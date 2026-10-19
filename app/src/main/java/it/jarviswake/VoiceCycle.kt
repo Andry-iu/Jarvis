@@ -76,9 +76,10 @@ internal object VoiceCycle {
     }
 
     fun voiceDispatched(token: String) {
+        if (!matches(token) || phase != VoiceCycleState.Phase.WEB) return
         state.voiceDispatched(token)
         if (matches(token) && phase == VoiceCycleState.Phase.VOICE) {
-            app?.let { DiagnosticLog.record(it, DiagnosticLog.Event.VOICE_DISPATCHED, token) }
+            app?.let { DiagnosticLog.record(it, DiagnosticLog.Event.VOICE_DISPATCHED_FIRST, token) }
             main.removeCallbacks(watchdog)
         }
     }
