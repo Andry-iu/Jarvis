@@ -35,7 +35,7 @@ import org.json.JSONTokener
 class WebChatActivity : Activity() {
     companion object {
         const val EXTRA_AUTOMATION = "automation"
-        private const val CHATGPT_URL = "https://chatgpt.com/"
+        private const val CHATGPT_URL = "https://chatgpt.com/g/g-p-6ad5d9f2d9f48191a7c4860050aa43cc-jarvisruntime/project"
         private const val MICROPHONE_REQUEST_CODE = 41
         private val FILL_GREETING_SCRIPT = """
             (() => {
