@@ -50,6 +50,7 @@ internal object VoiceCycle {
         state = VoiceCycleState()
         val token = UUID.randomUUID().toString()
         state.begin(token, SystemClock.elapsedRealtime())
+        DiagnosticLog.record(context, DiagnosticLog.Event.CYCLE_STARTED, token)
         app = context.applicationContext as Application
         try {
             val filter = IntentFilter(Intent.ACTION_SCREEN_OFF)
@@ -68,17 +69,23 @@ internal object VoiceCycle {
 
     fun openWeb(context: Context, token: String, resumed: Boolean, focused: Boolean): Boolean {
         val keyguard = context.getSystemService(KeyguardManager::class.java)
-        return state.openWeb(token, SystemClock.elapsedRealtime(), resumed, focused,
+        val opened = state.openWeb(token, SystemClock.elapsedRealtime(), resumed, focused,
             keyguard.isDeviceLocked, keyguard.isKeyguardLocked, canShowWhileLocked = true)
+        if (opened) DiagnosticLog.record(context, DiagnosticLog.Event.WEB_OPENED, token)
+        return opened
     }
 
     fun voiceDispatched(token: String) {
         state.voiceDispatched(token)
-        if (matches(token) && phase == VoiceCycleState.Phase.VOICE) main.removeCallbacks(watchdog)
+        if (matches(token) && phase == VoiceCycleState.Phase.VOICE) {
+            app?.let { DiagnosticLog.record(it, DiagnosticLog.Event.VOICE_DISPATCHED, token) }
+            main.removeCallbacks(watchdog)
+        }
     }
 
     fun cancel(context: Context, token: String, message: String) {
         if (!state.cancel(token)) return
+        DiagnosticLog.record(context, DiagnosticLog.Event.CYCLE_CANCELLED, token)
         // Invalidate first. Every pending launch/DOM callback now belongs to a dead cycle.
         main.removeCallbacks(watchdog)
         app?.let { runCatching { it.unregisterReceiver(screenOff) } }
