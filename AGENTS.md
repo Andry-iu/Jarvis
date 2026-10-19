@@ -9,6 +9,8 @@ Prima di modificare il progetto leggere `README.md`, `CONTINUITY.md` e `VERIFICA
 - Per diagnosi Android/ChatGPT consultare più fonti primarie pertinenti e distinguere codice, test locali e riscontro sul dispositivo. Non dichiarare risolto sul telefono ciò che è solo compilato o simulato.
 - Aggiornare documentazione e stato di continuità insieme alle modifiche rilevanti. Non presentare attività pianificate come completate.
 - Non inserire in Git cookie, credenziali, chiavi di firma, audio, trascrizioni, cache o output di build. Il modello Vosk si prepara tramite lo script con checksum fissato.
+- Prima di ogni modifica, aggiornare i riferimenti remoti e partire da `main` allineato, completo e senza modifiche locali pendenti. Se il checkout non coincide con `origin/main`, riallinearlo in modo sicuro prima di intervenire.
+- Al rilascio di un APK firmato per il collaudo, committare e pubblicare direttamente su `main` sorgenti, test, documentazione e checksum della versione. Non serve chiedere un ulteriore «Consolida». Non committare l'APK né chiavi o credenziali.
 - Se esiste una cronologia remota, recuperarla e integrare i cambiamenti conservandola. Nessun force-push per sostituirla con una copia ricavata da ZIP.
 
 ## Build, firma e consegna APK — regola operativa consolidata
@@ -19,4 +21,4 @@ Prima di modificare il progetto leggere `README.md`, `CONTINUITY.md` e `VERIFICA
 - Riservare all'utente il collaudo sul dispositivo fisico. Non dichiarare riusciti i test reali basandosi soltanto sulla build locale.
 - Preservare la firma permanente; non generare una chiave sostitutiva. Non chiedere o stampare password in chat. Non inserire keystore, password, cookie, audio, trascrizioni, cache o output di build in Git.
 - Mantenere il backup cifrato nel branch di handoff dedicato; verificare il certificato SHA-256 prima della firma e rimuovere i file in chiaro temporanei dopo.
-- Non eseguire commit/push se l'utente non richiede «Consolida». Quando lo chiede, aggiornare sorgenti, test e documentazione in un commit fast-forward, verificare il branch remoto e non usare force-push.
+- Partire sempre da `main` completo e aggiornato. Quando una modifica culmina nel rilascio di un APK firmato per il collaudo, aggiornare nello stesso rilascio sorgenti, test e documentazione con un commit fast-forward su `main`, senza attendere un'ulteriore richiesta «Consolida». Verificare il branch remoto e non usare force-push.

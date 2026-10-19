@@ -78,6 +78,7 @@ Non è stato implementato un trigger DSP/hardware a basso consumo né un filtro 
 - Non committare APK, modelli Vosk, cache, output intermedi o chiavi. Registrare il checksum dell'APK nel file di rilascio; consegnare l'APK direttamente quando richiesto.
 - Usare JDK 17, Gradle Wrapper 8.13, Android platform 36 e Build Tools 36.0.0. Compilare localmente, senza workflow GitHub Actions. Test consigliati: `node scripts/test-web-voice.cjs` e `./gradlew --no-daemon testDebugUnitTest lintDebug assembleDebug`.
 - Evitare clone shallow per il lavoro normale: recuperare tutta la cronologia e tutti i branch prima di diagnosticare un'assenza. Prima di un push confrontare l'hash remoto atteso e usare aggiornamenti fast-forward; mai force-push.
+- **Procedura approvata dall'utente (19 ottobre 2026):** prima di ogni modifica aggiornare `main` e iniziare da una baseline pulita, allineata al remoto e con cronologia completa. Quando la modifica è pronta e viene rilasciato l'APK firmato da testare, committare e pubblicare direttamente su `main` sorgenti, test e documentazione pertinenti; non attendere un ulteriore «Consolida». Lasciare fuori dal repository APK, chiavi e credenziali. Continuano a valere build e firma locali, senza GitHub Actions, e push fast-forward senza force-push.
 
 ## Perché la continuità si è interrotta e prevenzione
 
