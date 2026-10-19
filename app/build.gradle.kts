@@ -11,6 +11,20 @@ android {
         versionName = "0.5.26"
         ndk { abiFilters += listOf("arm64-v8a") }
     }
+    val ciKeystore = System.getenv("JARVIS_KEYSTORE_PATH")
+    signingConfigs {
+        create("persistent") {
+            storeFile = file(ciKeystore ?: "signing-keystore-not-configured.jks")
+            storePassword = System.getenv("JARVIS_SIGNING_PASSWORD") ?: ""
+            keyAlias = "jarvis"
+            keyPassword = System.getenv("JARVIS_SIGNING_PASSWORD") ?: ""
+        }
+    }
+    buildTypes {
+        getByName("debug") {
+            if (!ciKeystore.isNullOrBlank()) signingConfig = signingConfigs.getByName("persistent")
+        }
+    }
     compileOptions { sourceCompatibility = JavaVersion.VERSION_17; targetCompatibility = JavaVersion.VERSION_17 }
 
     packaging { jniLibs { useLegacyPackaging = false } }
