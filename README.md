@@ -4,6 +4,7 @@ App Kotlin per Android 12–16 (minSdk 31, targetSdk 36), APK ARM64 destinato al
 
 ## Documentazione e continuità
 
+- [docs/INSTALLAZIONE_NUOVO_DISPOSITIVO.md](docs/INSTALLAZIONE_NUOVO_DISPOSITIVO.md): checklist completa per installazione pulita, permessi Android, Accessibilità, assistente, firma APK e collaudo su telefono bloccato.
 - [CONTINUITY.md](CONTINUITY.md): stato del progetto, requisiti consolidati e indicazioni per riprendere il lavoro.
 - [PROMPT_CONTINUITA.txt](PROMPT_CONTINUITA.txt): istruzione pronta per una nuova conversazione di sviluppo.
 - [docs/ROADMAP.md](docs/ROADMAP.md): logging e integrazione JarvisRuntime approvati, ancora da implementare.
