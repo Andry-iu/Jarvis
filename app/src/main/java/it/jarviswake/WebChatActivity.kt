@@ -331,6 +331,7 @@ class WebChatActivity : Activity() {
     private var lastVoiceCandidateX = Float.NaN
     private var lastVoiceCandidateY = Float.NaN
     private var stableVoiceCandidateCount = 0
+    private var voiceReadyLogged = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -377,6 +378,7 @@ class WebChatActivity : Activity() {
                 override fun onPageStarted(view: WebView, url: String, favicon: android.graphics.Bitmap?) {
                     if (webDestroyed || active.get() !== this@WebChatActivity) return
                     automationPageReady = false
+                    voiceReadyLogged = false
                     documentGeneration++
                     resetVoiceCandidate()
                     super.onPageStarted(view, url, favicon)
@@ -394,6 +396,7 @@ class WebChatActivity : Activity() {
                     super.onPageFinished(view, url)
                     if (webDestroyed || active.get() !== this@WebChatActivity) return
                     automationPageReady = true
+                    if (cycleToken != null && isValidCycle()) DiagnosticLog.record(this@WebChatActivity, DiagnosticLog.Event.WEB_PAGE_READY, cycleToken)
                     localHud?.setStatus("PAGINA CARICATA — PREPARAZIONE VOICE")
                     State.setAttempt(this@WebChatActivity, "Pagina ChatGPT caricata nel WebView.")
                     State.set(this@WebChatActivity, "Pagina Web caricata; attendo i controlli ChatGPT.")
@@ -642,6 +645,10 @@ class WebChatActivity : Activity() {
                 return@evaluateJavascript
             }
             resetVoiceCandidate()
+            if (!voiceReadyLogged) {
+                voiceReadyLogged = true
+                DiagnosticLog.record(this, DiagnosticLog.Event.VOICE_CONTROL_READY, cycleToken)
+            }
 
             // Latch BEFORE dispatch: even an unaccepted touch must never be repeated.
             VoiceCycle.voiceDispatched(cycleToken!!)
