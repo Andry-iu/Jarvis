@@ -146,119 +146,167 @@ class WebChatActivity : Activity() {
             })()
         """.trimIndent()
         private val VOICE_CONTROL_LOCATION_SCRIPT = """
-            (() => {
-              // Observe actual streams, including when WebView caches permission grants.
-              // No audio or transcript is read; only track lifecycle is inspected.
-              if (!window.__jarvisWakeMedia && navigator.mediaDevices?.getUserMedia) {
-                const media = { tracks: new Set(), pending: 0, error: null, requested: false };
-                const original = navigator.mediaDevices.getUserMedia;
-                navigator.mediaDevices.getUserMedia = async function(...args) {
-                  const audio = !!args[0]?.audio;
-                  if (audio) { media.pending++; media.error = null; media.requested = true; }
-                  try {
-                    const stream = await original.apply(this, args);
-                    if (audio) stream.getAudioTracks().forEach(track => media.tracks.add(track));
-                    return stream;
-                  } catch (error) {
-                    if (audio) media.error = error.name || 'MediaError';
-                    throw error;
-                  } finally {
-                    if (audio) media.pending--;
-                  }
-                };
-                window.__jarvisWakeMedia = media;
-              }
-              const media = window.__jarvisWakeMedia;
-              const mediaActive = media && [...media.tracks].some(track => track.readyState === 'live');
-              if (media) [...media.tracks].filter(track => track.readyState === 'ended')
-                .forEach(track => media.tracks.delete(track));
-              const visible = element => {
-                const rect = element.getBoundingClientRect();
-                const style = getComputedStyle(element);
-                return rect.width > 8 && rect.height > 8 && style.visibility !== 'hidden' &&
-                  style.display !== 'none' && style.opacity !== '0' &&
-                  rect.bottom > 0 && rect.right > 0 && rect.top < innerHeight && rect.left < innerWidth;
-              };
-              const norm = value => (value || '').toLowerCase().normalize('NFD')
-                .replace(/[\u0300-\u036f]/g, '').replace(/[^a-z ]/g, ' ')
-                .trim().replace(/ +/g, ' ');
-              const exact = new Set([
-                'start voice mode', 'voice mode', 'open voice mode',
-                'start voice conversation', 'start a voice conversation',
-                'start voice chat', 'start voice', 'voice',
-                'avvia modalita vocale', 'modalita vocale',
-                'avvia conversazione vocale', 'avvia una conversazione vocale',
-                'avvia chat vocale', 'inizia una conversazione vocale',
-                'usa la modalita vocale', 'parla con chatgpt', 'avvia voice', 'voce'
-              ]);
-              const descriptor = element => norm([
-                element.getAttribute('aria-label'), element.getAttribute('title'),
-                element.getAttribute('data-testid'), element.innerText
-              ].filter(Boolean).join(' '));
-              const voiceTerm = label => label.includes('voice') || label.includes('vocal');
-              const exitTerm = label => ['end', 'stop', 'leave', 'exit', 'close', 'terminate',
-                'termina', 'chiudi', 'esci'].some(term => label.includes(term));
-              const activeHeading = [...document.querySelectorAll('h1,h2,h3,header,[role="heading"]')]
-                .filter(visible).map(descriptor)
-                .some(label => label === 'voice mode' || label === 'modalita vocale' ||
-                  label.endsWith(' voice mode') || label.endsWith(' modalita vocale'));
-              const activeExitControl = [...document.querySelectorAll(
-                'button,[role="button"],[aria-label],[data-testid]'
-              )].filter(visible).map(descriptor).some(label => voiceTerm(label) && exitTerm(label));
-              const visiblePageText = norm(document.body ? document.body.innerText : '');
-              const activePageText = visiblePageText.includes('chatgpt modalita vocale') ||
-                visiblePageText.includes('chatgpt voice mode');
-              if (mediaActive || activeHeading || activeExitControl || activePageText) {
-                return JSON.stringify({ state: 'active' });
-              }
-              if (media?.pending) return JSON.stringify({ state: 'opening' });
-              const controls = [...document.querySelectorAll(
-                'button,[role="button"],[aria-label],[data-testid]'
-              )]
-                .map(element => {
-                  const label = descriptor(element);
-                  const rect = element.getBoundingClientRect();
-                  const forbidden = label.includes('microphone') || label.includes('dictation') ||
-                    label.includes('record') || label.includes('stop voice') ||
-                    label.includes('end voice') || label.includes('send message') ||
-                    (voiceTerm(label) && exitTerm(label));
-                  const voiceWord = voiceTerm(label);
-                  const score = exact.has(label) ? 4 :
-                    ([...exact].some(value => label.startsWith(value + ' ')) ? 3 :
-                    (voiceWord ? 2 : 0));
-                  return { element, rect, visible: visible(element), forbidden, score };
-                });
-              const enabled = item => !item.element.disabled &&
-                item.element.getAttribute('aria-disabled') !== 'true';
-              const semantic = controls
-                .filter(item => item.visible && !item.forbidden && item.score > 0 && enabled(item))
-                .sort((a, b) => b.score - a.score);
+(() => {
+  const preferBottom = __JARVIS_LOCKED__;
+  // Observe actual streams, including when WebView caches permission grants.
+  // No audio or transcript is read; only track lifecycle is inspected.
+  if (!window.__jarvisWakeMedia && navigator.mediaDevices?.getUserMedia) {
+    const media = { tracks: new Set(), pending: 0, error: null, requested: false };
+    const original = navigator.mediaDevices.getUserMedia;
+    navigator.mediaDevices.getUserMedia = async function(...args) {
+      const audio = !!args[0]?.audio;
+      if (audio) { media.pending++; media.error = null; media.requested = true; }
+      try {
+        const stream = await original.apply(this, args);
+        if (audio) stream.getAudioTracks().forEach(track => media.tracks.add(track));
+        return stream;
+      } catch (error) {
+        if (audio) media.error = error.name || 'MediaError';
+        throw error;
+      } finally {
+        if (audio) media.pending--;
+      }
+    };
+    window.__jarvisWakeMedia = media;
+  }
+  const media = window.__jarvisWakeMedia;
+  const mediaActive = media && [...media.tracks].some(track => track.readyState === 'live');
+  if (media) [...media.tracks].filter(track => track.readyState === 'ended')
+    .forEach(track => media.tracks.delete(track));
+  const visible = element => {
+    const rect = element.getBoundingClientRect();
+    const style = getComputedStyle(element);
+    return rect.width > 8 && rect.height > 8 && style.visibility !== 'hidden' &&
+      style.display !== 'none' && style.opacity !== '0' &&
+      rect.bottom > 0 && rect.right > 0 && rect.top < innerHeight && rect.left < innerWidth;
+  };
+  const norm = value => (value || '').toLowerCase().normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '').replace(/[^a-z ]/g, ' ')
+    .trim().replace(/ +/g, ' ');
+  const exact = new Set([
+    'start voice mode', 'voice mode', 'open voice mode',
+    'start voice conversation', 'start a voice conversation',
+    'start voice chat', 'start voice', 'voice',
+    'avvia modalita vocale', 'modalita vocale',
+    'avvia conversazione vocale', 'avvia una conversazione vocale',
+    'avvia chat vocale', 'inizia una conversazione vocale',
+    'usa la modalita vocale', 'parla con chatgpt', 'avvia voice', 'voce'
+  ]);
+  const descriptor = element => {
+    const labelledBy = (element.getAttribute('aria-labelledby') || '').trim()
+      .split(/\s+/).filter(Boolean)
+      .map(id => document.getElementById(id)?.textContent || '').join(' ');
+    return norm([
+      labelledBy || element.getAttribute('aria-label'), element.getAttribute('title'),
+      element.getAttribute('data-testid'), element.innerText,
+      ...[...element.querySelectorAll('svg title,[aria-label]')]
+        .map(child => child.getAttribute('aria-label') || child.textContent)
+    ].filter(Boolean).join(' '));
+  };
+  const voiceTerm = label => label.includes('voice') || label.includes('vocal');
+  const exitTerm = label => ['end', 'stop', 'leave', 'exit', 'close', 'terminate',
+    'termina', 'chiudi', 'esci'].some(term => label.split(' ').includes(term));
+  const activeHeading = [...document.querySelectorAll('h1,h2,h3,header,[role="heading"]')]
+    .filter(visible).map(descriptor)
+    .some(label => label === 'voice mode' || label === 'modalita vocale' ||
+      label.endsWith(' voice mode') || label.endsWith(' modalita vocale'));
+  const activeExitControl = [...document.querySelectorAll(
+    'button,[role="button"]'
+  )].filter(visible).map(descriptor).some(label => voiceTerm(label) && exitTerm(label));
+  const visiblePageText = norm(document.body ? document.body.innerText : '');
+  const activePageText = visiblePageText.includes('chatgpt modalita vocale') ||
+    visiblePageText.includes('chatgpt voice mode');
+  if (mediaActive || activeHeading || activeExitControl || activePageText) {
+    return JSON.stringify({ state: 'active' });
+  }
+  if (media?.pending) return JSON.stringify({ state: 'opening' });
+  const controls = [...document.querySelectorAll(
+    'button,[role="button"]'
+  )]
+    .map(element => {
+      const label = descriptor(element);
+      const rect = element.getBoundingClientRect();
+      const forbidden = /microphon|microfon|dictat|dettat|record|registr|send|invia/.test(label) ||
+        /attach|allega|upload|carica|settings|impostazioni|share|condividi|menu/.test(label) ||
+        (!!element.getAttribute('aria-haspopup') && element.getAttribute('aria-haspopup') !== 'false') ||
+        (voiceTerm(label) && exitTerm(label));
+      const voiceWord = voiceTerm(label);
+      const score = exact.has(label) ? 4 :
+        ([...exact].some(value => label.startsWith(value + ' ')) ? 3 :
+        (voiceWord ? 2 : 0));
+      return { element, rect, visible: visible(element), forbidden, score };
+    });
+  const enabled = item => !item.element.disabled &&
+    item.element.getAttribute('aria-disabled') !== 'true';
+  const reachable = item => {
+    const x = item.rect.left + item.rect.width / 2;
+    const y = item.rect.top + item.rect.height / 2;
+    const hit = document.elementFromPoint(x, y);
+    return hit && (hit === item.element || item.element.contains(hit));
+  };
+  const locationRank = rect => {
+    if (!preferBottom) return 0;
+    if (rect.top >= innerHeight * 2 / 3) return 0;
+    if (rect.bottom <= innerHeight / 3) return 1;
+    return 2;
+  };
+  const semantic = controls
+    .filter(item => item.visible && !item.forbidden && item.score > 0 && enabled(item) && reachable(item))
+    .sort((a, b) => preferBottom
+      ? locationRank(a.rect) - locationRank(b.rect) || b.score - a.score || b.rect.bottom - a.rect.bottom
+      : b.score - a.score || a.rect.top - b.rect.top);
 
-              // Mobile ChatGPT has changed the accessible Voice label more than once.
-              // On an empty composer Voice is the rightmost enabled, nearly-square control.
-              const composer = [...document.querySelectorAll('textarea,[contenteditable="true"]')]
-                .find(element => visible(element));
-              const composerEmpty = composer && !(composer.value || composer.innerText || '').trim();
-              const geometric = controls
-                .filter(item => composerEmpty && item.visible && !item.forbidden && enabled(item) &&
-                  item.rect.bottom > innerHeight * 0.72 &&
-                  item.rect.left > innerWidth * 0.55 &&
-                  item.rect.width >= 28 && item.rect.width <= 96 &&
-                  item.rect.height >= 28 && item.rect.height <= 96 &&
-                  Math.abs(item.rect.width - item.rect.height) <= 24)
-                .sort((a, b) => b.rect.right - a.rect.right);
-              const selected = semantic[0] || geometric[0];
-              if (!selected) return null;
-              const rect = selected.rect;
-              return JSON.stringify({
-                x: rect.left + rect.width / 2,
-                y: rect.top + rect.height / 2,
-                viewportWidth: innerWidth,
-                viewportHeight: innerHeight,
-                strategy: semantic.length ? 'semantic' : 'geometric'
-              });
-            })()
+  // Mobile ChatGPT has changed the accessible Voice label more than once.
+  // Fallback stays inside the empty editor's compact DOM container. Project
+  // composers can be at the top; normal chat composers can be at the bottom.
+  // While keyguard is showing, inspect bottom, top, then other positions.
+  // Never choose an unrelated page/header button.
+  const composers = [...document.querySelectorAll('textarea,[contenteditable="true"]')]
+    .filter(visible).sort((a, b) => {
+      const ar = a.getBoundingClientRect(), br = b.getBoundingClientRect();
+      return preferBottom
+        ? locationRank(ar) - locationRank(br) || br.bottom - ar.bottom
+        : ar.top - br.top;
+    });
+  const composerCandidate = () => {
+    for (const composer of composers) {
+      if ((composer.value || composer.innerText || '').trim() || composer.disabled ||
+        composer.getAttribute('aria-disabled') === 'true') continue;
+      const editorRect = composer.getBoundingClientRect();
+      for (let scope = composer.parentElement; scope && scope !== document.body; scope = scope.parentElement) {
+        const box = scope.getBoundingClientRect();
+        if (box.height > editorRect.height + 144 || box.width > innerWidth) break;
+        const local = controls.filter(item => scope.contains(item.element) && item.visible &&
+          item.rect.left >= box.left + box.width / 2 && item.rect.right <= box.right + 1 &&
+          item.rect.top >= box.top - 1 && item.rect.bottom <= box.bottom + 1 &&
+          item.rect.width >= 28 && item.rect.width <= 96 &&
+          item.rect.height >= 28 && item.rect.height <= 96 &&
+          Math.abs(item.rect.width - item.rect.height) <= 24)
+          .sort((a, b) => b.rect.right - a.rect.right);
+        if (!local.length) continue;
+        const candidate = local[0];
+        // Do not substitute Dictation/Send when Voice is disabled or ambiguous.
+        const unique = local.length === 1 || candidate.rect.left >= local[1].rect.right;
+        if (unique && !candidate.forbidden && enabled(candidate) && reachable(candidate)) return candidate;
+        break;
+      }
+    }
+    return null;
+  };
+  const selected = semantic[0] || composerCandidate();
+  if (!selected) return null;
+  const rect = selected.rect;
+  return JSON.stringify({
+    x: rect.left + rect.width / 2,
+    y: rect.top + rect.height / 2,
+    viewportWidth: innerWidth,
+    viewportHeight: innerHeight,
+    strategy: semantic.length ? 'semantic' : 'composer'
+  });
+})()
         """.trimIndent()
+        internal fun preloadVoiceControlScript(): String =
+            VOICE_CONTROL_LOCATION_SCRIPT.replace("__JARVIS_LOCKED__", "false")
         @Volatile private var active = WeakReference<WebChatActivity>(null)
         @Volatile private var automationPageReady = false
         fun isAutomationPageReady(): Boolean = active.get()?.let {
@@ -575,6 +623,12 @@ class WebChatActivity : Activity() {
         Toast.makeText(this, message, Toast.LENGTH_LONG).show()
     }
 
+    private fun voiceControlLocationScript(): String {
+        val keyguard = getSystemService(KeyguardManager::class.java)
+        val locked = keyguard.isDeviceLocked || keyguard.isKeyguardLocked
+        return VOICE_CONTROL_LOCATION_SCRIPT.replace("__JARVIS_LOCKED__", locked.toString())
+    }
+
     /**
      * The DOM is used only to obtain the visible button coordinates. A native DOWN/UP
      * sequence is then delivered to WebView, so the page receives a real touch path
@@ -600,7 +654,7 @@ class WebChatActivity : Activity() {
         }
         voiceTapInFlight = true
         val generation = documentGeneration
-        webView.evaluateJavascript(VOICE_CONTROL_LOCATION_SCRIPT) { rawResult ->
+        webView.evaluateJavascript(voiceControlLocationScript()) { rawResult ->
             if (!isValidCycle() || webDestroyed || generation != documentGeneration) {
                 voiceTapInFlight = false
                 callback(WebVoiceTapResult.UNAVAILABLE)
@@ -617,7 +671,8 @@ class WebChatActivity : Activity() {
                 if (viewportWidth <= 0f || viewportHeight <= 0f) return@runCatching null
                 WebVoiceDomResult(
                     x = value.getDouble("x").toFloat() * webView.width / viewportWidth,
-                    y = value.getDouble("y").toFloat() * webView.height / viewportHeight
+                    y = value.getDouble("y").toFloat() * webView.height / viewportHeight,
+                    semantic = value.optString("strategy") == "semantic"
                 )
             }.getOrNull()
             if (result?.active == true) {
@@ -648,6 +703,8 @@ class WebChatActivity : Activity() {
             if (!voiceReadyLogged) {
                 voiceReadyLogged = true
                 DiagnosticLog.record(this, DiagnosticLog.Event.VOICE_CONTROL_READY, cycleToken)
+                DiagnosticLog.record(this, if (result.semantic) DiagnosticLog.Event.VOICE_CONTROL_SEMANTIC
+                    else DiagnosticLog.Event.VOICE_CONTROL_COMPOSER, cycleToken)
             }
 
             // Latch BEFORE dispatch: even an unaccepted touch must never be repeated.
@@ -688,7 +745,7 @@ class WebChatActivity : Activity() {
             return
         }
         val generation = documentGeneration
-        webView.evaluateJavascript(VOICE_CONTROL_LOCATION_SCRIPT) { rawResult ->
+        webView.evaluateJavascript(voiceControlLocationScript()) { rawResult ->
             if (!isValidCycle() || webDestroyed || generation != documentGeneration) {
                 callback(WebVoicePageState.UNAVAILABLE)
                 return@evaluateJavascript
@@ -790,7 +847,8 @@ class WebChatActivity : Activity() {
 private data class WebVoiceDomResult(
     val x: Float = 0f,
     val y: Float = 0f,
-    val active: Boolean = false
+    val active: Boolean = false,
+    val semantic: Boolean = false
 )
 
 enum class WebVoiceTapResult { DISPATCHED, BLOCKED, ACTIVE, NOT_FOUND, UNAVAILABLE }

@@ -14,6 +14,8 @@ import android.app.role.RoleManager
 import android.provider.Settings
 import android.view.View
 import android.widget.*
+import android.webkit.WebView
+import android.webkit.WebViewClient
 
 class MainActivity : Activity() {
     private val assistantPermissionRequest = 2
@@ -23,6 +25,7 @@ class MainActivity : Activity() {
     private lateinit var status: TextView
     private lateinit var attemptStatus: TextView
     private lateinit var coverButton: Button
+    private lateinit var contentRoot: FrameLayout
     private val update = object : Runnable {
         override fun run() {
             status.text = (if (State.running) "● " else "○ ") + State.get(this@MainActivity)
@@ -80,7 +83,10 @@ class MainActivity : Activity() {
         }
         text("Jarvis riconosce ‘Hey Jarvis’ sul telefono e avvia una nuova chat ChatGPT con Voice. Per iniziare, accedi a ChatGPT e abilita i due permessi richiesti per l’automazione: Accessibilità e HUD.", 14f)
         text("Per l’ascolto al riavvio, imposta Jarvis come assistente predefinito. Questa scelta sostituisce l’assistente attuale per i richiami di sistema.", 14f)
-        setContentView(ScrollView(this).apply { addView(layout) })
+        contentRoot = FrameLayout(this)
+        contentRoot.addView(ScrollView(this).apply { addView(layout) },
+            FrameLayout.LayoutParams(-1, -1))
+        setContentView(contentRoot)
         handler.post { requestStart() }
     }
 
@@ -98,6 +104,7 @@ class MainActivity : Activity() {
 
     private fun requestStart() {
         if (State.running) {
+            prepareChatGpt()
             WakeService.resumeExisting()
             return
         }
@@ -113,8 +120,15 @@ class MainActivity : Activity() {
         if (Build.VERSION.SDK_INT >= 33 && !getSystemService(android.app.NotificationManager::class.java).areNotificationsEnabled()) {
             State.set(this, "Abilita le notifiche: Android le richiede per il servizio microfono continuo."); return
         }
-        try { startForegroundService(Intent(this, WakeService::class.java)) }
+        try {
+            prepareChatGpt()
+            startForegroundService(Intent(this, WakeService::class.java))
+        }
         catch (e: RuntimeException) { State.set(this, "Avvio rifiutato: ${e.javaClass.simpleName}") }
+    }
+
+    private fun prepareChatGpt() {
+        if (::contentRoot.isInitialized) ChatGptPreloader.prepare(this, contentRoot)
     }
     private fun startVoiceCycle() {
         VoiceCycle.start(this)

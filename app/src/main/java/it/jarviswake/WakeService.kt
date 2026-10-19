@@ -229,6 +229,7 @@ class WakeService : Service() {
     }
 
     private fun onWake() {
+        DiagnosticLog.record(this, DiagnosticLog.Event.WAKE_DETECTED)
         vibrateWakeConfirmation()
         pauseForVoice()
         State.setAttempt(this, "Wake word Hey Jarvis rilevata; avvio schermata di sblocco.")

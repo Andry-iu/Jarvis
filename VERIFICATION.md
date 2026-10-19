@@ -1,64 +1,64 @@
-# Verifica — JarvisWake 0.5.26
+# Verifica — JarvisWake 0.5.30
 
-## Obiettivo e modifica rispetto alla 0.5.25
+## Build e APK
 
-Avviare ChatGPT Voice quando viene pronunciata la wake word a telefono già bloccato, senza aspettare impronta/PIN. L'autenticazione del dispositivo non viene rimossa: le attività del ciclo sono mostrate sopra il keyguard tramite le API Android previste.
+Build locale eseguita il 19 ottobre 2026 con JDK 17, Gradle 8.13, Android SDK 36 e Build Tools 36.0.0:
 
-Nella 0.5.25, VoiceCycleState.openWeb rifiutava l'apertura se isDeviceLocked o isKeyguardLocked erano veri, e LaunchActivity richiedeva automaticamente lo sblocco. Il messaggio di attesa visto dall'utente corrispondeva a questa condizione esplicita.
+```text
+gradle --no-daemon testDebugUnitTest lintDebug assembleDebug
+BUILD SUCCESSFUL — 53 task
+```
 
-- Il coordinatore autorizza il passaggio al WebView sopra il blocco soltanto con ciclo valido, attività resumed e focus acquisito. Restano scadenze, cancellazione e protezione da callback obsolete.
-- Anche WebChatActivity usa setShowWhenLocked e setTurnScreenOn, soltanto per il ciclo automatico; la schermata usata per configurare l'accesso non è abilitata sopra il blocco.
-- Nessuna richiesta automatica di sblocco. Il pulsante Sblocca telefono è disponibile come comando facoltativo durante il ciclo bloccato, compresa la fase Voice.
-- Finché il keyguard è presente si usa la cover interna, con X e note aggiornate. La cover intercetta i tocchi fisici diretti alla pagina sottostante. Il tocco automatico Voice continua a raggiungere direttamente il WebView una sola volta.
-- L'avvio da stato già bloccato non equivale a un nuovo evento SCREEN_OFF: X, Indietro e spegnimento dello schermo continuano a invalidare e chiudere il ciclo prima di riprendere Vosk.
-- I meccanismi DOM di Voice, il rilascio del microfono e il saluto «ciao jarvis» non sono stati modificati. Rimangono la preferenza persistente opaco/semitrasparente e le note nascoste dopo l'attivazione Voice.
+- Test JVM: 16 superati. Lint: task completata senza errori bloccanti.
+- `node scripts/test-web-voice.cjs`: superato; include riconoscimento semantico, strategia spaziale, fallback nel compositore, stabilità del controllo, protezione bozze e invio singolo.
+- APK: `it.jarviswake`, versionName `0.5.30`, versionCode `52`, minSdk `31`, target/compile SDK `36`, ABI ARM64.
+- SHA-256 della build debug prima della firma permanente: `30f888c22d589484c4a950d6b65ab612e0858526d6c1a40963ea9c6d6d3a23ff`.
+- APK consegnato: `JarvisWake-0.5.30-debug-arm64-permanent.apk`, SHA-256 `02a9ccbd5d477acc7408a2337158eda7c54208d859641655b362f69bbb9c202f`.
+- Certificato SHA-256 `a8ddfbe2b78be5460e72df57afbc3434411e3cc27328b13bc16b4daaba13389a`, uguale al certificato permanente consolidato. `apksigner verify` conferma schema v3 per API 31+ e schema v2 con verifica separata per API 24–27. `zipalign -c -P 16 -v 4` superato.
+- Il file cifrato è stato letto dal branch GitHub `signing-handoff-2026-10-19`; l'archivio age a passphrase è stato autenticato, il keystore verificato e i temporanei in chiaro rimossi dopo la firma. Nessuna credenziale è stata inclusa in questo repository.
+- Nessuna GitHub Action è stata usata per compilare o firmare.
 
-## Documentazione incrociata
+I checksum sono registrati anche in `releases/0.5.30/SHA256SUMS`. Il contenuto APK non è committato.
 
-- Activity.setShowWhenLocked: permette all'attività di rimanere resumed e visibile sopra il blocco.
-  https://developer.android.com/reference/android/app/Activity#setShowWhenLocked(boolean)
-- Activity.setTurnScreenOn: accende lo schermo se l'attività può diventare visibile e resumed.
-  https://developer.android.com/reference/android/app/Activity#setTurnScreenOn(boolean)
-- KeyguardManager.requestDismissKeyguard: richiesta separata di rimozione del keyguard, con autenticazione quando necessaria. Nel nuovo percorso viene invocata solo dal pulsante dell'utente.
-  https://developer.android.com/reference/android/app/KeyguardManager#requestDismissKeyguard(android.app.Activity,%20android.app.KeyguardManager.KeyguardDismissCallback)
-- Microfono e servizi in background: restrizioni dei permessi while-in-use ed eccezioni, compreso VoiceInteractionService. La sola presenza del servizio assistente non dimostra che WebRTC funzioni da una pagina nascosta; il ciclo mantiene invece visibile l'attività WebView.
-  https://developer.android.com/develop/background-work/services/fgs/restrictions-bg-start
+## Modifiche 0.5.28–0.5.30 portate nel sorgente
 
-Queste fonti documentano le possibilità del sistema Android. Non certificano il comportamento della pagina ChatGPT o della cattura WebRTC sul Galaxy S24+.
+- Confrontati gli APK .27/.28/.29 e recuperate dal bytecode soltanto le differenze osservabili: semantic labeling del controllo Voice, fallback limitato al compositore e preferenza basso-prima con keyguard.
+- La 0.5.30 aggiunge un WebView invisibile che carica il progetto mentre `MainActivity` avvia l'ascolto e osserva il DOM senza toccare Voice.
+- Alla wake il preloader è distrutto; il WebView effettivo ricarica l'URL progetto. Non sono trasferiti la pagina DOM pronta o il controllo individuato. L'eventuale beneficio da cache non è misurato.
 
-## Verifiche locali
+## Analisi dei tempi diagnostici
 
-Comandi: `node scripts/test-web-voice.cjs` e Gradle offline `testDebugUnitTest lintDebug assembleDebug`.
+I log disponibili registrano tempo monotono per `CYCLE_STARTED`, `WEB_OPENED`, `WEB_PAGE_READY`, `VOICE_CONTROL_READY` e `VOICE_DISPATCHED_FIRST`.
 
-- Compilazione riuscita; 16 test JVM superati, zero errori/fallimenti.
-- Test JavaScript degli script DOM/media superati: attese del saluto, controllo dei pulsanti, conservazione delle bozze e invio singolo.
-- Lint Android: 0 errori, 13 avvisi non bloccanti.
-- Quattro nuovi test dello stato: avvio da bloccato senza autenticazione, obbligo di resume/focus, cancellazione dopo spegnimento/X, rifiuto di un avvio scaduto.
-- APK verificato con apksigner e aapt: versione 0.5.26, codice 48, ABI arm64-v8a, firma valida e stesso certificato della 0.5.25.
-- Integrità dell'archivio sorgente verificata. SHA-256 di APK e archivio riportati nel file di accompagnamento.
+- In un ciclo, `WEB_PAGE_READY` arriva 11,65 s dopo `CYCLE_STARTED` e `VOICE_CONTROL_READY` a 13,48 s: circa 1,83 s dalla pagina pronta al controllo.
+- In un altro ciclo, pagina pronta a 3,82 s e controllo Voice a 11,41 s: circa 7,59 s tra pagina pronta e controllo.
+- Altri campioni di controllo pronto sono tra circa 3,3 e 8,1 s. Un precedente campione era circa 3,92 s.
 
-## Limiti e prova richiesta
+Questi sono esempi osservati, non statistiche né una garanzia. Nei log esaminati non c'è sempre un evento `WAKE_DETECTED` associabile; `CYCLE_STARTED` può riferirsi a un ciclo manuale. `VOICE_DISPATCHED_FIRST` indica il gesto inviato, non che il server sia pronto, che abbia risposto o che l'utente abbia sentito l'audio. Non è ancora misurato il tempo wake-to-first-audible-response.
 
-Riscontro successivo dell'utente, 19 ottobre 2026: «Ho testato, funziona». È una conferma generale sul dispositivo di riferimento; non risultano un verbale di ogni scenario sotto elencato o prove su altri telefoni.
+## Prove ancora da fare sul telefono
 
-Nessun dispositivo Android collegato: l'effettivo avvio audio prima dell'impronta deve essere provato sul Samsung Android 16 / One UI. Login ChatGPT e permessi devono essere già configurati. Questa modifica non aggiunge il funzionamento prima del primo sblocco dopo il riavvio.
+Nessun dispositivo Android era collegato alla build. La prova fisica va eseguita sul Samsung Galaxy S24+ Android 16 / One UI. Non è dichiarato verificato in questa build:
 
-La conversazione con l'account connesso diventa disponibile a chi pronuncia la wake word senza autenticazione. Vosk non verifica l'identità del parlante. La protezione dei tocchi non limita ciò che si può chiedere vocalmente a ChatGPT.
+In un feedback precedente l'utente aveva detto che una correzione della schermata di blocco funzionava; in un'altra prova aveva segnalato Voice senza risposta vocale dopo l'avvio manuale. Non è noto se quei risultati corrispondano al codice 0.5.30.
 
-1. Bloccare il telefono e pronunciare Hey Jarvis; attendere senza usare l'impronta: cover, attivazione Voice e invio singolo di «ciao jarvis» devono precedere lo sblocco.
-2. Verificare risposta audio, ascolto della propria voce e assenza di ulteriori tocchi Voice.
-3. Provare X e tasto di blocco sia durante il caricamento sia durante la conversazione: il ciclo deve chiudersi e Vosk riprendere.
-4. Avviare un altro ciclo da bloccato, usare Sblocca telefono e verificare che la conversazione non venga riavviata o duplicata. Ripetere annullando la richiesta biometrica.
-5. Verificare il ciclo manuale da telefono sbloccato e le due opzioni di copertura.
+1. Wake con telefono sbloccato e bloccato, senza impronta obbligatoria; cover visibile, Voice attiva e risposta audio.
+2. Una sola attivazione Voice e nessun ulteriore tocco durante caricamento, ricreazione o riconnessione Accessibilità.
+3. Invio di «ciao jarvis», ricezione da ChatGPT e parlato di risposta; nessuna bozza personale sovrascritta.
+4. X, Indietro e nuovo spegnimento schermo chiudono l'intera sessione e riattivano Vosk.
+5. Avvio da assistente dopo riavvio, dopo processo terminato e prima/dopo primo sblocco.
+6. Copertura opaca/semitrasparente persistente e leggibilità della X.
+7. Nuova chat generata automaticamente nel progetto JarvisRuntime per ogni ciclo.
+8. Differenza di latenza e batteria con preloader attivo/disattivo.
+9. Misura separata dal riconoscimento wake fino al primo audio remoto e alla conferma manuale che sia udibile.
 
-## Preparazione del commit Git
+## Riferimenti Android per il percorso bloccato
 
-Il successivo aggiornamento di documentazione/CI conserva invariati i sorgenti applicativi, i test e la versione rispetto allo ZIP 0.5.26 consegnato. Aggiunge continuità di sviluppo, roadmap e istruzioni per riprendere il lavoro. Il nome degli artefatti CI viene letto dai metadati di compilazione tramite `scripts/package-apk.py`, invece del valore obsoleto 0.3.1. La verifica locale del packaging usa l'APK 0.5.26 già compilato; non equivale a una nuova esecuzione remota di GitHub Actions.
+La 0.5.26 introdusse l'attività visibile sopra il keyguard senza richiedere automaticamente lo sblocco. I riferimenti Android spiegano le API usate ma non certificano WebRTC o ChatGPT Voice su One UI:
 
-Controlli del packaging superati: nome 0.5.26/codice 48 ricavati dai metadati, output del workflow coerenti, APK byte per byte con lo stesso SHA-256 del file consegnato, YAML leggibile e allineamento ZIP a 16 KB verificato. Il confronto con lo ZIP originale conferma che nessun sorgente dell'app o test è cambiato.
+- [Activity.setShowWhenLocked](https://developer.android.com/reference/android/app/Activity#setShowWhenLocked(boolean))
+- [Activity.setTurnScreenOn](https://developer.android.com/reference/android/app/Activity#setTurnScreenOn(boolean))
+- [KeyguardManager.requestDismissKeyguard](https://developer.android.com/reference/android/app/KeyguardManager#requestDismissKeyguard(android.app.Activity,%20android.app.KeyguardManager.KeyguardDismissCallback))
+- [Limitazioni dei servizi foreground e permesso microfono](https://developer.android.com/develop/background-work/services/fgs/restrictions-bg-start)
 
-## Prima esecuzione GitHub Actions
-
-Il primo run remoto del 19 ottobre 2026 (`39235187225`, commit `5a3b3cb`) si è fermato prima della compilazione: `android-actions/setup-android@v3` richiedeva per impostazione predefinita `tools platform-tools`, ma `sdkmanager` non trovava il vecchio pacchetto `tools`. Il workflow specifica ora soltanto `platform-tools`; l'azione prepara già i command-line tools e il passo successivo continua a installare platform 36 e build-tools 36.0.0. La correzione riguarda esclusivamente la preparazione CI, senza modificare versione o comportamento dell'app.
-
-Riferimenti verificati: [input dell'azione eseguita](https://github.com/android-actions/setup-android/blob/9fc6c4e9069bf8d3d10b2204b1fb8f6ef7065407/action.yml), [installazione dei pacchetti SDK](https://developer.android.com/tools/sdkmanager). L'esito di ciascuna compilazione remota è consultabile in [GitHub Actions](https://github.com/Andry-iu/Jarvis/actions/workflows/android.yml) per il relativo commit.
+La base storica di verifica 0.5.26 e la ricostruzione della causa del vuoto di continuità sono riassunte in `CONTINUITY.md`.

@@ -47,6 +47,7 @@ internal object VoiceCycle {
 
     fun start(context: Context) {
         if (active) return
+        ChatGptPreloader.discard()
         state = VoiceCycleState()
         val token = UUID.randomUUID().toString()
         state.begin(token, SystemClock.elapsedRealtime())

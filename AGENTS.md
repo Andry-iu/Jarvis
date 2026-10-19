@@ -11,11 +11,12 @@ Prima di modificare il progetto leggere `README.md`, `CONTINUITY.md` e `VERIFICA
 - Non inserire in Git cookie, credenziali, chiavi di firma, audio, trascrizioni, cache o output di build. Il modello Vosk si prepara tramite lo script con checksum fissato.
 - Se esiste una cronologia remota, recuperarla e integrare i cambiamenti conservandola. Nessun force-push per sostituirla con una copia ricavata da ZIP.
 
-## Consegna APK e verifica CI — regola operativa consolidata
+## Build, firma e consegna APK — regola operativa consolidata
 
-- Quando l'utente chiede un APK, seguire autonomamente GitHub Actions fino a conclusione: verificare il run riferito al commit richiesto, esito di build/test/lint e artifact.
-- Scaricare l'artifact ZIP, estrarre l'APK, controllare integrità SHA-256 e firma/certificato quando pertinente; non chiedere all'utente di controllare hash o stato del workflow.
+- Compilare localmente con JDK 17, Gradle Wrapper 8.13, Android SDK 36 e Build Tools 36.0.0. Non usare GitHub Actions per build o firma.
+- Quando l'utente chiede un APK, eseguire davvero test/build locali, verificare versione, ABI, integrità ZIP, allineamento e certificato. Consegnare l'APK direttamente, non un archivio ZIP, e indicare esplicitamente se non è firmato con il certificato permanente.
 - Consegnare direttamente il file `.apk` pronto da installare, non un link a uno ZIP, quando il file è effettivamente disponibile e verificato nell'ambiente corrente. Non inventare link locali né dichiarare verifiche non eseguite.
-- Se il recupero diretto dell'APK non è tecnicamente possibile, dichiarare il limite e fornire il link GitHub all'artifact, distinguendo chiaramente questa soluzione di ripiego.
-- Riservare all'utente il collaudo sul dispositivo fisico. Non dichiarare riusciti i test reali basandosi soltanto sulla CI.
-- Rispettare la compilazione selettiva: i commit ordinari non devono avviare l'APK; usare `[build-apk]` quando la build è richiesta, o il dispatch manuale se necessario. Preservare la firma persistente.
+- Riservare all'utente il collaudo sul dispositivo fisico. Non dichiarare riusciti i test reali basandosi soltanto sulla build locale.
+- Preservare la firma permanente; non generare una chiave sostitutiva. Non chiedere o stampare password in chat. Non inserire keystore, password, cookie, audio, trascrizioni, cache o output di build in Git.
+- Mantenere il backup cifrato nel branch di handoff dedicato; verificare il certificato SHA-256 prima della firma e rimuovere i file in chiaro temporanei dopo.
+- Non eseguire commit/push se l'utente non richiede «Consolida». Quando lo chiede, aggiornare sorgenti, test e documentazione in un commit fast-forward, verificare il branch remoto e non usare force-push.

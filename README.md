@@ -1,4 +1,4 @@
-# JarvisWake 0.5.26 — assistente Android e ChatGPT Voice
+# JarvisWake 0.5.30 — assistente Android e ChatGPT Voice
 
 App Kotlin per Android 12–16 (minSdk 31, targetSdk 36), APK ARM64 destinato alla prova su Samsung Galaxy S24+ Android 16.
 
@@ -15,7 +15,7 @@ App Kotlin per Android 12–16 (minSdk 31, targetSdk 36), APK ARM64 destinato al
 
 JarvisWake riconosce localmente “Hey Jarvis”, vibra, libera il microfono e apre ChatGPT Voice usando una sessione **ChatGPT Web autenticata con l'account dell'utente**. Questo percorso conserva l'ambiente ChatGPT dell'account, invece di ricostruire memoria e istruzioni tramite API separate.
 
-La conversazione viene avviata come **nuova chat normale**, perché ChatGPT Web non offre Voice nella chat temporanea. La chat usa memoria e istruzioni personalizzate dell'account, appare nella cronologia e può aggiornare la memoria secondo le impostazioni dell'account.
+La destinazione è il progetto ChatGPT **JarvisRuntime**, configurato dall'utente con memoria «Solo progetto». L'app apre l'URL del progetto. La creazione automatica verificata di una nuova conversazione per ogni ciclo non è ancora dimostrata: non presumere che la pagina di progetto apra sempre una chat nuova.
 
 ## Configurazione iniziale
 
@@ -35,12 +35,14 @@ La dichiarazione Android del servizio assistente include la sessione, il servizi
 2. Vosk interrompe la cattura. Il controllo Voice non viene premuto finché il worker audio non ha rilasciato il microfono.
 3. Se il telefono è bloccato, Jarvis accende lo schermo e mostra la cover J.A.R.V.I.S. sopra la schermata di blocco, senza richiedere automaticamente impronta/PIN.
 4. Quando l'attività è ripresa e ha il focus, apre la propria attività WebView, anch'essa abilitata a restare visibile sopra il blocco. Il telefono resta bloccato: lo sblocco non è più un prerequisito per il ciclo Voice. Il comando **Sblocca telefono** rimane disponibile come azione facoltativa.
-5. Il WebView carica una nuova chat normale da `https://chatgpt.com/`. Dopo una ricreazione prima del tocco ripristina la navigazione salvata, oppure carica la pagina se il ripristino non è disponibile.
+5. Il WebView carica l'URL del progetto JarvisRuntime. Dopo una ricreazione prima del tocco ripristina la navigazione salvata, oppure carica l'URL del progetto se il ripristino non è disponibile. La nuova chat per ogni sessione resta da verificare.
 6. Il DOM individua il controllo Voice; due letture consecutive ne verificano la posizione. Una sola sequenza touch nativa DOWN/UP attiva il blocco contro ulteriori tocchi, condiviso dall'intero ciclo.
 7. Dopo il tocco, Voice viene considerata attiva e le note della cover scompaiono, come richiesto. Le osservazioni successive servono per il saluto e per riconoscere la chiusura; non autorizzano altre pressioni Voice.
 8. X, Indietro o schermo spento invalidano il ciclo prima di rimuovere finestre e WebView. Le callback precedenti non possono riaprire ChatGPT. Il servizio di ascolto già avviato riprende dopo il rilascio del WebView.
 
 Il coordinatore applica scadenze indipendenti dal WebView e dall'accessibilità: 45 secondi perché la schermata Jarvis sia pronta e 40 secondi per caricamento/ricerca del controllo Voice. Un caricamento che non termina non può più saltare il timeout. Errori della pagina principale e arresto del processo WebView chiudono il ciclo e lasciano una diagnosi nella schermata principale.
+
+Mentre la schermata principale ha avviato l'ascolto, la 0.5.30 carica lo stesso progetto in un WebView invisibile e osserva il DOM senza premere Voice. Alla wake il preloader viene distrutto e la sessione effettiva crea un altro WebView. Perciò la pagina pronta e la posizione trovata non sono riutilizzate; non è stato misurato un vantaggio di latenza sul dispositivo.
 
 Una ricreazione Android **dopo** il tocco Voice chiude il ciclo: lo stato audio vivo di una pagina non si ripristina tramite la cronologia WebView. Non viene mai premuto Voice una seconda volta per tentare di ricostruirlo. Dopo la morte del processo, intent appartenenti al ciclo precedente vengono rifiutati.
 
@@ -90,6 +92,6 @@ bash gradlew --no-daemon testDebugUnitTest lintDebug assembleDebug
 
 Vedere `VERIFICATION.md` per ciò che è stato verificato staticamente e ciò che richiede la prova sul Galaxy S24+.
 
-La CI usa `scripts/package-apk.py` per nominare l'APK secondo `output-metadata.json`, evitando versioni obsolete nel nome. Gli artefatti APK sono output di build; sorgenti, wrapper Gradle, script, test, licenze e documentazione sono versionati. Il modello Vosk viene preparato dallo script con checksum fissato.
+Gli artefatti APK sono output di build e non vengono committati. Sorgenti, wrapper Gradle, script, test, licenze e documentazione sono versionati. Il modello Vosk viene preparato dallo script con checksum fissato. Per questo progetto la build e la firma richieste dall'utente si eseguono localmente, senza GitHub Actions.
 
-La firma debug generata su un runner CI non è automaticamente quella dell'APK installato sul telefono. Per aggiornamenti installabili sopra la stessa app serve lo stesso certificato; le chiavi di firma restano esterne al repository.
+Per aggiornare l'app installata serve il certificato permanente. Il backup del keystore è conservato cifrato nel branch `signing-handoff-2026-10-19`; non inserire mai passphrase o keystore in chiaro in Git. `scripts/firma-jarvis-0.5.30-termux.sh` è vincolato all'hash della build 0.5.30 ed è una procedura locale di recupero/firma quando il keystore è sul telefono.

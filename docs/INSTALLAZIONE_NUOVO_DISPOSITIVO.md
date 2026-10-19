@@ -1,48 +1,52 @@
-# JarvisWake — installazione pulita e configurazione di un nuovo dispositivo
+# JarvisWake 0.5.30 — installazione e collaudo
 
-Stato: guida operativa basata sul codice 0.5.26 e sul collaudo del 19 ottobre 2026 su Samsung Galaxy S24+ / Android 16. Su altri produttori o versioni Android nomi delle voci e disponibilità del ruolo assistente possono cambiare. Non equivale a certificazione su tutti i dispositivi.
+Guida basata sul codice 0.5.30 e sul dispositivo di riferimento Samsung Galaxy S24+ / Android 16. Non certifica tutti i modelli Android. Build e firma sono locali; questa procedura non usa GitHub Actions.
 
 ## Prima di iniziare
 
-- Usare un APK **ARM64** proveniente dagli artifact ufficiali del repository; verificare l'esito del workflow Android APK. La build selettiva parte con commit contenente `[build-apk]` oppure manualmente con `workflow_dispatch`.
-- Le build destinate agli aggiornamenti devono usare la **stessa chiave permanente** (`JARVIS_KEYSTORE_BASE64` e password `ANDRY` in GitHub Secrets); APK firmati con altre chiavi non aggiornano un'installazione esistente. Non condividere né versionare keystore, password o contenuti Base64.
-- Connessione Internet per ChatGPT Web e account ChatGPT valido; riconoscimento «Hey Jarvis» tramite Vosk offline. Non è garantita l'autenticazione tramite WebView su tutti i dispositivi.
-- Se il dispositivo ha già una versione installata con certificato diverso, l'aggiornamento viene rifiutato: non disinstallare senza aver valutato la perdita di sessione WebView e preferenze.
+- Scaricare l'APK ARM64 firmato con il certificato permanente e verificarlo tramite checksum indicato in `releases/0.5.30/SHA256SUMS`.
+- Per aggiornare un'installazione esistente, il certificato deve essere identico. Non disinstallare per aggirare un errore di firma senza valutare la perdita della sessione WebView e delle preferenze.
+- Serve Internet per ChatGPT Web e un account ChatGPT autenticato nel WebView dell'app. L'accesso nell'app ChatGPT nativa o nel browser esterno non condivide necessariamente la stessa sessione.
+- Il riconoscimento «Hey Jarvis» è locale tramite Vosk. Non è un'autenticazione del parlante.
 
-## Configurazione iniziale — ordine consigliato
+## Configurazione iniziale
 
-1. Installare l'APK estratto dallo ZIP di GitHub Actions; aprire **JarvisWake**.
-2. Concedere **Microfono** e **Notifiche** quando richiesti. Se negati: Impostazioni Android → Applicazioni → JarvisWake → Autorizzazioni. L'ascolto continuo richiede la notifica del servizio in primo piano.
-3. Consentire **Comparsa in primo piano / Visualizza sopra altre app**: pulsante «Consenti HUD sopra le altre app» nell'app oppure impostazioni speciali di accesso. Verificare che sia attivo.
-4. **Samsung / Android con restrizioni per APK esterni:** Impostazioni → Applicazioni → JarvisWake → menu ⋮ → **Consenti impostazioni con restrizioni** (nome variabile). Autorizzare soltanto se l'APK è attendibile. Se l'opzione non compare, non presumere che sia necessaria: controllare il passo seguente.
-5. Aprire Impostazioni → Accessibilità → Applicazioni installate → **JarvisWake: avvio Voice** e **attivare il servizio**. La scritta «Gestita tramite impostazioni con restrizioni» indica che prima occorre il passo 4. La sola autorizzazione a sovrapporsi alle altre app non sostituisce l'Accessibilità.
-6. In JarvisWake scegliere **Configura accesso a ChatGPT**. Accedere a `chatgpt.com` nel WebView dell'app, completare eventuali verifiche di account e assicurarsi che la sessione resti autenticata. Non è la stessa sessione del browser esterno o dell'app ChatGPT nativa.
-7. Premere **Imposta Jarvis come assistente del telefono** e selezionare JarvisWake. Questo **sostituisce l'assistente digitale precedente** per i richiami di sistema; è reversibile dalle impostazioni Android. Alcuni dispositivi non offrono il ruolo richiesto.
-8. Tornare nell'app e verificare che il servizio **Avvia ascolto Hey Jarvis** sia attivo. Se Android limita il servizio per batteria, esaminare le impostazioni batteria dell'app e le eventuali restrizioni di background del produttore; non disattivare indiscriminatamente tutte le protezioni. Il funzionamento dopo riavvio e prima del primo sblocco non è garantito.
-9. Nell'app principale scegliere **Copertura: opaca / semitrasparente** secondo preferenza; l'impostazione è persistente. La schermata di copertura J.A.R.V.I.S. non richiede controlli aggiuntivi.
+1. Installare l'APK e aprire **JarvisWake**.
+2. Concedere **Microfono** e **Notifiche**. L'ascolto continuo richiede la notifica del servizio in primo piano.
+3. Consentire la sovrapposizione HUD tramite «Consenti HUD sopra le altre app».
+4. Su Samsung, se Accessibilità è bloccata dalle restrizioni APK esterno, aprire Impostazioni → Applicazioni → JarvisWake → menu ⋮ → **Consenti impostazioni con restrizioni**. Il nome può variare; autorizzare solo se si considera attendibile l'APK.
+5. Aprire Impostazioni → Accessibilità → Applicazioni installate → **JarvisWake: avvio Voice** e attivare il servizio.
+6. In JarvisWake scegliere **Configura accesso a ChatGPT** e autenticarsi nel WebView.
+7. Premere **Imposta Jarvis come assistente del telefono** e selezionare JarvisWake. Questo sostituisce l'assistente corrente per i richiami di sistema ed è reversibile dalle impostazioni Assistente digitale.
+8. Tornare all'app e verificare che «Avvia ascolto Hey Jarvis» sia attivo. Esaminare le impostazioni batteria Android/One UI solo se il sistema arresta il servizio. Non è garantito l'avvio dopo riavvio o prima del primo sblocco.
+9. Scegliere la copertura opaca o semitrasparente dall'app. La preferenza resta memorizzata.
 
-## Collaudo dopo installazione
+## Prove consigliate
 
-1. A telefono **sbloccato**, provare «Avvia ciclo completo: ChatGPT Voice» e verificare caricamento WebView, accesso ChatGPT, autorizzazione del microfono Web, apertura Voice, invio singolo «ciao jarvis» e risposta vocale.
-2. Bloccare il telefono, pronunciare **«Hey Jarvis»** senza toccare lo schermo: la copertura deve restare visibile sopra il blocco e la conversazione partire **senza richiesta automatica di impronta/PIN**. Il pulsante «Sblocca telefono» è facoltativo.
-3. Provare X/Indietro e un nuovo spegnimento schermo: il ciclo deve chiudersi e l'ascolto riprendere; nessuna seconda pressione automatica su Voice.
-4. Verificare il passaggio opaco/semitrasparente nell'**app principale**, non nella copertura.
-5. Usare «Esporta diagnostica» nell'app principale per salvare un archivio ZIP di eventi locali. Verificare che il file venga creato e che non contenga audio, conversazioni, cookie o credenziali. Non considerare il logging collaudato su altri dispositivi senza una prova specifica.
+1. Da telefono sbloccato, premere **Avvia ciclo completo: ChatGPT Voice**. Verificare apertura del progetto JarvisRuntime, un solo gesto Voice, saluto «ciao jarvis», ascolto e risposta vocale.
+2. Bloccare il telefono e pronunciare «Hey Jarvis» senza usare subito impronta/PIN. Verificare cover, Voice e risposta. Lo sblocco è facoltativo.
+3. Provare X e Indietro durante caricamento e conversazione; verificare che la sessione Voice/WebView si chiuda e Vosk riprenda.
+4. Durante una conversazione spegnere nuovamente lo schermo; verificare la chiusura del ciclo.
+5. Verificare che Voice non riceva tocchi ripetuti, che le note spariscano dopo l'attivazione e che la X resti raggiungibile.
+6. Esportare la diagnostica e controllare gli eventi di wake, pagina e controllo Voice. Il log non misura ancora la prima risposta audio udibile.
+7. Riavviare il telefono e verificare separatamente il ruolo assistente, l'ascolto wake e il pre-caricamento. Il preloader 0.5.30 parte quando la MainActivity avvia l'ascolto; non è dimostrato in ogni percorso di boot.
+
+La creazione automatica di una nuova conversazione per ogni sessione dentro JarvisRuntime e il beneficio del preloader devono ancora essere verificati. Il preloader osserva il controllo in un WebView invisibile, poi lo distrugge alla wake; il ciclo effettivo ne apre un altro.
 
 ## Diagnosi rapida
 
 | Sintomo | Controllo iniziale |
 | --- | --- |
-| Jarvis compare ma sparisce / Android chiede impronta | Controllare soprattutto **impostazioni con restrizioni** e **servizio Accessibilità attivo** dopo reinstallazione; poi permesso overlay. Non modificare il codice della copertura senza evidenza. |
-| «Gestita tramite impostazioni con restrizioni» | Abilitare l'accesso alle impostazioni con restrizioni dalla pagina informazioni app, quindi attivare il servizio Accessibilità. |
-| Nessuna risposta a «Hey Jarvis» | Controllare microfono, notifiche, servizio in primo piano, ruolo assistente e restrizioni batteria; verificare lo stato nell'app. |
-| WebView non accede a ChatGPT | Verificare login nel WebView e connettività; l'accesso nel browser esterno non è sufficiente. |
-| Voice non si apre / microfono negato | Verificare permesso microfono Android, autorizzazione WebView, servizio Accessibilità e assenza di altre app che trattengono il microfono. |
-| «App non installata» dopo «Aggiorna» | Confrontare certificati di firma APK installato e nuovo APK; controllare anche versionCode e compatibilità ABI/SDK. Una build GitHub riuscita non dimostra la compatibilità della firma. |
+| Jarvis compare ma sparisce o Android mostra solo la schermata di blocco | Verificare Accessibilità, permesso overlay, ruolo assistente e stato attività. Distinguere avvio da telefono già bloccato da un nuovo spegnimento schermo. |
+| Nessuna risposta a «Hey Jarvis» | Controllare Microfono, Notifiche, servizio in primo piano, ruolo assistente e restrizioni batteria; esportare i log. |
+| ChatGPT Web non è autenticato | Effettuare il login dal pulsante di configurazione dentro JarvisWake. |
+| Voice non si apre o il microfono è negato | Controllare permesso microfono Android, permesso WebView per host ChatGPT, Accessibilità e app che potrebbero occupare il microfono. |
+| «App non installata» durante l'aggiornamento | Verificare versione, ABI e certificato APK; non rimuovere l'app senza valutare la perdita di dati locali. |
+| La risposta non è udibile | Distinguere Voice attiva, traccia microfono live, saluto inviato e risposta audio; i log attuali non rilevano la prima voce udibile. |
 
-## Limiti di sicurezza e manutenzione
+## Privacy e limiti
 
-- L'avvio vocale sopra il blocco rende ChatGPT accessibile a chiunque pronunci la wake word: Vosk **non autentica il parlante**. Non equivale allo sblocco del dispositivo.
-- Dopo reinstallazione possono azzerarsi autorizzazioni, ruolo assistente, sessione WebView e preferenze. Ripetere questa checklist.
-- L'avvio dopo reboot, le differenze tra One UI e altri Android, il consumo batteria e la compatibilità ChatGPT Web richiedono prove sul dispositivo reale.
-- Questa guida descrive il comportamento e i passaggi noti, non garantisce che tutte le varianti Android mostrino gli stessi menu.
+- Chiunque pronunci la wake word può avviare Voice con l'account ChatGPT autenticato; Vosk non riconosce l'identità della persona.
+- Il puntino verde Android segnala l'accesso al microfono da parte del servizio di ascolto continuo. Non è implementato un trigger DSP a basso consumo.
+- Doze, permessi, chiamate, Bluetooth, process kill e One UI possono interrompere l'ascolto o Voice.
+- Pagina, login e controlli DOM di ChatGPT Web possono cambiare senza preavviso. Le prove DOM automatiche non sostituiscono il collaudo sul telefono.

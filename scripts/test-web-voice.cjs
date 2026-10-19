@@ -8,23 +8,39 @@ const submitGreetingScript = source.split('private val SUBMIT_GREETING_SCRIPT = 
 function element(label, {hidden = false, x = 340, y = 740, text = ''} = {}) {
   return {innerText: text, value: '', disabled: false, hidden,
     getAttribute: name => name === 'aria-label' ? label : null,
+    querySelectorAll:() => [], contains:other => other === this,
     getBoundingClientRect: () => ({left:x, top:y, right:x+40, bottom:y+40, width:40, height:40})};
 }
-function page({controls = [], headings = [], composer = null, gum = async () => ({getAudioTracks: () => []})} = {}) {
+function page({controls = [], headings = [], composer = null, locked = false,
+    gum = async () => ({getAudioTracks: () => []})} = {}) {
+  const body = {innerText:''};
   const context = vm.createContext({window: {}, navigator:{mediaDevices:{getUserMedia:gum}},
     innerWidth:400, innerHeight:800, getComputedStyle:e => ({visibility:e.hidden?'hidden':'visible',display:'block',opacity:'1'}),
-    document:{body:{innerText:''}, querySelectorAll:query => query.startsWith('h1') ? headings :
-      query.startsWith('textarea') ? (composer ? [composer] : []) : controls}});
-  return {context, inspect: () => { const value = vm.runInContext(script, context); return value ? JSON.parse(value) : null; }};
+    document:{body, getElementById:() => null, elementFromPoint:(x,y) =>
+      controls.find(e => {const r=e.getBoundingClientRect();return x>=r.left&&x<=r.right&&y>=r.top&&y<=r.bottom;}) || null,
+      querySelectorAll:query => query.startsWith('h1') ? headings :
+        query.startsWith('textarea') ? (composer ? [composer] : []) :
+        query.startsWith('button') ? controls : []}});
+  const runScript = script.replace('__JARVIS_LOCKED__', String(locked));
+  return {context, inspect: () => { const value = vm.runInContext(runScript, context); return value ? JSON.parse(value) : null; }};
 }
 (async () => {
   const start = element('Start voice mode');
   assert.equal(page({controls:[start]}).inspect().strategy, 'semantic');
+  const topVoice = element('Start voice mode', {x:340,y:100});
+  const bottomVoice = element('Voice', {x:340,y:740});
+  assert.equal(page({controls:[topVoice,bottomVoice],locked:true}).inspect().y, 760,
+    'When keyguard is showing, search at the bottom first');
+  assert.equal(page({controls:[topVoice,bottomVoice]}).inspect().y, 120,
+    'When unlocked, the strongest semantic label wins');
   assert.equal(page({controls:[element('Close voice')]}).inspect().state, 'active');
   assert.equal(page({headings:[element('Voice mode',{hidden:true})]}).inspect(), null);
   assert.equal(page({controls:[element('')]}).inspect(), null, 'No composer: no geometric start');
   assert.equal(page({controls:[element('Microphone')],composer:element('')}).inspect(), null);
-  assert.equal(page({controls:[element('')],composer:element('')}).inspect().strategy, 'geometric');
+  const scope = {parentElement:null, contains:() => true,
+    getBoundingClientRect:() => ({left:0,top:680,right:400,bottom:790,width:400,height:110})};
+  const composer = Object.assign(element('',{x:20,y:710}), {parentElement:scope});
+  assert.equal(page({controls:[element('')],composer}).inspect().strategy, 'composer');
   assert.equal(page({controls:[element('')],composer:element('',{text:'Draft'})}).inspect(), null);
   let release;
   const track = {readyState:'live'};
