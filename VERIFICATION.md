@@ -1,5 +1,16 @@
 # Registro verifiche — JarvisWake
 
+## 0.5.32 — preloader dietro l’interfaccia e APK firmato
+
+Build locale eseguita il 19 ottobre 2026 con JDK 17, Gradle 8.13 e Android SDK/Build Tools 36.0.0. Build/test senza GitHub Actions.
+
+- Correzione: `ChatGptPreloader` aggiunge la WebView a schermo intero come figlio 0 del `FrameLayout`; lo `ScrollView` principale resta sopra e riceve i tocchi. L’opacità zero da sola non impediva alla WebView di interferire con il touch dispatch.
+- `testDebugUnitTest lintDebug assembleDebug`: BUILD SUCCESSFUL; 25 test JVM superati. `node scripts/test-web-voice.cjs`: superato.
+- APK: `it.jarviswake`, versionName `0.5.32`, versionCode `54`, minSdk `31`, target/compile SDK `36`, ABI `arm64-v8a`.
+- APK firmato: `JarvisWake-0.5.32-debug-arm64-permanent.apk`; SHA-256 `d381bcc76be2e10a5d2731395908cc7a4a0b123417191f888ba2e2fd90ec914b`.
+- Certificato permanente SHA-256 `a8ddfbe2b78be5460e72df57afbc3434411e3cc27328b13bc16b4daaba13389a`, verificato. Schema v3 verificato per API 31+. `zipalign -c -P 16 -v 4` e `unzip -t` superati; APK ARM64 e versione verificati con `aapt dump badging`.
+- Il test sul telefono deve confermare che i pulsanti restino interattivi mentre il preloader carica; la build non certifica touch, Voice, rete o risposta audio su One UI.
+
 ## 0.5.31 — build locale e firma
 
 Build eseguita il 19 ottobre 2026 con JDK 17, Gradle 8.13, Android SDK 36 e Build Tools 36.0.0. Non è stata usata GitHub Actions.

@@ -1,4 +1,4 @@
-# JarvisWake 0.5.31 — assistente Android e ChatGPT Voice
+# JarvisWake 0.5.32 — assistente Android e ChatGPT Voice
 
 App Kotlin per Android 12–16 (minSdk 31, targetSdk 36), APK ARM64 destinato alla prova su Samsung Galaxy S24+ Android 16.
 
@@ -42,7 +42,7 @@ La dichiarazione Android del servizio assistente include la sessione, il servizi
 
 Il coordinatore applica scadenze indipendenti dal WebView e dall'accessibilità: 45 secondi perché la schermata Jarvis sia pronta e 40 secondi per caricamento/ricerca del controllo Voice. Un caricamento che non termina non può più saltare il timeout. Errori della pagina principale e arresto del processo WebView chiudono il ciclo e lasciano una diagnosi nella schermata principale.
 
-Mentre la schermata principale ha avviato l'ascolto, la 0.5.31 carica il progetto in un WebView invisibile e osserva il DOM senza premere Voice. Alla wake trasferisce il medesimo WebView alla schermata Voice, evitando una seconda creazione e un nuovo caricamento della pagina. L'eventuale posizione DOM osservata prima della wake viene usata solo come indizio: le coordinate vengono scalate al WebView corrente e confrontate con una nuova osservazione DOM prima del gesto unico. Il vantaggio reale di latenza e la disponibilità della sessione ChatGPT vanno verificati sul Galaxy.
+Mentre la schermata principale ha avviato l'ascolto, la 0.5.32 carica il progetto in un WebView invisibile e osserva il DOM senza premere Voice. Il preloader resta dietro la schermata interattiva, così non intercetta i tocchi dei pulsanti. Alla wake trasferisce il medesimo WebView alla schermata Voice, evitando una seconda creazione e un nuovo caricamento della pagina. L'eventuale posizione DOM osservata prima della wake viene usata solo come indizio: le coordinate vengono scalate al WebView corrente e confrontate con una nuova osservazione DOM prima del gesto unico. Il vantaggio reale di latenza e la disponibilità della sessione ChatGPT vanno verificati sul Galaxy.
 
 Se il display si spegne durante l'ascolto Vosk, la cattura microfono viene fermata e il servizio riprende all'evento di accensione dello schermo, senza attendere lo sblocco. Nello stesso evento richiede subito il preloader alla `MainActivity` già esistente; non avvia una schermata nascosta dal background. Se l'attività non esiste (per esempio dopo un cold start), il microfono riprende comunque ma il preloader resta in attesa che Jarvis venga aperto. Se lo schermo si spegne durante un ciclo ChatGPT, il ciclo viene annullato come prima.
 

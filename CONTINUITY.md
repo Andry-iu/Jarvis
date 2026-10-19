@@ -1,14 +1,14 @@
 # JarvisWake — continuità di sviluppo
 
-Aggiornato il 19 ottobre 2026 per la release 0.5.31. Questo documento descrive lo stato del codice; `VERIFICATION.md` registra prove e limiti, `docs/ROADMAP.md` separa attività aperte e implementate.
+Aggiornato il 19 ottobre 2026 per la release 0.5.32. Questo documento descrive lo stato del codice; `VERIFICATION.md` registra prove e limiti, `docs/ROADMAP.md` separa attività aperte e implementate.
 
 ## Stato attuale
 
-- Versione sorgenti: **0.5.31**, versionCode **53**. Pacchetto `it.jarviswake`, minSdk 31, compile/target SDK 36, Build Tools 36.0.0, Gradle Wrapper 8.13, JDK 17, ABI `arm64-v8a`.
+- Versione sorgenti: **0.5.32**, versionCode **54**. Pacchetto `it.jarviswake`, minSdk 31, compile/target SDK 36, Build Tools 36.0.0, Gradle Wrapper 8.13, JDK 17, ABI `arm64-v8a`.
 - Repository di riferimento: `https://github.com/Andry-iu/Jarvis`, branch `main`. Usare sempre il `main` remoto più recente come baseline; non assumere che la 0.5.30 sia ancora HEAD.
 - Il codice si collega al progetto ChatGPT JarvisRuntime all'URL `https://chatgpt.com/g/g-p-6ad5d9f2d9f48191a7c4860050aa43cc-jarvisruntime/project`.
-- La 0.5.31 introduce il riuso del WebView precaricato, sospensione microfono a schermo spento, riattivazione/pre-caricamento a schermo acceso e diagnostica correlata. Build, test e firma permanente verificati localmente sono in `VERIFICATION.md` e `releases/0.5.31/SHA256SUMS`.
-- Dispositivo di riferimento: Samsung Galaxy S24+ (SM-S926B), Android 16 / One UI. La prova su dispositivo della 0.5.31 resta necessaria; non dedurre il successo sul telefono dai test DOM o dalla compilazione.
+- La 0.5.32 corregge il blocco dei controlli della schermata principale inserendo il WebView del preloader dietro l’interfaccia. Mantiene il riuso introdotto nella 0.5.31. Build, test e firma permanente verificati localmente sono in `VERIFICATION.md` e `releases/0.5.32/SHA256SUMS`.
+- Dispositivo di riferimento: Samsung Galaxy S24+ (SM-S926B), Android 16 / One UI. La correzione .32 richiede ancora conferma sul dispositivo; non dedurre il successo sul telefono dai test DOM o dalla compilazione.
 - Feedback storico: l'utente aveva confermato che la schermata di blocco funzionava dopo una correzione precedente; in altre prove aveva segnalato assenza della risposta vocale. Questi riscontri non certificano l'APK 0.5.30.
 
 ## Requisiti e decisioni consolidate
@@ -36,6 +36,7 @@ Aggiornato il 19 ottobre 2026 per la release 0.5.31. Questo documento descrive l
 | 0.5.29 | 51 | APK firmato conservato nella Library; sorgenti non trovati nei branch Git esaminati. Dal bytecode: con keyguard attivo ricerca prima in basso e poi in alto, con diagnostiche della strategia semantica/fallback. Anche questo è recupero dal bytecode, non una ricostruzione integrale della cronologia sorgente. |
 | 0.5.30 | 52 | Porta nel sorgente locale le modifiche osservabili in 0.5.28/0.5.29 e aggiunge il preloader descritto sotto. Test DOM, unit test, lint e build locali sono registrati in `VERIFICATION.md`. |
 | 0.5.31 | 53 | Riusa alla wake lo stesso WebView pre-caricato, richiede il preloader a schermo acceso se `MainActivity` esiste, sospende la cattura Vosk a display spento e la riprende anche con keyguard, aggiunge diagnostica correlata fino alla riproduzione osservata nei media HTML. Build e firma permanente verificate; test dispositivo ancora da eseguire. |
+| 0.5.32 | 54 | Aggiunge il WebView del preloader come primo figlio del `FrameLayout`, dietro la schermata principale interattiva. Evita che la WebView invisibile a schermo intero copra i pulsanti e intercetti i tocchi. Build, test, firma permanente e integrità APK verificate; conferma touch sul Galaxy ancora richiesta. |
 
 I dettagli non deducibili dai bytecode .28/.29 non vanno inventati. Se emergono APK o sorgenti più completi, confrontarli con il codice consolidato prima di sostituire implementazioni.
 
@@ -51,7 +52,7 @@ I dettagli non deducibili dai bytecode .28/.29 non vanno inventati. Se emergono 
 
 ## Pre-caricamento: comportamento effettivo e limite
 
-La 0.5.31 crea dalla `MainActivity` un WebView invisibile mentre il servizio di ascolto è attivo, carica il progetto JarvisRuntime e cerca il controllo Voice nel DOM senza toccarlo. Interroga il controllo per un massimo di circa 30 secondi (prima ogni 250 ms, poi ogni secondo). Alla wake `WebChatActivity` stacca e riutilizza lo stesso WebView; se il caricamento non è terminato, continua ad attenderlo senza aprire una seconda pagina. La diagnostica registra `WEB_PRELOAD_REUSED`, `WEB_PRELOAD_VOICE_SEEDED` e `WEB_PAGE_READY` con l'ID del ciclo.
+La 0.5.31 crea dalla `MainActivity` un WebView invisibile mentre il servizio di ascolto è attivo. La 0.5.32 lo aggiunge dietro la schermata principale per preservarne i tocchi. Carica il progetto JarvisRuntime e cerca il controllo Voice nel DOM senza toccarlo. Interroga il controllo per un massimo di circa 30 secondi (prima ogni 250 ms, poi ogni secondo). Alla wake `WebChatActivity` stacca e riutilizza lo stesso WebView; se il caricamento non è terminato, continua ad attenderlo senza aprire una seconda pagina. La diagnostica registra `WEB_PRELOAD_REUSED`, `WEB_PRELOAD_VOICE_SEEDED` e `WEB_PAGE_READY` con l'ID del ciclo.
 
 Il punto DOM precaricato viene scalato alle dimensioni correnti del WebView e usato solo per inizializzare il controllo di stabilità. Una lettura DOM fresca deve ancora corrispondere entro 8 px e la successiva osservazione stabile autorizza l'unico DOWN/UP. Non sono usate coordinate assolute e il seed non può da solo provocare il tocco. Se il WebView non può essere staccato, viene distrutto in sicurezza e la schermata attiva ne crea uno nuovo.
 

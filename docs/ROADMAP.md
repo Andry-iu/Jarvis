@@ -1,6 +1,10 @@
 # Roadmap — JarvisWake
 
-Stato sorgenti 0.5.31, versionCode 53. Il codice è distinto dal collaudo su Samsung Galaxy S24+ Android 16 / One UI.
+Stato sorgenti 0.5.32, versionCode 54. Il codice è distinto dal collaudo su Samsung Galaxy S24+ Android 16 / One UI.
+
+## Implementato nella 0.5.32
+
+- Corretto l’ordine dei figli nel `FrameLayout` della schermata principale: il WebView a schermo intero del preloader viene inserito dietro lo `ScrollView`, evitando che un livello invisibile intercetti i tocchi dei pulsanti. Il WebView resta attaccato e pronto al successivo handoff. Test touch sul dispositivo fisico ancora da eseguire.
 
 ## Implementato nella 0.5.31
 

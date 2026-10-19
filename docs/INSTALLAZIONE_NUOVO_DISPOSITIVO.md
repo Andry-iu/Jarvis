@@ -1,10 +1,10 @@
-# JarvisWake 0.5.31 — installazione e collaudo
+# JarvisWake 0.5.32 — installazione e collaudo
 
-Guida basata sul codice 0.5.31 e sul dispositivo di riferimento Samsung Galaxy S24+ / Android 16. Non certifica tutti i modelli Android. Build e firma sono locali; questa procedura non usa GitHub Actions.
+Guida basata sul codice 0.5.32 e sul dispositivo di riferimento Samsung Galaxy S24+ / Android 16. Non certifica tutti i modelli Android. Build e firma sono locali; questa procedura non usa GitHub Actions.
 
 ## Prima di iniziare
 
-- Scaricare l'APK ARM64 firmato con il certificato permanente e verificarlo tramite checksum indicato in `releases/0.5.31/SHA256SUMS`.
+- Scaricare l'APK ARM64 firmato con il certificato permanente e verificarlo tramite checksum indicato in `releases/0.5.32/SHA256SUMS`.
 - Per aggiornare un'installazione esistente, il certificato deve essere identico. Non disinstallare per aggirare un errore di firma senza valutare la perdita della sessione WebView e delle preferenze.
 - Serve Internet per ChatGPT Web e un account ChatGPT autenticato nel WebView dell'app. L'accesso nell'app ChatGPT nativa o nel browser esterno non condivide necessariamente la stessa sessione.
 - Il riconoscimento «Hey Jarvis» è locale tramite Vosk. Non è un'autenticazione del parlante.
@@ -31,7 +31,7 @@ Guida basata sul codice 0.5.31 e sul dispositivo di riferimento Samsung Galaxy S
 6. Esportare la diagnostica e correlare cattura, wake, rilascio, pagina, controllo Voice, gesto, traccia microfono e `VOICE_MEDIA_PLAYING`. Quest'ultimo segnala media HTML in riproduzione, non garantisce che l'audio sia stato sentito.
 7. Riaccendere lo schermo mentre Jarvis è già in memoria e verificare che il preloader parta subito anche con keyguard. Dopo un riavvio/cold start senza `MainActivity`, il preloader può attendere l'apertura dell'app a causa dei limiti Android agli avvii Activity in background.
 
-La creazione automatica di una nuova conversazione per ogni sessione dentro JarvisRuntime e il beneficio effettivo del preloader devono ancora essere verificati. La 0.5.31 trasferisce il medesimo WebView invisibile alla sessione Voice; la posizione DOM precaricata è solo un seed e viene verificata live prima del gesto.
+La creazione automatica di una nuova conversazione per ogni sessione dentro JarvisRuntime e il beneficio effettivo del preloader devono ancora essere verificati. La 0.5.32 trasferisce alla sessione Voice il medesimo WebView invisibile, mantenuto dietro i pulsanti della schermata principale; la posizione DOM precaricata è solo un seed e viene verificata live prima del gesto.
 
 ## Diagnosi rapida
 

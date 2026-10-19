@@ -120,7 +120,10 @@ internal object ChatGptPreloader {
         try {
             CookieManager.getInstance().setAcceptCookie(true)
             CookieManager.getInstance().setAcceptThirdPartyCookies(view, true)
-            container.addView(view, FrameLayout.LayoutParams(-1, -1))
+            // Keep the live preloader attached, but behind the interactive app UI.
+            // An alpha-zero full-screen WebView added last can still participate in
+            // touch dispatch and make every control in MainActivity appear frozen.
+            container.addView(view, 0, FrameLayout.LayoutParams(-1, -1))
             DiagnosticLog.record(context, DiagnosticLog.Event.WEB_PRELOAD_STARTED)
             view.loadUrl(PROJECT_URL)
         } catch (_: RuntimeException) {
