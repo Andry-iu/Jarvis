@@ -58,7 +58,7 @@ class VoiceAccessibilityService : AccessibilityService() {
     private val poll = object : Runnable {
         override fun run() {
             processAutomation()
-            if (currentToken() != null) main.postDelayed(this, 50L)
+            if (currentToken() != null) main.postDelayed(this, 100L)
         }
     }
 
