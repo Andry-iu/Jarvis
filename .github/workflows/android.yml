@@ -27,7 +27,19 @@ jobs:
         run: sdkmanager 'platforms;android-36' 'build-tools;36.0.0'
       - name: Prepare verified offline model
         run: bash scripts/prepare-model.sh
+      - name: Restore persistent signing key
+        env:
+          KEYSTORE_BASE64: ${{ secrets.JARVIS_KEYSTORE_BASE64 }}
+          SIGNING_PASSWORD: ${{ secrets.ANDRY }}
+        run: |
+          test -n "$KEYSTORE_BASE64" || { echo "::error::Missing JARVIS_KEYSTORE_BASE64 secret"; exit 1; }
+          test -n "$SIGNING_PASSWORD" || { echo "::error::Missing ANDRY secret"; exit 1; }
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/jarvis-signing.jks"
+          keytool -list -keystore "$RUNNER_TEMP/jarvis-signing.jks" -storepass "$SIGNING_PASSWORD" -alias jarvis >/dev/null
+          echo "JARVIS_KEYSTORE_PATH=$RUNNER_TEMP/jarvis-signing.jks" >> "$GITHUB_ENV"
       - name: Build, test and lint
+        env:
+          JARVIS_SIGNING_PASSWORD: ${{ secrets.ANDRY }}
         run: bash gradlew --no-daemon testDebugUnitTest lintDebug assembleDebug
       - name: Verify APK signature and 16 KB ZIP alignment
         id: apk
