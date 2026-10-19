@@ -1,0 +1,10 @@
+JarvisWake 0.1.0
+Original application code licensed under Apache License 2.0.
+
+Bundled third-party components:
+- Vosk API 0.3.75, Alpha Cephei, Apache-2.0: https://github.com/alphacep/vosk-api
+- vosk-model-small-en-us-0.15, Alpha Cephei, Apache-2.0: https://alphacephei.com/vosk/models
+- JNA 5.18.1, LGPL-2.1-or-later OR Apache-2.0; used under Apache-2.0: https://github.com/java-native-access/jna
+- Kotlin standard library, JetBrains, Apache-2.0: https://github.com/JetBrains/kotlin
+The APK includes a copy of this notice and the Apache-2.0 license in assets.
+The model is downloaded only at build time by scripts/prepare-model.sh.

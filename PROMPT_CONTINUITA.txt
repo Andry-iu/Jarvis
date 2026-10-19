@@ -1,0 +1,9 @@
+Riprendiamo JarvisWake dalla base applicativa 0.5.26 (versionCode 48).
+
+Leggi prima AGENTS.md, README.md, CONTINUITY.md, VERIFICATION.md e docs/ROADMAP.md, poi analizza i sorgenti attuali e lo stato Git. Mantieni separati requisiti approvati, funzioni implementate, riscontro dell'utente e prove ancora necessarie.
+
+Preserva: wake offline Hey Jarvis, avvio manuale, sessione ChatGPT dell'account, avvio Voice anche da telefono già bloccato, HUD J.A.R.V.I.S. con versione e note, fondo opaco predefinito e selezione semitrasparente memorizzata, X disponibile. Dopo un solo gesto Voice considerala attiva e non ripetere tocchi. Nascondi le note dopo l'attivazione. X, Indietro o un nuovo spegnimento schermo devono invalidare il ciclo, chiudere Voice/WebView e riprendere Vosk. Saluto esatto: ciao jarvis, inviato una sola volta quando i controlli sono pronti. Non reintrodurre l'attesa obbligatoria dell'impronta o ritardi arbitrari.
+
+Per la prossima versione sono approvati logging locale senza audio/trascrizioni, rotazione file ed esportazione manuale; continuità mediante identificativo della conversazione dedicata, senza scegliere l'ultima chat generica. L'utente ha creato il progetto ChatGPT JarvisRuntime con memoria Solo progetto e inserito le istruzioni. Queste funzioni non sono ancora implementate nella 0.5.26; verifica URL/ID reali e supporto del percorso web prima di integrarle. Non inventare identificativi, soglie di rotazione o un testo delle istruzioni del progetto non disponibile nei file.
+
+Prima di formulare nuove ipotesi tecniche confronta il codice con più fonti primarie pertinenti. Non confondere build/test locali superati con una prova sul dispositivo. Aggiorna documentazione e continuità insieme alle modifiche. Quando il remoto è accessibile, conserva la sua cronologia e verifica il commit pubblicato; non sostituirla con questo snapshot tramite force-push.

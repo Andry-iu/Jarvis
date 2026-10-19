@@ -1,0 +1,9 @@
+/.gradle/
+/.kotlin/
+/local.properties
+/**/build/
+/app/src/main/assets/model/
+*.jks
+*.keystore
+/JarvisWake-*-debug-arm64.apk
+/JarvisWake-*-debug-arm64.apk.sha256
