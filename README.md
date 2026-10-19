@@ -1,4 +1,4 @@
-# JarvisWake 0.5.30 — assistente Android e ChatGPT Voice
+# JarvisWake 0.5.31 — assistente Android e ChatGPT Voice
 
 App Kotlin per Android 12–16 (minSdk 31, targetSdk 36), APK ARM64 destinato alla prova su Samsung Galaxy S24+ Android 16.
 
@@ -7,7 +7,7 @@ App Kotlin per Android 12–16 (minSdk 31, targetSdk 36), APK ARM64 destinato al
 - [docs/INSTALLAZIONE_NUOVO_DISPOSITIVO.md](docs/INSTALLAZIONE_NUOVO_DISPOSITIVO.md): checklist completa per installazione pulita, permessi Android, Accessibilità, assistente, firma APK e collaudo su telefono bloccato.
 - [CONTINUITY.md](CONTINUITY.md): stato del progetto, requisiti consolidati e indicazioni per riprendere il lavoro.
 - [PROMPT_CONTINUITA.txt](PROMPT_CONTINUITA.txt): istruzione pronta per una nuova conversazione di sviluppo.
-- [docs/ROADMAP.md](docs/ROADMAP.md): logging e integrazione JarvisRuntime approvati, ancora da implementare.
+- [docs/ROADMAP.md](docs/ROADMAP.md): comportamento implementato e verifiche ancora aperte.
 - [VERIFICATION.md](VERIFICATION.md): verifiche eseguite e limiti delle prove.
 - [AGENTS.md](AGENTS.md): istruzioni operative per chi modifica i sorgenti.
 
@@ -32,7 +32,7 @@ La dichiarazione Android del servizio assistente include la sessione, il servizi
 ## Flusso automatico
 
 1. La wake word o **Avvia ciclo completo: ChatGPT Voice** creano un solo ciclo identificato. Un secondo avvio durante il ciclo viene ignorato.
-2. Vosk interrompe la cattura. Il controllo Voice non viene premuto finché il worker audio non ha rilasciato il microfono.
+2. A schermo spento il servizio rilascia la cattura Vosk; a ogni accensione dello schermo la riavvia anche se il keyguard è ancora visibile. Alla wake Vosk interrompe la cattura e il controllo Voice non viene premuto finché il worker audio non ha rilasciato il microfono.
 3. Se il telefono è bloccato, Jarvis accende lo schermo e mostra la cover J.A.R.V.I.S. sopra la schermata di blocco, senza richiedere automaticamente impronta/PIN.
 4. Quando l'attività è ripresa e ha il focus, apre la propria attività WebView, anch'essa abilitata a restare visibile sopra il blocco. Il telefono resta bloccato: lo sblocco non è più un prerequisito per il ciclo Voice. Il comando **Sblocca telefono** rimane disponibile come azione facoltativa.
 5. Il WebView carica l'URL del progetto JarvisRuntime. Dopo una ricreazione prima del tocco ripristina la navigazione salvata, oppure carica l'URL del progetto se il ripristino non è disponibile. La nuova chat per ogni sessione resta da verificare.
@@ -42,7 +42,13 @@ La dichiarazione Android del servizio assistente include la sessione, il servizi
 
 Il coordinatore applica scadenze indipendenti dal WebView e dall'accessibilità: 45 secondi perché la schermata Jarvis sia pronta e 40 secondi per caricamento/ricerca del controllo Voice. Un caricamento che non termina non può più saltare il timeout. Errori della pagina principale e arresto del processo WebView chiudono il ciclo e lasciano una diagnosi nella schermata principale.
 
-Mentre la schermata principale ha avviato l'ascolto, la 0.5.30 carica lo stesso progetto in un WebView invisibile e osserva il DOM senza premere Voice. Alla wake il preloader viene distrutto e la sessione effettiva crea un altro WebView. Perciò la pagina pronta e la posizione trovata non sono riutilizzate; non è stato misurato un vantaggio di latenza sul dispositivo.
+Mentre la schermata principale ha avviato l'ascolto, la 0.5.31 carica il progetto in un WebView invisibile e osserva il DOM senza premere Voice. Alla wake trasferisce il medesimo WebView alla schermata Voice, evitando una seconda creazione e un nuovo caricamento della pagina. L'eventuale posizione DOM osservata prima della wake viene usata solo come indizio: le coordinate vengono scalate al WebView corrente e confrontate con una nuova osservazione DOM prima del gesto unico. Il vantaggio reale di latenza e la disponibilità della sessione ChatGPT vanno verificati sul Galaxy.
+
+Se il display si spegne durante l'ascolto Vosk, la cattura microfono viene fermata e il servizio riprende all'evento di accensione dello schermo, senza attendere lo sblocco. Nello stesso evento richiede subito il preloader alla `MainActivity` già esistente; non avvia una schermata nascosta dal background. Se l'attività non esiste (per esempio dopo un cold start), il microfono riprende comunque ma il preloader resta in attesa che Jarvis venga aperto. Se lo schermo si spegne durante un ciclo ChatGPT, il ciclo viene annullato come prima.
+
+Android invia `ACTION_SCREEN_ON` quando cambia lo stato interattivo del dispositivo ([riferimento API](https://developer.android.com/reference/android/content/Intent#ACTION_SCREEN_ON)); gli avvii di Activity dal background sono soggetti a restrizioni ([documentazione Android](https://developer.android.com/guide/components/activities/secure-bal)).
+
+La diagnostica associa cattura, wake, rilascio del microfono, ciclo, riuso del preloader, controllo Voice, gesto, traccia microfono della pagina e riproduzione rilevata nei tag media HTML. La riproduzione media rilevata non prova da sola che il primo parlato sia stato effettivamente udibile.
 
 Una ricreazione Android **dopo** il tocco Voice chiude il ciclo: lo stato audio vivo di una pagina non si ripristina tramite la cronologia WebView. Non viene mai premuto Voice una seconda volta per tentare di ricostruirlo. Dopo la morte del processo, intent appartenenti al ciclo precedente vengono rifiutati.
 

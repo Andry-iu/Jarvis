@@ -3,6 +3,7 @@
 Prima di modificare il progetto leggere `README.md`, `CONTINUITY.md` e `VERIFICATION.md`. `PROMPT_CONTINUITA.txt` è il testo breve per riprendere il lavoro in una nuova conversazione; `docs/ROADMAP.md` distingue le decisioni approvate dalle funzioni implementate.
 
 - Conservare i requisiti consolidati elencati in `CONTINUITY.md`; confrontare ogni modifica di comportamento con tali requisiti e con le nuove richieste dell'utente.
+- **Discussione prima dello sviluppo:** quando l'utente sta valutando o discutendo modifiche, non iniziare a cambiare codice, documenti o configurazioni. Raccogliere e chiarire prima l'intero ambito della prossima release; iniziare solo dopo un'autorizzazione esplicita dell'utente a implementare. Questa regola vale anche quando si lavora partendo da Git e va mantenuta nei documenti di continuità.
 - Un solo gesto Voice per ciclo. Dopo il gesto, nessuna ripetizione automatica, anche dopo ricreazione dell'attività o riconnessione dell'accessibilità.
 - Mantenere X disponibile e cancellazione del ciclo prima della chiusura del WebView. Distinguere avvio da telefono già bloccato da un nuovo spegnimento dello schermo, che chiude la conversazione.
 - Non sostituire implicitamente la sessione ChatGPT dell'account con API separate. Non usare l'ultima chat generica per implementare la futura continuità JarvisRuntime.
@@ -11,6 +12,7 @@ Prima di modificare il progetto leggere `README.md`, `CONTINUITY.md` e `VERIFICA
 - Non inserire in Git cookie, credenziali, chiavi di firma, audio, trascrizioni, cache o output di build. Il modello Vosk si prepara tramite lo script con checksum fissato.
 - Prima di ogni modifica, aggiornare i riferimenti remoti e partire da `main` allineato, completo e senza modifiche locali pendenti. Se il checkout non coincide con `origin/main`, riallinearlo in modo sicuro prima di intervenire.
 - Al rilascio di un APK firmato per il collaudo, committare e pubblicare direttamente su `main` sorgenti, test, documentazione e checksum della versione. Non serve chiedere un ulteriore «Consolida». Non committare l'APK né chiavi o credenziali.
+- L'autorizzazione all'implementazione segue la regola di discussione qui sopra; il rilascio e il push non anticipano mai la decisione di scope.
 - Se esiste una cronologia remota, recuperarla e integrare i cambiamenti conservandola. Nessun force-push per sostituirla con una copia ricavata da ZIP.
 
 ## Build, firma e consegna APK — regola operativa consolidata

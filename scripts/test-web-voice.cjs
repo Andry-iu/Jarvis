@@ -12,13 +12,14 @@ function element(label, {hidden = false, x = 340, y = 740, text = ''} = {}) {
     getBoundingClientRect: () => ({left:x, top:y, right:x+40, bottom:y+40, width:40, height:40})};
 }
 function page({controls = [], headings = [], composer = null, locked = false,
-    gum = async () => ({getAudioTracks: () => []})} = {}) {
+    audioElements = [], gum = async () => ({getAudioTracks: () => []})} = {}) {
   const body = {innerText:''};
   const context = vm.createContext({window: {}, navigator:{mediaDevices:{getUserMedia:gum}},
     innerWidth:400, innerHeight:800, getComputedStyle:e => ({visibility:e.hidden?'hidden':'visible',display:'block',opacity:'1'}),
     document:{body, getElementById:() => null, elementFromPoint:(x,y) =>
       controls.find(e => {const r=e.getBoundingClientRect();return x>=r.left&&x<=r.right&&y>=r.top&&y<=r.bottom;}) || null,
-      querySelectorAll:query => query.startsWith('h1') ? headings :
+      querySelectorAll:query => query === 'audio,video' ? audioElements :
+        query.startsWith('h1') ? headings :
         query.startsWith('textarea') ? (composer ? [composer] : []) :
         query.startsWith('button') ? controls : []}});
   const runScript = script.replace('__JARVIS_LOCKED__', String(locked));
@@ -34,6 +35,11 @@ function page({controls = [], headings = [], composer = null, locked = false,
   assert.equal(page({controls:[topVoice,bottomVoice]}).inspect().y, 120,
     'When unlocked, the strongest semantic label wins');
   assert.equal(page({controls:[element('Close voice')]}).inspect().state, 'active');
+  assert.equal(page({headings:[element('Voice mode')]}).inspect().outputPlaying, false,
+    'Active Voice alone does not claim audible output');
+  assert.equal(page({headings:[element('Voice mode')], audioElements:[{
+    paused:false, readyState:4, muted:false, volume:1
+  }]}).inspect().outputPlaying, true, 'Report only observable page media playback');
   assert.equal(page({headings:[element('Voice mode',{hidden:true})]}).inspect(), null);
   assert.equal(page({controls:[element('')]}).inspect(), null, 'No composer: no geometric start');
   assert.equal(page({controls:[element('Microphone')],composer:element('')}).inspect(), null);

@@ -18,6 +18,26 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 
 class MainActivity : Activity() {
+    companion object {
+        @Volatile private var instance = java.lang.ref.WeakReference<MainActivity>(null)
+
+        /** Uses an already-existing activity; never launches UI from the background. */
+        fun preloadForScreenOn(): Boolean {
+            val activity = instance.get() ?: return false
+            if (!WakeScreenPolicy.shouldPreloadForScreenOn(
+                    mainActivityAvailable = true, voiceCycleActive = VoiceCycle.active))
+                return false
+            activity.handler.post {
+                if (!activity.isFinishing && !activity.isDestroyed &&
+                    WakeScreenPolicy.shouldPreloadForScreenOn(true, VoiceCycle.active) &&
+                    activity::contentRoot.isInitialized) {
+                    activity.prepareChatGpt()
+                }
+            }
+            return true
+        }
+    }
+
     private val assistantPermissionRequest = 2
     private val assistantRoleRequest = 3
     private val diagnosticsExportRequest = 4
@@ -35,6 +55,7 @@ class MainActivity : Activity() {
     }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        instance = java.lang.ref.WeakReference(this)
         JarvisRecognitionService.rememberSystemRecognizer(this)
         val layout = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL; setPadding(32, 48, 32, 32)
@@ -61,6 +82,7 @@ class MainActivity : Activity() {
         }
         button("Imposta Jarvis come assistente del telefono") { requestAssistantRole() }
         button("Configura accesso a ChatGPT") {
+            ChatGptPreloader.discard()
             startActivity(Intent(this, WebChatActivity::class.java))
         }
         button("Abilita automazione Voice") {
@@ -221,6 +243,16 @@ class MainActivity : Activity() {
         }
     }
 
-    override fun onResume() { super.onResume(); updateCoverButton(); handler.post(update) }
+    override fun onResume() {
+        super.onResume()
+        updateCoverButton()
+        if (::contentRoot.isInitialized && !VoiceCycle.active) prepareChatGpt()
+        handler.post(update)
+    }
     override fun onPause() { handler.removeCallbacks(update); super.onPause() }
+    override fun onDestroy() {
+        if (!isChangingConfigurations) ChatGptPreloader.discard()
+        if (instance.get() === this) instance.clear()
+        super.onDestroy()
+    }
 }

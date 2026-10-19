@@ -1,37 +1,38 @@
 # Roadmap — JarvisWake
 
-Stato verificato al 19 ottobre 2026, versione sorgenti 0.5.30. Le attività “implementate” descrivono il codice; il comportamento su Galaxy S24+ resta da provare quando indicato.
+Stato sorgenti 0.5.31, versionCode 53. Il codice è distinto dal collaudo su Samsung Galaxy S24+ Android 16 / One UI.
 
-## Stato implementato
+## Implementato nella 0.5.31
 
-- Riconoscimento offline «Hey Jarvis» tramite Vosk e avvio manuale del ciclo.
-- Integrazione Android `VoiceInteractionService` e servizio microfono continuo; il comportamento dopo boot/process kill su One UI non è certificato.
-- Avvio del progetto JarvisRuntime tramite WebView e ricerca DOM semantica del controllo Voice; al keyguard l'ordine spaziale inizia in basso.
-- Una sola sequenza touch per ciclo, protezione contro invii/tocchi duplicati e saluto «ciao jarvis» in una sola submission quando compositore e pulsante sono pronti.
-- HUD con X, fondo opaco predefinito, scelta semitrasparente persistente, note nascoste dopo Voice; X/Indietro/spegnimento schermo annullano il ciclo.
-- Diagnostica locale a eventi sintetici, rotazione e esportazione manuale; niente audio o trascrizioni.
-- Preloader sperimentale che carica la pagina progetto mentre la MainActivity ha avviato l'ascolto e osserva il controllo. Il WebView viene distrutto alla wake e il risultato DOM non è riutilizzato; riduzione tempi non dimostrata.
+- Riconoscimento locale «Hey Jarvis» tramite Vosk e avvio manuale del ciclo.
+- Integrazione Android `VoiceInteractionService` e servizio microfono continuo quando lo schermo è interattivo.
+- Sospensione reale di `AudioRecord` quando lo schermo si spegne; riattivazione a `ACTION_SCREEN_ON`, anche mentre la schermata di blocco è visibile. Spegnere lo schermo durante una sessione Voice continua invece a chiudere il ciclo.
+- Preloader: la pagina JarvisRuntime aperta in WebView invisibile dalla schermata principale viene trasferita e riutilizzata dalla sessione Voice, senza ricreare il WebView né ricaricare intenzionalmente il progetto.
+- All'evento di accensione schermo, il servizio chiede alla `MainActivity` già esistente di avviare subito il preloader; se non esiste, non tenta un avvio Activity dal background.
+- Seed DOM del controllo Voice raccolto durante il pre-caricamento. È solo un aiuto per la stabilità: il punto viene scalato al viewport corrente e validato con nuove osservazioni DOM prima dell'unico tocco nativo.
+- Una sola sequenza DOWN/UP per ciclo, protezione contro gesti duplicati e saluto «ciao jarvis» una sola submission quando campo e pulsante sono pronti.
+- HUD con X, opaco predefinito, scelta semitrasparente persistente; note nascoste dopo Voice. X/Indietro/spegnimento schermo annullano il ciclo.
+- Diagnostica locale sintetica ed esportabile, con ID correlato per cattura microfono, wake, rilascio, ciclo, preloader, Voice e media playback. Nessun audio, trascrizione o testo conversazione.
 
-## Priorità aperte
+## Misure aperte
 
-1. **Collaudo 0.5.30 sul Galaxy S24+**: manuale, wake con display acceso/bloccato, risposta vocale, X/Indietro, nuovo spegnimento schermo, ripresa Vosk e avvio dopo riavvio. Registrare separatamente esiti e log.
-2. **Tempo fino alla risposta**: inserire eventi per wake, rilascio microfono, apertura WebView, pagina pronta, controllo Voice, gesto, acquisizione microfono e primo audio remoto. La conferma che l'utente lo sente resta una verifica manuale; i log attuali arrivano al dispatch ma non misurano il parlato udibile.
-3. **Preloader**: confrontare cicli con/senza preloader usando le stesse condizioni di rete e login. Se si mantiene, ridurre duplicazione riutilizzando in modo sicuro la pagina WebView o trasferendo uno stato DOM non fragile; non dichiarare sufficiente la sola cache.
-4. **Nuova chat nel progetto**: verificare che ogni ciclo inizi una nuova conversazione dentro JarvisRuntime. La versione apre l'URL progetto ma non ha prova che crei automaticamente una chat nuova né conserva un ID affidabile per sessione.
-5. **Posizione per dispositivo**: l'utente preferisce riutilizzare la posizione del controllo appresa al primo successo. Attualmente la posizione non viene memorizzata: il DOM viene interrogato di nuovo e le coordinate restano relative al viewport. Progettare cache per dispositivo/versione/layout con verifica semantica e fallback dinamico; niente coordinate assolute condivise tra telefoni.
-6. **Risposta saluto e voce**: verificare su dispositivo che «ciao jarvis» venga ricevuto e che ChatGPT risponda vocalmente. Non confondere campo compilato, click Invia, media track live e audio effettivamente sentito.
-7. **Consumi**: non è stato aggiunto un trigger hardware a basso consumo o un secondo gate di ampiezza. Raccogliere una baseline batteria di Vosk prima di valutare un filtro aggiuntivo.
+1. **Collaudo su Galaxy S24+**: display spento, pressione tasto laterale, wake prima dello sblocco, ripresa Vosk, avvio manuale, risposta vocale, X/Indietro/spegnimento durante Voice e ciclo dopo riavvio.
+2. **Preloader e latenza**: confrontare dati diagnostici prima/dopo 0.5.31 a parità di rete e login. Verificare che la sessione autenticata resti disponibile dopo il trasferimento del WebView.
+3. **Prima risposta udibile**: `VOICE_MEDIA_PLAYING` segnala solo la riproduzione di un tag HTML `audio` o `video`. Va confrontato con l'ascolto reale sul telefono; non è prova che l'utente abbia udito la risposta.
+4. **Nuova chat JarvisRuntime**: verificare che ogni ciclo crei una nuova conversazione nel progetto. La pagina viene aperta dal progetto, ma la creazione automatica non è dimostrata.
+5. **Avvio assistente dopo boot/process death**: il preloader viene avviato allo schermo acceso se `MainActivity` esiste. Dopo cold start o riavvio, Android può non avere l'Activity; Vosk riprende senza preloader finché l'utente non apre Jarvis.
+6. **Posizione per dispositivo**: non è persistita. Il codice usa una posizione dal WebView stesso solo se ne trova una durante il pre-caricamento; decide il DOM live, non una coordinata universale.
+7. **Consumi**: nessun trigger DSP/hardware aggiuntivo o gate di ampiezza è stato introdotto. Misurare Vosk separatamente prima di progettare un secondo filtro.
 
-## Diagnostica esistente
+## Interpretazione della diagnostica
 
-`DiagnosticLog` registra timestamp UTC, tempo monotono, evento e token ciclo; limita i log a tre file da 256 KiB e consente esportazione ZIP. Sono disponibili eventi di wake, caricamento pagina, ricerca/strategia Voice, primo dispatch e preloader. Non registra contenuti conversazione, audio o trascrizioni.
+Gli eventi riportano UTC, tempo monotono, nome e token. Per gli ascolti Vosk il token nasce all'avvio della cattura; se viene rilevata la wake, lo stesso ID passa a `CYCLE_STARTED` e agli eventi successivi. Si possono così calcolare tempi wake→rilascio, wake→pagina pronta, wake→controllo Voice, wake→gesto e wake→media playback rilevato. Media playback non equivale a parlato intelligibile o udibile.
 
-I campioni 19/10 mostrano 11,65 s da `CYCLE_STARTED` a `WEB_PAGE_READY` e 13,48 s a `VOICE_CONTROL_READY` in un ciclo; in un altro il controllo arriva a 11,41 s pur con pagina pronta a 3,82 s. Sono dati osservati, non prestazioni garantite; il riferimento non è sempre `WAKE_DETECTED`, e non c'è evento del primo audio udibile. Vedere `CONTINUITY.md` e `VERIFICATION.md`.
+Le misure dipendono da rete, account ChatGPT, DOM del servizio, WebView e dispositivo. Non aggiungere pause arbitrarie o tocchi ripetuti per nascondere condizioni non osservate.
 
-## Regole per la prossima modifica
+## Regole di lavoro
 
-- Non aggiungere pause arbitrarie o tocchi ripetuti per nascondere una condizione non osservata.
-- Preservare X sempre disponibile, HUD opaco/semitrasparente persistente, funzionamento da schermata di blocco, cancellazione su X/Indietro/schermo spento, ripresa Vosk e un solo gesto Voice.
-- Tenere separati wake word locale e dettatura Assistente Android.
-- Usare la sessione ChatGPT dell'utente e il progetto JarvisRuntime, senza API/account alternativi o apertura dell'ultima chat generica.
-- Aggiornare test e documenti nello stesso commit del codice. Build e firma sono locali; non usare GitHub Actions per compilare.
+- Discutere l'intero ambito di una release prima di iniziare lo sviluppo. Quando l'utente sta ancora valutando le opzioni, non cambiare codice; implementare soltanto dopo autorizzazione esplicita. La regola vale anche sul branch Git.
+- Preservare HUD opaco/semitrasparente persistente, X disponibile, wake anche da schermata di blocco, cancellazione ciclo, un solo gesto Voice e nessuna ripetizione dopo l'attivazione.
+- Usare sessione ChatGPT autenticata e progetto JarvisRuntime; non API/account alternativi né ultima chat generica.
+- Aggiornare test e documenti con codice. Build/firma localmente; niente compilazione automatica GitHub al push. Al rilascio firmato per il test, commit e push fast-forward su `main` secondo `AGENTS.md`.

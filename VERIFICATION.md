@@ -1,6 +1,24 @@
-# Verifica — JarvisWake 0.5.30
+# Registro verifiche — JarvisWake
 
-## Build e APK
+## 0.5.31 — build locale e firma
+
+Build eseguita il 19 ottobre 2026 con JDK 17, Gradle 8.13, Android SDK 36 e Build Tools 36.0.0. Non è stata usata GitHub Actions.
+
+```text
+gradle --no-daemon testDebugUnitTest lintDebug assembleDebug
+BUILD SUCCESSFUL — 53 task
+```
+
+- Test JVM: 25 superati, 0 falliti, 0 saltati. `node scripts/test-web-voice.cjs`: superato, inclusi casi di stato audio playback e invio saluto.
+- APK locale: `it.jarviswake`, versionName `0.5.31`, versionCode `53`, minSdk `31`, target/compile SDK `36`, ABI ARM64 (`lib/arm64-v8a`). Dimensione circa 54 MiB.
+- APK consegnato: `JarvisWake-0.5.31-debug-arm64-permanent.apk`; SHA-256 `dd253417641d8b52715139bce5202ee8a033289b76e0a3c72f65839369215e83`.
+- Firma verificata con il certificato permanente: `a8ddfbe2b78be5460e72df57afbc3434411e3cc27328b13bc16b4daaba13389a`. Schema v3 verificato per API 31+; schema v2 verificato separatamente per API 24–27. Il manifest dell'app ha minSdk 31, perciò il percorso supportato in questo rilascio è v3.
+- `zipalign -c -P 16 -v 4` e `unzip -t`: superati. `aapt dump badging`: pacchetto, versione e SDK verificati. Checksum anche in `releases/0.5.31/SHA256SUMS`; l'APK non viene committato.
+- La build e il test DOM non verificano il comportamento di Android/One UI, la riduzione effettiva della latenza, il mantenimento della sessione Web ChatGPT dopo handoff o l'audio realmente udibile. Prova sul Galaxy S24+ ancora richiesta.
+
+## 0.5.30 — storico
+
+### Build e APK
 
 Build locale eseguita il 19 ottobre 2026 con JDK 17, Gradle 8.13, Android SDK 36 e Build Tools 36.0.0:
 
@@ -20,13 +38,13 @@ BUILD SUCCESSFUL — 53 task
 
 I checksum sono registrati anche in `releases/0.5.30/SHA256SUMS`. Il contenuto APK non è committato.
 
-## Modifiche 0.5.28–0.5.30 portate nel sorgente
+### Modifiche 0.5.28–0.5.30 portate nel sorgente (storico)
 
 - Confrontati gli APK .27/.28/.29 e recuperate dal bytecode soltanto le differenze osservabili: semantic labeling del controllo Voice, fallback limitato al compositore e preferenza basso-prima con keyguard.
 - La 0.5.30 aggiunge un WebView invisibile che carica il progetto mentre `MainActivity` avvia l'ascolto e osserva il DOM senza toccare Voice.
-- Alla wake il preloader è distrutto; il WebView effettivo ricarica l'URL progetto. Non sono trasferiti la pagina DOM pronta o il controllo individuato. L'eventuale beneficio da cache non è misurato.
+- Alla wake il preloader era distrutto e il WebView effettivo ricaricava il progetto; la 0.5.31 corregge questo comportamento riutilizzando la stessa istanza.
 
-## Analisi dei tempi diagnostici
+### Analisi dei tempi diagnostici
 
 I log disponibili registrano tempo monotono per `CYCLE_STARTED`, `WEB_OPENED`, `WEB_PAGE_READY`, `VOICE_CONTROL_READY` e `VOICE_DISPATCHED_FIRST`.
 
@@ -36,7 +54,7 @@ I log disponibili registrano tempo monotono per `CYCLE_STARTED`, `WEB_OPENED`, `
 
 Questi sono esempi osservati, non statistiche né una garanzia. Nei log esaminati non c'è sempre un evento `WAKE_DETECTED` associabile; `CYCLE_STARTED` può riferirsi a un ciclo manuale. `VOICE_DISPATCHED_FIRST` indica il gesto inviato, non che il server sia pronto, che abbia risposto o che l'utente abbia sentito l'audio. Non è ancora misurato il tempo wake-to-first-audible-response.
 
-## Prove ancora da fare sul telefono
+### Prove ancora da fare sul telefono per la 0.5.31
 
 Nessun dispositivo Android era collegato alla build. La prova fisica va eseguita sul Samsung Galaxy S24+ Android 16 / One UI. Non è dichiarato verificato in questa build:
 
@@ -50,9 +68,10 @@ In un feedback precedente l'utente aveva detto che una correzione della schermat
 6. Copertura opaca/semitrasparente persistente e leggibilità della X.
 7. Nuova chat generata automaticamente nel progetto JarvisRuntime per ogni ciclo.
 8. Differenza di latenza e batteria con preloader attivo/disattivo.
-9. Misura separata dal riconoscimento wake fino al primo audio remoto e alla conferma manuale che sia udibile.
+9. Misura dal `WAKE_DETECTED` al primo `VOICE_MEDIA_PLAYING`, quindi confermare manualmente che l'audio sia una risposta vocale udibile. `VOICE_MEDIA_PLAYING` da solo non certifica l'uscita audio né l'ascolto.
+10. Schermo spento: verificare stop di Vosk, accensione display senza sblocco, ripresa del microfono e richiesta immediata di preloader quando `MainActivity` è ancora viva. Verificare anche il comportamento senza Activity dopo avvio a freddo.
 
-## Riferimenti Android per il percorso bloccato
+### Riferimenti Android
 
 La 0.5.26 introdusse l'attività visibile sopra il keyguard senza richiedere automaticamente lo sblocco. I riferimenti Android spiegano le API usate ma non certificano WebRTC o ChatGPT Voice su One UI:
 

@@ -171,6 +171,8 @@ class WebChatActivity : Activity() {
   }
   const media = window.__jarvisWakeMedia;
   const mediaActive = media && [...media.tracks].some(track => track.readyState === 'live');
+  const outputPlaying = [...document.querySelectorAll('audio,video')].some(element =>
+    !element.paused && element.readyState >= 2 && !element.muted && element.volume > 0);
   if (media) [...media.tracks].filter(track => track.readyState === 'ended')
     .forEach(track => media.tracks.delete(track));
   const visible = element => {
@@ -217,7 +219,7 @@ class WebChatActivity : Activity() {
   const activePageText = visiblePageText.includes('chatgpt modalita vocale') ||
     visiblePageText.includes('chatgpt voice mode');
   if (mediaActive || activeHeading || activeExitControl || activePageText) {
-    return JSON.stringify({ state: 'active' });
+    return JSON.stringify({ state: 'active', inputTrackLive: !!mediaActive, outputPlaying });
   }
   if (media?.pending) return JSON.stringify({ state: 'opening' });
   const controls = [...document.querySelectorAll(
@@ -380,6 +382,9 @@ class WebChatActivity : Activity() {
     private var lastVoiceCandidateY = Float.NaN
     private var stableVoiceCandidateCount = 0
     private var voiceReadyLogged = false
+    private var voiceInputTrackLogged = false
+    private var voiceMediaPlayingLogged = false
+    private var preloadedVoiceLocation: PreloadedVoiceLocation? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -408,10 +413,15 @@ class WebChatActivity : Activity() {
                 VoiceCycle.cancel(this, cycleToken!!, "ChatGPT chiuso. Ascolto Hey Jarvis riattivato.")
             }
         }
-        automationPageReady = false
+        val preparedPage = cycleToken?.let { ChatGptPreloader.handoff(it) }
+        automationPageReady = preparedPage?.pageReady ?: false
+        preloadedVoiceLocation = preparedPage?.voiceLocation
         State.setAttempt(this, "ChatGPT creato; WebView ${WebView.getCurrentWebViewPackage()?.versionName ?: "sconosciuto"}.")
-        webView = WebView(this).apply {
+        webView = (preparedPage?.webView ?: WebView(this)).apply {
             setBackgroundColor(android.graphics.Color.rgb(2, 8, 15))
+            alpha = 1f
+            isClickable = true
+            isFocusable = true
             importantForAccessibility = WebView.IMPORTANT_FOR_ACCESSIBILITY_YES
             settings.apply {
                 javaScriptEnabled = true
@@ -526,9 +536,15 @@ class WebChatActivity : Activity() {
             insets
         }
         setContentView(root)
-        val restored = savedInstanceState?.getBundle("web_state")?.let { webView.restoreState(it) }
-        if (restored == null || restored.size == 0) webView.loadUrl(CHATGPT_URL)
-        else State.setAttempt(this, "WebView ripristinato; attendo caricamento pagina.")
+        if (preparedPage == null) {
+            val restored = savedInstanceState?.getBundle("web_state")?.let { webView.restoreState(it) }
+            if (restored == null || restored.size == 0) webView.loadUrl(CHATGPT_URL)
+            else State.setAttempt(this, "WebView ripristinato; attendo caricamento pagina.")
+        } else {
+            State.setAttempt(this, if (preparedPage.pageReady)
+                "WebView del progetto riutilizzato senza ricaricare ChatGPT."
+            else "WebView del progetto riutilizzato; attendo il completamento del caricamento.")
+        }
         if (!intent.getBooleanExtra(EXTRA_AUTOMATION, false)) {
             Toast.makeText(
                 this,
@@ -689,9 +705,19 @@ class WebChatActivity : Activity() {
                 return@evaluateJavascript
             }
 
-            val sameCandidate = kotlin.math.abs(result.x - lastVoiceCandidateX) <= 8f &&
+            if (stableVoiceCandidateCount == 0) {
+                val seed = preloadedVoiceLocation
+                preloadedVoiceLocation = null
+                val seedPoint = seed?.let { PreloadedVoicePolicy.scale(it, webView.width, webView.height) }
+                if (seedPoint != null && PreloadedVoicePolicy.matches(seedPoint, result.x, result.y)) {
+                        lastVoiceCandidateX = seedPoint.x
+                        lastVoiceCandidateY = seedPoint.y
+                        stableVoiceCandidateCount = 1
+                }
+            }
+            val agreesWithPrevious = kotlin.math.abs(result.x - lastVoiceCandidateX) <= 8f &&
                 kotlin.math.abs(result.y - lastVoiceCandidateY) <= 8f
-            stableVoiceCandidateCount = if (sameCandidate) stableVoiceCandidateCount + 1 else 1
+            stableVoiceCandidateCount = if (agreesWithPrevious) stableVoiceCandidateCount + 1 else 1
             lastVoiceCandidateX = result.x
             lastVoiceCandidateY = result.y
             if (stableVoiceCandidateCount < 2) {
@@ -754,7 +780,17 @@ class WebChatActivity : Activity() {
                 val encoded = JSONTokener(rawResult).nextValue() as? String
                     ?: return@runCatching WebVoicePageState.NOT_FOUND
                 val value = JSONObject(encoded)
-                if (value.optString("state") == "active") WebVoicePageState.ACTIVE
+                if (value.optString("state") == "active") {
+                    if (value.optBoolean("inputTrackLive") && !voiceInputTrackLogged) {
+                        voiceInputTrackLogged = true
+                        DiagnosticLog.record(this@WebChatActivity, DiagnosticLog.Event.VOICE_INPUT_TRACK_LIVE, cycleToken)
+                    }
+                    if (value.optBoolean("outputPlaying") && !voiceMediaPlayingLogged) {
+                        voiceMediaPlayingLogged = true
+                        DiagnosticLog.record(this@WebChatActivity, DiagnosticLog.Event.VOICE_MEDIA_PLAYING, cycleToken)
+                    }
+                    WebVoicePageState.ACTIVE
+                }
                 else if (value.has("x") && value.has("y") &&
                     value.optString("strategy") == "semantic") WebVoicePageState.START_READY
                 else WebVoicePageState.NOT_FOUND

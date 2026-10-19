@@ -1,14 +1,14 @@
 # JarvisWake — continuità di sviluppo
 
-Aggiornato il 19 ottobre 2026. Questo documento descrive lo stato effettivo del codice locale consolidato; `VERIFICATION.md` registra prove e limiti, `docs/ROADMAP.md` separa attività aperte e implementate.
+Aggiornato il 19 ottobre 2026 per la release 0.5.31. Questo documento descrive lo stato del codice; `VERIFICATION.md` registra prove e limiti, `docs/ROADMAP.md` separa attività aperte e implementate.
 
 ## Stato attuale
 
-- Versione sorgenti: **0.5.30**, versionCode **52**. Pacchetto `it.jarviswake`, minSdk 31, compile/target SDK 36, Build Tools 36.0.0, Gradle Wrapper 8.13, JDK 17, ABI `arm64-v8a`.
+- Versione sorgenti: **0.5.31**, versionCode **53**. Pacchetto `it.jarviswake`, minSdk 31, compile/target SDK 36, Build Tools 36.0.0, Gradle Wrapper 8.13, JDK 17, ABI `arm64-v8a`.
 - Repository di riferimento: `https://github.com/Andry-iu/Jarvis`, branch `main`. Usare sempre il `main` remoto più recente come baseline; non assumere che la 0.5.30 sia ancora HEAD.
 - Il codice si collega al progetto ChatGPT JarvisRuntime all'URL `https://chatgpt.com/g/g-p-6ad5d9f2d9f48191a7c4860050aa43cc-jarvisruntime/project`.
-- L'APK 0.5.30 firmato con il certificato permanente è stato compilato e verificato localmente. La sua impronta e i test eseguiti sono in `VERIFICATION.md` e `releases/0.5.30/SHA256SUMS`.
-- Dispositivo di riferimento: Samsung Galaxy S24+ (SM-S926B), Android 16 / One UI. La 0.5.30 non è stata collaudata su dispositivo in questo ambiente. Non dedurre il successo sul telefono dai test DOM o dalla compilazione.
+- La 0.5.31 introduce il riuso del WebView precaricato, sospensione microfono a schermo spento, riattivazione/pre-caricamento a schermo acceso e diagnostica correlata. Build, test e firma permanente verificati localmente sono in `VERIFICATION.md` e `releases/0.5.31/SHA256SUMS`.
+- Dispositivo di riferimento: Samsung Galaxy S24+ (SM-S926B), Android 16 / One UI. La prova su dispositivo della 0.5.31 resta necessaria; non dedurre il successo sul telefono dai test DOM o dalla compilazione.
 - Feedback storico: l'utente aveva confermato che la schermata di blocco funzionava dopo una correzione precedente; in altre prove aveva segnalato assenza della risposta vocale. Questi riscontri non certificano l'APK 0.5.30.
 
 ## Requisiti e decisioni consolidate
@@ -25,6 +25,7 @@ Aggiornato il 19 ottobre 2026. Questo documento descrive lo stato effettivo del 
 10. Le diagnostiche devono essere locali, esportabili manualmente e prive di audio, trascrizioni, cookie, credenziali o testo della conversazione.
 11. Ogni APK installabile sopra l'app esistente deve usare il certificato permanente. Keystore e password non entrano in chiaro nel repository. Non usare GitHub Actions per compilare: build e firma sono locali.
 12. Prima di proporre una nuova ipotesi tecnica, leggere codice e documentazione pertinenti, verificare più fonti primarie quando si dipende da API Android o dal comportamento web, e distinguere chiaramente fatti, stime e prove su dispositivo.
+13. Prima discutere l'intero ambito delle modifiche proposte. Non iniziare lo sviluppo finché l'utente non autorizza esplicitamente l'implementazione; la regola vale anche per le attività su Git.
 
 ## Evoluzione ricostruita delle versioni
 
@@ -34,12 +35,13 @@ Aggiornato il 19 ottobre 2026. Questo documento descrive lo stato effettivo del 
 | 0.5.28 | 50 | APK conservato nella Library; sorgenti non trovati nei branch Git esaminati. Dal bytecode recuperato: miglioramento delle etichette semantiche Voice e fallback limitato al compositore. Ricostruzione binaria, non recupero dei sorgenti originali. |
 | 0.5.29 | 51 | APK firmato conservato nella Library; sorgenti non trovati nei branch Git esaminati. Dal bytecode: con keyguard attivo ricerca prima in basso e poi in alto, con diagnostiche della strategia semantica/fallback. Anche questo è recupero dal bytecode, non una ricostruzione integrale della cronologia sorgente. |
 | 0.5.30 | 52 | Porta nel sorgente locale le modifiche osservabili in 0.5.28/0.5.29 e aggiunge il preloader descritto sotto. Test DOM, unit test, lint e build locali sono registrati in `VERIFICATION.md`. |
+| 0.5.31 | 53 | Riusa alla wake lo stesso WebView pre-caricato, richiede il preloader a schermo acceso se `MainActivity` esiste, sospende la cattura Vosk a display spento e la riprende anche con keyguard, aggiunge diagnostica correlata fino alla riproduzione osservata nei media HTML. Build e firma permanente verificate; test dispositivo ancora da eseguire. |
 
 I dettagli non deducibili dai bytecode .28/.29 non vanno inventati. Se emergono APK o sorgenti più completi, confrontarli con il codice consolidato prima di sostituire implementazioni.
 
 ## Flusso Voice e responsabilità
 
-- `WakeService` acquisisce l'audio Vosk, riconosce la wake word, registra `WAKE_DETECTED`, rilascia il microfono e avvia il ciclo.
+- `WakeService` acquisisce l'audio Vosk solo a display interattivo, sospende `AudioRecord` su `ACTION_SCREEN_OFF` e lo riavvia su `ACTION_SCREEN_ON` anche con il keyguard visibile. Riconosce la wake word, registra eventi di cattura/wake correlati, rilascia il microfono e avvia il ciclo.
 - `VoiceCycle` coordina il token del ciclo, apertura WebView, tempi massimi, cancellazione e passaggio al servizio di ascolto.
 - `LaunchActivity` porta la schermata di copertura sopra il keyguard; lo sblocco è facoltativo.
 - `WebChatActivity` apre l'URL JarvisRuntime, concede il microfono solo agli host ChatGPT ammessi, analizza lo stato DOM e invia al massimo un gesto Voice. Dopo il gesto osserva lo stato, ma non autorizza tocchi Voice aggiuntivi.
@@ -49,15 +51,17 @@ I dettagli non deducibili dai bytecode .28/.29 non vanno inventati. Se emergono 
 
 ## Pre-caricamento: comportamento effettivo e limite
 
-La 0.5.30 crea dalla `MainActivity` un WebView invisibile mentre il servizio di ascolto è attivo, carica il progetto JarvisRuntime e cerca il controllo Voice nel DOM. Non lo tocca. Dopo il caricamento esegue al massimo 24 osservazioni a intervalli di 250 ms. In caso di wake, `VoiceCycle` ferma e distrugge quel WebView, poi `WebChatActivity` crea il WebView della sessione effettiva e apre nuovamente l'URL del progetto.
+La 0.5.31 crea dalla `MainActivity` un WebView invisibile mentre il servizio di ascolto è attivo, carica il progetto JarvisRuntime e cerca il controllo Voice nel DOM senza toccarlo. Interroga il controllo per un massimo di circa 30 secondi (prima ogni 250 ms, poi ogni secondo). Alla wake `WebChatActivity` stacca e riutilizza lo stesso WebView; se il caricamento non è terminato, continua ad attenderlo senza aprire una seconda pagina. La diagnostica registra `WEB_PRELOAD_REUSED`, `WEB_PRELOAD_VOICE_SEEDED` e `WEB_PAGE_READY` con l'ID del ciclo.
 
-Quindi il preloader anticipa la richiesta pagina e registra se il controllo compare, ma **non riusa** la pagina, il risultato DOM o le coordinate nella sessione Voice. Non crea né identifica in modo verificato una chat nuova nel progetto. Un possibile beneficio da cache/rete non è misurato e non è dimostrato sul telefono. Inoltre il preloader parte quando `MainActivity` richiede l'ascolto; l'avvio dell'assistente a processo freddo o dopo riavvio non garantisce che `MainActivity` sia stata creata e il preloader eseguito.
+Il punto DOM precaricato viene scalato alle dimensioni correnti del WebView e usato solo per inizializzare il controllo di stabilità. Una lettura DOM fresca deve ancora corrispondere entro 8 px e la successiva osservazione stabile autorizza l'unico DOWN/UP. Non sono usate coordinate assolute e il seed non può da solo provocare il tocco. Se il WebView non può essere staccato, viene distrutto in sicurezza e la schermata attiva ne crea uno nuovo.
 
-L'utente ha proposto di ricordare su ciascun telefono la posizione trovata e riutilizzarla nei cicli successivi. Il codice attuale non persiste una posizione per dispositivo: valuta il DOM della pagina live ogni ciclo. Prima di aggiungere coordinate memorizzate, dare priorità a semantica/accessibilità e invalidare il dato quando cambiano pagina, layout, viewport o versione web. La soluzione non deve ricadere su coordinate fisse universali.
+Il beneficio di latenza e l'autenticazione conservata dal WebView trasferito devono essere verificati sul Galaxy. Il preloader parte quando `MainActivity` richiede l'ascolto e viene richiesto di nuovo immediatamente su `ACTION_SCREEN_ON` se la stessa Activity esiste già. La richiesta riusa un'attività esistente e non ne lancia una invisibile dal background: Android limita gli avvii di Activity in background. In un cold start/avvio assistente dopo riavvio, senza `MainActivity` esistente, Vosk riprende ma il preloader parte solo quando l'interfaccia viene aperta. La creazione o identificazione di una nuova chat in JarvisRuntime per ogni ciclo non è verificata.
+
+Non viene ancora persistita una posizione per dispositivo: ogni sessione usa il DOM live e, se disponibile, il seed del preloader dello stesso WebView. Una cache per dispositivo resta da discutere; non introdurre coordinate fisse universali.
 
 ## Diagnostica e tempi
 
-I log misurano eventi di processo, non il momento in cui l'utente sente la prima risposta. Negli eventi disponibili nel workspace il riferimento è `CYCLE_STARTED`, seguito da `WEB_OPENED`, `WEB_PAGE_READY`, `VOICE_CONTROL_READY` e `VOICE_DISPATCHED_FIRST`. I campioni mostrano:
+I log misurano eventi di processo, non il momento in cui l'utente sente la prima risposta. Per una wake Vosk, cattura microfono, wake e rilascio condividono un ID di sessione che passa a `CYCLE_STARTED`. Gli eventi comprendono `MICROPHONE_CAPTURE_STARTED`, `WAKE_DETECTED`, `MICROPHONE_CAPTURE_RELEASED`, `WEB_OPENED`, pagina pronta (preloader o live), `VOICE_CONTROL_READY`, `VOICE_DISPATCHED_FIRST`, `VOICE_INPUT_TRACK_LIVE` e `VOICE_MEDIA_PLAYING`. Quest'ultimo indica che un elemento audio/video HTML della pagina risulta in riproduzione; non prova che il contenuto sia parlato, che l'uscita audio sia instradata correttamente o che l'utente lo abbia sentito. I campioni precedenti mostrano:
 
 - un ciclo: 11,65 s da `CYCLE_STARTED` a `WEB_PAGE_READY`, 13,48 s a `VOICE_CONTROL_READY` (circa 1,83 s dalla pagina pronta al controllo);
 - un altro ciclo: 3,82 s a `WEB_PAGE_READY`, 11,41 s a `VOICE_CONTROL_READY` (circa 7,59 s di attesa/ricerca successiva);
@@ -74,8 +78,8 @@ Non è stato implementato un trigger DSP/hardware a basso consumo né un filtro 
 ## Repository, firma e rilascio
 
 - Il branch `main` è il ramo sorgente consolidato. Il branch `signing-handoff-2026-10-19` conserva `signing-transfer/jarvis-signing-backup.tar.age` (SHA-256 `155b8afc72265dae8bfe5e8d4a09a49929375d88e9972bd9b2777723d2502e58`) e le istruzioni `signing-transfer/RECOVERY.md`. L'archivio contiene il keystore permanente e i file password cifrati con age in modalità passphrase. Il certificato verificato per l'APK è SHA-256 `a8ddfbe2b78be5460e72df57afbc3434411e3cc27328b13bc16b4daaba13389a`.
-- La passphrase di age **non è conservata su Git**. È stata fornita dall'utente nel contesto di lavoro e l'archivio è già stato decrittato con successo per firmare la 0.5.30. In una nuova sessione senza quel contesto, il repository da solo non permette di decrittare l'archivio: l'utente dovrà inserirla nel prompt locale age, oppure firmare sul proprio Galaxy usando il keystore già presente in Termux (`~/jarvis-signing/jarvis-signing.jks`). Non chiedere di inserire la passphrase o le password nel repository o nei log.
-- Il certificato non è legato al modello di telefono, ma deve coincidere con quello dell'app installata sul Galaxy S24+ per installare un aggiornamento. La firma 0.5.30 con quel certificato è stata verificata. `scripts/firma-jarvis-0.5.30-termux.sh` è vincolato all'hash della build 0.5.30: non usarlo per un APK successivo senza aggiornarne hash/percorso e verificarlo per quella release. Procedura dettagliata: `docs/RECUPERO_FIRMA.md`.
+- La passphrase di age **non è conservata su Git**. È stata fornita dall'utente nel contesto di lavoro e l'archivio è stato decrittato localmente per firmare la 0.5.31. In una nuova sessione senza quel contesto, il repository da solo non permette di decrittare l'archivio: l'utente dovrà inserirla nel prompt locale age, oppure firmare sul proprio Galaxy usando il keystore già presente in Termux (`~/jarvis-signing/jarvis-signing.jks`). Non chiedere di inserire la passphrase o le password nel repository o nei log.
+- Il certificato non è legato al modello di telefono, ma deve coincidere con quello dell'app installata sul Galaxy S24+ per installare un aggiornamento. La firma 0.5.31 con quel certificato è stata verificata. `scripts/firma-jarvis-0.5.30-termux.sh` resta vincolato all'hash della build 0.5.30: non usarlo per un APK successivo senza aggiornarne hash/percorso e verificarlo per quella release. Procedura dettagliata: `docs/RECUPERO_FIRMA.md`.
 - Non conservare passphrase, password, keystore in chiaro, cookie o diagnostiche nel repository. Non esporre password negli argomenti di processo o nei log. Per ogni firma verificare certificato e schemi APK.
 - Non committare APK, modelli Vosk, cache, output intermedi o chiavi. Registrare il checksum dell'APK nel file di rilascio; consegnare l'APK direttamente quando richiesto.
 - Usare JDK 17, Gradle Wrapper 8.13, Android platform 36 e Build Tools 36.0.0. Compilare localmente, senza workflow GitHub Actions. Il workflow Android deve restare senza trigger `push`; un commit su `main` non deve nemmeno avviare il workflow. Test consigliati: `node scripts/test-web-voice.cjs` e `./gradlew --no-daemon testDebugUnitTest lintDebug assembleDebug`.
@@ -101,6 +105,6 @@ Prevenzione: ad ogni rilascio aggiornare codice, test, versione, `CONTINUITY.md`
 2. Verificare il nuovo commit remoto, il branch e il working tree; poi leggere i log diagnostici reali disponibili.
 3. Collaudare sul Galaxy S24+: ciclo manuale e wake, display bloccato, Voice e risposta audio, una sola attivazione, X/Indietro/spegnimento schermo, ripresa Vosk, avvio assistente dopo riavvio.
 4. Strumentare wake-to-first-audio distinguendo “audio remoto rilevato” da “utente lo ha sentito”.
-5. Misurare se il preloader riduce davvero la latenza; in caso contrario, riusare lo stesso WebView o eliminare il pre-caricamento. Verificare inoltre la creazione automatica di una nuova chat nel progetto e memorizzare solo identificativi affidabili.
-6. Valutare memorizzazione per dispositivo dell'ultima posizione DOM semantica, con fallback dinamico e senza coordinate assolute.
+5. Misurare sul Galaxy la differenza di latenza con il preloader riusato e verificare il mantenimento dell'accesso ChatGPT. Verificare la creazione automatica di una nuova chat nel progetto e memorizzare solo identificativi affidabili.
+6. Discutere l'eventuale memorizzazione per dispositivo dell'ultima posizione DOM semantica, con fallback dinamico e senza coordinate assolute.
 7. Al rilascio di ogni APK firmato da provare, committare direttamente su `main` sorgenti, test e documentazione della release, secondo la procedura approvata dall'utente.

@@ -2,7 +2,10 @@ package it.jarviswake
 
 import android.annotation.SuppressLint
 import android.app.*
+import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.ServiceInfo
 import android.media.AudioFormat
 import android.media.AudioRecord
@@ -13,6 +16,7 @@ import org.json.JSONObject
 import org.vosk.Model
 import org.vosk.Recognizer
 import java.io.File
+import java.util.UUID
 import kotlin.math.sqrt
 
 class WakeService : Service() {
@@ -44,9 +48,20 @@ class WakeService : Service() {
     @Volatile private var listening = false
     @Volatile private var stopping = false
     @Volatile private var recorder: AudioRecord? = null
+    private var screenInteractive = true
+    private var screenReceiverRegistered = false
     private var foregroundStarted = false
     internal val main = Handler(Looper.getMainLooper())
     private lateinit var notifications: NotificationManager
+
+    private val screenStateReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            when (intent.action) {
+                Intent.ACTION_SCREEN_OFF -> setScreenInteractive(false)
+                Intent.ACTION_SCREEN_ON -> setScreenInteractive(true)
+            }
+        }
+    }
 
     override fun onBind(intent: Intent?) = null
 
@@ -54,6 +69,17 @@ class WakeService : Service() {
         super.onCreate()
         instance = this
         notifications = getSystemService(NotificationManager::class.java)
+        screenInteractive = getSystemService(PowerManager::class.java).isInteractive
+        val screenFilter = IntentFilter().apply {
+            addAction(Intent.ACTION_SCREEN_ON)
+            addAction(Intent.ACTION_SCREEN_OFF)
+        }
+        if (Build.VERSION.SDK_INT >= 33) registerReceiver(screenStateReceiver, screenFilter, RECEIVER_NOT_EXPORTED)
+        else {
+            @Suppress("DEPRECATION")
+            registerReceiver(screenStateReceiver, screenFilter)
+        }
+        screenReceiverRegistered = true
         notifications.createNotificationChannel(NotificationChannel("listen", "Ascolto offline", NotificationManager.IMPORTANCE_LOW))
         notifications.cancel(2)
         notifications.deleteNotificationChannel("wake")
@@ -99,7 +125,7 @@ class WakeService : Service() {
     }
 
     private fun resumeListening() {
-        if (stopping || listening || VoiceCycle.active) return
+        if (!WakeScreenPolicy.shouldListen(screenInteractive, VoiceCycle.active, stopping) || listening) return
         if (workerRunning) { resumeRequested = true; return }
         resumeRequested = false
         workerRunning = true
@@ -107,6 +133,27 @@ class WakeService : Service() {
         ensureForeground("Microfono attivo. Pronuncia Hey Jarvis.")
         State.set(this, "Preparazione modello offline…")
         Thread({ listen() }, "JarvisWakeAudio").start()
+    }
+
+    private fun setScreenInteractive(interactive: Boolean) {
+        if (screenInteractive == interactive) return
+        screenInteractive = interactive
+        if (!interactive) {
+            resumeRequested = false
+            listening = false
+            runCatching { recorder?.stop() }
+            notifications.notify(1, serviceNotification("Microfono sospeso; si riattiva quando lo schermo si accende."))
+            if (!VoiceCycle.active) State.set(this, "Schermo spento: microfono sospeso; Jarvis si riattiva quando lo schermo si accende.")
+            DiagnosticLog.record(this, DiagnosticLog.Event.SCREEN_OFF_MIC_PAUSED)
+        } else {
+            DiagnosticLog.record(this, DiagnosticLog.Event.SCREEN_ON_MIC_RESUME_REQUESTED)
+            if (!stopping && !VoiceCycle.active) {
+                DiagnosticLog.record(this, DiagnosticLog.Event.SCREEN_ON_PRELOAD_REQUESTED)
+                if (!MainActivity.preloadForScreenOn())
+                    DiagnosticLog.record(this, DiagnosticLog.Event.SCREEN_ON_PRELOAD_UNAVAILABLE)
+                resumeListening()
+            }
+        }
     }
 
     private fun pauseForVoice() {
@@ -154,6 +201,8 @@ class WakeService : Service() {
         var audio: AudioRecord? = null
         var lock: PowerManager.WakeLock? = null
         var detected = false
+        var wakeCycleId: String? = null
+        var captureSessionId: String? = null
         var failure: String? = null
         try {
             lock = getSystemService(PowerManager::class.java).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "JarvisWake:audio")
@@ -170,8 +219,10 @@ class WakeService : Service() {
             recorder = audio
             check(audio.state == AudioRecord.STATE_INITIALIZED) { "Microfono non inizializzato" }
             if (!listening) return
+            captureSessionId = UUID.randomUUID().toString()
             audio.startRecording()
             check(audio.recordingState == AudioRecord.RECORDSTATE_RECORDING) { "Microfono non avviato" }
+            DiagnosticLog.record(this, DiagnosticLog.Event.MICROPHONE_CAPTURE_STARTED, captureSessionId)
             State.set(this, "In ascolto continuo: pronuncia Hey Jarvis. Consumo da misurare.")
             val frame = ShortArray(320)
             val preRoll = java.util.ArrayDeque<ShortArray>()
@@ -198,6 +249,8 @@ class WakeService : Service() {
                         }
                         if (confidence && WakePhrase.matches(result.optString("text"))) {
                             detected = true
+                            wakeCycleId = captureSessionId
+                            DiagnosticLog.record(this, DiagnosticLog.Event.WAKE_DETECTED, wakeCycleId)
                             break
                         }
                     }
@@ -214,28 +267,31 @@ class WakeService : Service() {
             runCatching { audio?.stop() }; runCatching { audio?.release() }
             runCatching { recognizer?.close() }; runCatching { model?.close() }
             if (lock?.isHeld == true) lock.release()
+            captureSessionId?.let {
+                DiagnosticLog.record(this, DiagnosticLog.Event.MICROPHONE_CAPTURE_RELEASED, it)
+            }
             main.post {
                 workerRunning = false
                 if (instance !== this) return@post
                 when {
                     stopping -> Unit
                     VoiceCycle.active -> Unit
+                    !screenInteractive -> Unit
                     resumeRequested -> resumeListening()
-                    detected -> onWake()
+                    detected -> onWake(wakeCycleId)
                     failure != null -> stopCompletely(failure!!)
                 }
             }
         }
     }
 
-    private fun onWake() {
-        DiagnosticLog.record(this, DiagnosticLog.Event.WAKE_DETECTED)
+    private fun onWake(wakeCycleId: String?) {
         vibrateWakeConfirmation()
         pauseForVoice()
         State.setAttempt(this, "Wake word Hey Jarvis rilevata; avvio schermata di sblocco.")
         State.set(this, "Hey Jarvis rilevato. Microfono in pausa per ChatGPT.")
         if (Settings.canDrawOverlays(this)) {
-            VoiceCycle.start(this)
+            VoiceCycle.start(this, wakeCycleId)
         } else {
             State.set(this, "Consenti la visualizzazione sopra altre app per aprire ChatGPT. Ascolto riattivato.")
             resumeListening()
@@ -254,6 +310,10 @@ class WakeService : Service() {
 
     override fun onDestroy() {
         if (instance === this) instance = null
+        if (screenReceiverRegistered) {
+            runCatching { unregisterReceiver(screenStateReceiver) }
+            screenReceiverRegistered = false
+        }
         listening = false
         runCatching { recorder?.stop() }
         State.running = false

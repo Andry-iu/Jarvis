@@ -45,11 +45,10 @@ internal object VoiceCycle {
         }
     }
 
-    fun start(context: Context) {
+    fun start(context: Context, existingCycleId: String? = null) {
         if (active) return
-        ChatGptPreloader.discard()
         state = VoiceCycleState()
-        val token = UUID.randomUUID().toString()
+        val token = existingCycleId ?: UUID.randomUUID().toString()
         state.begin(token, SystemClock.elapsedRealtime())
         DiagnosticLog.record(context, DiagnosticLog.Event.CYCLE_STARTED, token)
         app = context.applicationContext as Application
