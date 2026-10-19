@@ -18,6 +18,7 @@ import android.widget.*
 class MainActivity : Activity() {
     private val assistantPermissionRequest = 2
     private val assistantRoleRequest = 3
+    private val diagnosticsExportRequest = 4
     private val handler = Handler(Looper.getMainLooper())
     private lateinit var status: TextView
     private lateinit var attemptStatus: TextView
@@ -73,6 +74,7 @@ class MainActivity : Activity() {
         }
         layout.addView(coverButton)
         updateCoverButton()
+        button("Esporta diagnostica") { exportDiagnostics() }
         button("Permessi e batteria") {
             startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:$packageName")))
         }
@@ -151,6 +153,10 @@ class MainActivity : Activity() {
     @Deprecated("Android RoleManager returns its selection through an activity result")
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == diagnosticsExportRequest) {
+            if (resultCode == RESULT_OK) data?.data?.let { writeDiagnostics(it) }
+            return
+        }
         if (requestCode != assistantRoleRequest) return
         val roles = getSystemService(RoleManager::class.java)
         when {
@@ -161,6 +167,38 @@ class MainActivity : Activity() {
             else -> State.set(this, "Android non ha assegnato a Jarvis il ruolo assistente. Riprova dalle impostazioni Assistente digitale.")
         }
     }
+    private fun exportDiagnostics() {
+        val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
+            addCategory(Intent.CATEGORY_OPENABLE)
+            type = "application/zip"
+            putExtra(Intent.EXTRA_TITLE, "jarvis-diagnostics.zip")
+        }
+        startActivityForResult(intent, diagnosticsExportRequest)
+    }
+
+    private fun writeDiagnostics(uri: Uri) {
+        Thread({
+            val result = runCatching {
+                val files = java.io.File(filesDir, "diagnostics").listFiles()
+                    ?.filter { it.isFile && it.name.matches(Regex("events-[0-9]+\\.log")) }
+                    ?.sortedBy { it.name }.orEmpty()
+                contentResolver.openOutputStream(uri, "w")?.use { output ->
+                    java.util.zip.ZipOutputStream(output).use { zip ->
+                        for (file in files) {
+                            zip.putNextEntry(java.util.zip.ZipEntry(file.name))
+                            file.inputStream().use { it.copyTo(zip) }
+                            zip.closeEntry()
+                        }
+                    }
+                } ?: error("Destinazione non disponibile")
+            }
+            runOnUiThread {
+                State.set(this, if (result.isSuccess) "Diagnostica esportata." else
+                    "Esportazione diagnostica non riuscita: ${result.exceptionOrNull()?.javaClass?.simpleName}")
+            }
+        }, "JarvisDiagnosticExport").start()
+    }
+
     private fun updateCoverButton() {
         coverButton.text = if (CoverSettings.isOpaque(this)) {
             "Copertura: opaca\nPassa a semitrasparente"
