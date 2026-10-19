@@ -94,4 +94,4 @@ Vedere `VERIFICATION.md` per ciò che è stato verificato staticamente e ciò ch
 
 Gli artefatti APK sono output di build e non vengono committati. Sorgenti, wrapper Gradle, script, test, licenze e documentazione sono versionati. Il modello Vosk viene preparato dallo script con checksum fissato. Per questo progetto la build e la firma richieste dall'utente si eseguono localmente, senza GitHub Actions.
 
-Per aggiornare l'app installata serve il certificato permanente. Il backup del keystore è conservato cifrato nel branch `signing-handoff-2026-10-19`; non inserire mai passphrase o keystore in chiaro in Git. `scripts/firma-jarvis-0.5.30-termux.sh` è vincolato all'hash della build 0.5.30 ed è una procedura locale di recupero/firma quando il keystore è sul telefono.
+Per aggiornare l'app installata serve il certificato permanente. Il backup del keystore è conservato cifrato nel branch `signing-handoff-2026-10-19`; non inserire mai passphrase o keystore in chiaro in Git. La procedura di ripristino e firma, compreso il limite dello script Termux vincolato alla 0.5.30, è in [docs/RECUPERO_FIRMA.md](docs/RECUPERO_FIRMA.md).

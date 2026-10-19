@@ -5,7 +5,7 @@ Aggiornato il 19 ottobre 2026. Questo documento descrive lo stato effettivo del 
 ## Stato attuale
 
 - Versione sorgenti: **0.5.30**, versionCode **52**. Pacchetto `it.jarviswake`, minSdk 31, compile/target SDK 36, Build Tools 36.0.0, Gradle Wrapper 8.13, JDK 17, ABI `arm64-v8a`.
-- Repository di riferimento: `https://github.com/Andry-iu/Jarvis`, branch `main`. Le modifiche di questa versione sono state consolidate nel commit successivo a `99b7d8f3d5d542a43d6c7e0581587d752391d015`.
+- Repository di riferimento: `https://github.com/Andry-iu/Jarvis`, branch `main`. Usare sempre il `main` remoto più recente come baseline; non assumere che la 0.5.30 sia ancora HEAD.
 - Il codice si collega al progetto ChatGPT JarvisRuntime all'URL `https://chatgpt.com/g/g-p-6ad5d9f2d9f48191a7c4860050aa43cc-jarvisruntime/project`.
 - L'APK 0.5.30 firmato con il certificato permanente è stato compilato e verificato localmente. La sua impronta e i test eseguiti sono in `VERIFICATION.md` e `releases/0.5.30/SHA256SUMS`.
 - Dispositivo di riferimento: Samsung Galaxy S24+ (SM-S926B), Android 16 / One UI. La 0.5.30 non è stata collaudata su dispositivo in questo ambiente. Non dedurre il successo sul telefono dai test DOM o dalla compilazione.
@@ -73,7 +73,9 @@ Non è stato implementato un trigger DSP/hardware a basso consumo né un filtro 
 
 ## Repository, firma e rilascio
 
-- Il branch `main` è il ramo sorgente consolidato. Il branch `signing-handoff-2026-10-19` conserva il file cifrato `signing-transfer/jarvis-signing-backup.tar.age` e `RECOVERY.md`; la cifratura age è a passphrase. Il certificato verificato per l'APK è SHA-256 `a8ddfbe2b78be5460e72df57afbc3434411e3cc27328b13bc16b4daaba13389a`.
+- Il branch `main` è il ramo sorgente consolidato. Il branch `signing-handoff-2026-10-19` conserva `signing-transfer/jarvis-signing-backup.tar.age` (SHA-256 `155b8afc72265dae8bfe5e8d4a09a49929375d88e9972bd9b2777723d2502e58`) e le istruzioni `signing-transfer/RECOVERY.md`. L'archivio contiene il keystore permanente e i file password cifrati con age in modalità passphrase. Il certificato verificato per l'APK è SHA-256 `a8ddfbe2b78be5460e72df57afbc3434411e3cc27328b13bc16b4daaba13389a`.
+- La passphrase di age **non è conservata su Git**. È stata fornita dall'utente nel contesto di lavoro e l'archivio è già stato decrittato con successo per firmare la 0.5.30. In una nuova sessione senza quel contesto, il repository da solo non permette di decrittare l'archivio: l'utente dovrà inserirla nel prompt locale age, oppure firmare sul proprio Galaxy usando il keystore già presente in Termux (`~/jarvis-signing/jarvis-signing.jks`). Non chiedere di inserire la passphrase o le password nel repository o nei log.
+- Il certificato non è legato al modello di telefono, ma deve coincidere con quello dell'app installata sul Galaxy S24+ per installare un aggiornamento. La firma 0.5.30 con quel certificato è stata verificata. `scripts/firma-jarvis-0.5.30-termux.sh` è vincolato all'hash della build 0.5.30: non usarlo per un APK successivo senza aggiornarne hash/percorso e verificarlo per quella release. Procedura dettagliata: `docs/RECUPERO_FIRMA.md`.
 - Non conservare passphrase, password, keystore in chiaro, cookie o diagnostiche nel repository. Non esporre password negli argomenti di processo o nei log. Per ogni firma verificare certificato e schemi APK.
 - Non committare APK, modelli Vosk, cache, output intermedi o chiavi. Registrare il checksum dell'APK nel file di rilascio; consegnare l'APK direttamente quando richiesto.
 - Usare JDK 17, Gradle Wrapper 8.13, Android platform 36 e Build Tools 36.0.0. Compilare localmente, senza workflow GitHub Actions. Il workflow Android deve restare senza trigger `push`; un commit su `main` non deve nemmeno avviare il workflow. Test consigliati: `node scripts/test-web-voice.cjs` e `./gradlew --no-daemon testDebugUnitTest lintDebug assembleDebug`.
@@ -95,10 +97,10 @@ Prevenzione: ad ogni rilascio aggiornare codice, test, versione, `CONTINUITY.md`
 
 ## Ripresa del prossimo lavoro
 
-1. Partire dal commit consolidato della 0.5.30 e leggere `AGENTS.md`, questo file, `README.md`, `VERIFICATION.md` e `docs/ROADMAP.md`.
+1. Recuperare il `main` remoto completo e leggere `AGENTS.md`, questo file, `README.md`, `VERIFICATION.md`, `docs/ROADMAP.md` e `docs/RECUPERO_FIRMA.md`.
 2. Verificare il nuovo commit remoto, il branch e il working tree; poi leggere i log diagnostici reali disponibili.
 3. Collaudare sul Galaxy S24+: ciclo manuale e wake, display bloccato, Voice e risposta audio, una sola attivazione, X/Indietro/spegnimento schermo, ripresa Vosk, avvio assistente dopo riavvio.
 4. Strumentare wake-to-first-audio distinguendo “audio remoto rilevato” da “utente lo ha sentito”.
 5. Misurare se il preloader riduce davvero la latenza; in caso contrario, riusare lo stesso WebView o eliminare il pre-caricamento. Verificare inoltre la creazione automatica di una nuova chat nel progetto e memorizzare solo identificativi affidabili.
 6. Valutare memorizzazione per dispositivo dell'ultima posizione DOM semantica, con fallback dinamico e senza coordinate assolute.
-7. Non consolidare modifiche successive finché l'utente non lo richiede esplicitamente; per questa operazione l'utente ha invece autorizzato il commit e l'aggiornamento remoto.
+7. Al rilascio di ogni APK firmato da provare, committare direttamente su `main` sorgenti, test e documentazione della release, secondo la procedura approvata dall'utente.
