@@ -1,0 +1,50 @@
+name: Initialize Jarvis Signing Key
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  initialize:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Generate and encrypt permanent keystore
+        env:
+          SIGNING_PASSWORD: ${{ secrets.ANDRY }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          if [ -z "$SIGNING_PASSWORD" ]; then
+            echo "::error::Missing ANDRY secret"
+            exit 1
+          fi
+          if [ "${#SIGNING_PASSWORD}" -lt 12 ]; then
+            echo "::error::ANDRY password must contain at least 12 characters"
+            exit 1
+          fi
+          keytool -genkeypair -noprompt -keystore "$RUNNER_TEMP/jarvis-signing.jks" \
+            -storetype PKCS12 -alias jarvis -keyalg RSA -keysize 3072 -validity 10000 \
+            -dname "CN=JarvisWake, OU=Android, O=Jarvis, C=IT" \
+            -storepass "$SIGNING_PASSWORD" -keypass "$SIGNING_PASSWORD"
+          keytool -list -keystore "$RUNNER_TEMP/jarvis-signing.jks" \
+            -storepass "$SIGNING_PASSWORD" -alias jarvis >/dev/null
+          mkdir -p "$RUNNER_TEMP/signing-backup"
+          openssl enc -aes-256-cbc -salt -pbkdf2 -iter 250000 \
+            -in "$RUNNER_TEMP/jarvis-signing.jks" \
+            -out "$RUNNER_TEMP/signing-backup/jarvis-signing.jks.enc" \
+            -pass env:SIGNING_PASSWORD
+          sha256sum "$RUNNER_TEMP/jarvis-signing.jks" | cut -d' ' -f1 > "$RUNNER_TEMP/signing-backup/keystore.sha256"
+          rm -f "$RUNNER_TEMP/jarvis-signing.jks"
+          echo "BACKUP_PATH=$RUNNER_TEMP/signing-backup" >> "$GITHUB_ENV"
+      - name: Download encrypted backup
+        uses: actions/upload-artifact@v4
+        with:
+          name: jarvis-signing-key-encrypted-backup
+          path: ${{ env.BACKUP_PATH }}/
+          retention-days: 1
+          if-no-files-found: error
