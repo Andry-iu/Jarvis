@@ -56,3 +56,9 @@ La conversazione con l'account connesso diventa disponibile a chi pronuncia la w
 Il successivo aggiornamento di documentazione/CI conserva invariati i sorgenti applicativi, i test e la versione rispetto allo ZIP 0.5.26 consegnato. Aggiunge continuità di sviluppo, roadmap e istruzioni per riprendere il lavoro. Il nome degli artefatti CI viene letto dai metadati di compilazione tramite `scripts/package-apk.py`, invece del valore obsoleto 0.3.1. La verifica locale del packaging usa l'APK 0.5.26 già compilato; non equivale a una nuova esecuzione remota di GitHub Actions.
 
 Controlli del packaging superati: nome 0.5.26/codice 48 ricavati dai metadati, output del workflow coerenti, APK byte per byte con lo stesso SHA-256 del file consegnato, YAML leggibile e allineamento ZIP a 16 KB verificato. Il confronto con lo ZIP originale conferma che nessun sorgente dell'app o test è cambiato.
+
+## Prima esecuzione GitHub Actions
+
+Il primo run remoto del 19 ottobre 2026 (`39235187225`, commit `5a3b3cb`) si è fermato prima della compilazione: `android-actions/setup-android@v3` richiedeva per impostazione predefinita `tools platform-tools`, ma `sdkmanager` non trovava il vecchio pacchetto `tools`. Il workflow specifica ora soltanto `platform-tools`; l'azione prepara già i command-line tools e il passo successivo continua a installare platform 36 e build-tools 36.0.0. La correzione riguarda esclusivamente la preparazione CI, senza modificare versione o comportamento dell'app.
+
+Riferimenti verificati: [input dell'azione eseguita](https://github.com/android-actions/setup-android/blob/9fc6c4e9069bf8d3d10b2204b1fb8f6ef7065407/action.yml), [installazione dei pacchetti SDK](https://developer.android.com/tools/sdkmanager). L'esito di ciascuna compilazione remota è consultabile in [GitHub Actions](https://github.com/Andry-iu/Jarvis/actions/workflows/android.yml) per il relativo commit.

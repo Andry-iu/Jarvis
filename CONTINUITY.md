@@ -63,6 +63,8 @@ L'APK 0.5.26 consegnato ha lo stesso certificato della 0.5.25. La chiave è este
 
 `releases/0.5.26/SHA256SUMS` identifica l'APK e lo ZIP già consegnati, non un eventuale nuovo ZIP con questi documenti. Il workflow ricava ora il nome dell'artefatto dalla versione realmente compilata; era rimasto erroneamente fissato a 0.3.1.
 
+La prima esecuzione GitHub Actions ha evidenziato un errore nella preparazione SDK, prima della build. Il workflow specifica `packages: platform-tools` per evitare il vecchio pacchetto `tools` non più trovato. Diagnosi e riferimenti sono in `VERIFICATION.md`; la correzione non cambia l'app.
+
 ## Stato della sincronizzazione Git
 
 Repository di riferimento: **https://github.com/Andry-iu/Jarvis**, pubblico, ramo predefinito `main`. Accesso in lettura e scrittura verificato il 19 ottobre 2026. Il vecchio nome `Andry-iu/JarvisWake` viene risolto da GitHub verso questo repository; usare il nome attuale.
