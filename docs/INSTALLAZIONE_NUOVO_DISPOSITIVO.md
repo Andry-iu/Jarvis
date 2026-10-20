@@ -1,10 +1,10 @@
-# JarvisWake 0.5.32 — installazione e collaudo
+# JarvisWake 0.5.33 — installazione e collaudo
 
-Guida basata sul codice 0.5.32 e sul dispositivo di riferimento Samsung Galaxy S24+ / Android 16. Non certifica tutti i modelli Android. Build e firma sono locali; questa procedura non usa GitHub Actions.
+Guida basata sul codice 0.5.33 e sul dispositivo di riferimento Samsung Galaxy S24+ / Android 16. Non certifica tutti i modelli Android. Build e firma sono locali; questa procedura non usa GitHub Actions.
 
 ## Prima di iniziare
 
-- Scaricare l'APK ARM64 firmato con il certificato permanente e verificarlo tramite checksum indicato in `releases/0.5.32/SHA256SUMS`.
+- Scaricare l'APK ARM64 firmato con il certificato permanente e verificarlo tramite checksum indicato in `releases/0.5.33/SHA256SUMS`.
 - Per aggiornare un'installazione esistente, il certificato deve essere identico. Non disinstallare per aggirare un errore di firma senza valutare la perdita della sessione WebView e delle preferenze.
 - Serve Internet per ChatGPT Web e un account ChatGPT autenticato nel WebView dell'app. L'accesso nell'app ChatGPT nativa o nel browser esterno non condivide necessariamente la stessa sessione.
 - Il riconoscimento «Hey Jarvis» è locale tramite Vosk. Non è un'autenticazione del parlante.
@@ -26,12 +26,12 @@ Guida basata sul codice 0.5.32 e sul dispositivo di riferimento Samsung Galaxy S
 1. Da telefono sbloccato, premere **Avvia ciclo completo: ChatGPT Voice**. Verificare apertura del progetto JarvisRuntime, un solo gesto Voice, saluto «ciao jarvis», ascolto e risposta vocale.
 2. Bloccare il telefono e pronunciare «Hey Jarvis» senza usare subito impronta/PIN. Verificare cover, Voice e risposta. Lo sblocco è facoltativo.
 3. Provare X e Indietro durante caricamento e conversazione; verificare che la sessione Voice/WebView si chiuda e Vosk riprenda.
-4. Durante una conversazione spegnere nuovamente lo schermo; verificare la chiusura del ciclo. In modalità di ascolto, invece, spegnere lo schermo e riaccenderlo con il tasto fisico; verificare che il microfono venga sospeso e ripreso senza bisogno di sbloccare.
+4. Durante una conversazione spegnere nuovamente lo schermo; verificare la chiusura del ciclo. In modalità di ascolto spegnere lo schermo: il puntino microfono deve restare visibile per 30 secondi, e una wake pronunciata in questa finestra deve avviare il ciclo. Senza wake, verificare che la cattura si fermi allo scadere; riaccendere prima o dopo la scadenza e verificare la ripresa senza sbloccare.
 5. Verificare che Voice non riceva tocchi ripetuti, che le note spariscano dopo l'attivazione e che la X resti raggiungibile.
 6. Esportare la diagnostica e correlare cattura, wake, rilascio, pagina, controllo Voice, gesto, traccia microfono e `VOICE_MEDIA_PLAYING`. Quest'ultimo segnala media HTML in riproduzione, non garantisce che l'audio sia stato sentito.
 7. Riaccendere lo schermo mentre Jarvis è già in memoria e verificare che il preloader parta subito anche con keyguard. Dopo un riavvio/cold start senza `MainActivity`, il preloader può attendere l'apertura dell'app a causa dei limiti Android agli avvii Activity in background.
 
-La creazione automatica di una nuova conversazione per ogni sessione dentro JarvisRuntime e il beneficio effettivo del preloader devono ancora essere verificati. La 0.5.32 trasferisce alla sessione Voice il medesimo WebView invisibile, mantenuto dietro i pulsanti della schermata principale; la posizione DOM precaricata è solo un seed e viene verificata live prima del gesto.
+La creazione automatica di una nuova conversazione per ogni sessione dentro JarvisRuntime e il beneficio effettivo del preloader devono ancora essere verificati. La 0.5.33 trasferisce alla sessione Voice il medesimo WebView invisibile, mantenuto dietro i pulsanti della schermata principale; la posizione DOM precaricata è solo un seed e viene verificata live prima del gesto.
 
 ## Diagnosi rapida
 

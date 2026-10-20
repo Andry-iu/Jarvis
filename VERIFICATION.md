@@ -1,3 +1,18 @@
+## 0.5.33 — finestra microfono screen-off e modello residente
+
+Build locale eseguita il 20 ottobre 2026 con Gradle Wrapper 8.13, Eclipse Temurin JDK 17.0.20.1, Android SDK platform 36 e Build Tools 36.0.0. Nessuna GitHub Actions è stata usata.
+
+- `./gradlew --no-daemon testDebugUnitTest lintDebug assembleDebug`: `BUILD SUCCESSFUL`; 28 test JVM superati, 0 falliti, 0 errori.
+- `node scripts/test-web-voice.cjs`: superato.
+- Lint: 0 errori e 17 warning già pertinenti a risorse/compatibilità, splash screen, strings, WebView, dipendenze e ABI; nessun blocco alla build.
+- APK locale: `it.jarviswake`, versionName `0.5.33`, versionCode `55`, minSdk `31`, target/compile SDK `36`, ABI `arm64-v8a`; 55,614,488 byte.
+- APK firmato: `JarvisWake-0.5.33-debug-arm64-permanent.apk`; SHA-256 `83760c8d9127d8d06bf884a06e2a96c3d43e8310af569e85d673b85d61fcb21d`.
+- Certificato permanente SHA-256 `a8ddfbe2b78be5460e72df57afbc3434411e3cc27328b13bc16b4daaba13389a`, verificato. `apksigner verify` conferma schema v3; il manifest ha minSdk 31. Schema v1/v2 non abilitati per questo APK.
+- `zipalign -c -P 16 -v 4` e `unzip -t`: superati. `aapt dump badging`: pacchetto, versione, SDK e metadati verificati. Checksum anche in `releases/0.5.33/SHA256SUMS`; l'APK non è committato.
+- Le verifiche di build non provano il comportamento effettivo del microfono dopo screen-off né la ripresa alla pressione del tasto laterale sul Galaxy S24+; questo richiede collaudo fisico.
+
+Modifiche: il `WakeService` mantiene un unico `Model` e `Recognizer` nel worker finché resta attivo il servizio. A `ACTION_SCREEN_OFF` mantiene la cattura per 30 secondi; alla scadenza chiude `AudioRecord` e rilascia il wakelock parziale, continuando ad attendere con modello/recognizer residenti. `ACTION_SCREEN_ON` annulla la scadenza e riapre immediatamente `AudioRecord`. Wake rilevate nella finestra screen-off seguono il normale flusso di ciclo; Voice continua a sospendere l'ascolto Vosk. La diagnostica aggiunge `SCREEN_OFF_MIC_GRACE_STARTED`, `SCREEN_OFF_MIC_GRACE_EXPIRED`, `VOSK_MODEL_READY` e `VOSK_MODEL_RELEASED`. Test unitari aggiunti per la soglia di 30 secondi e per la precedenza del ciclo Voice.
+
 # Registro verifiche — JarvisWake
 
 ## 0.5.32 — preloader dietro l’interfaccia e APK firmato

@@ -1,13 +1,13 @@
 # JarvisWake — continuità di sviluppo
 
-Aggiornato il 19 ottobre 2026 per la release 0.5.32. Questo documento descrive lo stato del codice; `VERIFICATION.md` registra prove e limiti, `docs/ROADMAP.md` separa attività aperte e implementate.
+Aggiornato il 20 ottobre 2026 per la release 0.5.33. Build, test e firma locali sono verificati; resta il collaudo sul telefono. Questo documento descrive lo stato del codice; `VERIFICATION.md` registra prove e limiti, `docs/ROADMAP.md` separa attività aperte e implementate.
 
 ## Stato attuale
 
-- Versione sorgenti: **0.5.32**, versionCode **54**. Pacchetto `it.jarviswake`, minSdk 31, compile/target SDK 36, Build Tools 36.0.0, Gradle Wrapper 8.13, JDK 17, ABI `arm64-v8a`.
+- Versione sorgenti: **0.5.33**, versionCode **55**. Pacchetto `it.jarviswake`, minSdk 31, compile/target SDK 36, Build Tools 36.0.0, Gradle Wrapper 8.13, JDK 17, ABI `arm64-v8a`.
 - Repository di riferimento: `https://github.com/Andry-iu/Jarvis`, branch `main`. Usare sempre il `main` remoto più recente come baseline; non assumere che la 0.5.30 sia ancora HEAD.
 - Il codice si collega al progetto ChatGPT JarvisRuntime all'URL `https://chatgpt.com/g/g-p-6ad5d9f2d9f48191a7c4860050aa43cc-jarvisruntime/project`.
-- La 0.5.32 corregge il blocco dei controlli della schermata principale inserendo il WebView del preloader dietro l’interfaccia. Mantiene il riuso introdotto nella 0.5.31. Build, test e firma permanente verificati localmente sono in `VERIFICATION.md` e `releases/0.5.32/SHA256SUMS`.
+- La 0.5.33 mantiene Vosk Model/Recognizer per tutta la vita del servizio, tiene attiva la cattura per 30 secondi dopo screen-off e riprende subito all’accensione riusando il modello. Build e test locali sono superati, la firma permanente è verificata; il collaudo effettivo su Galaxy è ancora aperto. Risultati in `VERIFICATION.md` e hash in `releases/0.5.33/SHA256SUMS`.
 - Dispositivo di riferimento: Samsung Galaxy S24+ (SM-S926B), Android 16 / One UI. La correzione .32 richiede ancora conferma sul dispositivo; non dedurre il successo sul telefono dai test DOM o dalla compilazione.
 - Feedback storico: l'utente aveva confermato che la schermata di blocco funzionava dopo una correzione precedente; in altre prove aveva segnalato assenza della risposta vocale. Questi riscontri non certificano l'APK 0.5.30.
 
@@ -36,13 +36,14 @@ Aggiornato il 19 ottobre 2026 per la release 0.5.32. Questo documento descrive l
 | 0.5.29 | 51 | APK firmato conservato nella Library; sorgenti non trovati nei branch Git esaminati. Dal bytecode: con keyguard attivo ricerca prima in basso e poi in alto, con diagnostiche della strategia semantica/fallback. Anche questo è recupero dal bytecode, non una ricostruzione integrale della cronologia sorgente. |
 | 0.5.30 | 52 | Porta nel sorgente locale le modifiche osservabili in 0.5.28/0.5.29 e aggiunge il preloader descritto sotto. Test DOM, unit test, lint e build locali sono registrati in `VERIFICATION.md`. |
 | 0.5.31 | 53 | Riusa alla wake lo stesso WebView pre-caricato, richiede il preloader a schermo acceso se `MainActivity` esiste, sospende la cattura Vosk a display spento e la riprende anche con keyguard, aggiunge diagnostica correlata fino alla riproduzione osservata nei media HTML. Build e firma permanente verificate; test dispositivo ancora da eseguire. |
-| 0.5.32 | 54 | Aggiunge il WebView del preloader come primo figlio del `FrameLayout`, dietro la schermata principale interattiva. Evita che la WebView invisibile a schermo intero copra i pulsanti e intercetti i tocchi. Build, test, firma permanente e integrità APK verificate; conferma touch sul Galaxy ancora richiesta. |
+| 0.5.32 | 54 | Aggiunge il WebView del preloader dietro la schermata principale interattiva. Build e firma verificati; conferma touch sul Galaxy ancora richiesta. |
+| 0.5.33 | 55 | Aggiunge 30 secondi di cattura dopo screen-off, mantiene il modello e recognizer Vosk caricati per la vita del servizio, riapre `AudioRecord` alla riaccensione, registra in diagnostica scadenza e disponibilità del modello. Build, test e firma locali verificati; collaudo sul Galaxy ancora da eseguire. |
 
 I dettagli non deducibili dai bytecode .28/.29 non vanno inventati. Se emergono APK o sorgenti più completi, confrontarli con il codice consolidato prima di sostituire implementazioni.
 
 ## Flusso Voice e responsabilità
 
-- `WakeService` acquisisce l'audio Vosk solo a display interattivo, sospende `AudioRecord` su `ACTION_SCREEN_OFF` e lo riavvia su `ACTION_SCREEN_ON` anche con il keyguard visibile. Riconosce la wake word, registra eventi di cattura/wake correlati, rilascia il microfono e avvia il ciclo.
+- `WakeService` mantiene una sola istanza di `Model` e `Recognizer` per la vita del servizio. Cattura a display interattivo e per 30 secondi dopo `ACTION_SCREEN_OFF`; alla scadenza rilascia `AudioRecord` e il wakelock CPU, ma conserva il modello in memoria. `ACTION_SCREEN_ON` annulla la scadenza e riapre la cattura anche con keyguard visibile. Una wake rilevata nella finestra buia avvia il ciclo; Voice e l’uso della chat continuano a usare il microfono solo dopo il rilascio della cattura Vosk.
 - `VoiceCycle` coordina il token del ciclo, apertura WebView, tempi massimi, cancellazione e passaggio al servizio di ascolto.
 - `LaunchActivity` porta la schermata di copertura sopra il keyguard; lo sblocco è facoltativo.
 - `WebChatActivity` apre l'URL JarvisRuntime, concede il microfono solo agli host ChatGPT ammessi, analizza lo stato DOM e invia al massimo un gesto Voice. Dopo il gesto osserva lo stato, ma non autorizza tocchi Voice aggiuntivi.
@@ -62,7 +63,7 @@ Non viene ancora persistita una posizione per dispositivo: ogni sessione usa il 
 
 ## Diagnostica e tempi
 
-I log misurano eventi di processo, non il momento in cui l'utente sente la prima risposta. Per una wake Vosk, cattura microfono, wake e rilascio condividono un ID di sessione che passa a `CYCLE_STARTED`. Gli eventi comprendono `MICROPHONE_CAPTURE_STARTED`, `WAKE_DETECTED`, `MICROPHONE_CAPTURE_RELEASED`, `WEB_OPENED`, pagina pronta (preloader o live), `VOICE_CONTROL_READY`, `VOICE_DISPATCHED_FIRST`, `VOICE_INPUT_TRACK_LIVE` e `VOICE_MEDIA_PLAYING`. Quest'ultimo indica che un elemento audio/video HTML della pagina risulta in riproduzione; non prova che il contenuto sia parlato, che l'uscita audio sia instradata correttamente o che l'utente lo abbia sentito. I campioni precedenti mostrano:
+I log misurano eventi di processo, non il momento in cui l'utente sente la prima risposta. Per una wake Vosk, cattura microfono, wake e rilascio condividono un ID di sessione che passa a `CYCLE_STARTED`. Gli eventi comprendono `VOSK_MODEL_READY`, `VOSK_MODEL_RELEASED`, `SCREEN_OFF_MIC_GRACE_STARTED`, `SCREEN_OFF_MIC_GRACE_EXPIRED`, `MICROPHONE_CAPTURE_STARTED`, `WAKE_DETECTED`, `MICROPHONE_CAPTURE_RELEASED`, `WEB_OPENED`, pagina pronta (preloader o live), `VOICE_CONTROL_READY`, `VOICE_DISPATCHED_FIRST`, `VOICE_INPUT_TRACK_LIVE` e `VOICE_MEDIA_PLAYING`. Quest'ultimo indica che un elemento audio/video HTML della pagina risulta in riproduzione; non prova che il contenuto sia parlato, che l'uscita audio sia instradata correttamente o che l'utente lo abbia sentito. I campioni precedenti mostrano:
 
 - un ciclo: 11,65 s da `CYCLE_STARTED` a `WEB_PAGE_READY`, 13,48 s a `VOICE_CONTROL_READY` (circa 1,83 s dalla pagina pronta al controllo);
 - un altro ciclo: 3,82 s a `WEB_PAGE_READY`, 11,41 s a `VOICE_CONTROL_READY` (circa 7,59 s di attesa/ricerca successiva);
@@ -72,7 +73,7 @@ Questi numeri sono campioni, non prestazioni garantite. I log in esame non conte
 
 ## Avvio in background, privacy e consumi
 
-Jarvis usa un `VoiceInteractionService` selezionabile come assistente e un servizio microfono continuo. Il puntino privacy verde è coerente con l'accesso continuativo al microfono. Android/One UI può applicare limiti di avvio, Doze e permessi; il codice non dimostra l'ascolto dopo riavvio, prima del primo sblocco o quando il processo è terminato. Verificare separatamente sul Galaxy S24+ che il ruolo assistente e il servizio riprendano.
+Jarvis usa un `VoiceInteractionService` selezionabile come assistente e un servizio foreground. A schermo acceso e per i 30 secondi di grazia dopo screen-off il microfono è in cattura; poi `AudioRecord` viene chiuso e l'indicatore privacy deve spegnersi, mentre modello e recognizer restano residenti senza wakelock CPU. Android/One UI può applicare limiti di avvio, Doze e permessi; il codice non dimostra l'ascolto dopo riavvio, prima del primo sblocco o quando il processo è terminato. Verificare separatamente sul Galaxy S24+ che il ruolo assistente e il servizio riprendano.
 
 Non è stato implementato un trigger DSP/hardware a basso consumo né un filtro audio generico prima di Vosk. Non ci sono misure comparative di batteria che provino che un secondo gate riduca il consumo netto; Vosk riceve già il flusso audio necessario al riconoscimento. Misurare prima l'uso energetico e l'eventuale ridondanza, senza aggiungere un secondo ascoltatore microfono.
 
@@ -104,7 +105,7 @@ Prevenzione: ad ogni rilascio aggiornare codice, test, versione, `CONTINUITY.md`
 
 1. Recuperare il `main` remoto completo e leggere `AGENTS.md`, questo file, `README.md`, `VERIFICATION.md`, `docs/ROADMAP.md` e `docs/RECUPERO_FIRMA.md`.
 2. Verificare il nuovo commit remoto, il branch e il working tree; poi leggere i log diagnostici reali disponibili.
-3. Collaudare sul Galaxy S24+: ciclo manuale e wake, display bloccato, Voice e risposta audio, una sola attivazione, X/Indietro/spegnimento schermo, ripresa Vosk, avvio assistente dopo riavvio.
+3. Collaudare sul Galaxy S24+: verificare cattura immediata a schermo acceso, wake pronunciata entro i 30 secondi dopo screen-off, arresto cattura alla scadenza, modello residente senza wakelock CPU e ripresa alla riaccensione; poi ciclo Voice, risposta audio, X/Indietro e avvio assistente dopo riavvio.
 4. Strumentare wake-to-first-audio distinguendo “audio remoto rilevato” da “utente lo ha sentito”.
 5. Misurare sul Galaxy la differenza di latenza con il preloader riusato e verificare il mantenimento dell'accesso ChatGPT. Verificare la creazione automatica di una nuova chat nel progetto e memorizzare solo identificativi affidabili.
 6. Discutere l'eventuale memorizzazione per dispositivo dell'ultima posizione DOM semantica, con fallback dinamico e senza coordinate assolute.
