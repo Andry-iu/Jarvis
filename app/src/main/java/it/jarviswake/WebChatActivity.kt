@@ -77,21 +77,16 @@ class WebChatActivity : Activity() {
               const current = (target.value || target.innerText || target.textContent || '').trim();
               if (current) return JSON.stringify({result:'composer_not_empty'});
               const message = 'ciao jarvis';
-              target.focus();
               if (target.isContentEditable) {
-                // Prefer browser editing; confirm the actual text, not execCommand's return value.
-                document.execCommand?.('insertText', false, message);
-                const edited = (target.innerText || target.textContent || '').trim();
-                if (!edited) {
-                  const before = new InputEvent('beforeinput', {
-                    bubbles:true, cancelable:true, inputType:'insertText', data:message
-                  });
-                  if (!target.dispatchEvent(before)) return JSON.stringify({result:'composer_waiting'});
-                  target.textContent = message;
-                  target.dispatchEvent(new InputEvent('input', {
-                    bubbles:true, inputType:'insertText', data:message
-                  }));
-                }
+                // Update the editor DOM without focusing it, which can open Android's keyboard.
+                const before = new InputEvent('beforeinput', {
+                  bubbles:true, cancelable:true, inputType:'insertText', data:message
+                });
+                if (!target.dispatchEvent(before)) return JSON.stringify({result:'composer_waiting'});
+                target.textContent = message;
+                target.dispatchEvent(new InputEvent('input', {
+                  bubbles:true, inputType:'insertText', data:message
+                }));
               } else {
                 const prototype = target instanceof HTMLInputElement
                   ? HTMLInputElement.prototype : HTMLTextAreaElement.prototype;

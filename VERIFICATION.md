@@ -1,3 +1,13 @@
+## 0.5.34 — inserimento del saluto senza focus
+
+- Modificato `FILL_GREETING_SCRIPT`: il saluto «ciao jarvis» viene inserito nel DOM senza `target.focus()` e senza `document.execCommand`, che senza focus potrebbe agire sulla selezione errata. Il test protegge dall'uso del focus, verifica il testo in `contenteditable` e conserva la protezione contro invii duplicati.
+- `node scripts/test-web-voice.cjs`: superato. Test JVM: 28 superati, 0 falliti, 0 errori, 0 saltati. `lintDebug`: 0 errori, 17 avvisi preesistenti.
+- Build locale: `./gradlew --no-daemon testDebugUnitTest lintDebug assembleDebug` — superata.
+- APK: `it.jarviswake`, versionName `0.5.34`, versionCode `56`, minSdk `31`, target/compile SDK `36`, ABI ARM64 (`arm64-v8a`).
+- APK firmato: `JarvisWake-0.5.34-debug-arm64-permanent.apk`; SHA-256 `9e799398e10818d4369a704daef55200101d2b79f9c29cbe6d86ceaeab19e136`.
+- `apksigner verify`: schema v3 valido; certificato SHA-256 permanente `a8ddfbe2b78be5460e72df57afbc3434411e3cc27328b13bc16b4daaba13389a`. `zipalign -c -P 16 -v 4`, `unzip -t` e metadati `aapt`: superati. Checksum in `releases/0.5.34/SHA256SUMS`; APK escluso da Git.
+- Il Galaxy S24+ non è collegato a questo ambiente: va verificato se la tastiera smette di lampeggiare e se ChatGPT riceve e invia ancora il saluto una sola volta. La prova fisica della 0.5.33 ha confermato wake entro i 30 secondi a schermo spento, nessun avvio dopo la scadenza e ripresa immediata all'accensione.
+
 ## 0.5.33 — finestra microfono screen-off e modello residente
 
 Build locale eseguita il 20 ottobre 2026 con Gradle Wrapper 8.13, Eclipse Temurin JDK 17.0.20.1, Android SDK platform 36 e Build Tools 36.0.0. Nessuna GitHub Actions è stata usata.

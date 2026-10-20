@@ -80,7 +80,7 @@ function page({controls = [], headings = [], composer = null, locked = false,
     const composer = Object.assign(Object.create(HTMLTextAreaElement.prototype), {
       disabled:false, innerText:'', textContent:'', isContentEditable:false, hidden:false,
       getAttribute:name => name === 'placeholder' ? 'Chiedi a ChatGPT' : null,
-      closest:() => null, focus() {},
+      closest:() => null, focus() { throw new Error('Greeting must not focus the composer or open the keyboard'); },
       getBoundingClientRect:() => ({left:20, top:700, right:380, bottom:750, width:360, height:50}),
       dispatchEvent:() => true
     });
@@ -138,9 +138,10 @@ function page({controls = [], headings = [], composer = null, locked = false,
   assert.equal(ambiguous.submit(), 'send_not_ready', 'Ambiguous Send does not authorize an arbitrary click');
   const editable = greetingPage(); editable.show();
   editable.composer.isContentEditable=true;
-  editable.document.execCommand = () => { editable.composer.textContent='ciao jarvis'; return false; };
+  editable.document.execCommand = () => { throw new Error('Unfocused greeting must not use the active selection'); };
   editable.fill();
-  assert.equal(editable.fill(), 'filled', 'Use observed editor text even if execCommand returns false');
+  assert.equal(editable.fill(), 'filled', 'Contenteditable text is accepted without execCommand');
+  assert.equal(editable.composer.textContent, 'ciao jarvis', 'Contenteditable greeting is inserted without focus');
   const connecting = greetingPage(); connecting.show();
   const capture = {pending:1, error:null, requested:true, tracks:new Set()};
   connecting.context.window.__jarvisWakeMedia=capture;

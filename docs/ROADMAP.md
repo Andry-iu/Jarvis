@@ -1,6 +1,10 @@
 # Roadmap — JarvisWake
 
-Stato sorgenti 0.5.33, versionCode 55; build, test e firma locali verificati. Il collaudo sul Samsung Galaxy S24+ Android 16 / One UI resta da eseguire.
+Stato sorgenti 0.5.34, versionCode 56; test DOM, build e firma permanente verificati. L'utente ha confermato sul Galaxy S24+ il comportamento screen-off della 0.5.33; il test della tastiera e del saluto senza focus sulla 0.5.34 resta da eseguire.
+
+## Implementato nella 0.5.34
+
+- Il saluto «ciao jarvis» aggiorna il compositore DOM senza chiamare `focus()` o `execCommand`, per evitare l'apertura automatica della tastiera. Il test DOM controlla che il focus non sia richiesto e che il testo resti inviabile una volta sola. L'accettazione da parte della pagina ChatGPT e la scomparsa del lampeggio vanno verificate sul Galaxy.
 
 ## Implementato nella 0.5.33
 

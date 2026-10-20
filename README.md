@@ -1,4 +1,4 @@
-# JarvisWake 0.5.33 — assistente Android e ChatGPT Voice
+# JarvisWake 0.5.34 — assistente Android e ChatGPT Voice
 
 App Kotlin per Android 12–16 (minSdk 31, targetSdk 36), APK ARM64 destinato alla prova su Samsung Galaxy S24+ Android 16.
 
@@ -42,7 +42,7 @@ La dichiarazione Android del servizio assistente include la sessione, il servizi
 
 Il coordinatore applica scadenze indipendenti dal WebView e dall'accessibilità: 45 secondi perché la schermata Jarvis sia pronta e 40 secondi per caricamento/ricerca del controllo Voice. Un caricamento che non termina non può più saltare il timeout. Errori della pagina principale e arresto del processo WebView chiudono il ciclo e lasciano una diagnosi nella schermata principale.
 
-Mentre la schermata principale ha avviato l'ascolto, la 0.5.33 carica il progetto in un WebView invisibile e osserva il DOM senza premere Voice. Il preloader resta dietro la schermata interattiva, così non intercetta i tocchi dei pulsanti. Alla wake trasferisce il medesimo WebView alla schermata Voice, evitando una seconda creazione e un nuovo caricamento della pagina. L'eventuale posizione DOM osservata prima della wake viene usata solo come indizio: le coordinate vengono scalate al WebView corrente e confrontate con una nuova osservazione DOM prima del gesto unico. Il vantaggio reale di latenza e la disponibilità della sessione ChatGPT vanno verificati sul Galaxy.
+Mentre la schermata principale ha avviato l'ascolto, Jarvis carica il progetto in un WebView invisibile e osserva il DOM senza premere Voice. Il preloader resta dietro la schermata interattiva, così non intercetta i tocchi dei pulsanti. Alla wake trasferisce il medesimo WebView alla schermata Voice, evitando una seconda creazione e un nuovo caricamento della pagina. L'eventuale posizione DOM osservata prima della wake viene usata solo come indizio: le coordinate vengono scalate al WebView corrente e confrontate con una nuova osservazione DOM prima del gesto unico. Il vantaggio reale di latenza e la disponibilità della sessione ChatGPT vanno verificati sul Galaxy.
 
 Se il display si spegne durante l'ascolto Vosk, la cattura continua per 30 secondi; alla scadenza `AudioRecord` viene rilasciato e il modello resta in memoria senza mantenere un wakelock CPU. Un risveglio dello schermo riattiva la cattura usando il modello già residente e richiede subito il preloader alla `MainActivity` già esistente, senza attendere lo sblocco e senza avviare schermate nascoste dal background. Se l'attività non esiste (per esempio dopo un cold start), l'ascolto riprende comunque ma il preloader resta in attesa che Jarvis venga aperto. Se lo schermo si spegne durante un ciclo ChatGPT, il ciclo viene annullato; finché resta la finestra residua dei 30 secondi il servizio può poi ascoltare di nuovo la wake word.
 
@@ -56,7 +56,7 @@ La sessione assistente Android disabilita la propria finestra predefinita e la n
 
 ## Messaggio iniziale
 
-Il testo inviato è **«ciao jarvis»**, senza l'istruzione precedente «Dì soltanto». Il saluto non viene consumato quando il campo manca: dopo aver osservato Voice, l'app attende un compositore identificabile, vuoto, abilitato e stabile in due letture. Se l'osservatore ha rilevato una richiesta microfono, attende anche una traccia audio live e nessuna acquisizione pendente o fallita.
+Il testo inviato è **«ciao jarvis»**, senza l'istruzione precedente «Dì soltanto». Il saluto non viene consumato quando il campo manca: dopo aver osservato Voice, l'app attende un compositore identificabile, vuoto, abilitato e stabile in due letture. Se l'osservatore ha rilevato una richiesta microfono, attende anche una traccia audio live e nessuna acquisizione pendente o fallita. La 0.5.34 inserisce il saluto via DOM senza assegnare il focus al campo, per evitare l'apertura momentanea della tastiera; serve conferma sul dispositivo che ChatGPT accetti ancora l'inserimento e l'invio.
 
 Dopo la compilazione del campo attende un unico pulsante **Invia** visibile e abilitato. Il solo tipo HTML `submit` non basta e non vengono usati Invio sintetico o invio indiscriminato del form. L'attesa viene ripetuta senza riscrivere il messaggio; il click di invio viene bloccato prima dell'esecuzione, così callback tardive non possono duplicarlo. La finestra di attesa è di 10 secondi di tempo trascorso dal primo tentativo, verificata quando Voice è osservabile; se il campo contiene testo dell'utente non viene sovrascritto.
 

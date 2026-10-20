@@ -1,13 +1,14 @@
 # JarvisWake — continuità di sviluppo
 
-Aggiornato il 20 ottobre 2026 per la release 0.5.33. Build, test e firma locali sono verificati; resta il collaudo sul telefono. Questo documento descrive lo stato del codice; `VERIFICATION.md` registra prove e limiti, `docs/ROADMAP.md` separa attività aperte e implementate.
+Aggiornato il 20 ottobre 2026 per la release 0.5.34. La prova 0.5.33 sul Samsung S24+ ha confermato wake nella finestra screen-off, stop oltre i 30 secondi e ripresa immediata a schermo acceso. La 0.5.34 prova a evitare il lampeggio tastiera inserendo il saluto senza focus; build, test e firma locali sono superati, resta la verifica del saluto sul telefono. Questo documento descrive lo stato del codice; `VERIFICATION.md` registra prove e limiti, `docs/ROADMAP.md` separa attività aperte e implementate.
 
 ## Stato attuale
 
-- Versione sorgenti: **0.5.33**, versionCode **55**. Pacchetto `it.jarviswake`, minSdk 31, compile/target SDK 36, Build Tools 36.0.0, Gradle Wrapper 8.13, JDK 17, ABI `arm64-v8a`.
+- Versione sorgenti: **0.5.34**, versionCode **56**. Pacchetto `it.jarviswake`, minSdk 31, compile/target SDK 36, Build Tools 36.0.0, Gradle Wrapper 8.13, JDK 17, ABI `arm64-v8a`.
 - Repository di riferimento: `https://github.com/Andry-iu/Jarvis`, branch `main`. Usare sempre il `main` remoto più recente come baseline; non assumere che la 0.5.30 sia ancora HEAD.
 - Il codice si collega al progetto ChatGPT JarvisRuntime all'URL `https://chatgpt.com/g/g-p-6ad5d9f2d9f48191a7c4860050aa43cc-jarvisruntime/project`.
-- La 0.5.33 mantiene Vosk Model/Recognizer per tutta la vita del servizio, tiene attiva la cattura per 30 secondi dopo screen-off e riprende subito all’accensione riusando il modello. Build e test locali sono superati, la firma permanente è verificata; il collaudo effettivo su Galaxy è ancora aperto. Risultati in `VERIFICATION.md` e hash in `releases/0.5.33/SHA256SUMS`.
+- La 0.5.33 mantiene Vosk Model/Recognizer per tutta la vita del servizio, tiene attiva la cattura per 30 secondi dopo screen-off e riprende subito all'accensione riusando il modello. Sul Galaxy S24+ l'utente ha confermato wake entro la finestra, nessun avvio dopo la scadenza e ripresa immediata all'accensione.
+- La 0.5.34 elimina il focus esplicito del compositore durante l'inserimento DOM del saluto e non usa più `execCommand`; verificare che ChatGPT accetti e invii ancora il saluto senza mostrare la tastiera.
 - Dispositivo di riferimento: Samsung Galaxy S24+ (SM-S926B), Android 16 / One UI. La correzione .32 richiede ancora conferma sul dispositivo; non dedurre il successo sul telefono dai test DOM o dalla compilazione.
 - Feedback storico: l'utente aveva confermato che la schermata di blocco funzionava dopo una correzione precedente; in altre prove aveva segnalato assenza della risposta vocale. Questi riscontri non certificano l'APK 0.5.30.
 
@@ -37,7 +38,8 @@ Aggiornato il 20 ottobre 2026 per la release 0.5.33. Build, test e firma locali 
 | 0.5.30 | 52 | Porta nel sorgente locale le modifiche osservabili in 0.5.28/0.5.29 e aggiunge il preloader descritto sotto. Test DOM, unit test, lint e build locali sono registrati in `VERIFICATION.md`. |
 | 0.5.31 | 53 | Riusa alla wake lo stesso WebView pre-caricato, richiede il preloader a schermo acceso se `MainActivity` esiste, sospende la cattura Vosk a display spento e la riprende anche con keyguard, aggiunge diagnostica correlata fino alla riproduzione osservata nei media HTML. Build e firma permanente verificate; test dispositivo ancora da eseguire. |
 | 0.5.32 | 54 | Aggiunge il WebView del preloader dietro la schermata principale interattiva. Build e firma verificati; conferma touch sul Galaxy ancora richiesta. |
-| 0.5.33 | 55 | Aggiunge 30 secondi di cattura dopo screen-off, mantiene il modello e recognizer Vosk caricati per la vita del servizio, riapre `AudioRecord` alla riaccensione, registra in diagnostica scadenza e disponibilità del modello. Build, test e firma locali verificati; collaudo sul Galaxy ancora da eseguire. |
+| 0.5.33 | 55 | Aggiunge 30 secondi di cattura dopo screen-off, mantiene il modello e recognizer Vosk caricati per la vita del servizio, riapre `AudioRecord` alla riaccensione, registra in diagnostica scadenza e disponibilità del modello. Build, test e firma locali verificati; utente conferma sul Galaxy wake entro 30 secondi, stop dopo la scadenza e ripresa immediata alla riaccensione. |
+| 0.5.34 | 56 | Inserisce «ciao jarvis» senza focus o `execCommand` per evitare il lampeggio della tastiera. Test, build e firma locali verificati; prova sul Galaxy ancora da eseguire. |
 
 I dettagli non deducibili dai bytecode .28/.29 non vanno inventati. Se emergono APK o sorgenti più completi, confrontarli con il codice consolidato prima di sostituire implementazioni.
 
