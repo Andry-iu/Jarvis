@@ -3,6 +3,9 @@ const vm = require('node:vm');
 const assert = require('node:assert/strict');
 const source = fs.readFileSync('app/src/main/java/it/jarviswake/WebChatActivity.kt', 'utf8');
 const script = source.split('private val VOICE_CONTROL_LOCATION_SCRIPT = """')[1].split('""".trimIndent()')[0];
+const stopScript = source.split('private val VOICE_STOP_BOTTOM_CONTROL_SCRIPT = """')[1].split('""".trimIndent()')[0];
+const stopBlock = source.split('fun endVoiceForWake(token: String, callback: (Boolean) -> Unit) {')[1]
+  .split('fun showStatus(token: String, message: String) {')[0];
 const fillGreetingScript = source.split('private val FILL_GREETING_SCRIPT = """')[1].split('""".trimIndent()')[0];
 const submitGreetingScript = source.split('private val SUBMIT_GREETING_SCRIPT = """')[1].split('""".trimIndent()')[0];
 function element(label, {hidden = false, x = 340, y = 740, text = ''} = {}) {
@@ -23,9 +26,36 @@ function page({controls = [], headings = [], composer = null, locked = false,
         query.startsWith('textarea') ? (composer ? [composer] : []) :
         query.startsWith('button') ? controls : []}});
   const runScript = script.replace('__JARVIS_LOCKED__', String(locked));
-  return {context, inspect: () => { const value = vm.runInContext(runScript, context); return value ? JSON.parse(value) : null; }};
+  return {context, inspect: () => { const value = vm.runInContext(runScript, context); return value ? JSON.parse(value) : null; },
+    stop: () => JSON.parse(vm.runInContext(stopScript, context))};
 }
 (async () => {
+  assert.match(stopBlock, /evaluateJavascript\(VOICE_STOP_BOTTOM_CONTROL_SCRIPT\)/,
+    'Stop searches the current Voice UI for its bottom control');
+  assert.match(stopBlock, /MotionEvent\.ACTION_DOWN[\s\S]*MotionEvent\.ACTION_UP/,
+    'Stop sends a native DOWN/UP touch at the freshly located point');
+  assert.match(stopScript, /innerHeight \* 0\.70/);
+  assert.match(stopScript, /innerWidth \* 0\.68/);
+  assert.match(stopScript, /sort\(\(a, b\) => b\.right - a\.right\)/,
+    'Among compact controls along the lower right, the rightmost X is preferred');
+  assert.match(stopScript, /elementFromPoint/,
+    'Stop ignores controls covered by another element');
+  assert.doesNotMatch(stopBlock, /voiceTogglePoint|COORDINATES_REPLAYED/,
+    'Stop does not reuse the saved Voice activation location');
+  const closeAtBottom = page({controls:[element('Voice',{x:340,y:100}), element('',{x:250,y:740}), element('',{x:340,y:740})]}).stop();
+  assert.equal(closeAtBottom.result, 'found', 'Unlabelled current bottom X can be targeted');
+  assert.equal(closeAtBottom.strategy, 'bottom_right');
+  assert.equal(closeAtBottom.x, 360);
+  assert.equal(closeAtBottom.y, 760);
+  assert.equal(closeAtBottom.candidateCount, 1, 'Top Voice activation control and left mute button are ignored');
+  assert.equal(page({controls:[element('',{x:250,y:740}), element('',{x:340,y:740})]}).stop().x, 360,
+    'Bottom row mute control is not confused with the rightmost X');
+  const disabledBottom = element('',{x:340,y:740}); disabledBottom.disabled=true;
+  assert.equal(page({controls:[disabledBottom]}).stop().result, 'target_unavailable',
+    'Disabled bottom controls cannot be tapped');
+  assert.equal(page({controls:[element('',{x:340,y:500})]}).stop().result, 'target_unavailable',
+    'A control above the lower screen is not mistaken for the close button');
+  assert.match(stopBlock, /VOICE_STOP_BOTTOM_CONTROL_FOUND/);
   const start = element('Start voice mode');
   assert.equal(page({controls:[start]}).inspect().strategy, 'semantic');
   const topVoice = element('Start voice mode', {x:340,y:100});

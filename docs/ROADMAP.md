@@ -1,15 +1,13 @@
 # Roadmap — JarvisWake
 
-Stato release 0.5.42, versionCode 64. Dopo che lo screenshot della 0.5.41 ha mostrato l'interfaccia Voice ancora aperta con il controllo `X` visibile, la 0.5.42 cerca un controllo di uscita accessibile nella UI attuale e usa le sue coordinate aggiornate. Target mancante o ambiguo: nessun tocco. La diagnostica distingue target trovato, dispatch e conferma. Build: 38 test JVM e test DOM superati, lint 0 errori/18 avvisi. APK firmato permanentemente, SHA-256 `86d09959e19f71679390f539da5f6fd18f8c30d42a924c7e8ea137eea6054b64`; v2/v3 e allineamento 16 KB verificati. Collaudo Galaxy S24+ necessario.
+Stato release 0.5.44, versionCode 66. L'utente ha identificato che la X si sposta in basso nella Voice attiva. Allo swipe la logica cerca un controllo compatto, visibile, raggiungibile e nell'angolo inferiore destro della UI corrente; tra più controlli seleziona quello più a destra. Invia un unico tocco nativo DOWN/UP e verifica lo stop. Build e test locali superati. APK firmato col certificato permanente `a8ddfbe2b78be5460e72df57afbc3434411e3cc27328b13bc16b4daaba13389a`; schemi v2/v3 e allineamento 16 KB verificati. SHA-256 APK `9ce6d51bb2b00e6645f0388acb319211a59f98c53be23341b453b3199cace18f`. Resta il collaudo sul Galaxy S24+.
 
 Stato precedente: 0.5.39, versionCode 61. La prova della 0.5.38 sul Galaxy S24+ ha mostrato che lo swipe non produce effetti. La cover interna è posizionata sotto il padding della barra di stato ma riutilizzava l'inset assoluto del display nelle coordinate locali; la 0.5.39 sottrae la posizione sullo schermo della vista e amplia la zona superiore interna. Build e 37 test locali superati; APK firmato col certificato permanente, SHA-256 `4f5e310c45a0da250507f385a883b7910d872068acc87f7df81ad5f752c49396`. Firme v2/v3 e allineamento 16 KB verificati; collaudo sul dispositivo da completare.
 
-## In verifica nella 0.5.42
+## In verifica nella 0.5.44
 
-- Prima dello stop, il DOM cerca nella schermata Voice corrente un solo controllo di uscita visibile, abilitato e raggiungibile, con descrizione semantica Voice/stop. Il punto d'avvio non è riutilizzato.
-- Viene inviato un solo gesto DOWN/UP al target attuale. La conferma attende fino a due secondi che torni disponibile un controllo iniziale Voice. Swipe ripetuti durante l'arresto sono ignorati.
-- Se non c'è un target unico, Jarvis non tenta un tocco geometrico o un pulsante generico. La diagnostica registra target trovato/mancante, tocco inviato e arresto confermato/fallito, senza contenuti della conversazione.
-- Test e build locali superati; screenshot e prova sul Galaxy confermano che la 0.5.41 non chiudeva la UI Voice. La 0.5.42 resta da collaudare sul Galaxy S24+.
+- La ricerca dello stop usa la schermata Voice corrente e filtra controlli compatti nella fascia inferiore destra, senza richiedere un'etichetta accessibile. Controlli fuori da quell'area o coperti non sono selezionati.
+- Il test DOM controlla pulsanti in alto/basso, mute a sinistra, controlli disabilitati, assenza di target e selezione della X più a destra. La conferma aspetta che la pagina torni allo stato iniziale Voice. Build, firma e prova Galaxy vanno registrate dopo verifica.
 
 ## Storico della 0.5.41
 

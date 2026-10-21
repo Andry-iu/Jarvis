@@ -1,3 +1,21 @@
+# 0.5.44 — X Voice corrente nell'angolo inferiore destro
+
+- La schermata attiva viene interrogata al momento dello swipe. Sono candidati i controlli visibili, abilitati e raggiungibili, compatti e nella fascia inferiore destra; viene selezionato il più a destra senza richiedere un'etichetta Voice/X. Il punto iniziale non viene conservato né riusato.
+- Test JVM: 41 superati, 0 falliti, 0 errori, 0 saltati. `node scripts/test-web-voice.cjs`: superato, inclusi X senza etichetta in basso a destra, controllo superiore ignorato, mute a sinistra, disabilitato e nessun target. `lintDebug`: 0 errori e 18 avvisi.
+- Build locale JDK 17, Gradle 8.13, SDK 36 e Build Tools 36.0.0: `testDebugUnitTest lintDebug assembleDebug -PjarvisUnsigned=true` superata. Pacchetto `it.jarviswake`, versionName `0.5.44`, versionCode `66`, minSdk `31`, target/compile SDK `36`, ABI `arm64-v8a`. ZIP CRC e allineamento 16 KB verificati.
+- APK firmato con il certificato permanente: SHA-256 certificato `a8ddfbe2b78be5460e72df57afbc3434411e3cc27328b13bc16b4daaba13389a`; schema v3 verificato per API 31+ e schema v2 verificato separatamente per API 24–27. SHA-256 APK firmato `9ce6d51bb2b00e6645f0388acb319211a59f98c53be23341b453b3199cace18f`. L'APK firmato mantiene versione `0.5.44` / versionCode `66` ed è allineato a 16 KB.
+- Resta la prova del gesto e del controllo X sulla UI reale del Galaxy S24+; i test DOM usano una pagina simulata.
+
+# 0.5.43 — ripetizione del tocco Voice alle coordinate salvate
+
+- I log della prova 0.5.42 mostrano `HIDE_GESTURE_RECOGNIZED` seguito da `VOICE_STOP_TARGET_NOT_FOUND`: lo swipe funziona, ma la ricerca semantica della X non la riconosceva.
+- All'apertura Voice vengono salvate le coordinate normalizzate del tocco nativo. Quando lo swipe viene riconosciuto, Jarvis invia un singolo DOWN/UP nativo allo stesso punto della WebView, senza consultare il DOM, cercare la X o aspettare di trovarla. Poi controlla per 2 secondi se Voice è tornata allo stato iniziale.
+- Test JVM: 42 superati, 0 falliti, 0 errori. `node scripts/test-web-voice.cjs`: superato; verifica anche che lo stop non interroghi più il DOM. `lintDebug`: 0 errori e 18 avvisi.
+- Build locale con JDK 17, Gradle 8.13, SDK 36 e Build Tools 36.0.0: `testDebugUnitTest lintDebug assembleDebug -PjarvisUnsigned=true` superata.
+- APK: `it.jarviswake`, versionName `0.5.43`, versionCode `65`, minSdk `31`, target/compile SDK `36`, ABI `arm64-v8a`. ZIP CRC e allineamento 16 KB verificati.
+- APK firmato con il certificato permanente, SHA-256 certificato `a8ddfbe2b78be5460e72df57afbc3434411e3cc27328b13bc16b4daaba13389a`; schema v3 verificato per API 31+ e v2 per API 24–27. SHA-256 APK `dc3a86698072d8465c0bbb022136df8a207b66ff937b160b87244c7dc9016711`.
+- Resta la prova sul Galaxy S24+: verificare che il tocco alle coordinate salvate fermi Voice, nasconda la cover e mostri Home. La build e i test locali non provano il comportamento del controllo nella UI reale di ChatGPT.
+
 # 0.5.42 — target di uscita Voice rilevato nella schermata attiva
 
 - Il feedback con screenshot della 0.5.41 mostra la UI Voice ancora aperta e la `X` visibile dopo lo swipe. Il punto riutilizzato dall'avvio non ha chiuso la sessione.

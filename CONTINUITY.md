@@ -1,10 +1,11 @@
-# JarvisWake — continuità di sviluppo
+Aggiornato il 21 ottobre 2026 per la 0.5.44. L'utente ha verificato che la X della Voice attiva si sposta in basso: lo stop ora cerca nella UI corrente un controllo compatto raggiungibile nell'angolo inferiore destro, senza dipendere da un'etichetta accessibile o dalle coordinate iniziali. Invia un solo tocco nativo DOWN/UP e poi verifica lo stato. Il collaudo sul Galaxy S24+ resta da fare.
+
 
 Aggiornato il 21 ottobre 2026 per la 0.5.42. Lo screenshot della prova 0.5.41 mostra l'errore rosso e l'interfaccia Voice ancora aperta, con il controllo `X` visibile: il punto usato per avviare Voice non è bastato a fermarla. La 0.5.42 cerca nella UI attiva un solo controllo di uscita semanticamente riconosciuto, ne rileva le coordinate al momento dello swipe e registra target, tocco e conferma. Se il target non è unico, non invia tocchi. Build locale: 38 test JVM e test DOM superati, lint 0 errori/18 avvisi. APK ARM64 firmato col certificato permanente, v2 verificata per API 24–27 e v3 per API 31+, allineamento 16 KB verificato. SHA-256 `86d09959e19f71679390f539da5f6fd18f8c30d42a924c7e8ea137eea6054b64`; resta il collaudo sul Galaxy S24+.
 
 ## Stato attuale
 
-- Versione sorgenti: **0.5.42**, versionCode **64**. Pacchetto `it.jarviswake`, minSdk 31, compile/target SDK 36, Build Tools 36.0.0, Gradle Wrapper 8.13, JDK 17, ABI `arm64-v8a`.
+- Versione sorgenti: **0.5.44**, versionCode **66**. Pacchetto `it.jarviswake`, minSdk 31, compile/target SDK 36, Build Tools 36.0.0, Gradle Wrapper 8.13, JDK 17, ABI `arm64-v8a`.
 - Repository di riferimento: `https://github.com/Andry-iu/Jarvis`, branch `main`. Usare sempre il `main` remoto più recente come baseline; non assumere che la 0.5.30 sia ancora HEAD.
 - Il codice si collega al progetto ChatGPT JarvisRuntime all'URL `https://chatgpt.com/g/g-p-6ad5d9f2d9f48191a7c4860050aa43cc-jarvisruntime/project`.
 - La 0.5.33 mantiene Vosk Model/Recognizer per tutta la vita del servizio, tiene attiva la cattura per 30 secondi dopo screen-off e riprende subito all'accensione riusando il modello. Sul Galaxy S24+ l'utente ha confermato wake entro la finestra, nessun avvio dopo la scadenza e ripresa immediata all'accensione.
@@ -37,6 +38,8 @@ Aggiornato il 21 ottobre 2026 per la 0.5.42. Lo screenshot della prova 0.5.41 mo
 
 | Versione | Codice | Stato delle informazioni |
 | --- | ---: | --- |
+| 0.5.44 | 66 | Allo swipe cerca la X corrente nella fascia inferiore destra anche senza etichetta accessibile; invia un singolo tocco nativo al controllo trovato e poi verifica lo stato Voice. Build e 41 test JVM/test DOM superati; APK firmato col certificato permanente, SHA-256 `9ce6d51bb2b00e6645f0388acb319211a59f98c53be23341b453b3199cace18f`, schemi v2/v3 e allineamento 16 KB verificati. Collaudo Galaxy da fare. |
+| 0.5.43 | 65 | Riusa le coordinate effettive premute all'avvio di Voice; allo swipe ripete un tocco nativo DOWN/UP nello stesso punto senza cercare la X nel DOM, poi verifica lo stato. Build/firma e prova Galaxy da completare. |
 | 0.5.27 | 49 | Ultima versione con sorgenti nel branch `main` prima del consolidamento corrente. Include polling Accessibilità a 100 ms, eventi diagnostici di caricamento e controllo Voice, e correzione della doppia registrazione della transizione Voice. Commit di riferimento: `99b7d8f3d5d542a43d6c7e0581587d752391d015`. |
 | 0.5.28 | 50 | APK conservato nella Library; sorgenti non trovati nei branch Git esaminati. Dal bytecode recuperato: miglioramento delle etichette semantiche Voice e fallback limitato al compositore. Ricostruzione binaria, non recupero dei sorgenti originali. |
 | 0.5.29 | 51 | APK firmato conservato nella Library; sorgenti non trovati nei branch Git esaminati. Dal bytecode: con keyguard attivo ricerca prima in basso e poi in alto, con diagnostiche della strategia semantica/fallback. Anche questo è recupero dal bytecode, non una ricostruzione integrale della cronologia sorgente. |

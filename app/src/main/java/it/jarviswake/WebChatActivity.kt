@@ -323,6 +323,37 @@ class WebChatActivity : Activity() {
   });
 })()
         """.trimIndent()
+        private val VOICE_STOP_BOTTOM_CONTROL_SCRIPT = """
+(() => {
+  const visible = element => {
+    const rect = element.getBoundingClientRect();
+    const style = getComputedStyle(element);
+    return rect.width >= 28 && rect.width <= 104 && rect.height >= 28 && rect.height <= 104 &&
+      Math.abs(rect.width - rect.height) <= 28 && style.visibility !== 'hidden' &&
+      style.display !== 'none' && style.opacity !== '0' && rect.top >= innerHeight * 0.70 &&
+      rect.bottom <= innerHeight && rect.left >= innerWidth * 0.68 && rect.right <= innerWidth;
+  };
+  const controls = [...document.querySelectorAll('button,[role="button"]')]
+    .filter(element => visible(element) && !element.disabled &&
+      element.getAttribute('aria-disabled') !== 'true' && element.getAttribute('aria-busy') !== 'true')
+    .map(element => {
+      const rect = element.getBoundingClientRect();
+      const x = rect.left + rect.width / 2, y = rect.top + rect.height / 2;
+      const hit = document.elementFromPoint(x, y);
+      return {x, y, right:rect.right, reachable:!!hit && (hit === element || element.contains(hit))};
+    }).filter(item => item.reachable)
+    .sort((a, b) => b.right - a.right);
+  if (!controls.length) return JSON.stringify({result:'target_unavailable', candidateCount:0});
+  const selected = controls[0];
+  // The bottom row can include mute and other controls. Select the rightmost
+  // compact button, and refuse near-ties instead of tapping an uncertain target.
+  if (controls.length > 1 && selected.right - controls[1].right < 28)
+    return JSON.stringify({result:'ambiguous', candidateCount:controls.length});
+  return JSON.stringify({result:'found', x:selected.x, y:selected.y,
+    viewportWidth:innerWidth, viewportHeight:innerHeight, strategy:'bottom_right',
+    candidateCount:controls.length});
+})()
+        """.trimIndent()
         internal fun preloadVoiceControlScript(): String =
             VOICE_CONTROL_LOCATION_SCRIPT.replace("__JARVIS_LOCKED__", "false")
         @Volatile private var active = WeakReference<WebChatActivity>(null)
@@ -359,31 +390,28 @@ class WebChatActivity : Activity() {
                     callback(false); return@runOnUiThread
                 }
                 val generation = activity.documentGeneration
-                activity.webView.evaluateJavascript(activity.voiceControlLocationScript()) { rawResult ->
+                activity.webView.evaluateJavascript(VOICE_STOP_BOTTOM_CONTROL_SCRIPT) { rawResult ->
                     if (activity.webDestroyed || !activity.isValidCycle() || generation != activity.documentGeneration) {
                         callback(false); return@evaluateJavascript
                     }
-                    val coords = runCatching {
+                    val target = runCatching {
                         val encoded = JSONTokener(rawResult).nextValue() as? String ?: return@runCatching null
                         val value = JSONObject(encoded)
-                        if (value.optString("state") != "active" ||
-                            value.optString("strategy") != "voice_exit") return@runCatching null
-                        val viewportWidth = value.getDouble("viewportWidth").toFloat()
-                        val viewportHeight = value.getDouble("viewportHeight").toFloat()
-                        if (viewportWidth <= 0f || viewportHeight <= 0f) return@runCatching null
-                        floatArrayOf(
-                            value.getDouble("x").toFloat() * activity.webView.width / viewportWidth,
-                            value.getDouble("y").toFloat() * activity.webView.height / viewportHeight
-                        )
+                        if (value.optString("result") != "found") return@runCatching null
+                        val point = VoiceViewportPoint.capture(
+                            value.getDouble("x").toFloat(), value.getDouble("y").toFloat(),
+                            value.getDouble("viewportWidth").toFloat(), value.getDouble("viewportHeight").toFloat()
+                        )?.toViewPoint(activity.webView.width, activity.webView.height) ?: return@runCatching null
+                        point
                     }.getOrNull()
-                    if (coords == null) {
+                    if (target == null) {
                         DiagnosticLog.record(activity, DiagnosticLog.Event.VOICE_STOP_TARGET_NOT_FOUND, token)
                         callback(false)
                         return@evaluateJavascript
                     }
-                    DiagnosticLog.record(activity, DiagnosticLog.Event.VOICE_STOP_TARGET_FOUND, token)
+                    DiagnosticLog.record(activity, DiagnosticLog.Event.VOICE_STOP_BOTTOM_CONTROL_FOUND, token)
                     val downTime = SystemClock.uptimeMillis()
-                    val down = MotionEvent.obtain(downTime, downTime, MotionEvent.ACTION_DOWN, coords[0], coords[1], 0)
+                    val down = MotionEvent.obtain(downTime, downTime, MotionEvent.ACTION_DOWN, target.x, target.y, 0)
                         .apply { source = InputDevice.SOURCE_TOUCHSCREEN }
                     val downAccepted = activity.webView.dispatchTouchEvent(down)
                     down.recycle()
@@ -392,11 +420,13 @@ class WebChatActivity : Activity() {
                             callback(false); return@postDelayed
                         }
                         val upTime = SystemClock.uptimeMillis()
-                        val up = MotionEvent.obtain(downTime, upTime, MotionEvent.ACTION_UP, coords[0], coords[1], 0)
+                        val up = MotionEvent.obtain(downTime, upTime, MotionEvent.ACTION_UP, target.x, target.y, 0)
                             .apply { source = InputDevice.SOURCE_TOUCHSCREEN }
-                        activity.webView.dispatchTouchEvent(up); up.recycle()
+                        activity.webView.dispatchTouchEvent(up)
+                        up.recycle()
                         DiagnosticLog.record(activity, DiagnosticLog.Event.VOICE_STOP_TOUCH_DISPATCHED, token)
                         if (!downAccepted) {
+                            DiagnosticLog.record(activity, DiagnosticLog.Event.VOICE_STOP_FAILED, token)
                             callback(false)
                             return@postDelayed
                         }
@@ -999,6 +1029,21 @@ private data class WebVoiceDomResult(
     val active: Boolean = false,
     val semantic: Boolean = false
 )
+
+internal data class VoiceViewportPoint private constructor(val xFraction: Float, val yFraction: Float) {
+    companion object {
+        fun capture(x: Float, y: Float, width: Float, height: Float): VoiceViewportPoint? {
+            if (width <= 0f || height <= 0f || x !in 0f..width || y !in 0f..height) return null
+            return VoiceViewportPoint(x / width, y / height)
+        }
+    }
+    fun toViewPoint(width: Int, height: Int): VoiceViewPoint? {
+        if (width <= 0 || height <= 0) return null
+        return VoiceViewPoint(xFraction * width, yFraction * height)
+    }
+}
+
+internal data class VoiceViewPoint(val x: Float, val y: Float)
 
 enum class WebVoiceTapResult { DISPATCHED, BLOCKED, ACTIVE, NOT_FOUND, UNAVAILABLE }
 enum class WebVoicePageState { ACTIVE, START_READY, NOT_FOUND, UNAVAILABLE }
