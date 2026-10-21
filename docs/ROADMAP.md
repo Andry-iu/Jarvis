@@ -1,15 +1,19 @@
 # Roadmap — JarvisWake
 
-Stato release 0.5.41, versionCode 63. La correzione riusa per lo stop Voice la coordinata WebView registrata quando lo stesso controllo è stato premuto per avviarla; il controllo di stato considera anche il candidato sicuro nel compositore. Build: 40 test JVM e test DOM superati, lint 0 errori/18 avvisi. APK firmato permanentemente, SHA-256 `3e85f77d335f928c5897fdea6fbc31469a363262f6ffcc24059b74cefbbbe92a`; v2/v3 e allineamento 16 KB verificati. Collaudo Galaxy S24+ necessario.
+Stato release 0.5.42, versionCode 64. Dopo che lo screenshot della 0.5.41 ha mostrato l'interfaccia Voice ancora aperta con il controllo `X` visibile, la 0.5.42 cerca un controllo di uscita accessibile nella UI attuale e usa le sue coordinate aggiornate. Target mancante o ambiguo: nessun tocco. La diagnostica distingue target trovato, dispatch e conferma. Build: 38 test JVM e test DOM superati, lint 0 errori/18 avvisi. APK firmato permanentemente, SHA-256 `86d09959e19f71679390f539da5f6fd18f8c30d42a924c7e8ea137eea6054b64`; v2/v3 e allineamento 16 KB verificati. Collaudo Galaxy S24+ necessario.
 
 Stato precedente: 0.5.39, versionCode 61. La prova della 0.5.38 sul Galaxy S24+ ha mostrato che lo swipe non produce effetti. La cover interna è posizionata sotto il padding della barra di stato ma riutilizzava l'inset assoluto del display nelle coordinate locali; la 0.5.39 sottrae la posizione sullo schermo della vista e amplia la zona superiore interna. Build e 37 test locali superati; APK firmato col certificato permanente, SHA-256 `4f5e310c45a0da250507f385a883b7910d872068acc87f7df81ad5f752c49396`. Firme v2/v3 e allineamento 16 KB verificati; collaudo sul dispositivo da completare.
 
-## In verifica nella 0.5.41
+## In verifica nella 0.5.42
 
-- L'arresto di Voice riutilizza il punto normalizzato del WebView selezionato in avvio, adattato alle dimensioni correnti: nessuna ricerca di un secondo pulsante di uscita. Dopo un unico gesto DOWN/UP, lo stato atteso è il controllo iniziale individuato semanticamente o nel compositore compatto.
-- Gli swipe ripetuti mentre il tocco di arresto è ancora in verifica vengono ignorati, per evitare di premere di nuovo lo stesso toggle.
-- La coordinata salvata viene invalidata con l'istanza/ciclo WebView e non è una posizione fissa del display. Il gesto di swipe, cover, gestione X/blocco e protezione da tocchi Voice ripetuti restano invariati.
-- L'esito di build, firma e test sarà registrato in `VERIFICATION.md`; resta la conferma sul Galaxy S24+.
+- Prima dello stop, il DOM cerca nella schermata Voice corrente un solo controllo di uscita visibile, abilitato e raggiungibile, con descrizione semantica Voice/stop. Il punto d'avvio non è riutilizzato.
+- Viene inviato un solo gesto DOWN/UP al target attuale. La conferma attende fino a due secondi che torni disponibile un controllo iniziale Voice. Swipe ripetuti durante l'arresto sono ignorati.
+- Se non c'è un target unico, Jarvis non tenta un tocco geometrico o un pulsante generico. La diagnostica registra target trovato/mancante, tocco inviato e arresto confermato/fallito, senza contenuti della conversazione.
+- Test e build locali superati; screenshot e prova sul Galaxy confermano che la 0.5.41 non chiudeva la UI Voice. La 0.5.42 resta da collaudare sul Galaxy S24+.
+
+## Storico della 0.5.41
+
+- La 0.5.41 riutilizzava il punto normalizzato WebView selezionato all'avvio per tentare lo stop. Lo screenshot successivo mostra Voice ancora aperta con il controllo `X` visibile; il metodo non ha fermato la sessione. Build e firma della 0.5.41 sono documentate in `VERIFICATION.md`.
 
 ## Storico della 0.5.40
 

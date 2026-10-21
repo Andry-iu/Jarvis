@@ -209,14 +209,33 @@ class WebChatActivity : Activity() {
     .filter(visible).map(descriptor)
     .some(label => label === 'voice mode' || label === 'modalita vocale' ||
       label.endsWith(' voice mode') || label.endsWith(' modalita vocale'));
-  const activeExitControl = [...document.querySelectorAll(
-    'button,[role="button"]'
-  )].filter(visible).map(descriptor).some(label => voiceTerm(label) && exitTerm(label));
+  const activeExitControls = [...document.querySelectorAll('button,[role="button"]')]
+    .filter(visible).map(element => ({element, label:descriptor(element)}))
+    .filter(({element, label}) => voiceTerm(label) && exitTerm(label) &&
+      !element.disabled && element.getAttribute('aria-disabled') !== 'true' &&
+      (() => {
+        const rect = element.getBoundingClientRect();
+        const hit = document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2);
+        return hit && (hit === element || element.contains(hit));
+      })());
+  const activeExitControl = activeExitControls.length > 0;
   const visiblePageText = norm(document.body ? document.body.innerText : '');
   const activePageText = visiblePageText.includes('chatgpt modalita vocale') ||
     visiblePageText.includes('chatgpt voice mode');
   if (mediaActive || activeHeading || activeExitControl || activePageText) {
-    return JSON.stringify({ state: 'active', inputTrackLive: !!mediaActive, outputPlaying });
+    const result = { state: 'active', inputTrackLive: !!mediaActive, outputPlaying,
+      exitCandidates: activeExitControls.length };
+    // Stop Voice using the currently visible exit control. The start control's
+    // former position may no longer be the exit button after the UI changes.
+    if (activeExitControls.length === 1) {
+      const rect = activeExitControls[0].element.getBoundingClientRect();
+      result.x = rect.left + rect.width / 2;
+      result.y = rect.top + rect.height / 2;
+      result.viewportWidth = innerWidth;
+      result.viewportHeight = innerHeight;
+      result.strategy = 'voice_exit';
+    }
+    return JSON.stringify(result);
   }
   if (media?.pending) return JSON.stringify({ state: 'opening' });
   const controls = [...document.querySelectorAll(
@@ -339,26 +358,66 @@ class WebChatActivity : Activity() {
                 if (!activity.isValidCycle() || activity.webDestroyed || !activity.resumed || !activity.hasWindowFocus()) {
                     callback(false); return@runOnUiThread
                 }
-                val coords = activity.voiceToggleTarget?.forSize(activity.webView.width, activity.webView.height)
-                if (coords == null) { callback(false); return@runOnUiThread }
                 val generation = activity.documentGeneration
-                if (generation != activity.documentGeneration) { callback(false); return@runOnUiThread }
-                val downTime = SystemClock.uptimeMillis()
-                val down = MotionEvent.obtain(downTime, downTime, MotionEvent.ACTION_DOWN, coords[0], coords[1], 0)
-                    .apply { source = InputDevice.SOURCE_TOUCHSCREEN }
-                activity.webView.dispatchTouchEvent(down); down.recycle()
-                activity.webView.postDelayed({
+                activity.webView.evaluateJavascript(activity.voiceControlLocationScript()) { rawResult ->
                     if (activity.webDestroyed || !activity.isValidCycle() || generation != activity.documentGeneration) {
-                        callback(false); return@postDelayed
+                        callback(false); return@evaluateJavascript
                     }
-                    val upTime = SystemClock.uptimeMillis()
-                    val up = MotionEvent.obtain(downTime, upTime, MotionEvent.ACTION_UP, coords[0], coords[1], 0)
+                    val coords = runCatching {
+                        val encoded = JSONTokener(rawResult).nextValue() as? String ?: return@runCatching null
+                        val value = JSONObject(encoded)
+                        if (value.optString("state") != "active" ||
+                            value.optString("strategy") != "voice_exit") return@runCatching null
+                        val viewportWidth = value.getDouble("viewportWidth").toFloat()
+                        val viewportHeight = value.getDouble("viewportHeight").toFloat()
+                        if (viewportWidth <= 0f || viewportHeight <= 0f) return@runCatching null
+                        floatArrayOf(
+                            value.getDouble("x").toFloat() * activity.webView.width / viewportWidth,
+                            value.getDouble("y").toFloat() * activity.webView.height / viewportHeight
+                        )
+                    }.getOrNull()
+                    if (coords == null) {
+                        DiagnosticLog.record(activity, DiagnosticLog.Event.VOICE_STOP_TARGET_NOT_FOUND, token)
+                        callback(false)
+                        return@evaluateJavascript
+                    }
+                    DiagnosticLog.record(activity, DiagnosticLog.Event.VOICE_STOP_TARGET_FOUND, token)
+                    val downTime = SystemClock.uptimeMillis()
+                    val down = MotionEvent.obtain(downTime, downTime, MotionEvent.ACTION_DOWN, coords[0], coords[1], 0)
                         .apply { source = InputDevice.SOURCE_TOUCHSCREEN }
-                    activity.webView.dispatchTouchEvent(up); up.recycle()
+                    val downAccepted = activity.webView.dispatchTouchEvent(down)
+                    down.recycle()
                     activity.webView.postDelayed({
-                        activity.inspectVoiceState { state -> callback(state == WebVoicePageState.START_READY) }
-                    }, 700L)
-                }, 50L)
+                        if (activity.webDestroyed || !activity.isValidCycle() || generation != activity.documentGeneration) {
+                            callback(false); return@postDelayed
+                        }
+                        val upTime = SystemClock.uptimeMillis()
+                        val up = MotionEvent.obtain(downTime, upTime, MotionEvent.ACTION_UP, coords[0], coords[1], 0)
+                            .apply { source = InputDevice.SOURCE_TOUCHSCREEN }
+                        activity.webView.dispatchTouchEvent(up); up.recycle()
+                        DiagnosticLog.record(activity, DiagnosticLog.Event.VOICE_STOP_TOUCH_DISPATCHED, token)
+                        if (!downAccepted) {
+                            callback(false)
+                            return@postDelayed
+                        }
+                        val startedAt = SystemClock.uptimeMillis()
+                        fun verifyStop() {
+                            if (activity.webDestroyed || !activity.isValidCycle() || generation != activity.documentGeneration) {
+                                callback(false); return
+                            }
+                            activity.inspectVoiceState { state ->
+                                if (state == WebVoicePageState.START_READY) {
+                                    DiagnosticLog.record(activity, DiagnosticLog.Event.VOICE_STOP_CONFIRMED, token)
+                                    callback(true)
+                                } else if (SystemClock.uptimeMillis() - startedAt >= 2_000L) {
+                                    DiagnosticLog.record(activity, DiagnosticLog.Event.VOICE_STOP_FAILED, token)
+                                    callback(false)
+                                } else activity.webView.postDelayed({ verifyStop() }, 200L)
+                            }
+                        }
+                        activity.webView.postDelayed({ verifyStop() }, 200L)
+                    }, 50L)
+                }
             }
         }
 
@@ -407,7 +466,6 @@ class WebChatActivity : Activity() {
     private var pendingMicrophoneRequest: PermissionRequest? = null
     private var voiceTapInFlight = false
     private var cycleToken: String? = null
-    private var voiceToggleTarget: VoiceToggleTarget? = null
     private var resumed = false
     private var webDestroyed = false
     private var localHud: HolographicOverlayView? = null
@@ -783,7 +841,6 @@ class WebChatActivity : Activity() {
             }
 
             // Latch BEFORE dispatch: even an unaccepted touch must never be repeated.
-            voiceToggleTarget = VoiceToggleTarget.capture(result.x, result.y, webView.width, webView.height)
             VoiceCycle.voiceDispatched(cycleToken!!)
             val downTime = SystemClock.uptimeMillis()
             val down = MotionEvent.obtain(

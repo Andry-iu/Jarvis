@@ -34,7 +34,22 @@ function page({controls = [], headings = [], composer = null, locked = false,
     'When keyguard is showing, search at the bottom first');
   assert.equal(page({controls:[topVoice,bottomVoice]}).inspect().y, 120,
     'When unlocked, the strongest semantic label wins');
-  assert.equal(page({controls:[element('Close voice')]}).inspect().state, 'active');
+  const exitPage = page({controls:[element('Close voice',{x:320,y:720})]}).inspect();
+  assert.equal(exitPage.state, 'active');
+  assert.equal(exitPage.strategy, 'voice_exit', 'Expose the current Voice exit control for a fresh stop tap');
+  assert.equal(exitPage.x, 340);
+  assert.equal(exitPage.y, 740);
+  assert.equal(exitPage.exitCandidates, 1);
+  const ambiguousExit = page({controls:[
+    element('Close voice',{x:320,y:720}), element('End voice mode',{x:250,y:650})
+  ]}).inspect();
+  assert.equal(ambiguousExit.state, 'active');
+  assert.equal(ambiguousExit.strategy, undefined, 'Do not tap if multiple Voice exit controls are visible');
+  assert.equal(ambiguousExit.exitCandidates, 2);
+  const unrelatedClose = page({controls:[element('Close',{x:320,y:720})],
+    headings:[element('Voice mode')]}).inspect();
+  assert.equal(unrelatedClose.state, 'active');
+  assert.equal(unrelatedClose.strategy, undefined, 'Do not guess from a generic close button');
   assert.equal(page({headings:[element('Voice mode')]}).inspect().outputPlaying, false,
     'Active Voice alone does not claim audible output');
   assert.equal(page({headings:[element('Voice mode')], audioElements:[{

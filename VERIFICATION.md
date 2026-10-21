@@ -1,4 +1,15 @@
-# 0.5.41 — riuso del punto del controllo Voice per avvio e arresto
+# 0.5.42 — target di uscita Voice rilevato nella schermata attiva
+
+- Il feedback con screenshot della 0.5.41 mostra la UI Voice ancora aperta e la `X` visibile dopo lo swipe. Il punto riutilizzato dall'avvio non ha chiuso la sessione.
+- Prima dell'unico tocco di stop, il DOM individua nella UI corrente un controllo di uscita Voice visibile, abilitato e raggiungibile. Il target deve essere unico e semanticamente legato a Voice e alla chiusura; se manca o è ambiguo, non parte alcun tocco.
+- Dopo il DOWN/UP nativo, lo stato viene verificato ripetutamente per un massimo di 2 secondi. Gli swipe duplicati restano bloccati durante il tentativo. La diagnostica registra target trovato/mancante, tocco inviato e conferma o fallimento, senza testo, audio o URL.
+- Test JVM: 38 superati, 0 falliti, 0 errori, 0 saltati. `node scripts/test-web-voice.cjs`: superato, inclusi controllo Voice corrente unico, target ambiguo e chiusura generica rifiutata. `lintDebug`: 0 errori e 18 avvisi.
+- Build locale JDK 17, Gradle 8.13, SDK 36 e Build Tools 36.0.0: `testDebugUnitTest lintDebug assembleDebug -PjarvisUnsigned=true` superata.
+- APK: `it.jarviswake`, versionName `0.5.42`, versionCode `64`, minSdk `31`, target/compile SDK `36`, ABI `arm64-v8a`. ZIP CRC e allineamento 16 KB verificati.
+- Firma permanente: certificato SHA-256 `a8ddfbe2b78be5460e72df57afbc3434411e3cc27328b13bc16b4daaba13389a`; schema v3 verificato per API 31+ e schema v2 verificato separatamente per API 24–27. SHA-256 APK firmato `86d09959e19f71679390f539da5f6fd18f8c30d42a924c7e8ea137eea6054b64`.
+- Resta la prova sul Galaxy S24+: verificare che il controllo `X` venga premuto, Voice si chiuda, la cover sparisca e si apra Home. I test DOM non riproducono il DOM effettivo della UI ChatGPT sul telefono.
+
+## 0.5.41 — riuso del punto del controllo Voice per avvio e arresto
 
 - La posizione del controllo trovata e premuta per avviare Voice viene conservata per il ciclo e riutilizzata per lo stop, scalata alle dimensioni correnti della WebView. Non viene cercato un secondo comando di uscita.
 - Una richiesta di arresto già in corso ignora ulteriori swipe finché non torna il risultato, evitando un secondo tocco sul toggle e una possibile riapertura.
