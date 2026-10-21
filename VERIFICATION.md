@@ -1,3 +1,14 @@
+# 0.5.38 — riconoscimento swipe dalla cover (APK firmato per prova)
+
+- Corretto il riconoscimento del drag: la cover valuta il movimento del dito durante `ACTION_MOVE`, parte in una fascia alta interna sotto la barra di stato, usa soglia di 72 dp e tollera una diagonale discendente. Lo swipe orizzontale, quello verso l'alto e le partenze nella barra di sistema non attivano l'azione.
+- Aggiunta un'indicazione visiva in alto: «SCORRI VERSO IL BASSO PER HOME». Al riconoscimento, la logica esistente termina Voice, nasconde la cover e mostra la Home; la pagina resta disponibile per la riattivazione con «Ehi Jarvis».
+- Test JVM: 36 superati, 0 falliti, 0 errori, 0 saltati. Nuovi casi coprono soglia, direzione, zona iniziale, trascinamento diagonale e reset. `node scripts/test-web-voice.cjs`: superato. `lintDebug`: 0 errori e 18 warning.
+- Build pulita locale con JDK 17, Gradle 8.13, SDK 36: `clean testDebugUnitTest lintDebug assembleDebug` superata. APK arm64 allineato a 16 KB.
+- APK: `it.jarviswake`, versionName `0.5.38`, versionCode `60`, minSdk `31`, target/compile SDK `36`, ABI `arm64-v8a`.
+- Firma permanente verificata con alias `jarvis`; certificato SHA-256 `a8ddfbe2b78be5460e72df57afbc3434411e3cc27328b13bc16b4daaba13389a`; firme v2 e v3 verificate separatamente. `zipalign -c -P 16 -v 4`: superato.
+- SHA-256 APK firmato: `306d298e7b448c07529da1e60036c33cc08717ea3808362cfba8605fa21ed4a3`.
+- Resta la prova sul Galaxy S24+: verificare che lo swipe iniziato nella fascia indicata nasconda davvero la cover, fermi l'audio Voice e poi permetta wake e ripresa della stessa conversazione.
+
 # 0.5.37 — cover nascosta e riattivazione con wake word (APK firmato per prova)
 
 - Implementato lo swipe verso il basso per nascondere la cover e tornare alla Home; prima di nasconderla l'app termina la modalità Voice per rilasciare il microfono, mantiene la pagina/conversazione WebView e riprende Voice sulla stessa pagina al trigger «Ehi Jarvis».

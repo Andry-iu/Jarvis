@@ -19,6 +19,7 @@ import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.sin
+import android.view.ViewConfiguration
 
 /** Original cinematic HUD animation shown while ChatGPT is being configured. */
 class HolographicOverlayView(context: Context) : View(context) {
@@ -65,26 +66,38 @@ class HolographicOverlayView(context: Context) : View(context) {
     private var downY = 0f
     private var lastTapAt = 0L
     private var lastTapTarget = 0
+    private val swipeDetector = CoverSwipeDetector(
+        density = resources.displayMetrics.density,
+        touchSlop = ViewConfiguration.get(context).scaledTouchSlop.toFloat()
+    )
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
         when (event.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
                 downX = event.x
                 downY = event.y
+                val statusBarInset = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                    rootWindowInsets?.getInsets(android.view.WindowInsets.Type.statusBars())?.top ?: 0
+                } else 0
+                swipeDetector.onDown(event.x, event.y, height, statusBarInset)
+                return true
+            }
+            MotionEvent.ACTION_MOVE -> {
+                if (swipeDetector.onMove(event.x, event.y)) {
+                    fireHideGesture()
+                }
                 return true
             }
             MotionEvent.ACTION_UP -> {
+                if (swipeDetector.onMove(event.x, event.y)) {
+                    fireHideGesture()
+                    return true
+                }
+                if (swipeDetector.wasTriggered) return true
+                swipeDetector.reset()
                 val dx = event.x - downX
                 val dy = event.y - downY
                 val slop = 36f * resources.displayMetrics.density
-                if (downY < height * 0.20f && dy > maxOf(90f * resources.displayMetrics.density, height * 0.12f) &&
-                    kotlin.math.abs(dx) < maxOf(80f * resources.displayMetrics.density, kotlin.math.abs(dy) * 0.65f)) {
-                    pendingSingleTap?.let(gestureHandler::removeCallbacks)
-                    pendingSingleTap = null
-                    lastTapAt = 0L
-                    onHide?.invoke()
-                    return true
-                }
                 if (kotlin.math.abs(dx) > slop || kotlin.math.abs(dy) > slop) return true
                 val target = tapTarget(event.x, event.y)
                 if (target == 0) return true
@@ -109,6 +122,7 @@ class HolographicOverlayView(context: Context) : View(context) {
                 return true
             }
             MotionEvent.ACTION_CANCEL -> {
+                swipeDetector.reset()
                 pendingSingleTap?.let(gestureHandler::removeCallbacks)
                 pendingSingleTap = null
                 lastTapAt = 0L
@@ -117,6 +131,14 @@ class HolographicOverlayView(context: Context) : View(context) {
             }
         }
         return true
+    }
+
+    private fun fireHideGesture() {
+        pendingSingleTap?.let(gestureHandler::removeCallbacks)
+        pendingSingleTap = null
+        lastTapAt = 0L
+        lastTapTarget = 0
+        onHide?.invoke()
     }
 
     private fun tapTarget(x: Float, y: Float): Int {
@@ -148,6 +170,18 @@ class HolographicOverlayView(context: Context) : View(context) {
         val seconds = (SystemClock.uptimeMillis() - startedAt) / 1000f
         // Replace each frame's background so translucency never accumulates to opaque.
         canvas.drawColor(Color.argb(backgroundAlpha, 2, 8, 15), PorterDuff.Mode.SRC)
+
+        if (voiceActive) {
+            val density = resources.displayMetrics.density
+            val label = "↓  SCORRI VERSO IL BASSO PER HOME"
+            paint.style = Paint.Style.FILL
+            paint.typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
+            paint.textAlign = Paint.Align.CENTER
+            paint.textSize = width * 0.028f
+            paint.letterSpacing = 0.035f
+            paint.color = withAlpha(cyan, 0.70f)
+            canvas.drawText(label, width / 2f, 72f * density, paint)
+        }
 
         val cx = width / 2f
         val cy = height * 0.43f

@@ -1,10 +1,10 @@
 # JarvisWake — continuità di sviluppo
 
-Aggiornato il 21 ottobre 2026 per la 0.5.37. È pronto un APK ARM64 firmato permanentemente per provare swipe verso Home, arresto di Voice, wake «Ehi Jarvis» e ripresa della stessa pagina. Test DOM/unitari, lint, build, allineamento e firma sono verificati; resta necessario il collaudo sul Galaxy S24+.
+Aggiornato il 21 ottobre 2026 per la 0.5.38. La prova della 0.5.37 sul Galaxy S24+ ha mostrato che lo swipe non veniva riconosciuto. La nuova build rileva il trascinamento durante il movimento, parte dalla fascia sotto la barra di stato e mostra un'indicazione visiva. Test DOM/JVM, lint, build pulita, firma e allineamento superati; verificare il gesto sul telefono.
 
 ## Stato attuale
 
-- Versione sorgenti: **0.5.37**, versionCode **59**. Pacchetto `it.jarviswake`, minSdk 31, compile/target SDK 36, Build Tools 36.0.0, Gradle Wrapper 8.13, JDK 17, ABI `arm64-v8a`.
+- Versione sorgenti: **0.5.38**, versionCode **60**. Pacchetto `it.jarviswake`, minSdk 31, compile/target SDK 36, Build Tools 36.0.0, Gradle Wrapper 8.13, JDK 17, ABI `arm64-v8a`.
 - Repository di riferimento: `https://github.com/Andry-iu/Jarvis`, branch `main`. Usare sempre il `main` remoto più recente come baseline; non assumere che la 0.5.30 sia ancora HEAD.
 - Il codice si collega al progetto ChatGPT JarvisRuntime all'URL `https://chatgpt.com/g/g-p-6ad5d9f2d9f48191a7c4860050aa43cc-jarvisruntime/project`.
 - La 0.5.33 mantiene Vosk Model/Recognizer per tutta la vita del servizio, tiene attiva la cattura per 30 secondi dopo screen-off e riprende subito all'accensione riusando il modello. Sul Galaxy S24+ l'utente ha confermato wake entro la finestra, nessun avvio dopo la scadenza e ripresa immediata all'accensione.
@@ -12,6 +12,7 @@ Aggiornato il 21 ottobre 2026 per la 0.5.37. È pronto un APK ARM64 firmato perm
 - La 0.5.35 elimina l'abbandono automatico dopo 10 secondi: `NOT_READY` è ritentabile senza limite fino alla preparazione del compositore o alla cancellazione del ciclo. `SENT` termina come inviato; campo occupato o esito ambiguo terminano senza nuovo invio per proteggere le bozze e l'invio singolo. Build e test locali superati; il collaudo sul Galaxy resta da eseguire.
 - La 0.5.36 aggiunge etichette localizzate e fallback al campo editabile attivo, visibile e vuoto; la protezione contro bozze e invii doppi resta invariata. Nuovi eventi sintetici distinguono stato Voice e risultati del saluto, con registrazione limitata ai cambi di risultato e senza testo. Test/build locali superati; APK unsigned, firma permanente non eseguita, collaudo sul telefono aperto.
 - La 0.5.37 rimuove X, aggiunge tocco singolo sui cerchi per opaco/semitrasparente, doppio tocco centrale per terminare il ciclo, doppio tocco in alto a destra per esportare diagnostica e swipe verso il basso per terminare Voice, mostrare Home e lasciare la pagina pronta alla wake. APK firmato permanentemente; firma, test e build locali superati. Stop microfono, wake in background e ripresa stessa conversazione ancora da provare sul Galaxy.
+- La 0.5.38 corregge lo swipe che non si è attivato sul telefono: il riconoscimento ora avviene durante `ACTION_MOVE`, usa una zona iniziale appena sotto la barra di stato, una soglia più breve e un'indicazione a schermo. Test automatici coprono direzione, zona e soglia; APK firmato permanentemente, prova reale ancora necessaria.
 - Dispositivo di riferimento: Samsung Galaxy S24+ (SM-S926B), Android 16 / One UI. La correzione .32 richiede ancora conferma sul dispositivo; non dedurre il successo sul telefono dai test DOM o dalla compilazione.
 - Feedback storico: l'utente aveva confermato che la schermata di blocco funzionava dopo una correzione precedente; in altre prove aveva segnalato assenza della risposta vocale. Questi riscontri non certificano l'APK 0.5.30.
 
@@ -46,6 +47,7 @@ Aggiornato il 21 ottobre 2026 per la 0.5.37. È pronto un APK ARM64 firmato perm
 | 0.5.35 | 57 | Candidato locale non rilasciato: rimuove il termine di 10 secondi per `NOT_READY`, mantenendo terminali campo occupato ed esito ambiguo per non sovrascrivere testo o duplicare l'invio. Test, build e collaudo sul Galaxy da completare. |
 | 0.5.36 | 58 | Aggiunge riconoscimento del campo localizzato o già attivo e diagnostica degli stati Voice e delle fasi del saluto, senza registrare contenuti. Test, build e collaudo sul Galaxy da completare. |
 | 0.5.37 | 59 | Gesti della cover e ritorno alla Home; chiusura di Voice per il wake locale e ripresa della stessa pagina. APK firmato col certificato permanente; test e build superati, collaudo Galaxy da completare. |
+| 0.5.38 | 60 | Rende riconoscibile lo swipe dalla cover durante il movimento e mostra la zona di partenza. Build e test da eseguire; collaudo Galaxy necessario. |
 
 I dettagli non deducibili dai bytecode .28/.29 non vanno inventati. Se emergono APK o sorgenti più completi, confrontarli con il codice consolidato prima di sostituire implementazioni.
 

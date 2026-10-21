@@ -1,12 +1,13 @@
 # Roadmap — JarvisWake
 
-Stato release 0.5.37, versionCode 59: APK ARM64 firmato col certificato permanente e pronto per la prova sul Galaxy S24+. Swipe verso il basso: termina Voice per rilasciare il microfono, mostra la Home e lascia la pagina WebView pronta alla riattivazione con «Ehi Jarvis». Verifiche build, test, lint, firma e allineamento completate; comportamento sul dispositivo ancora da collaudare.
+Stato release 0.5.38, versionCode 60. L'utente ha provato la 0.5.37 sul Galaxy S24+ e ha riferito che lo swipe non ha prodotto effetti. Il nuovo rilevatore gestisce il drag mentre il dito si muove, parte da una fascia interna sotto la barra di stato, usa una soglia più breve e mostra un'indicazione. Build pulita, test, firma permanente e allineamento superati; la correzione va confermata sul dispositivo.
 
-## In prova nella 0.5.37
+## In prova nella 0.5.38
 
 - Tocco singolo sui cerchi: alterna cover opaca e semitrasparente. Doppio tocco al centro: chiude il ciclo. Doppio tocco in alto a destra: esporta la diagnostica. Il pulsante X è stato rimosso.
-- Swipe dall'alto verso il basso: termina la modalità Voice, nasconde la cover e torna alla Home. La pagina e la conversazione WebView restano aperte in background; la wake word «Ehi Jarvis» dovrebbe riportare alla stessa sessione e riattivare Voice.
-- L'APK è firmato permanentemente. La prova sul Galaxy S24+ deve confermare il rilascio reale del microfono, l'ascolto wake in background e la ripresa della stessa conversazione.
+- Swipe iniziato nella fascia alta interna, appena sotto la barra di stato: il rilevatore si attiva durante il movimento e termina la modalità Voice, nasconde la cover e torna alla Home. La pagina e la conversazione WebView restano aperte in background; la wake word «Ehi Jarvis» dovrebbe riportare alla stessa sessione e riattivare Voice.
+- Indicazione visiva nella parte alta della cover per mostrare la direzione del gesto e la zona di avvio, tenuta fuori dal bordo che Android usa per la tendina di sistema.
+- APK firmato permanentemente pronto. Test sul Galaxy S24+ necessario per confermare il gesto, il rilascio reale del microfono, l'ascolto wake in background e la ripresa della stessa conversazione.
 
 ## Correzione in lavorazione per la 0.5.36
 
@@ -64,6 +65,6 @@ Le misure dipendono da rete, account ChatGPT, DOM del servizio, WebView e dispos
 ## Regole di lavoro
 
 - Discutere l'intero ambito di una release prima di iniziare lo sviluppo. Quando l'utente sta ancora valutando le opzioni, non cambiare codice; implementare soltanto dopo autorizzazione esplicita. La regola vale anche sul branch Git.
-- Preservare HUD opaco/semitrasparente persistente, X disponibile, wake anche da schermata di blocco, cancellazione ciclo, un solo gesto Voice e nessuna ripetizione dopo l'attivazione.
+- Preservare HUD opaco/semitrasparente persistente senza X, gesti della cover, wake anche da schermata di blocco, cancellazione ciclo, un solo gesto Voice e nessuna ripetizione dopo l'attivazione.
 - Usare sessione ChatGPT autenticata e progetto JarvisRuntime; non API/account alternativi né ultima chat generica.
 - Aggiornare test e documenti con codice. Build/firma localmente; niente compilazione automatica GitHub al push. Al rilascio firmato per il test, commit e push fast-forward su `main` secondo `AGENTS.md`.
