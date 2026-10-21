@@ -87,6 +87,35 @@ class VoiceCycleStateTest {
         assertFalse(state.expired(500_000L))
     }
 
+    @Test fun hiddenVoiceCycleResumesSameCycleWithOneFreshVoiceGesture() {
+        val state = waiting()
+        assertTrue(state.openWeb("wake-A", 2_000L, true, true, false, false))
+        state.voiceDispatched("wake-A")
+        assertTrue(state.hideForWake("wake-A"))
+        assertTrue(state.hiddenForWake)
+        assertEquals(VoiceCycleState.Phase.VOICE, state.phase)
+        assertFalse(state.hideForWake("wake-A"))
+        assertTrue(state.resumeFromWake("wake-A", 3_000L))
+        assertFalse(state.hiddenForWake)
+        assertEquals(VoiceCycleState.Phase.WEB, state.phase)
+        assertTrue(state.touchGate.canDispatch)
+        state.voiceDispatched("wake-A")
+        assertFalse(state.touchGate.canDispatch)
+        assertFalse(state.hiddenForWake)
+    }
+
+    @Test fun staleWakeCannotResumeHiddenConversation() {
+        val state = waiting()
+        state.openWeb("wake-A", 2_000L, true, true, false, false)
+        state.voiceDispatched("wake-A")
+        assertTrue(state.hideForWake("wake-A"))
+        assertFalse(state.resumeFromWake("wake-B", 3_000L))
+        assertTrue(state.hiddenForWake)
+        assertTrue(state.cancel("wake-A"))
+        assertFalse(state.hiddenForWake)
+        assertFalse(state.resumeFromWake("wake-A", 4_000L))
+    }
+
     @Test fun duplicateStartAndStaleCancellationDoNotReplaceCurrentAttempt() {
         val state = waiting()
         assertFalse(state.begin("wake-B", 2_000L))

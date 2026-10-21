@@ -74,17 +74,18 @@ function page({controls = [], headings = [], composer = null, locked = false,
   Object.defineProperty(HTMLTextAreaElement.prototype, 'value', {
     get() { return this._value || ''; }, set(value) { this._value = value; }
   });
-  function greetingPage() {
+  function greetingPage({placeholder = 'Chiedi a ChatGPT', focused = false} = {}) {
     const controls = [];
     let present = false, connected = true;
     const composer = Object.assign(Object.create(HTMLTextAreaElement.prototype), {
       disabled:false, innerText:'', textContent:'', isContentEditable:false, hidden:false,
-      getAttribute:name => name === 'placeholder' ? 'Chiedi a ChatGPT' : null,
+      getAttribute:name => name === 'placeholder' ? placeholder : null,
       closest:() => null, focus() { throw new Error('Greeting must not focus the composer or open the keyboard'); },
       getBoundingClientRect:() => ({left:20, top:700, right:380, bottom:750, width:360, height:50}),
       dispatchEvent:() => true
     });
-    const document = {querySelectorAll:query => query.startsWith('textarea') ? (present ? [composer] : []) : controls,
+    const document = {activeElement:focused ? composer : null,
+      querySelectorAll:query => query.startsWith('textarea') ? (present ? [composer] : []) : controls,
       contains:element => connected && element === composer};
     const context = vm.createContext({window:{}, document, innerWidth:400, innerHeight:800,
       getComputedStyle:e => ({visibility:e.hidden?'hidden':'visible',display:'block',opacity:'1'}),
@@ -107,6 +108,15 @@ function page({controls = [], headings = [], composer = null, locked = false,
   assert.equal(greeting.fill(), 'composer_waiting', 'Wait until the reduced Voice composer is stable');
   assert.equal(greeting.fill(), 'filled');
   assert.equal(greeting.composer.value, 'ciao jarvis');
+  const focusedItalian = greetingPage({placeholder:'Digita', focused:true});
+  focusedItalian.show();
+  assert.equal(focusedItalian.fill(), 'composer_waiting');
+  assert.equal(focusedItalian.fill(), 'filled', 'A focused empty composer is accepted even with an unfamiliar localized label');
+  assert.equal(focusedItalian.composer.value, 'ciao jarvis');
+  const focusedUnknown = greetingPage({placeholder:'Scrivi qui', focused:true});
+  focusedUnknown.show();
+  assert.equal(focusedUnknown.fill(), 'composer_waiting');
+  assert.equal(focusedUnknown.fill(), 'filled', 'The already focused editable is a safe fallback when its label changes');
   assert.equal(greeting.submit(), 'send_not_ready', 'No fake Enter or blind form submission');
   const close = control('Close voice');
   const hiddenSend = control('Send message', {hidden:true});

@@ -19,6 +19,7 @@ internal object VoiceCycle {
     private val main = Handler(Looper.getMainLooper())
     private var app: Application? = null
     val active: Boolean get() = state.id != null
+    val hiddenForWake: Boolean get() = state.hiddenForWake
     val id: String? get() = state.id
     val phase: VoiceCycleState.Phase get() = state.phase
     val touchGate: WebVoiceTouchGate get() = state.touchGate
@@ -82,6 +83,30 @@ internal object VoiceCycle {
             app?.let { DiagnosticLog.record(it, DiagnosticLog.Event.VOICE_DISPATCHED_FIRST, token) }
             main.removeCallbacks(watchdog)
         }
+    }
+
+    fun hideForWake(context: Context, token: String) {
+        if (!matches(token) || phase != VoiceCycleState.Phase.VOICE || hiddenForWake) return
+        WebChatActivity.endVoiceForWake(token) { released ->
+            if (!released || !matches(token) || !state.hideForWake(token)) {
+                DiagnosticLog.record(context, DiagnosticLog.Event.HIDE_FOR_WAKE_FAILED, token)
+                State.setAttempt(context, "Non ho potuto fermare Voice in sicurezza; la cover resta visibile.")
+                return@endVoiceForWake
+            }
+            DiagnosticLog.record(context, DiagnosticLog.Event.COVER_HIDDEN_FOR_WAKE, token)
+            VoiceAccessibilityService.coverHidden(token)
+            WakeService.listenWhileHidden()
+        }
+    }
+
+    fun resumeHidden(context: Context, token: String?): Boolean {
+        if (!hiddenForWake || token == null || !state.resumeFromWake(token, SystemClock.elapsedRealtime())) return false
+        DiagnosticLog.record(context, DiagnosticLog.Event.WAKE_RESUMED_HIDDEN_CYCLE, token)
+        WakeService.pauseForVoiceCycle()
+        VoiceAccessibilityService.resumeWeb(token)
+        WebChatActivity.bringExistingToFront(context, token)
+        State.setAttempt(context, "Wake rilevata; riapro Voice nella conversazione esistente.")
+        return true
     }
 
     fun cancel(context: Context, token: String, message: String) {

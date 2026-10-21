@@ -1,3 +1,37 @@
+# 0.5.37 — cover nascosta e riattivazione con wake word (APK firmato per prova)
+
+- Implementato lo swipe verso il basso per nascondere la cover e tornare alla Home; prima di nasconderla l'app termina la modalità Voice per rilasciare il microfono, mantiene la pagina/conversazione WebView e riprende Voice sulla stessa pagina al trigger «Ehi Jarvis».
+- Un tocco sui cerchi alterna opaco/semitrasparente; doppio tocco al centro chiude il ciclo; doppio tocco in alto a destra esporta il log diagnostico locale. Rimosso il pulsante X.
+- Diagnostica esportata in archivio locale limitato, senza testo conversazione o audio.
+- Test JVM: 31 superati, 0 falliti, 0 errori, 0 saltati. `node scripts/test-web-voice.cjs`: superato. `lintDebug`: 0 errori e 17 warning.
+- Build locale con JDK 17, Gradle 8.13 e SDK 36: `clean testDebugUnitTest lintDebug assembleDebug` superata. APK arm64 allineato a 16 KB.
+- APK: `it.jarviswake`, versionName `0.5.37`, versionCode `59`, minSdk `31`, target/compile SDK `36`, ABI `arm64-v8a`.
+- Firma permanente verificata: alias `jarvis`; certificato SHA-256 `a8ddfbe2b78be5460e72df57afbc3434411e3cc27328b13bc16b4daaba13389a`; firme v3 e v2 verificate separatamente. `zipalign -c -P 16 -v 4`: superato.
+- SHA-256 APK firmato: `ac44b814881fa7512bdf95acd1f71f1b249ec1f6062cd9cb274aae33f52cb7b4`.
+- Limite della prova: nessun telefono collegato all'ambiente. Va collaudato sul Galaxy S24+ che lo swipe mostri la Home, il microfono di ChatGPT si fermi, Jarvis rilevi «Ehi Jarvis» e Voice riprenda nella stessa conversazione.
+
+## 0.5.36 — riconoscimento campo attivo e diagnostica del saluto (candidato locale)
+
+- Dopo la prova dell'utente con la 0.5.35, la schermata mostrava una chat nuova e il cursore nel campo vuoto, ma non il saluto. Questo conferma il sintomo sul Galaxy S24+; non identifica da solo il ramo DOM responsabile.
+- `FILL_GREETING_SCRIPT` riconosce «Digita» e altre etichette localizzate; come fallback considera il campo editabile già attivo, se visibile e vuoto. Mantiene le due letture stabili e non chiama `focus()`.
+- La diagnostica registra solo transizioni di stato Voice e categorie di risultato del saluto, senza contenuto, audio, URL o credenziali. Risultati ripetuti uguali non vengono riscritti a ogni ciclo di polling.
+- `node scripts/test-web-voice.cjs`: superato, inclusi campo italiano/non etichettato, protezione delle bozze e invio singolo. Test JVM: 29 superati, 0 falliti, 0 errori, 0 saltati. `lintDebug`: 0 errori e 16 warning.
+- Build locale con JDK 17, Gradle 8.13 e SDK 36: `clean testDebugUnitTest lintDebug assembleDebug` superata. Il repository Maven locale è stato usato; non sono stati necessari download durante la build.
+- APK: `it.jarviswake`, versionName `0.5.36`, versionCode `58`, minSdk `31`, target/compile SDK `36`, ABI `arm64-v8a`. SHA-256 dell'APK unsigned: `76c9a1666538deef12fc0be0339e98f05965bfa9918f5d0a9102a0630aa57b62`.
+- `zipalign -c -P 16 -v 4`, CRC ZIP e metadati APK: superati. La build è unsigned; `apksigner` conferma che non ha firma. Non è installabile come aggiornamento finché non viene firmata con il certificato permanente.
+- Nessun dispositivo è collegato all'ambiente: resta da installare e provare sul Galaxy S24+ che il saluto sia compilato e inviato una sola volta senza sovrascrivere testo o aprire la tastiera.
+
+## 0.5.35 — retry sicuro del saluto (candidato locale)
+
+- Rimossa la scadenza di 10 secondi che trasformava `NOT_READY` in un esito terminale. `NOT_READY` è ripetibile perché lo script garantisce che nessun click di invio è avvenuto.
+- Aggiunta una policy testata: solo `NOT_READY` è ritentabile; `SENT` è terminale come inviato; campo occupato e risultato ambiguo sono terminali per evitare sovrascritture o duplicati.
+- `node scripts/test-web-voice.cjs`: superato. Test JVM: 29 superati, 0 falliti, 0 errori, 0 saltati. `lintDebug`: 0 errori e 16 avvisi.
+- Build locale con JDK 17, Gradle 8.13, SDK 36 e Build Tools 36.0.0: `BUILD SUCCESSFUL`; `testDebugUnitTest lintDebug assembleDebug` superati.
+- APK: `it.jarviswake`, versionName `0.5.35`, versionCode `57`, minSdk `31`, target/compile SDK `36`, ABI `arm64-v8a`.
+- APK firmato permanente: `JarvisWake-0.5.35-debug-arm64-permanent.apk`; SHA-256 `5e816e5c6162c1def057c3b44c4a5fc4a8573c538b45bece549a3d88c8eb2de8`.
+- Certificato SHA-256 `a8ddfbe2b78be5460e72df57afbc3434411e3cc27328b13bc16b4daaba13389a`, uguale a quello permanente. Verifica v3 superata; v2 verificata separatamente nell'intervallo API 24–27, metodo necessario perché il controllo limitato a minSdk 31 usa v3. `zipalign -c -P 16 -v 4` e `unzip -t`: superati. APK escluso da Git.
+- Prova dell'utente sul Galaxy S24+: la chat si apre e il cursore resta attivo, ma il saluto non viene inserito né inviato. La causa non è distinguibile dai log della 0.5.35; la 0.5.36 aggiunge il fallback sul campo attivo e diagnostica per individuare la fase.
+
 ## 0.5.34 — inserimento del saluto senza focus
 
 - Modificato `FILL_GREETING_SCRIPT`: il saluto «ciao jarvis» viene inserito nel DOM senza `target.focus()` e senza `document.execCommand`, che senza focus potrebbe agire sulla selezione errata. Il test protegge dall'uso del focus, verifica il testo in `contenteditable` e conserva la protezione contro invii duplicati.

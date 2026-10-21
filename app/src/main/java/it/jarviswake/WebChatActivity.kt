@@ -1,3 +1,6 @@
+Warning: truncated output (original token count: 12629)
+Total output lines: 965
+
 package it.jarviswake
 
 import android.Manifest
@@ -65,8 +68,10 @@ class WebChatActivity : Activity() {
                 const label = [element.getAttribute('aria-label'), element.getAttribute('placeholder'),
                   element.getAttribute('data-testid'), element.id].join(' ').toLowerCase();
                 return label.includes('message') || label.includes('prompt') || label.includes('messaggio') ||
-                  label.includes('chiedi a chatgpt') || label.includes('composer');
-              });
+                  label.includes('chiedi a chatgpt') || label.includes('composer') ||
+                  label.includes('digita') || label.includes('ask anything') || label.includes('type a message');
+              }) || candidates.find(element => element === document.activeElement ||
+                element.contains(document.activeElement));
               if (!target) return JSON.stringify({result:'composer_missing'});
               const rect = target.getBoundingClientRect();
               const position = [rect.left, rect.top, rect.width, rect.height].join(',');
@@ -302,6 +307,20 @@ class WebChatActivity : Activity() {
   });
 })()
         """.trimIndent()
+        private val END_VOICE_LOCATION_SCRIPT = """
+            (() => {
+              const visible = e => { const r=e.getBoundingClientRect(),s=getComputedStyle(e); return r.width>8&&r.height>8&&s.display!=='none'&&s.visibility!=='hidden'&&s.opacity!=='0'&&r.bottom>0&&r.right>0&&r.top<innerHeight&&r.left<innerWidth; };
+              const norm = s => (s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z ]/g,' ').trim().replace(/ +/g,' ');
+              const labels = [...document.querySelectorAll('button,[role="button"]')].filter(visible).map(e => ({e, label:norm([e.getAttribute('aria-label'),e.getAttribute('title'),e.getAttribute('data-testid'),e.innerText,...[...e.querySelectorAll('[aria-label]')].map(x=>x.getAttribute('aria-label'))].filter(Boolean).join(' '))}));
+              const exits = labels.filter(x => {
+                const l=x.label, hasVoice=/voice|vocal|conversation|chiamata/.test(l), hasEnd=/end|stop|close|leave|exit|terminate|termina|chiudi|esci|fine/.test(l);
+                return hasVoice && hasEnd && !/mute|microphone|microfono/.test(l) && !x.e.disabled && x.e.getAttribute('aria-disabled')!=='true';
+              });
+              if (exits.length!==1) return JSON.stringify({result:'ambiguous',count:exits.length});
+              const r=exits[0].e.getBoundingClientRect();
+              return JSON.stringify({result:'ready',x:r.left+r.width/2,y:r.top+r.height/2,viewportWidth:innerWidth,viewportHeight:innerHeight});
+            })()
+        """.trimIndent()
         internal fun preloadVoiceControlScript(): String =
             VOICE_CONTROL_LOCATION_SCRIPT.replace("__JARVIS_LOCKED__", "false")
         @Volatile private var active = WeakReference<WebChatActivity>(null)
@@ -317,169 +336,15 @@ class WebChatActivity : Activity() {
         fun setExternalCoverVisible(token: String, visible: Boolean) {
             active.get()?.takeIf { it.cycleToken == token }?.let {
                 it.localHud?.visibility = if (visible) View.GONE else View.VISIBLE
-                it.localClose?.visibility = if (visible) View.GONE else View.VISIBLE
                 it.updateLockScreenUi()
             }
         }
 
-        fun showStatus(token: String, message: String) {
-            active.get()?.takeIf { it.cycleToken == token }?.localHud?.setStatus(message)
-        }
-
-        fun showVoiceActive(token: String) {
-            active.get()?.takeIf { it.cycleToken == token }?.localHud?.setVoiceActive()
-        }
-
-        fun tapVoiceControl(callback: (WebVoiceTapResult) -> Unit) {
-            val activity = active.get()
-            if (activity == null) callback(WebVoiceTapResult.UNAVAILABLE) else activity.runOnUiThread {
-                activity.locateAndTapVoiceControl(callback)
-            }
-        }
-
-        fun inspectVoiceState(callback: (WebVoicePageState) -> Unit) {
-            val activity = active.get()
-            if (activity == null) callback(WebVoicePageState.UNAVAILABLE) else activity.runOnUiThread {
-                activity.inspectVoiceState(callback)
-            }
-        }
-
-        fun sendGreetingToVoice(callback: (VoiceGreetingResult) -> Unit) {
-            val activity = active.get()
-            if (activity == null) callback(VoiceGreetingResult.UNAVAILABLE) else activity.runOnUiThread {
-                activity.sendGreetingToVoice(callback)
-            }
-        }
-
-        fun closeForCycle(token: String) {
-            active.get()?.takeIf { it.cycleToken == token }?.let {
-                it.releaseWebView()
-                it.finish()
-            }
-        }
-    }
-
-    private lateinit var webView: WebView
-    private var pendingMicrophoneRequest: PermissionRequest? = null
-    private var voiceTapInFlight = false
-    private var cycleToken: String? = null
-    private var resumed = false
-    private var webDestroyed = false
-    private var localHud: HolographicOverlayView? = null
-    private var localClose: View? = null
-    private var localUnlock: Button? = null
-    private var unlockPending = false
-    private val voiceTouchGate: WebVoiceTouchGate get() = VoiceCycle.touchGate
-    private fun isValidCycle() = VoiceCycle.matches(cycleToken) && !isFinishing && !isDestroyed
-
-    private var documentGeneration = 0
-    private var lastVoiceCandidateX = Float.NaN
-    private var lastVoiceCandidateY = Float.NaN
-    private var stableVoiceCandidateCount = 0
-    private var voiceReadyLogged = false
-    private var voiceInputTrackLogged = false
-    private var voiceMediaPlayingLogged = false
-    private var preloadedVoiceLocation: PreloadedVoiceLocation? = null
-
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        cycleToken = intent.getStringExtra(VoiceCycle.EXTRA_ID)
-        if (intent.getBooleanExtra(EXTRA_AUTOMATION, false)) {
-            if (!VoiceCycle.matches(cycleToken)) {
-                State.setAttempt(this, "ChatGPT richiesto da un ciclo terminato: apertura annullata.")
-                finish()
-                return
-            }
-            if (savedInstanceState != null && !voiceTouchGate.canDispatch) {
-                VoiceCycle.cancel(this, cycleToken!!,
-                    "Android ha ricreato ChatGPT durante Voice. Ciclo chiuso per evitare un secondo tocco.")
-                finish()
-                return
-            }
-        }
-        if (cycleToken != null) {
-            // Show this app's voice surface above keyguard; do not dismiss device security.
-            setShowWhenLocked(true)
-            setTurnScreenOn(true)
-        }
-        active = WeakReference(this)
-        if (cycleToken != null && Build.VERSION.SDK_INT >= 33) {
-            onBackInvokedDispatcher.registerOnBackInvokedCallback(OnBackInvokedDispatcher.PRIORITY_DEFAULT) {
-                VoiceCycle.cancel(this, cycleToken!!, "ChatGPT chiuso. Ascolto Hey Jarvis riattivato.")
-            }
-        }
-        val preparedPage = cycleToken?.let { ChatGptPreloader.handoff(it) }
-        automationPageReady = preparedPage?.pageReady ?: false
-        preloadedVoiceLocation = preparedPage?.voiceLocation
-        State.setAttempt(this, "ChatGPT creato; WebView ${WebView.getCurrentWebViewPackage()?.versionName ?: "sconosciuto"}.")
-        webView = (preparedPage?.webView ?: WebView(this)).apply {
-            setBackgroundColor(android.graphics.Color.rgb(2, 8, 15))
-            alpha = 1f
-            isClickable = true
-            isFocusable = true
-            importantForAccessibility = WebView.IMPORTANT_FOR_ACCESSIBILITY_YES
-            settings.apply {
-                javaScriptEnabled = true
-                domStorageEnabled = true
-                mediaPlaybackRequiresUserGesture = false
-                mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
-                allowFileAccess = false
-                allowContentAccess = false
-                setSupportMultipleWindows(false)
-            }
-            webViewClient = object : WebViewClient() {
-                override fun onPageStarted(view: WebView, url: String, favicon: android.graphics.Bitmap?) {
-                    if (webDestroyed || active.get() !== this@WebChatActivity) return
-                    automationPageReady = false
-                    voiceReadyLogged = false
-                    documentGeneration++
-                    resetVoiceCandidate()
-                    super.onPageStarted(view, url, favicon)
-                }
-
-                override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
-                    val uri = request.url
-                    return if (uri.scheme == "https") false else {
-                        Toast.makeText(this@WebChatActivity, "Collegamento non consentito: ${uri.scheme}", Toast.LENGTH_LONG).show()
-                        true
-                    }
-                }
-
-                override fun onPageFinished(view: WebView, url: String) {
-                    super.onPageFinished(view, url)
-                    if (webDestroyed || active.get() !== this@WebChatActivity) return
-                    automationPageReady = true
-                    if (cycleToken != null && isValidCycle()) DiagnosticLog.record(this@WebChatActivity, DiagnosticLog.Event.WEB_PAGE_READY, cycleToken)
-                    localHud?.setStatus("PAGINA CARICATA — PREPARAZIONE VOICE")
-                    State.setAttempt(this@WebChatActivity, "Pagina ChatGPT caricata nel WebView.")
-                    State.set(this@WebChatActivity, "Pagina Web caricata; attendo i controlli ChatGPT.")
-                }
-
-                override fun onReceivedError(view: WebView, request: WebResourceRequest, error: WebResourceError) {
-                    if (!webDestroyed && request.isForMainFrame) failLoading("Caricamento ChatGPT fallito: errore ${error.errorCode}.")
-                }
-
-                override fun onReceivedHttpError(view: WebView, request: WebResourceRequest, response: WebResourceResponse) {
-                    if (!webDestroyed && request.isForMainFrame && response.statusCode >= 400)
-                        failLoading("Caricamento ChatGPT fallito: HTTP ${response.statusCode}.")
-                }
-
-                override fun onRenderProcessGone(view: WebView, detail: RenderProcessGoneDetail): Boolean {
-                    releaseWebView()
-                    failLoading("Processo WebView terminato da Android; ciclo chiuso.")
-                    return true
-                }
-            }
-            webChromeClient = object : WebChromeClient() {
-                override fun onPermissionRequest(request: PermissionRequest) {
-                    runOnUiThread {
-                        if (isFinishing || isDestroyed || webDestroyed ||
-                            (cycleToken != null && !isValidCycle())) {
-                            request.deny()
-                            return@runOnUiThread
-                        }
-                        val host = request.origin.host.orEmpty().lowercase()
-                        val audioRequested = request.resources.contains(PermissionRequest.RESOURCE_AUDIO_CAPTURE)
+        fun bringExistingToFront(context: android.content.Context, token: String) {
+            context.startActivity(android.content.Intent(context, WebChatActivity::class.java)
+                .putExtra(VoiceCycle.EXTRA_ID, token)
+                .putExtra(EXTRA_AUTOMATION, true)
+                .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_…2629 tokens truncated…udioRequested = request.resources.contains(PermissionRequest.RESOURCE_AUDIO_CAPTURE)
                         if (!isTrustedVoiceHost(host) || !audioRequested) {
                             request.deny()
                             val reason = if (!audioRequested) "risorsa audio non richiesta" else "origine non autorizzata"
@@ -509,14 +374,17 @@ class WebChatActivity : Activity() {
         val root = FrameLayout(this)
         root.addView(webView, FrameLayout.LayoutParams(-1, -1))
         if (cycleToken != null) {
-            localHud = HolographicOverlayView(this).apply { setStatus("CARICAMENTO CHATGPT") }
-            root.addView(localHud, FrameLayout.LayoutParams(-1, -1))
-            localClose = CycleUi.closeButton(this) {
-                VoiceCycle.cancel(this, cycleToken!!, "ChatGPT chiuso. Ascolto Hey Jarvis riattivato.")
+            localHud = HolographicOverlayView(this).apply {
+                setStatus("CARICAMENTO CHATGPT")
+                setCoverActions(
+                    singleTap = { CoverSettings.setOpaque(this@WebChatActivity, !CoverSettings.isOpaque(this@WebChatActivity)) },
+                    close = { VoiceCycle.cancel(this@WebChatActivity, cycleToken!!, "Jarvis chiuso. Ascolto Hey Jarvis riattivato.") },
+                    export = { DiagnosticExportActivity.open(this@WebChatActivity) },
+                    hide = { VoiceCycle.hideForWake(this@WebChatActivity, cycleToken!!) }
+                )
             }
+            root.addView(localHud, FrameLayout.LayoutParams(-1, -1))
             val density = resources.displayMetrics.density
-            root.addView(localClose, FrameLayout.LayoutParams((56 * density).toInt(), (56 * density).toInt(),
-                Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL).apply { bottomMargin = (36 * density).toInt() })
             localUnlock = Button(this).apply {
                 text = "Sblocca telefono"
                 setOnClickListener { requestOptionalUnlock() }
@@ -555,6 +423,13 @@ class WebChatActivity : Activity() {
         if (cycleToken != null && !VoiceCycle.matches(cycleToken)) { releaseWebView(); finish(); return }
         updateLockScreenUi()
         if (cycleToken != null) State.setAttempt(this, "ChatGPT visibile; attendo pagina e controllo Voice.")
+    }
+
+    override fun onNewIntent(intent: android.content.Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        val token = intent.getStringExtra(VoiceCycle.EXTRA_ID)
+        if (VoiceCycle.matches(token)) cycleToken = token
     }
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
@@ -797,7 +672,7 @@ class WebChatActivity : Activity() {
     private fun sendGreetingToVoice(callback: (VoiceGreetingResult) -> Unit) {
         if (!isValidCycle() || webDestroyed) { callback(VoiceGreetingResult.UNAVAILABLE); return }
         if (!resumed || !hasWindowFocus() || !automationPageReady) {
-            callback(VoiceGreetingResult.NOT_READY)
+            callback(VoiceGreetingResult.SEND_NOT_READY)
             return
         }
         val generation = documentGeneration
@@ -815,12 +690,15 @@ class WebChatActivity : Activity() {
                     }
                     callback(when (parseGreetingResult(submitRaw)) {
                         "submitted_button", "submitted" -> VoiceGreetingResult.SENT
-                        "send_not_ready" -> VoiceGreetingResult.NOT_READY
+                        "send_not_ready" -> VoiceGreetingResult.SEND_NOT_READY
+                        "composer_not_empty" -> VoiceGreetingResult.COMPOSER_OCCUPIED
                         else -> VoiceGreetingResult.UNAVAILABLE
                     })
                 }
-                "composer_missing", "composer_waiting", "composer_unavailable" -> callback(VoiceGreetingResult.NOT_READY)
-                "composer_not_empty" -> callback(VoiceGreetingResult.COMPOSER_UNAVAILABLE)
+                "composer_missing" -> callback(VoiceGreetingResult.COMPOSER_MISSING)
+                "composer_waiting" -> callback(VoiceGreetingResult.COMPOSER_WAITING)
+                "composer_unavailable" -> callback(VoiceGreetingResult.COMPOSER_UNAVAILABLE)
+                "composer_not_empty" -> callback(VoiceGreetingResult.COMPOSER_OCCUPIED)
                 else -> callback(VoiceGreetingResult.UNAVAILABLE)
             }
         }
@@ -884,4 +762,7 @@ private data class WebVoiceDomResult(
 
 enum class WebVoiceTapResult { DISPATCHED, BLOCKED, ACTIVE, NOT_FOUND, UNAVAILABLE }
 enum class WebVoicePageState { ACTIVE, START_READY, NOT_FOUND, UNAVAILABLE }
-enum class VoiceGreetingResult { SENT, NOT_READY, COMPOSER_UNAVAILABLE, UNAVAILABLE }
+enum class VoiceGreetingResult {
+    SENT, COMPOSER_MISSING, COMPOSER_WAITING, COMPOSER_UNAVAILABLE,
+    SEND_NOT_READY, COMPOSER_OCCUPIED, UNAVAILABLE
+}

@@ -1,6 +1,8 @@
-# JarvisWake 0.5.34 — assistente Android e ChatGPT Voice
+# JarvisWake 0.5.37 — assistente Android e ChatGPT Voice
 
 App Kotlin per Android 12–16 (minSdk 31, targetSdk 36), APK ARM64 destinato alla prova su Samsung Galaxy S24+ Android 16.
+
+La 0.5.37 include i gesti touch della cover, lo swipe verso la Home con stop di ChatGPT Voice e la riattivazione della pagina mantenuta in background tramite «Ehi Jarvis». Il rilascio firmato è pronto per il collaudo sul dispositivo; vedi [VERIFICATION.md](VERIFICATION.md).
 
 ## Documentazione e continuità
 
@@ -58,7 +60,7 @@ La sessione assistente Android disabilita la propria finestra predefinita e la n
 
 Il testo inviato è **«ciao jarvis»**, senza l'istruzione precedente «Dì soltanto». Il saluto non viene consumato quando il campo manca: dopo aver osservato Voice, l'app attende un compositore identificabile, vuoto, abilitato e stabile in due letture. Se l'osservatore ha rilevato una richiesta microfono, attende anche una traccia audio live e nessuna acquisizione pendente o fallita. La 0.5.34 inserisce il saluto via DOM senza assegnare il focus al campo, per evitare l'apertura momentanea della tastiera; serve conferma sul dispositivo che ChatGPT accetti ancora l'inserimento e l'invio.
 
-Dopo la compilazione del campo attende un unico pulsante **Invia** visibile e abilitato. Il solo tipo HTML `submit` non basta e non vengono usati Invio sintetico o invio indiscriminato del form. L'attesa viene ripetuta senza riscrivere il messaggio; il click di invio viene bloccato prima dell'esecuzione, così callback tardive non possono duplicarlo. La finestra di attesa è di 10 secondi di tempo trascorso dal primo tentativo, verificata quando Voice è osservabile; se il campo contiene testo dell'utente non viene sovrascritto.
+Dopo la compilazione del campo attende un unico pulsante **Invia** visibile e abilitato. Il solo tipo HTML `submit` non basta e non vengono usati Invio sintetico o invio indiscriminato del form. Gli esiti che confermano che nessun click è avvenuto restano ritentabili finché il compositore e Invia sono pronti o il ciclo viene annullato; non c'è una scadenza di 10 secondi che consumi il saluto. Il click viene bloccato prima dell'esecuzione nel DOM e un esito ambiguo termina il tentativo senza un secondo invio. Se il campo contiene testo dell'utente non viene sovrascritto.
 
 Il DOM e la traccia microfono non certificano che il collegamento remoto Voice sia pronto a rispondere: l'accettazione effettiva del testo e il parlato devono essere verificati sul telefono. Le pagine ChatGPT e il comportamento dei loro editor possono cambiare.
 

@@ -41,6 +41,14 @@ class WakeService : Service() {
                 service.pauseForVoice()
             }
         }
+
+        fun listenWhileHidden() {
+            val service = instance ?: return
+            service.main.post {
+                if (!VoiceCycle.hiddenForWake) return@post
+                service.updateCaptureRequest()
+            }
+        }
     }
 
     @Volatile private var workerRunning = false
@@ -178,7 +186,10 @@ class WakeService : Service() {
     }
 
     private fun updateCaptureRequest() {
-        val shouldCapture = WakeScreenPolicy.shouldListen(
+        val shouldCapture = if (VoiceCycle.hiddenForWake) {
+            WakeScreenPolicy.shouldListen(screenInteractive, false, stopping,
+                SystemClock.elapsedRealtime(), screenOffDeadlineElapsedMs)
+        } else WakeScreenPolicy.shouldListen(
             screenInteractive, VoiceCycle.active, stopping,
             SystemClock.elapsedRealtime(), screenOffDeadlineElapsedMs
         )
@@ -351,6 +362,7 @@ class WakeService : Service() {
 
     private fun onWake(wakeCycleId: String?) {
         vibrateWakeConfirmation()
+        if (VoiceCycle.resumeHidden(this, VoiceCycle.id)) return
         pauseForVoice()
         State.setAttempt(this, "Wake word Hey Jarvis rilevata; avvio schermata di sblocco.")
         State.set(this, "Hey Jarvis rilevato. Microfono in pausa per ChatGPT.")

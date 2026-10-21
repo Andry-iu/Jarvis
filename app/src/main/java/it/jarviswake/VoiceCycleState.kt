@@ -11,6 +11,8 @@ internal class VoiceCycleState {
         private set
     var touchGate = WebVoiceTouchGate()
         private set
+    var hiddenForWake = false
+        private set
 
     fun begin(token: String, now: Long): Boolean {
         if (id != null) return false
@@ -38,6 +40,22 @@ internal class VoiceCycleState {
         if (!matches(token) || phase == Phase.UNLOCK) return
         touchGate.block()
         phase = Phase.VOICE
+        hiddenForWake = false
+    }
+
+    fun hideForWake(token: String): Boolean {
+        if (!matches(token) || phase != Phase.VOICE || hiddenForWake) return false
+        hiddenForWake = true
+        return true
+    }
+
+    fun resumeFromWake(token: String, now: Long): Boolean {
+        if (!matches(token) || !hiddenForWake) return false
+        hiddenForWake = false
+        phase = Phase.WEB
+        deadline = now + 40_000L
+        touchGate = WebVoiceTouchGate()
+        return true
     }
 
     fun expired(now: Long) = id != null && phase != Phase.VOICE && now >= deadline
@@ -45,6 +63,7 @@ internal class VoiceCycleState {
     fun cancel(token: String): Boolean {
         if (!matches(token)) return false
         id = null
+        hiddenForWake = false
         return true
     }
 }

@@ -44,17 +44,35 @@ class VoiceAccessibilityService : AccessibilityService() {
             context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().clear().apply()
             instance.get()?.stopPolling()
         }
+
+        fun coverHidden(token: String) {
+            instance.get()?.takeIf { VoiceCycle.matches(token) }?.hideAndReturnHome()
+        }
+
+        fun resumeWeb(token: String) {
+            val service = instance.get()?.takeIf { VoiceCycle.matches(token) } ?: return
+            service.preferences.edit().putString(CYCLE, token).putBoolean(OBSERVED, false)
+                .remove(INACTIVE_SINCE).remove(CLICKED_AT).apply()
+            service.startPolling()
+        }
+
+        fun openDiagnosticsExport() {
+            val service = instance.get() ?: return
+            service.hideOverlay()
+            DiagnosticExportActivity.open(service)
+        }
     }
 
     private val main = Handler(Looper.getMainLooper())
     private val preferences by lazy { getSharedPreferences(PREFS, Context.MODE_PRIVATE) }
     private var overlay: HolographicOverlayView? = null
-    private var closeButton: View? = null
     private var overlayFailed = false
     private var probePending = false
     private var greetingPending = false
     private var nextGreetingAt = 0L
     private var activeShown = false
+    private var lastVoiceState: WebVoicePageState? = null
+    private var lastGreetingResult: VoiceGreetingResult? = null
     private val poll = object : Runnable {
         override fun run() {
             processAutomation()
@@ -83,6 +101,8 @@ class VoiceAccessibilityService : AccessibilityService() {
         greetingPending = false
         activeShown = false
         nextGreetingAt = 0L
+        lastVoiceState = null
+        lastGreetingResult = null
         hideOverlay()
     }
 
@@ -91,6 +111,7 @@ class VoiceAccessibilityService : AccessibilityService() {
 
     private fun processAutomation() {
         val token = currentToken() ?: return
+        if (VoiceCycle.hiddenForWake) return
         showOverlay(token)
         if (VoiceCycle.phase == VoiceCycleState.Phase.VOICE && !activeShown) {
             activeShown = true
@@ -123,6 +144,16 @@ class VoiceAccessibilityService : AccessibilityService() {
                 if (currentToken() != token) return@inspectVoiceState
                 probePending = false
                 val now = SystemClock.elapsedRealtime()
+                if (state != lastVoiceState) {
+                    lastVoiceState = state
+                    val event = when (state) {
+                        WebVoicePageState.ACTIVE -> DiagnosticLog.Event.VOICE_STATE_ACTIVE
+                        WebVoicePageState.START_READY -> DiagnosticLog.Event.VOICE_STATE_START_READY
+                        WebVoicePageState.NOT_FOUND -> DiagnosticLog.Event.VOICE_STATE_NOT_FOUND
+                        WebVoicePageState.UNAVAILABLE -> DiagnosticLog.Event.VOICE_STATE_UNAVAILABLE
+                    }
+                    DiagnosticLog.record(this, event, token)
+                }
                 when (state) {
                     WebVoicePageState.ACTIVE -> {
                         preferences.edit().putBoolean(OBSERVED, true).remove(INACTIVE_SINCE).apply()
@@ -148,26 +179,39 @@ class VoiceAccessibilityService : AccessibilityService() {
         val started = preferences.getLong(GREETING_STARTED, 0L)
         if (started == 0L) {
             preferences.edit().putLong(GREETING_STARTED, now).apply()
+            DiagnosticLog.record(this, DiagnosticLog.Event.GREETING_ATTEMPTED, token)
             State.setAttempt(this, "Voice rilevata; attendo campo testo e pulsante Invia per «ciao jarvis».")
-        } else if (now - started >= 10_000L) {
-            preferences.edit().putBoolean(GREETING_DONE, true).apply()
-            State.setAttempt(this, "Voice attiva; campo o Invia non pronti entro 10 secondi. Saluto non inviato.")
-            return
         }
         greetingPending = true
         WebChatActivity.sendGreetingToVoice { result ->
             if (currentToken() != token) return@sendGreetingToVoice
             greetingPending = false
             nextGreetingAt = SystemClock.elapsedRealtime() + 100L
-            when (result) {
-                VoiceGreetingResult.NOT_READY -> Unit // Only observe/fill; no send has happened.
-                VoiceGreetingResult.SENT -> {
+            if (result != lastGreetingResult) {
+                lastGreetingResult = result
+                val event = when (result) {
+                    VoiceGreetingResult.SENT -> DiagnosticLog.Event.GREETING_SENT
+                    VoiceGreetingResult.COMPOSER_MISSING -> DiagnosticLog.Event.GREETING_COMPOSER_MISSING
+                    VoiceGreetingResult.COMPOSER_WAITING -> DiagnosticLog.Event.GREETING_COMPOSER_WAITING
+                    VoiceGreetingResult.COMPOSER_UNAVAILABLE -> DiagnosticLog.Event.GREETING_COMPOSER_UNAVAILABLE
+                    VoiceGreetingResult.SEND_NOT_READY -> DiagnosticLog.Event.GREETING_SEND_WAITING
+                    VoiceGreetingResult.COMPOSER_OCCUPIED -> DiagnosticLog.Event.GREETING_COMPOSER_OCCUPIED
+                    VoiceGreetingResult.UNAVAILABLE -> DiagnosticLog.Event.GREETING_ABORTED
+                }
+                DiagnosticLog.record(this, event, token)
+            }
+            when (VoiceGreetingRetryPolicy.action(result)) {
+                VoiceGreetingAction.RETRY -> Unit // No click occurred; continue until ready or cycle cancellation.
+                VoiceGreetingAction.SENT -> {
                     preferences.edit().putBoolean(GREETING_DONE, true).apply()
                     State.setAttempt(this, "Invio di «ciao jarvis» richiesto una volta; risposta vocale da verificare.")
                 }
-                VoiceGreetingResult.COMPOSER_UNAVAILABLE, VoiceGreetingResult.UNAVAILABLE -> {
+                VoiceGreetingAction.ABORT -> {
                     preferences.edit().putBoolean(GREETING_DONE, true).apply()
-                    State.setAttempt(this, "Saluto interrotto: campo occupato o pagina cambiata. Voice resta attiva.")
+                    State.setAttempt(this, when (result) {
+                        VoiceGreetingResult.COMPOSER_OCCUPIED -> "Saluto non inviato: il campo contiene già testo. Voice resta attiva."
+                        else -> "Saluto interrotto: esito dell'invio non verificabile; nessun nuovo invio per evitare duplicati."
+                    })
                 }
             }
         }
@@ -185,44 +229,42 @@ class VoiceAccessibilityService : AccessibilityService() {
         if (keyguard.isDeviceLocked || keyguard.isKeyguardLocked) return
         val manager = getSystemService(WindowManager::class.java)
         val hud = HolographicOverlayView(this)
-        val button = CycleUi.closeButton(this) {
-            VoiceCycle.cancel(this, token, "ChatGPT chiuso. Ascolto Hey Jarvis riattivato.")
-        }
+        hud.setCoverActions(
+            singleTap = { CoverSettings.setOpaque(this, !CoverSettings.isOpaque(this)) },
+            close = { VoiceCycle.cancel(this, token, "Jarvis chiuso. Ascolto Hey Jarvis riattivato.") },
+            export = { openDiagnosticsExport() },
+            hide = { VoiceCycle.hideForWake(this, token) }
+        )
         val hudParams = WindowManager.LayoutParams(-1, -1,
             WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
-            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or
-                WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
                 WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS, PixelFormat.TRANSLUCENT).apply {
             gravity = Gravity.TOP or Gravity.START
             layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS
         }
-        val closeParams = WindowManager.LayoutParams(dp(56), dp(56),
-            WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
-            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
-            PixelFormat.TRANSLUCENT).apply { gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL; y = dp(36) }
         try {
             manager.addView(hud, hudParams)
-            manager.addView(button, closeParams)
             overlay = hud
-            closeButton = button
             if (VoiceCycle.phase == VoiceCycleState.Phase.VOICE) hud.setVoiceActive()
             WebChatActivity.setExternalCoverVisible(token, true)
         } catch (e: RuntimeException) {
-            // Do not leave an overlay without its X. The Activity retains its own cover/X.
-            runCatching { manager.removeView(button) }
+            // The Activity retains its local interactive cover if the external overlay fails.
             runCatching { manager.removeView(hud) }
             overlayFailed = true
-            State.setAttempt(this, "HUD esterno non disponibile; uso cover e X nella schermata ChatGPT.")
+            State.setAttempt(this, "HUD esterno non disponibile; uso la cover nella schermata ChatGPT.")
         }
+    }
+
+    private fun hideAndReturnHome() {
+        hideOverlay()
+        performGlobalAction(GLOBAL_ACTION_HOME)
     }
 
     private fun hideOverlay() {
         val manager = getSystemService(WindowManager::class.java)
-        closeButton?.let { runCatching { manager.removeView(it) } }
         overlay?.let { runCatching { manager.removeView(it) } }
-        closeButton = null
         overlay = null
-        VoiceCycle.id?.let { WebChatActivity.setExternalCoverVisible(it, false) }
+        VoiceCycle.id?.let { WebChatActivity.setExternalCoverVisible(it, VoiceCycle.hiddenForWake) }
     }
     private fun dp(value: Int) = (value * resources.displayMetrics.density).toInt()
     override fun onInterrupt() = hideOverlay()

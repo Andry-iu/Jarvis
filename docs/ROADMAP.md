@@ -1,6 +1,25 @@
 # Roadmap — JarvisWake
 
-Stato sorgenti 0.5.34, versionCode 56; test DOM, build e firma permanente verificati. L'utente ha confermato sul Galaxy S24+ il comportamento screen-off della 0.5.33; il test della tastiera e del saluto senza focus sulla 0.5.34 resta da eseguire.
+Stato release 0.5.37, versionCode 59: APK ARM64 firmato col certificato permanente e pronto per la prova sul Galaxy S24+. Swipe verso il basso: termina Voice per rilasciare il microfono, mostra la Home e lascia la pagina WebView pronta alla riattivazione con «Ehi Jarvis». Verifiche build, test, lint, firma e allineamento completate; comportamento sul dispositivo ancora da collaudare.
+
+## In prova nella 0.5.37
+
+- Tocco singolo sui cerchi: alterna cover opaca e semitrasparente. Doppio tocco al centro: chiude il ciclo. Doppio tocco in alto a destra: esporta la diagnostica. Il pulsante X è stato rimosso.
+- Swipe dall'alto verso il basso: termina la modalità Voice, nasconde la cover e torna alla Home. La pagina e la conversazione WebView restano aperte in background; la wake word «Ehi Jarvis» dovrebbe riportare alla stessa sessione e riattivare Voice.
+- L'APK è firmato permanentemente. La prova sul Galaxy S24+ deve confermare il rilascio reale del microfono, l'ascolto wake in background e la ripresa della stessa conversazione.
+
+## Correzione in lavorazione per la 0.5.36
+
+- Il campo vuoto viene selezionato anche se la pagina ne cambia l'etichetta, purché sia il campo attivo o abbia un'etichetta localizzata riconosciuta; resta richiesta la stabilità su due letture.
+- La policy ritenta solo esiti che garantiscono che non è avvenuto il click d'invio. Testo già presente e risultato ambiguo restano terminali per proteggere bozze e invio singolo.
+- Eventi diagnostici sintetici registrano cambi di stato Voice e risultato della preparazione/invio. Non contengono testo, audio, URL o credenziali e i risultati ripetuti uguali non vengono registrati di nuovo.
+- Test DOM/unitari e build superati, APK unsigned prodotto; firma permanente e comportamento reale da verificare sul Galaxy S24+.
+
+## Correzione preparata per la 0.5.35
+
+- La sola condizione di invio ritentabile è `NOT_READY`, che garantisce che il click non è stato eseguito. Rimane ritentabile fino a quando il saluto è pronto o il ciclo termina; la scadenza di 10 secondi non lo marca più come concluso.
+- `SENT` chiude il tentativo come inviato. Campo occupato o esito ambiguo chiudono il tentativo senza sovrascrivere testo e senza rischiare un secondo click. La protezione DOM `submitted` resta impostata prima del click.
+- Test unitario della classificazione degli esiti aggiunto. Build e prova sul Galaxy S24+ ancora da completare.
 
 ## Implementato nella 0.5.34
 

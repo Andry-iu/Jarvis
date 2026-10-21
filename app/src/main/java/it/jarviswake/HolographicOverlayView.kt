@@ -12,6 +12,9 @@ import android.graphics.RectF
 import android.graphics.Typeface
 import android.os.SystemClock
 import android.view.View
+import android.view.MotionEvent
+import android.os.Handler
+import android.os.Looper
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.cos
@@ -30,6 +33,10 @@ class HolographicOverlayView(context: Context) : View(context) {
     private var errorText: String? = null
     private val coverPreferences = CoverSettings.preferences(context)
     private var backgroundAlpha = if (CoverSettings.isOpaque(context)) 255 else 128
+    private var onSingleTap: (() -> Unit)? = null
+    private var onClose: (() -> Unit)? = null
+    private var onExport: (() -> Unit)? = null
+    private var onHide: (() -> Unit)? = null
     private val coverListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
         if (key == CoverSettings.KEY_OPAQUE || key == null) updateCoverOpacity()
     }
@@ -37,6 +44,87 @@ class HolographicOverlayView(context: Context) : View(context) {
     init {
         setLayerType(LAYER_TYPE_SOFTWARE, null)
         importantForAccessibility = IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS
+        isClickable = true
+    }
+
+    fun setCoverActions(
+        singleTap: () -> Unit,
+        close: () -> Unit,
+        export: () -> Unit,
+        hide: () -> Unit
+    ) {
+        onSingleTap = singleTap
+        onClose = close
+        onExport = export
+        onHide = hide
+    }
+
+    private val gestureHandler = Handler(Looper.getMainLooper())
+    private var pendingSingleTap: Runnable? = null
+    private var downX = 0f
+    private var downY = 0f
+    private var lastTapAt = 0L
+    private var lastTapTarget = 0
+
+    override fun onTouchEvent(event: MotionEvent): Boolean {
+        when (event.actionMasked) {
+            MotionEvent.ACTION_DOWN -> {
+                downX = event.x
+                downY = event.y
+                return true
+            }
+            MotionEvent.ACTION_UP -> {
+                val dx = event.x - downX
+                val dy = event.y - downY
+                val slop = 36f * resources.displayMetrics.density
+                if (downY < height * 0.20f && dy > maxOf(90f * resources.displayMetrics.density, height * 0.12f) &&
+                    kotlin.math.abs(dx) < maxOf(80f * resources.displayMetrics.density, kotlin.math.abs(dy) * 0.65f)) {
+                    pendingSingleTap?.let(gestureHandler::removeCallbacks)
+                    pendingSingleTap = null
+                    lastTapAt = 0L
+                    onHide?.invoke()
+                    return true
+                }
+                if (kotlin.math.abs(dx) > slop || kotlin.math.abs(dy) > slop) return true
+                val target = tapTarget(event.x, event.y)
+                if (target == 0) return true
+                val now = SystemClock.uptimeMillis()
+                if (target == lastTapTarget && now - lastTapAt <= 350L) {
+                    pendingSingleTap?.let(gestureHandler::removeCallbacks)
+                    pendingSingleTap = null
+                    if (target == 1) onClose?.invoke() else if (target == 2) onExport?.invoke()
+                    lastTapAt = 0L
+                    lastTapTarget = 0
+                } else {
+                    pendingSingleTap?.let(gestureHandler::removeCallbacks)
+                    val pending = Runnable {
+                        pendingSingleTap = null
+                        if (target == 1) onSingleTap?.invoke()
+                    }
+                    pendingSingleTap = pending
+                    gestureHandler.postDelayed(pending, 360L)
+                    lastTapAt = now
+                    lastTapTarget = target
+                }
+                return true
+            }
+            MotionEvent.ACTION_CANCEL -> {
+                pendingSingleTap?.let(gestureHandler::removeCallbacks)
+                pendingSingleTap = null
+                lastTapAt = 0L
+                lastTapTarget = 0
+                return true
+            }
+        }
+        return true
+    }
+
+    private fun tapTarget(x: Float, y: Float): Int {
+        if (x > width * 0.78f && y < height * 0.16f) return 2
+        val cx = width / 2f
+        val cy = height * 0.43f
+        val radius = minOf(width, height) * 0.31f
+        return if ((x - cx) * (x - cx) + (y - cy) * (y - cy) <= radius * radius) 1 else 0
     }
 
     override fun onAttachedToWindow() {

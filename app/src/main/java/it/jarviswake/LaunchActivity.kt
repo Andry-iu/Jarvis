@@ -54,7 +54,15 @@ class LaunchActivity : Activity() {
         }
         setShowWhenLocked(true)
         setTurnScreenOn(true)
-        hud = HolographicOverlayView(this).apply { setStatus("AVVIO CHATGPT") }
+        hud = HolographicOverlayView(this).apply {
+            setStatus("AVVIO CHATGPT")
+            setCoverActions(
+                singleTap = { CoverSettings.setOpaque(this@LaunchActivity, !CoverSettings.isOpaque(this@LaunchActivity)) },
+                close = { cancel() },
+                export = { DiagnosticExportActivity.open(this@LaunchActivity) },
+                hide = { cancel() }
+            )
+        }
         val root = FrameLayout(this)
         root.addView(hud, FrameLayout.LayoutParams(-1, -1))
         val unlock = Button(this).apply {
@@ -64,10 +72,6 @@ class LaunchActivity : Activity() {
         root.addView(unlock, FrameLayout.LayoutParams(-2, -2, Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL).apply {
             bottomMargin = dp(112)
         })
-        root.addView(CycleUi.closeButton(this) { cancel() },
-            FrameLayout.LayoutParams(dp(56), dp(56), Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL).apply {
-                bottomMargin = dp(36)
-            })
         root.setOnApplyWindowInsetsListener { view, insets ->
             val bars = insets.getInsets(WindowInsets.Type.systemBars())
             view.setPadding(bars.left, bars.top, bars.right, bars.bottom)

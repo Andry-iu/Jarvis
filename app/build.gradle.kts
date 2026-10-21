@@ -7,8 +7,8 @@ android {
         applicationId = "it.jarviswake"
         minSdk = 31
         targetSdk = 36
-        versionCode = 56
-        versionName = "0.5.34"
+        versionCode = 59
+        versionName = "0.5.37"
         ndk { abiFilters += listOf("arm64-v8a") }
     }
     val ciKeystore = System.getenv("JARVIS_KEYSTORE_PATH")
@@ -22,7 +22,11 @@ android {
     }
     buildTypes {
         getByName("debug") {
-            if (!ciKeystore.isNullOrBlank()) signingConfig = signingConfigs.getByName("persistent")
+            if (providers.gradleProperty("jarvisUnsigned").orNull == "true") {
+                signingConfig = null
+            } else if (!ciKeystore.isNullOrBlank()) {
+                signingConfig = signingConfigs.getByName("persistent")
+            }
         }
     }
     compileOptions { sourceCompatibility = JavaVersion.VERSION_17; targetCompatibility = JavaVersion.VERSION_17 }
