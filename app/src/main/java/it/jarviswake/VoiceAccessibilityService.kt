@@ -49,6 +49,11 @@ class VoiceAccessibilityService : AccessibilityService() {
             instance.get()?.takeIf { VoiceCycle.matches(token) }?.hideAndReturnHome()
         }
 
+        fun showCoverStatus(token: String, message: String) {
+            instance.get()?.takeIf { VoiceCycle.matches(token) }?.overlay?.setGestureMessage(message)
+            WebChatActivity.showCoverStatus(token, message)
+        }
+
         fun resumeWeb(token: String) {
             val service = instance.get()?.takeIf { VoiceCycle.matches(token) } ?: return
             service.preferences.edit().putString(CYCLE, token).putBoolean(OBSERVED, false)

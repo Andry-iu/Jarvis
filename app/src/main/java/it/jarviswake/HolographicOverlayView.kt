@@ -32,6 +32,7 @@ class HolographicOverlayView(context: Context) : View(context) {
     private var modelConfirmed = false
     private var statusText = "PREPARAZIONE CHATGPT"
     private var errorText: String? = null
+    private var gestureMessage: String? = null
     private val coverPreferences = CoverSettings.preferences(context)
     private var backgroundAlpha = if (CoverSettings.isOpaque(context)) 255 else 128
     private var onSingleTap: (() -> Unit)? = null
@@ -79,7 +80,12 @@ class HolographicOverlayView(context: Context) : View(context) {
                 val statusBarInset = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                     rootWindowInsets?.getInsets(android.view.WindowInsets.Type.statusBars())?.top ?: 0
                 } else 0
-                swipeDetector.onDown(event.x, event.y, height, statusBarInset)
+                // Compare the gesture's start position to the status-bar edge in
+                // screen coordinates. The Activity cover is laid out below the bar;
+                // the accessibility overlay starts at the display's top edge.
+                val screenLocation = IntArray(2)
+                getLocationOnScreen(screenLocation)
+                swipeDetector.onDown(event.x, event.y, height, statusBarInset, screenLocation[1])
                 return true
             }
             MotionEvent.ACTION_MOVE -> {
@@ -181,6 +187,12 @@ class HolographicOverlayView(context: Context) : View(context) {
             paint.letterSpacing = 0.035f
             paint.color = withAlpha(cyan, 0.70f)
             canvas.drawText(label, width / 2f, 72f * density, paint)
+            gestureMessage?.let {
+                paint.textSize = width * 0.026f
+                paint.letterSpacing = 0.015f
+                paint.color = if (it.startsWith("ERRORE")) Color.rgb(255, 105, 105) else withAlpha(cyan, 0.92f)
+                canvas.drawText(it, width / 2f, 108f * density, paint)
+            }
         }
 
         val cx = width / 2f
@@ -300,6 +312,11 @@ class HolographicOverlayView(context: Context) : View(context) {
 
     fun setStatus(value: String) {
         statusText = value
+        invalidate()
+    }
+
+    fun setGestureMessage(value: String?) {
+        gestureMessage = value
         invalidate()
     }
 

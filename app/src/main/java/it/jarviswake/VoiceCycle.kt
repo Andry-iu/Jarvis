@@ -87,9 +87,12 @@ internal object VoiceCycle {
 
     fun hideForWake(context: Context, token: String) {
         if (!matches(token) || phase != VoiceCycleState.Phase.VOICE || hiddenForWake) return
+        DiagnosticLog.record(context, DiagnosticLog.Event.HIDE_GESTURE_RECOGNIZED, token)
+        VoiceAccessibilityService.showCoverStatus(token, "ARRESTO VOICE IN CORSO…")
         WebChatActivity.endVoiceForWake(token) { released ->
             if (!released || !matches(token) || !state.hideForWake(token)) {
                 DiagnosticLog.record(context, DiagnosticLog.Event.HIDE_FOR_WAKE_FAILED, token)
+                VoiceAccessibilityService.showCoverStatus(token, "ERRORE — VOICE NON SI È FERMATA")
                 State.setAttempt(context, "Non ho potuto fermare Voice in sicurezza; la cover resta visibile.")
                 return@endVoiceForWake
             }

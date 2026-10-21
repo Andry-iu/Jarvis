@@ -3,7 +3,7 @@ package it.jarviswake
 import kotlin.math.abs
 import kotlin.math.max
 
-/** Recognizes a deliberate downward drag started just below Android's status-bar edge. */
+/** Recognizes a downward drag in screen coordinates, independent of the cover's window origin. */
 internal class CoverSwipeDetector(
     density: Float,
     touchSlop: Float,
@@ -18,12 +18,15 @@ internal class CoverSwipeDetector(
     var wasTriggered: Boolean = false
         private set
 
-    fun onDown(x: Float, y: Float, viewHeight: Int, statusBarInset: Int) {
+    fun onDown(x: Float, y: Float, viewHeight: Int, statusBarInset: Int, viewScreenY: Int) {
         startX = x
         startY = y
         wasTriggered = false
-        val safeTop = max(statusBarInset + 8f * density, 32f * density)
-        eligible = viewHeight > 0 && y >= safeTop && y <= viewHeight * startZoneFraction
+        val screenY = y + viewScreenY
+        val safeTop = max(statusBarInset + 8f * density, 8f * density)
+        val maxStartY = statusBarInset + minDistanceDp * density * 4f
+        val maxStartOnView = viewHeight > 0 && y <= viewHeight * startZoneFraction
+        eligible = maxStartOnView && screenY >= safeTop && screenY <= maxStartY
     }
 
     fun onMove(x: Float, y: Float): Boolean {

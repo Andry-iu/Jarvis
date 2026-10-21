@@ -1,3 +1,20 @@
+# 0.5.40 — swipe cover in coordinate schermo e stato di arresto Voice
+
+- Dopo il mancato effetto osservato con la 0.5.38 e la correzione insufficiente della 0.5.39, la zona iniziale ora viene valutata usando posizione assoluta della vista, inset di sistema e altezza reale della cover. Sono coperte sia la cover interna già spostata dal padding sia l'overlay flottante.
+- La fascia valida è ampia nella parte superiore della cover e inizia sotto la barra di stato; restano esclusi tocchi dalla barra di sistema, swipe orizzontali o verso l'alto e inizi troppo in basso. Se il gesto è riconosciuto ma l'arresto di ChatGPT Voice non viene confermato, la cover mostra un errore e il log diagnostico registra l'esito.
+- Test JVM: 38 superati, 0 falliti, 0 errori, 0 saltati. Test DOM superati. `lintDebug`: 0 errori e 18 avvisi.
+- Build locale con JDK 17, Gradle 8.13, SDK 36 e Build Tools 36.0.0 completata. APK ARM64, versionName `0.5.40`, versionCode `62`, minSdk `31`, target/compile SDK `36`. ZIP CRC e allineamento 16 KB verificati.
+- Firma permanente: certificato SHA-256 `a8ddfbe2b78be5460e72df57afbc3434411e3cc27328b13bc16b4daaba13389a`; v2 verificata per API 24–27, v3 per API 31+. SHA-256 APK firmato `9225cd5cfe87cc1a7867b4dd2a273c84baa6de652ac4c7a6ce8f954a45b6f438`.
+- Resta la prova sul Galaxy S24+: verificare che lo swipe nasconda la cover, termini davvero Voice e permetta la riattivazione con wake word.
+
+# 0.5.39 — coordinate locali dello swipe sulla cover
+
+- La cover interna è contenuta in una root che applica il padding della barra di stato. Prima la logica riutilizzava l'inset assoluto senza sottrarre la posizione della vista, spostando troppo in basso la zona touch valida. Ora l'inset viene convertito rispetto all'origine della cover; l'overlay flottante continua a riferirsi al bordo del display.
+- Aggiunto test JVM che verifica una partenza vicino al bordo superiore locale quando il padding è già applicato.
+- Compilazione con `local-build-kit/build-local.sh`, toolchain verificata JDK 17.0.20.1+1 / Gradle 8.13 / SDK 36 / Build Tools 36.0.0. Test DOM superati; test JVM: 37 superati, 0 falliti, 0 errori, 0 saltati. Lint: 0 errori e 18 avvisi.
+- APK firmato: `it.jarviswake`, versionName `0.5.39`, versionCode `61`, minSdk `31`, target/compile SDK `36`, ABI `arm64-v8a`. SHA-256 `4f5e310c45a0da250507f385a883b7910d872068acc87f7df81ad5f752c49396`. Certificato SHA-256 `a8ddfbe2b78be5460e72df57afbc3434411e3cc27328b13bc16b4daaba13389a`, corrispondente al certificato permanente; schemi v2 e v3 verificati. ZIP CRC e allineamento 16 KB verificati.
+- Resta il collaudo sul Galaxy S24+: lo swipe deve nascondere la cover, fermare Voice e mostrare Home.
+
 # 0.5.38 — riconoscimento swipe dalla cover (APK firmato per prova)
 
 - Corretto il riconoscimento del drag: la cover valuta il movimento del dito durante `ACTION_MOVE`, parte in una fascia alta interna sotto la barra di stato, usa soglia di 72 dp e tollera una diagonale discendente. Lo swipe orizzontale, quello verso l'alto e le partenze nella barra di sistema non attivano l'azione.
