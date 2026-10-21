@@ -1,10 +1,17 @@
 # Roadmap — JarvisWake
 
-Stato release 0.5.40, versionCode 62. Dopo il mancato effetto della 0.5.38 e la correzione insufficiente della 0.5.39, la 0.5.40 valuta il gesto in coordinate sullo schermo per entrambe le cover e visualizza l'esito dell'arresto di Voice. Build locale: 38 test superati, lint senza errori (18 avvisi). APK firmato permanentemente, SHA-256 `9225cd5cfe87cc1a7867b4dd2a273c84baa6de652ac4c7a6ce8f954a45b6f438`; firme v2/v3 e allineamento 16 KB verificati. Il collaudo sul dispositivo resta aperto.
+Stato release 0.5.41, versionCode 63. La correzione riusa per lo stop Voice la coordinata WebView registrata quando lo stesso controllo è stato premuto per avviarla; il controllo di stato considera anche il candidato sicuro nel compositore. Build: 40 test JVM e test DOM superati, lint 0 errori/18 avvisi. APK firmato permanentemente, SHA-256 `3e85f77d335f928c5897fdea6fbc31469a363262f6ffcc24059b74cefbbbe92a`; v2/v3 e allineamento 16 KB verificati. Collaudo Galaxy S24+ necessario.
 
 Stato precedente: 0.5.39, versionCode 61. La prova della 0.5.38 sul Galaxy S24+ ha mostrato che lo swipe non produce effetti. La cover interna è posizionata sotto il padding della barra di stato ma riutilizzava l'inset assoluto del display nelle coordinate locali; la 0.5.39 sottrae la posizione sullo schermo della vista e amplia la zona superiore interna. Build e 37 test locali superati; APK firmato col certificato permanente, SHA-256 `4f5e310c45a0da250507f385a883b7910d872068acc87f7df81ad5f752c49396`. Firme v2/v3 e allineamento 16 KB verificati; collaudo sul dispositivo da completare.
 
-## In verifica nella 0.5.40
+## In verifica nella 0.5.41
+
+- L'arresto di Voice riutilizza il punto normalizzato del WebView selezionato in avvio, adattato alle dimensioni correnti: nessuna ricerca di un secondo pulsante di uscita. Dopo un unico gesto DOWN/UP, lo stato atteso è il controllo iniziale individuato semanticamente o nel compositore compatto.
+- Gli swipe ripetuti mentre il tocco di arresto è ancora in verifica vengono ignorati, per evitare di premere di nuovo lo stesso toggle.
+- La coordinata salvata viene invalidata con l'istanza/ciclo WebView e non è una posizione fissa del display. Il gesto di swipe, cover, gestione X/blocco e protezione da tocchi Voice ripetuti restano invariati.
+- L'esito di build, firma e test sarà registrato in `VERIFICATION.md`; resta la conferma sul Galaxy S24+.
+
+## Storico della 0.5.40
 
 - La zona iniziale dello swipe usa coordinate assolute sullo schermo, altezza della cover e inset di sistema. Test specifici coprono cover interna sotto il padding, overlay esterno, barra di stato, direzioni non valide, zona bassa e reset del gesto.
 - Se viene riconosciuto lo swipe ma il controllo Voice non conferma l'arresto, un messaggio rosso resta visibile e l'evento compare nella diagnostica. Build completata col kit locale: 38 test JVM, test DOM superati, lint 0 errori/18 avvisi. APK firmato permanentemente: `9225cd5cfe87cc1a7867b4dd2a273c84baa6de652ac4c7a6ce8f954a45b6f438`; firme v2/v3, ZIP CRC e allineamento 16 KB superati. Resta la prova sul Galaxy S24+.

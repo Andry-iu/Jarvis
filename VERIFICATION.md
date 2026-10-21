@@ -1,3 +1,15 @@
+# 0.5.41 — riuso del punto del controllo Voice per avvio e arresto
+
+- La posizione del controllo trovata e premuta per avviare Voice viene conservata per il ciclo e riutilizzata per lo stop, scalata alle dimensioni correnti della WebView. Non viene cercato un secondo comando di uscita.
+- Una richiesta di arresto già in corso ignora ulteriori swipe finché non torna il risultato, evitando un secondo tocco sul toggle e una possibile riapertura.
+- La conferma dopo lo stop considera valido il candidato nel compositore compatto oltre al controllo semantico; entrambi provengono dalla stessa ricerca prudente già usata per l'avvio.
+- Il blob `WebChatActivity.kt` del commit baseline 0.5.40 era binario non compilabile come sorgente. Il file Kotlin è stato ripristinato dalla revisione leggibile precedente e integrato con i metodi e la logica della 0.5.41; il build corrente è stato eseguito davvero.
+- Test JVM: 40 superati, 0 falliti. `node scripts/test-web-voice.cjs`: superato. `lintDebug`: 0 errori e 18 avvisi.
+- Build locale con JDK 17.0.20.1, Gradle 8.13, SDK 36 e Build Tools 36.0.0: `testDebugUnitTest lintDebug assembleDebug -PjarvisUnsigned=true` superata usando la cache locale dei repository; `settings.gradle.kts` è stato ripristinato dopo la build.
+- APK: `it.jarviswake`, versionName `0.5.41`, versionCode `63`, minSdk `31`, target/compile SDK `36`, ABI `arm64-v8a`. ZIP CRC e allineamento 16 KB verificati.
+- Firma permanente verificata: certificato SHA-256 `a8ddfbe2b78be5460e72df57afbc3434411e3cc27328b13bc16b4daaba13389a`; schema v2 verificato con API 24–27 e v3 con API 31+. SHA-256 APK firmato `3e85f77d335f928c5897fdea6fbc31469a363262f6ffcc24059b74cefbbbe92a`.
+- Resta la prova sul Galaxy S24+: lo swipe deve usare lo stesso punto, chiudere Voice, nascondere la cover e lasciare la conversazione riattivabile con la wake word.
+
 # 0.5.40 — swipe cover in coordinate schermo e stato di arresto Voice
 
 - Dopo il mancato effetto osservato con la 0.5.38 e la correzione insufficiente della 0.5.39, la zona iniziale ora viene valutata usando posizione assoluta della vista, inset di sistema e altezza reale della cover. Sono coperte sia la cover interna già spostata dal padding sia l'overlay flottante.

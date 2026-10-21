@@ -1,8 +1,8 @@
-# JarvisWake 0.5.40 — assistente Android e ChatGPT Voice
+# JarvisWake 0.5.41 — assistente Android e ChatGPT Voice
 
 App Kotlin per Android 12–16 (minSdk 31, targetSdk 36), APK ARM64 destinato alla prova su Samsung Galaxy S24+ Android 16.
 
-La 0.5.40 corregge il riconoscimento dello swipe usando coordinate sullo schermo per entrambe le cover, include il padding della cover interna nella zona valida e mostra un errore visibile se ChatGPT Voice non si ferma. Build locale: 38 test JVM superati, lint senza errori (18 avvisi). APK ARM64 firmato permanentemente, schemi v2/v3 e allineamento 16 KB verificati; SHA-256 `9225cd5cfe87cc1a7867b4dd2a273c84baa6de652ac4c7a6ce8f954a45b6f438`. Il collaudo sul Galaxy S24+ resta necessario. Vedi [VERIFICATION.md](VERIFICATION.md).
+La 0.5.41 conserva la posizione del controllo Voice usata per avviarlo e riutilizza lo stesso punto per chiuderlo con un singolo tocco. La coordinata è relativa alla WebView e viene adattata alle sue dimensioni correnti; la verifica di arresto accetta sia il controllo semantico sia il candidato sicuro nel compositore. Gli swipe ulteriori durante la chiusura in corso non inviano un secondo tocco. Build locale: 40 test JVM superati, test DOM superato, lint senza errori (18 avvisi). APK ARM64 firmato col certificato permanente, v2 verificata per API 24–27 e v3 per API 31+, allineamento 16 KB verificato; SHA-256 `3e85f77d335f928c5897fdea6fbc31469a363262f6ffcc24059b74cefbbbe92a`. Il collaudo sul Galaxy S24+ resta necessario. Vedi [VERIFICATION.md](VERIFICATION.md).
 
 ## Documentazione e continuità
 

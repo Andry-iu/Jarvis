@@ -16,6 +16,7 @@ import java.util.UUID
 internal object VoiceCycle {
     const val EXTRA_ID = "it.jarviswake.CYCLE_ID"
     private var state = VoiceCycleState()
+    private var hideStopInFlightToken: String? = null
     private val main = Handler(Looper.getMainLooper())
     private var app: Application? = null
     val active: Boolean get() = state.id != null
@@ -49,6 +50,7 @@ internal object VoiceCycle {
     fun start(context: Context, existingCycleId: String? = null) {
         if (active) return
         state = VoiceCycleState()
+        hideStopInFlightToken = null
         val token = existingCycleId ?: UUID.randomUUID().toString()
         state.begin(token, SystemClock.elapsedRealtime())
         DiagnosticLog.record(context, DiagnosticLog.Event.CYCLE_STARTED, token)
@@ -86,10 +88,14 @@ internal object VoiceCycle {
     }
 
     fun hideForWake(context: Context, token: String) {
-        if (!matches(token) || phase != VoiceCycleState.Phase.VOICE || hiddenForWake) return
+        if (!matches(token) || phase != VoiceCycleState.Phase.VOICE || hiddenForWake ||
+            hideStopInFlightToken == token) return
+        hideStopInFlightToken = token
         DiagnosticLog.record(context, DiagnosticLog.Event.HIDE_GESTURE_RECOGNIZED, token)
         VoiceAccessibilityService.showCoverStatus(token, "ARRESTO VOICE IN CORSO…")
         WebChatActivity.endVoiceForWake(token) { released ->
+            if (hideStopInFlightToken == token) hideStopInFlightToken = null
+            if (!matches(token)) return@endVoiceForWake
             if (!released || !matches(token) || !state.hideForWake(token)) {
                 DiagnosticLog.record(context, DiagnosticLog.Event.HIDE_FOR_WAKE_FAILED, token)
                 VoiceAccessibilityService.showCoverStatus(token, "ERRORE — VOICE NON SI È FERMATA")
@@ -114,6 +120,7 @@ internal object VoiceCycle {
 
     fun cancel(context: Context, token: String, message: String) {
         if (!state.cancel(token)) return
+        if (hideStopInFlightToken == token) hideStopInFlightToken = null
         DiagnosticLog.record(context, DiagnosticLog.Event.CYCLE_CANCELLED, token)
         // Invalidate first. Every pending launch/DOM callback now belongs to a dead cycle.
         main.removeCallbacks(watchdog)
