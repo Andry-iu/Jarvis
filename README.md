@@ -14,7 +14,7 @@ La 0.5.49 aggiunge la configurazione persistente dell'indirizzo del progetto Cha
 
 La 0.5.50 aggiunge **Svuota cache WebView**. Poiché l'utente ha segnalato che l'errore Voice persiste, la 0.5.51 aggiunge anche **Elimina dati locali ChatGPT**: dopo conferma cancella cache, cookie e storage locale della WebView e richiede un nuovo accesso. Non elimina conversazioni salvate nell'account. Build, 50 test JVM, test DOM, lint e firma permanente sono verificati; resta il collaudo sul Galaxy S24+.
 
-L'utente ha provato anche la 0.5.51: dopo il reset completo e un nuovo login, l'errore rosso Voice è rimasto. La diagnostica 0.5.52 registra un HTTP 404 da `persistent.oaistatic.com` nello stesso ciclo Voice fallito, a circa 225 ms dall'attivazione. È un forte indizio di un asset remoto non trovato o non disponibile per quella richiesta; il percorso non è nei log, quindi l'identificazione esatta del file resta da confermare.
+L'utente ha provato anche la 0.5.51: dopo il reset completo e un nuovo login, l'errore rosso Voice è rimasto. La diagnostica 0.5.52 ha registrato un HTTP 404 da `persistent.oaistatic.com` durante il ciclo. Aprendo in Chrome l'URL completo del modulo, l'utente ha ricevuto `BlobNotFound`: l'asset remoto non esiste all'indirizzo richiesto e la correzione deve avvenire lato servizio ChatGPT.
 
 ## Documentazione e continuità
 

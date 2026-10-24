@@ -6,7 +6,7 @@
 - Test JVM: 50 superati, 0 falliti, 0 errori, 0 saltati. `node scripts/test-web-voice.cjs`: superato. Lint: 0 errori, 20 avvisi.
 - APK `it.jarviswake`, versionName `0.5.52`, versionCode `74`, minSdk `31`, target/compile SDK `36`, ABI `arm64-v8a`. Certificato permanente SHA-256 `a8ddfbe2b78be5460e72df57afbc3434411e3cc27328b13bc16b4daaba13389a`; schema v3 verificato.
 - Allineamento 16 KB e ZIP CRC superati. SHA-256 APK `b8f85fdc299ff21ce0ef4c31d605ee38ac35f40458d87819ecc573740779d065`, in `releases/0.5.52/SHA256SUMS`.
-- Diagnostica caricata dall'utente: un singolo `WEB_SUBRESOURCE_HTTP_ERROR` per `persistent.oaistatic.com`, HTTP 404, nello stesso ciclo del Voice fallito e circa 225 ms dopo l'attivazione. Il percorso non è registrato per privacy: il collegamento al modulo Silero visualizzato è altamente compatibile per host e tempistica, ma non identificabile con certezza dal log. Evidenza contro un semplice errore di sessione/cache; probabile risposta remota asset non trovato/riferimento non disponibile. Il file ZIP originale non è conservato nel repository.
+- Diagnostica caricata dall'utente: un `WEB_SUBRESOURCE_HTTP_ERROR` per `persistent.oaistatic.com`, HTTP 404, nello stesso ciclo Voice e circa 225 ms dopo l'attivazione. In seguito l'utente ha aperto in Chrome l'URL completo visualizzato nell'errore e ha ricevuto XML `BlobNotFound`. L'oggetto remoto richiesto non esiste a quell'indirizzo: causa confermata lato asset/riferimento remoto, non risolvibile cancellando dati locali Jarvis. Il file ZIP originale non è conservato nel repository.
 
 # 0.5.51 — eliminazione dati locali ChatGPT, APK firmato
 
