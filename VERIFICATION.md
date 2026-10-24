@@ -1,5 +1,12 @@
 # 0.5.52 — diagnostica fetch Voice, APK firmato
 
+## Follow-up diagnostico — prompt di saluto, 24 ottobre 2026
+
+- L'ultimo archivio copre tre cicli fra le 17:45:58 e le 17:46:37 ora locale. In ciascun ciclo compaiono una volta `GREETING_ATTEMPTED` e `GREETING_SENT`; non emerge un doppio invio del prompt da parte di Jarvis.
+- Nei controlli successivi a ogni invio, `ASSISTANT_MONITOR_RESULT` riporta `roleNodes=0` e `assistantNodes=0`. Il log non registra il prompt effettivamente trasmesso, il testo/audio della risposta o campioni del microfono: non può stabilire se ChatGPT abbia rispettato le istruzioni né se abbia acquisito la voce.
+- In tutti e tre i cicli ricompare HTTP 404 per `persistent.oaistatic.com`. L'errore asset è osservato insieme al ciclo, ma questi dati non dimostrano che sia la causa di premesse o saluti ripetuti.
+- L'utente ha riportato una risposta che inizia con «Come da istruzioni, vado diretto al saluto» e ha osservato saluti ridondanti. Questo è un riscontro della risposta, non un contenuto registrato dal log. Un prompt testuale non assicura che la Voice rispetti il formato richiesto. Nessuna modifica al codice è stata eseguita per questo problema.
+
 - Diagnostica estesa: registra fallimenti di caricamento delle risorse secondarie con host e codice errore, errori HTTP con host e stato, messaggi console classificati in categorie fisse (import dinamico, modulo, MIME, CORS, rete), versione runtime WebView. Nessun URL completo, query, messaggio console libero o testo pagina è scritto nel log.
 - Motivazione: l'utente ha cancellato cache e dati locali ChatGPT con la 0.5.51, ha effettuato nuovamente il login e ha riferito che l'errore rosso Voice è rimasto. I callback precedenti ignoravano errori non riferiti al main frame, quindi non potevano identificare il fetch del modulo Silero.
 - Build locale JDK 17 / Gradle 8.13 / Android SDK 36 / Build Tools 36.0.0: `clean testDebugUnitTest lintDebug assembleDebug -PjarvisUnsigned=true` — `BUILD SUCCESSFUL`.

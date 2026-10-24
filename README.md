@@ -16,6 +16,8 @@ La 0.5.50 aggiunge **Svuota cache WebView**. Poiché l'utente ha segnalato che l
 
 L'utente ha provato anche la 0.5.51: dopo il reset completo e un nuovo login, l'errore rosso Voice è rimasto. La diagnostica 0.5.52 ha registrato un HTTP 404 da `persistent.oaistatic.com` durante il ciclo. Aprendo in Chrome l'URL completo del modulo, l'utente ha ricevuto `BlobNotFound`: l'asset remoto non esiste all'indirizzo richiesto e la correzione deve avvenire lato servizio ChatGPT.
 
+Nella diagnostica successiva, esportata il 24 ottobre 2026 alle 17:46, tre cicli hanno ciascuno un solo `GREETING_SENT` e un HTTP 404 da `persistent.oaistatic.com`. Il monitor ha riportato `assistantNodes=0` dopo l'invio: il log non mostra il testo della risposta e non permette di verificare se ChatGPT abbia seguito il prompt. L'utente ha osservato premesse e saluti ridondanti; l'invio singolo da Jarvis non garantisce una risposta conforme. Non è stata implementata una correzione.
+
 ## Documentazione e continuità
 
 - [docs/INSTALLAZIONE_NUOVO_DISPOSITIVO.md](docs/INSTALLAZIONE_NUOVO_DISPOSITIVO.md): checklist completa per installazione pulita, permessi Android, Accessibilità, assistente, firma APK e collaudo su telefono bloccato.

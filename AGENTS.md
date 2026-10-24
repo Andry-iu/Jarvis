@@ -11,7 +11,7 @@ Prima di modificare il progetto leggere `README.md`, `CONTINUITY.md` e `VERIFICA
 - Aggiornare documentazione e stato di continuità insieme alle modifiche rilevanti. Non presentare attività pianificate come completate.
 - Non inserire in Git cookie, credenziali, chiavi di firma, audio, trascrizioni, cache o output di build. Il modello Vosk si prepara tramite lo script con checksum fissato.
 - Prima di ogni modifica, aggiornare i riferimenti remoti e partire da `main` allineato, completo e senza modifiche locali pendenti. Se il checkout non coincide con `origin/main`, riallinearlo in modo sicuro prima di intervenire.
-- Al rilascio di un APK firmato per il collaudo, committare e pubblicare direttamente su `main` sorgenti, test, documentazione e checksum della versione. Non serve chiedere un ulteriore «Consolida». Non committare l'APK né chiavi o credenziali.
+- Un rilascio di APK firmato per il collaudo è completo solo quando sorgenti, test, documentazione e checksum sono committati su `main` e il push fast-forward è verificato: `HEAD` e `origin/main` devono puntare allo stesso commit prima di consegnare l'APK. Se il push fallisce, non dichiarare il rilascio allineato e riferire chiaramente il blocco. Non serve chiedere un ulteriore «Consolida». Non committare l'APK né chiavi o credenziali.
 - L'autorizzazione all'implementazione segue la regola di discussione qui sopra; il rilascio e il push non anticipano mai la decisione di scope.
 - Se esiste una cronologia remota, recuperarla e integrare i cambiamenti conservandola. Nessun force-push per sostituirla con una copia ricavata da ZIP.
 
