@@ -1,3 +1,11 @@
+# 0.5.48 — ricostruzione dal bytecode e build
+
+- APK storico fornito dall'utente: `it.jarviswake`, versionCode 70, ARM64, firmato col certificato permanente SHA-256 `a8ddfbe2b78be5460e72df57afbc3434411e3cc27328b13bc16b4daaba13389a`; SHA-256 `1cd72be0dc60c3eabd2801f856b90f37b4aa0e426ba23dd27eaed9239e8a9213`.
+- Differenze osservabili riportate nei sorgenti Kotlin: trasferimento della stessa WebView ChatGPT fra preloader e pagina interattiva; configurazione dal pulsante «Imposta modello e livello ChatGPT»; swipe a sinistra per fermare Voice e mostrare la chat; wake successiva sulla conversazione mantenuta; swipe verso il basso ancora diretto alla Home. Aggiunti gli eventi `CHAT_REVEAL_GESTURE_RECOGNIZED`, `CHAT_REVEALED_FOR_INTERACTION`, `CHAT_REVEAL_FAILED` e test del gesto.
+- La decompilazione ricostruisce il comportamento, non gli originali Kotlin o i test storici. Build locale pulita: `./gradlew --no-daemon clean testDebugUnitTest lintDebug assembleDebug -PjarvisUnsigned=true` — `BUILD SUCCESSFUL`; 45 test JVM superati, lint senza errori (20 avvisi), `node scripts/test-web-voice.cjs` superato.
+- APK unsigned: `it.jarviswake`, versionCode 70, versionName `0.5.48`, minSdk 31, target/compile SDK 36, ABI `arm64-v8a`; SHA-256 `369f19c334b68a395bbc7debca97a0f3b2ed7184cc75bfb85a831ae1cb013355`. `aapt`, CRC ZIP e allineamento 16 KB superati. `apksigner` conferma che questa build non è firmata.
+- Firma permanente non completata: il backup age è stato recuperato e il checksum verificato (`155b8afc72265dae8bfe5e8d4a09a49929375d88e9972bd9b2777723d2502e58`), ma la passphrase non compare nelle istruzioni Git recuperate né nel contesto disponibile. Non è stato creato né consegnato un APK firmato dai sorgenti ricostruiti. Il collaudo sul Galaxy S24+ resta aperto.
+
 # 0.5.47 — verifica della sonda diagnostica
 
 - La sonda ora registra `ASSISTANT_MONITOR_QUERY` ogni 5 secondi durante il polling, `ASSISTANT_MONITOR_RESULT` quando i conteggi cambiano e con heartbeat di 5 secondi, e `ASSISTANT_MONITOR_INVALID_RESULT` per callback non-stringa, JSON/schema non validi o errore di valutazione. I conteggi distinguono nodi con attributo ruolo, selettore assistant, nodi visibili, candidati leggibili e candidati stabili; ogni evento è correlato alla generazione documento.

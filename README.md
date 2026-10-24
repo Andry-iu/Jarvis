@@ -1,4 +1,4 @@
-# JarvisWake 0.5.47 — assistente Android e ChatGPT Voice
+# JarvisWake 0.5.48 — assistente Android e ChatGPT Voice
 
 App Kotlin per Android 12–16 (minSdk 31, targetSdk 36), APK ARM64 destinato alla prova su Samsung Galaxy S24+ Android 16.
 
@@ -6,7 +6,7 @@ La 0.5.47 rende verificabile anche il funzionamento del rilevatore: registra inv
 
 Il file `JarvisWake-0.5.47-test-bundle.zip` contiene l'APK ARM64 firmato col certificato permanente e le istruzioni per riprodurre la diagnostica. L'APK non firmato è disponibile separatamente; `scripts/firma-jarvis-0.5.47-termux.sh` verifica il suo checksum e il certificato permanente prima di firmarlo in Termux. Non installare un APK non firmato sopra una versione già presente. I checksum dei tre artefatti sono in `releases/0.5.47/SHA256SUMS`.
 
-La prossima release richiesta è la 0.5.48: configurazione interattiva di modello e intensità nello stesso WebView ChatGPT del preloader, con swipe sinistro per lasciare la chat utilizzabile e wake successiva per ripristinare la cover sulla stessa pagina. Lo scope e gli stati da verificare sono nel `docs/ROADMAP.md`; non è incluso nella release 0.5.47.
+La 0.5.48 è stata ricostruita dal bytecode dell'APK firmato fornito dall'utente: apre la stessa WebView autenticata per impostare modello e livello; durante Voice lo swipe sinistro ferma Voice e lascia la chat utilizzabile, mentre la wake successiva riporta alla stessa conversazione. Lo swipe verso il basso continua a tornare alla Home. I sorgenti originali non erano nel commit Git 0.5.47. La ricostruzione compila e i test locali passano; la build unsigned non è installabile come aggiornamento. La firma permanente e il collaudo Galaxy restano aperti.
 
 La frase inviata dopo l'attivazione di Voice resta configurabile dalla schermata principale e salvata nelle preferenze locali; «ciao jarvis» è il valore predefinito. Mantiene inoltre lo stop Voice della 0.5.44.
 

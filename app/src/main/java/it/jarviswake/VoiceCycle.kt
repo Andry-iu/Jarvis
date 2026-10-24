@@ -87,23 +87,27 @@ internal object VoiceCycle {
         }
     }
 
-    fun hideForWake(context: Context, token: String) {
+    fun hideForWake(context: Context, token: String, returnHome: Boolean = true) {
         if (!matches(token) || phase != VoiceCycleState.Phase.VOICE || hiddenForWake ||
             hideStopInFlightToken == token) return
         hideStopInFlightToken = token
-        DiagnosticLog.record(context, DiagnosticLog.Event.HIDE_GESTURE_RECOGNIZED, token)
-        VoiceAccessibilityService.showCoverStatus(token, "ARRESTO VOICE IN CORSO…")
+        DiagnosticLog.record(context, if (returnHome) DiagnosticLog.Event.HIDE_GESTURE_RECOGNIZED
+            else DiagnosticLog.Event.CHAT_REVEAL_GESTURE_RECOGNIZED, token)
+        VoiceAccessibilityService.showCoverStatus(token, if (returnHome) "ARRESTO VOICE IN CORSO…"
+            else "ARRESTO VOICE — APRO LA CHAT…")
         WebChatActivity.endVoiceForWake(token) { released ->
             if (hideStopInFlightToken == token) hideStopInFlightToken = null
             if (!matches(token)) return@endVoiceForWake
             if (!released || !matches(token) || !state.hideForWake(token)) {
-                DiagnosticLog.record(context, DiagnosticLog.Event.HIDE_FOR_WAKE_FAILED, token)
+                DiagnosticLog.record(context, if (returnHome) DiagnosticLog.Event.HIDE_FOR_WAKE_FAILED
+                    else DiagnosticLog.Event.CHAT_REVEAL_FAILED, token)
                 VoiceAccessibilityService.showCoverStatus(token, "ERRORE — VOICE NON SI È FERMATA")
                 State.setAttempt(context, "Non ho potuto fermare Voice in sicurezza; la cover resta visibile.")
                 return@endVoiceForWake
             }
-            DiagnosticLog.record(context, DiagnosticLog.Event.COVER_HIDDEN_FOR_WAKE, token)
-            VoiceAccessibilityService.coverHidden(token)
+            DiagnosticLog.record(context, if (returnHome) DiagnosticLog.Event.COVER_HIDDEN_FOR_WAKE
+                else DiagnosticLog.Event.CHAT_REVEALED_FOR_INTERACTION, token)
+            VoiceAccessibilityService.coverHidden(token, returnHome)
             WakeService.listenWhileHidden()
         }
     }

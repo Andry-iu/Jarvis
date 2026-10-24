@@ -56,4 +56,21 @@ class CoverSwipeDetectorTest {
         detector.onDown(100f, 64f, 2_400, statusBarInset = 48, viewScreenY = 0)
         assertTrue(detector.onMove(100f, 140f))
     }
+
+    @Test fun leftSwipeFromRightSideRevealsChatWithoutHomeAction() {
+        val detector = CoverSwipeDetector(density = 1f, touchSlop = 8f)
+        detector.onDown(300f, 420f, 2_400, statusBarInset = 48, viewScreenY = 0, viewWidth = 440)
+        assertTrue(detector.onMove(220f, 430f))
+        assertTrue(detector.wasTriggered)
+        assertTrue(detector.triggeredAction == CoverSwipeDetector.Action.CHAT)
+        assertFalse(detector.onMove(180f, 430f))
+    }
+
+    @Test fun leftSwipeRejectsStartsTooFarLeftAndLargeVerticalDrift() {
+        val detector = CoverSwipeDetector(density = 1f, touchSlop = 8f)
+        detector.onDown(120f, 420f, 2_400, statusBarInset = 48, viewScreenY = 0, viewWidth = 440)
+        assertFalse(detector.onMove(30f, 420f))
+        detector.onDown(300f, 420f, 2_400, statusBarInset = 48, viewScreenY = 0, viewWidth = 440)
+        assertFalse(detector.onMove(220f, 490f))
+    }
 }

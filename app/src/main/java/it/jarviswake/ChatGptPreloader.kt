@@ -5,6 +5,7 @@ import android.content.Context
 import android.graphics.Color
 import android.os.Handler
 import android.os.Looper
+import android.view.View
 import android.webkit.CookieManager
 import android.webkit.WebSettings
 import android.webkit.WebView
@@ -130,6 +131,29 @@ internal object ChatGptPreloader {
             DiagnosticLog.record(context, DiagnosticLog.Event.WEB_PRELOAD_FAILED)
             discard()
         }
+    }
+
+    /** Shows the same authenticated WebView as an interactive settings page. */
+    fun showForConfiguration(host: FrameLayout): Boolean = moveConfigurationWebView(host, visible = true)
+
+    /** Returns the same WebView behind Jarvis without reloading the current chat. */
+    fun hideConfiguration(container: FrameLayout): Boolean = moveConfigurationWebView(container, visible = false)
+
+    private fun moveConfigurationWebView(host: FrameLayout, visible: Boolean): Boolean {
+        val view = web.get() ?: return false
+        val parent = view.parent as? android.view.ViewGroup
+        if (parent !== host) {
+            val detached = runCatching { parent?.removeView(view); view.parent == null }.getOrDefault(false)
+            if (!detached) return false
+            if (!runCatching { host.addView(view, 0, FrameLayout.LayoutParams(-1, -1)); true }.getOrDefault(false)) return false
+        }
+        view.alpha = if (visible) 1f else 0f
+        view.isClickable = visible
+        view.isFocusable = visible
+        view.isFocusableInTouchMode = visible
+        view.importantForAccessibility = if (visible) View.IMPORTANT_FOR_ACCESSIBILITY_YES
+            else View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS
+        return true
     }
 
     /** Detaches the warmed page for the cycle; no duplicate WebView or page reload is created. */

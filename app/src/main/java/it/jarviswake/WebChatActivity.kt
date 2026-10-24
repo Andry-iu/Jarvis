@@ -719,7 +719,10 @@ class WebChatActivity : Activity() {
                     singleTap = { CoverSettings.setOpaque(this@WebChatActivity, !CoverSettings.isOpaque(this@WebChatActivity)) },
                     close = { VoiceCycle.cancel(this@WebChatActivity, cycleToken!!, "Jarvis chiuso. Ascolto Hey Jarvis riattivato.") },
                     export = { DiagnosticExportActivity.open(this@WebChatActivity) },
-                    hide = { VoiceCycle.hideForWake(this@WebChatActivity, cycleToken!!) }
+                    hide = { VoiceCycle.hideForWake(this@WebChatActivity, cycleToken!!) },
+                    revealChat = {
+                        VoiceCycle.hideForWake(this@WebChatActivity, cycleToken!!, returnHome = false)
+                    }
                 )
             }
             root.addView(localHud, FrameLayout.LayoutParams(-1, -1))

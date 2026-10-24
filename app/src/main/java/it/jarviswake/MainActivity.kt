@@ -1,6 +1,7 @@
 package it.jarviswake
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -13,6 +14,9 @@ import android.os.Looper
 import android.app.role.RoleManager
 import android.provider.Settings
 import android.view.View
+import android.view.Gravity
+import android.window.OnBackInvokedCallback
+import android.window.OnBackInvokedDispatcher
 import android.widget.*
 import android.webkit.WebView
 import android.webkit.WebViewClient
@@ -47,6 +51,9 @@ class MainActivity : Activity() {
     private lateinit var coverButton: Button
     private lateinit var greetingInput: EditText
     private lateinit var contentRoot: FrameLayout
+    private lateinit var homeScreen: ScrollView
+    private var chatSettingsLayer: FrameLayout? = null
+    private var settingsBackCallback: OnBackInvokedCallback? = null
     private val update = object : Runnable {
         override fun run() {
             status.text = (if (State.running) "● " else "○ ") + State.get(this@MainActivity)
@@ -86,6 +93,7 @@ class MainActivity : Activity() {
             ChatGptPreloader.discard()
             startActivity(Intent(this, WebChatActivity::class.java))
         }
+        button("Imposta modello e livello ChatGPT") { openChatSettings() }
         text("Frase da inviare dopo l’attivazione di Voice", 16f)
         greetingInput = EditText(this).apply {
             setSingleLine(true)
@@ -130,7 +138,8 @@ class MainActivity : Activity() {
         text("Jarvis riconosce ‘Hey Jarvis’ sul telefono e avvia una nuova chat ChatGPT con Voice. Per iniziare, accedi a ChatGPT e abilita i due permessi richiesti per l’automazione: Accessibilità e HUD.", 14f)
         text("Per l’ascolto al riavvio, imposta Jarvis come assistente predefinito. Questa scelta sostituisce l’assistente attuale per i richiami di sistema.", 14f)
         contentRoot = FrameLayout(this)
-        contentRoot.addView(ScrollView(this).apply { addView(layout) },
+        homeScreen = ScrollView(this).apply { addView(layout) }
+        contentRoot.addView(homeScreen,
             FrameLayout.LayoutParams(-1, -1))
         setContentView(contentRoot)
         handler.post { requestStart() }
@@ -176,6 +185,82 @@ class MainActivity : Activity() {
     private fun prepareChatGpt() {
         if (::contentRoot.isInitialized) ChatGptPreloader.prepare(this, contentRoot)
     }
+
+    private fun openChatSettings() {
+        if (chatSettingsLayer != null) return
+        if (VoiceCycle.active) {
+            Toast.makeText(this, "Termina prima il ciclo Voice per modificare la chat.", Toast.LENGTH_SHORT).show()
+            return
+        }
+        ChatGptPreloader.prepare(this, contentRoot)
+        val layer = FrameLayout(this).apply {
+            setBackgroundColor(Color.rgb(2, 8, 15))
+            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_YES
+            setOnApplyWindowInsetsListener { view, insets ->
+                val bars = insets.getInsets(android.view.WindowInsets.Type.systemBars())
+                view.setPadding(bars.left, bars.top, bars.right, bars.bottom)
+                insets
+            }
+        }
+        if (!ChatGptPreloader.showForConfiguration(layer)) {
+            Toast.makeText(this, "La pagina ChatGPT non è pronta. Riprova tra poco.", Toast.LENGTH_SHORT).show()
+            return
+        }
+        val toolbar = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(dp(8), dp(4), dp(12), dp(4))
+            setBackgroundColor(Color.rgb(13, 24, 36))
+            elevation = dp(6).toFloat()
+        }
+        toolbar.addView(Button(this).apply {
+            text = "‹ Jarvis"
+            contentDescription = "Torna alla schermata Jarvis mantenendo aperta la sessione ChatGPT"
+            setOnClickListener { closeChatSettings() }
+        }, LinearLayout.LayoutParams(-2, -2))
+        toolbar.addView(TextView(this).apply {
+            text = "Modello e livello ChatGPT"
+            textSize = 16f
+            setTextColor(Color.WHITE)
+            gravity = Gravity.CENTER_VERTICAL
+            contentDescription = "Impostazioni ChatGPT"
+        }, LinearLayout.LayoutParams(0, -1, 1f).apply { leftMargin = dp(12) })
+        layer.addView(toolbar, FrameLayout.LayoutParams(-1, dp(64), Gravity.TOP))
+        homeScreen.visibility = View.GONE
+        contentRoot.addView(layer, FrameLayout.LayoutParams(-1, -1))
+        chatSettingsLayer = layer
+        if (Build.VERSION.SDK_INT >= 33) {
+            val callback = OnBackInvokedCallback { closeChatSettings() }
+            settingsBackCallback = callback
+            onBackInvokedDispatcher.registerOnBackInvokedCallback(
+                OnBackInvokedDispatcher.PRIORITY_DEFAULT, callback)
+        }
+        State.setAttempt(this, "Impostazioni aperte nel WebView usato dal ciclo wake; torna a Jarvis senza chiudere la pagina.")
+    }
+
+    private fun closeChatSettings() {
+        val layer = chatSettingsLayer ?: return
+        if (Build.VERSION.SDK_INT >= 33) settingsBackCallback?.let {
+            onBackInvokedDispatcher.unregisterOnBackInvokedCallback(it)
+        }
+        settingsBackCallback = null
+        if (!ChatGptPreloader.hideConfiguration(contentRoot)) {
+            Toast.makeText(this, "Non riesco a ripristinare la pagina ChatGPT; lascio la schermata aperta.", Toast.LENGTH_SHORT).show()
+            return
+        }
+        contentRoot.removeView(layer)
+        chatSettingsLayer = null
+        homeScreen.visibility = View.VISIBLE
+        State.setAttempt(this, "Pagina ChatGPT mantenuta nel preloader; il prossimo ciclo wake riutilizza questo WebView.")
+    }
+
+    private fun dp(value: Int) = (value * resources.displayMetrics.density).toInt()
+
+    @SuppressLint("GestureBackNavigation")
+    override fun onBackPressed() {
+        if (chatSettingsLayer != null) closeChatSettings() else super.onBackPressed()
+    }
+
     private fun startVoiceCycle() {
         VoiceCycle.start(this)
     }
@@ -273,8 +358,15 @@ class MainActivity : Activity() {
         if (::contentRoot.isInitialized && !VoiceCycle.active) prepareChatGpt()
         handler.post(update)
     }
-    override fun onPause() { handler.removeCallbacks(update); super.onPause() }
+    override fun onPause() {
+        handler.removeCallbacks(update)
+        if (VoiceCycle.active && chatSettingsLayer != null) closeChatSettings()
+        super.onPause()
+    }
     override fun onDestroy() {
+        if (Build.VERSION.SDK_INT >= 33) settingsBackCallback?.let {
+            onBackInvokedDispatcher.unregisterOnBackInvokedCallback(it)
+        }
         if (!isChangingConfigurations) ChatGptPreloader.discard()
         if (instance.get() === this) instance.clear()
         super.onDestroy()

@@ -1,13 +1,13 @@
 # Roadmap — JarvisWake
 
-Release di prova 0.5.47, versionCode 69. Aggiunge diagnostica sul funzionamento della sonda delle risposte: heartbeat, esito e conteggi dei nodi di ruolo/assistente rilevati, visibili, leggibili e stabili, errori di parsing e generazione del documento. Mantiene la classificazione di risposte ripetute e le transizioni media della 0.5.46. Il log non contiene testo o hash. Test DOM e build superati; APK non firmato in questo ambiente, script incluso per firmarlo in Termux solo dopo verifica del checksum e del certificato permanente. Collaudo sul Galaxy S24+ da fare.
+Sorgenti in ricostruzione: 0.5.48, versionCode 70. L'APK storico fornito dall'utente è stato decompilato; le differenze osservabili sono state portate in Kotlin. Build pulita, 45 test JVM, lint e test DOM superati. La build unsigned non sostituisce la versione installata: manca la firma permanente perché la passphrase age non è reperibile nelle istruzioni Git accessibili. Collaudo sul Galaxy S24+ da fare. Il commit storico originale disponibile conteneva la 0.5.47.
 
-## Prossima release richiesta: 0.5.48
+## Ambito 0.5.48 ricostruito; verifiche ancora aperte
 
 - Dalla schermata principale Jarvis deve essere possibile aprire in modalità interattiva la stessa sessione WebView ChatGPT del preloader per scegliere modello e intensità dello sforzo. L'utente vuole poter selezionare sforzo alto o molto alto; non sostituire la sessione autenticata con API.
 - Uno swipe verso sinistra durante Voice deve fermare Voice, nascondere la cover e lasciare la chat utilizzabile. La wake successiva deve ripristinare la cover sulla stessa pagina mantenuta.
 - Mantenere lo swipe verso il basso già consolidato (stop Voice e Home) e il vincolo di un singolo gesto Voice per ciclo.
-- Questo comportamento non è implementato nella baseline 0.5.47. Registrare separatamente codice, test, build, firma e collaudo sul Galaxy S24+.
+- Rispetto alla 0.5.47, le modifiche sono state ricostruite dal bytecode dell'APK 0.5.48. Test e build superati; restano firma con certificato permanente e collaudo sul Galaxy S24+.
 
 Versione precedente 0.5.46, versionCode 68. Aggiunge diagnostica delle risposte per indagare la duplicazione: messaggi stabili, aggiornamenti, duplicati identici tra messaggi e frasi ripetute all'interno di un messaggio; registra inoltre ogni transizione osservata di riproduzione media. Il confronto del testo avviene nel WebView e solo ID, revisioni, lunghezze e conteggi vengono trasferiti al log. 43 test JVM, lint (0 errori/18 avvisi), test DOM, build pulita e firma permanente verificati. SHA-256 APK `68db2837289d9c218f6679a0a7f410f2c722c3c91e24396f28c95fd8289bb023`. Il collaudo ChatGPT reale resta da fare sul Galaxy S24+.
 

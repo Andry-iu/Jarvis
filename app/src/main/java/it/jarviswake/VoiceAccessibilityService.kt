@@ -45,8 +45,8 @@ class VoiceAccessibilityService : AccessibilityService() {
             instance.get()?.stopPolling()
         }
 
-        fun coverHidden(token: String) {
-            instance.get()?.takeIf { VoiceCycle.matches(token) }?.hideAndReturnHome()
+        fun coverHidden(token: String, returnHome: Boolean = true) {
+            instance.get()?.takeIf { VoiceCycle.matches(token) }?.hideCover(returnHome)
         }
 
         fun showCoverStatus(token: String, message: String) {
@@ -238,7 +238,8 @@ class VoiceAccessibilityService : AccessibilityService() {
             singleTap = { CoverSettings.setOpaque(this, !CoverSettings.isOpaque(this)) },
             close = { VoiceCycle.cancel(this, token, "Jarvis chiuso. Ascolto Hey Jarvis riattivato.") },
             export = { openDiagnosticsExport() },
-            hide = { VoiceCycle.hideForWake(this, token) }
+            hide = { VoiceCycle.hideForWake(this, token, returnHome = true) },
+            revealChat = { VoiceCycle.hideForWake(this, token, returnHome = false) }
         )
         val hudParams = WindowManager.LayoutParams(-1, -1,
             WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
@@ -260,9 +261,9 @@ class VoiceAccessibilityService : AccessibilityService() {
         }
     }
 
-    private fun hideAndReturnHome() {
+    private fun hideCover(returnHome: Boolean) {
         hideOverlay()
-        performGlobalAction(GLOBAL_ACTION_HOME)
+        if (returnHome) performGlobalAction(GLOBAL_ACTION_HOME)
     }
 
     private fun hideOverlay() {

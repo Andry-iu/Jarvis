@@ -39,6 +39,7 @@ class HolographicOverlayView(context: Context) : View(context) {
     private var onClose: (() -> Unit)? = null
     private var onExport: (() -> Unit)? = null
     private var onHide: (() -> Unit)? = null
+    private var onRevealChat: (() -> Unit)? = null
     private val coverListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
         if (key == CoverSettings.KEY_OPAQUE || key == null) updateCoverOpacity()
     }
@@ -53,12 +54,14 @@ class HolographicOverlayView(context: Context) : View(context) {
         singleTap: () -> Unit,
         close: () -> Unit,
         export: () -> Unit,
-        hide: () -> Unit
+        hide: () -> Unit,
+        revealChat: (() -> Unit)? = null
     ) {
         onSingleTap = singleTap
         onClose = close
         onExport = export
         onHide = hide
+        onRevealChat = revealChat
     }
 
     private val gestureHandler = Handler(Looper.getMainLooper())
@@ -85,18 +88,18 @@ class HolographicOverlayView(context: Context) : View(context) {
                 // the accessibility overlay starts at the display's top edge.
                 val screenLocation = IntArray(2)
                 getLocationOnScreen(screenLocation)
-                swipeDetector.onDown(event.x, event.y, height, statusBarInset, screenLocation[1])
+                swipeDetector.onDown(event.x, event.y, height, statusBarInset, screenLocation[1], width)
                 return true
             }
             MotionEvent.ACTION_MOVE -> {
                 if (swipeDetector.onMove(event.x, event.y)) {
-                    fireHideGesture()
+                    fireSwipeGesture()
                 }
                 return true
             }
             MotionEvent.ACTION_UP -> {
                 if (swipeDetector.onMove(event.x, event.y)) {
-                    fireHideGesture()
+                    fireSwipeGesture()
                     return true
                 }
                 if (swipeDetector.wasTriggered) return true
@@ -139,12 +142,16 @@ class HolographicOverlayView(context: Context) : View(context) {
         return true
     }
 
-    private fun fireHideGesture() {
+    private fun fireSwipeGesture() {
         pendingSingleTap?.let(gestureHandler::removeCallbacks)
         pendingSingleTap = null
         lastTapAt = 0L
         lastTapTarget = 0
-        onHide?.invoke()
+        when (swipeDetector.triggeredAction) {
+            CoverSwipeDetector.Action.CHAT -> onRevealChat?.invoke()
+            CoverSwipeDetector.Action.HOME -> onHide?.invoke()
+            null -> Unit
+        }
     }
 
     private fun tapTarget(x: Float, y: Float): Int {
@@ -179,7 +186,7 @@ class HolographicOverlayView(context: Context) : View(context) {
 
         if (voiceActive) {
             val density = resources.displayMetrics.density
-            val label = "↓  SCORRI VERSO IL BASSO PER HOME"
+            val label = "↓ HOME   ← CHAT INTERATTIVA"
             paint.style = Paint.Style.FILL
             paint.typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
             paint.textAlign = Paint.Align.CENTER
