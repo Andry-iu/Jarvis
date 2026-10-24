@@ -17,4 +17,12 @@
     <string name="chatgpt_webview_clear_cache">Svuota cache WebView</string>
     <string name="chatgpt_webview_cache_cleared">Cache WebView svuotata; accesso ChatGPT conservato.</string>
     <string name="chatgpt_webview_cache_clear_failed">Impossibile svuotare la cache WebView.</string>
+
+    <!-- 0.5.51: removes local WebView data; ChatGPT authentication must be performed again. -->
+    <string name="chatgpt_webview_clear_data">Elimina dati locali ChatGPT</string>
+    <string name="chatgpt_webview_clear_data_title">Eliminare i dati locali di ChatGPT?</string>
+    <string name="chatgpt_webview_clear_data_confirmation">Jarvis eliminerà cache, cookie e dati del sito salvati nella WebView. Dovrai accedere di nuovo a ChatGPT. Le conversazioni salvate nel tuo account non verranno eliminate.</string>
+    <string name="chatgpt_webview_clear_data_confirm">Elimina dati</string>
+    <string name="chatgpt_webview_data_cleared">Dati locali eliminati. Accedi di nuovo a ChatGPT.</string>
+    <string name="chatgpt_webview_data_clear_failed">Impossibile eliminare i dati locali di ChatGPT.</string>
 </resources>

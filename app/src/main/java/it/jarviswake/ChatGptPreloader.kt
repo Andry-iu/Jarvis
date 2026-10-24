@@ -9,6 +9,8 @@ import android.view.View
 import android.webkit.CookieManager
 import android.webkit.WebSettings
 import android.webkit.WebView
+import android.webkit.WebStorage
+import android.webkit.WebViewDatabase
 import android.webkit.WebViewClient
 import android.widget.FrameLayout
 import org.json.JSONObject
@@ -148,6 +150,39 @@ internal object ChatGptPreloader {
                     }
                 }
                 prepare(context, container)
+            }
+        }.isSuccess
+    }
+
+    /** Clears the app-wide WebView cache, cookies, JavaScript storage and saved WebView form/auth data. */
+    fun clearChatGptData(context: Context, container: FrameLayout, onComplete: (Boolean) -> Unit): Boolean {
+        if (VoiceCycle.active) return false
+        return runCatching {
+            val current = web.get()
+            if (current != null) {
+                current.clearCache(true)
+                discard()
+            } else {
+                WebView(context).let { temporary ->
+                    try {
+                        temporary.clearCache(true)
+                    } finally {
+                        temporary.destroy()
+                    }
+                }
+            }
+
+            CookieManager.getInstance().removeAllCookies {
+                val cleared = runCatching {
+                    WebStorage.getInstance().deleteAllData()
+                    val database = WebViewDatabase.getInstance(context.applicationContext)
+                    @Suppress("DEPRECATION")
+                    database.clearFormData()
+                    database.clearHttpAuthUsernamePassword()
+                    CookieManager.getInstance().flush()
+                    prepare(context, container)
+                }.isSuccess
+                onComplete(cleared)
             }
         }.isSuccess
     }

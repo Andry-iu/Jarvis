@@ -102,6 +102,23 @@ class MainActivity : Activity() {
                 Toast.makeText(this, getString(R.string.chatgpt_webview_cache_clear_failed), Toast.LENGTH_SHORT).show()
             }
         }
+        button(getString(R.string.chatgpt_webview_clear_data)) {
+            android.app.AlertDialog.Builder(this)
+                .setTitle(R.string.chatgpt_webview_clear_data_title)
+                .setMessage(R.string.chatgpt_webview_clear_data_confirmation)
+                .setNegativeButton(android.R.string.cancel, null)
+                .setPositiveButton(R.string.chatgpt_webview_clear_data_confirm) { _, _ ->
+                    val accepted = ChatGptPreloader.clearChatGptData(this, contentRoot) { success ->
+                        val message = if (success) R.string.chatgpt_webview_data_cleared
+                            else R.string.chatgpt_webview_data_clear_failed
+                        Toast.makeText(this, getString(message), Toast.LENGTH_LONG).show()
+                    }
+                    if (!accepted) {
+                        Toast.makeText(this, getString(R.string.chatgpt_webview_data_clear_failed), Toast.LENGTH_LONG).show()
+                    }
+                }
+                .show()
+        }
         text(getString(R.string.chatgpt_project_url_label), 16f)
         projectUrlInput = EditText(this).apply {
             setSingleLine(true)

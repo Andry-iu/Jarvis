@@ -1,3 +1,12 @@
+# 0.5.51 — eliminazione dati locali ChatGPT, APK firmato
+
+- Aggiunto il pulsante **Elimina dati locali ChatGPT** separato dalla sola pulizia cache. Una finestra di conferma avvisa che la sessione sarà cancellata e richiederà un nuovo accesso; le conversazioni conservate nell'account non vengono eliminate.
+- La pulizia elimina la cache risorse WebView, cookie con callback asincrona, storage JavaScript/Web SQL e dati HTTP/form salvati dal componente WebView; quindi ricrea il preloader sul progetto configurato. L'azione non è consentita durante un ciclo Voice attivo.
+- Build locale JDK 17 / Gradle 8.13 / Android SDK 36 / Build Tools 36.0.0: `clean testDebugUnitTest lintDebug assembleDebug -PjarvisUnsigned=true` — `BUILD SUCCESSFUL`.
+- Test JVM: 50 superati, 0 falliti, 0 errori, 0 saltati. `node scripts/test-web-voice.cjs`: superato. Lint: 0 errori, 20 avvisi.
+- APK `it.jarviswake`, versionName `0.5.51`, versionCode `73`, minSdk `31`, target/compile SDK `36`, ABI `arm64-v8a`. Certificato permanente SHA-256 `a8ddfbe2b78be5460e72df57afbc3434411e3cc27328b13bc16b4daaba13389a`; schema v3 verificato.
+- `zipalign -c -P 16 -v 4` e `unzip -t`: superati. SHA-256 APK `89b1957424206b56e148bd05ffb8480eb49db4f76ee896fb959a65de0bd38ecd`, registrato in `releases/0.5.51/SHA256SUMS`. Resta la prova sul Galaxy S24+; non è confermato che questo reset risolva l'errore Voice.
+
 # 0.5.50 — pulizia mirata della cache WebView, APK firmato
 
 - Aggiunto alla schermata principale il pulsante **Svuota cache WebView**. Usa `WebView.clearCache(true)` per eliminare la cache delle risorse dell'app e ricarica il WebView precaricato; non rimuove cookie né DOM storage, quindi non cancella il login ChatGPT.

@@ -1,5 +1,11 @@
 # Roadmap — JarvisWake
 
+## Release 0.5.51 — eliminazione dati locali ChatGPT
+
+- Aggiunto alla schermata principale **Elimina dati locali ChatGPT**, distinto da **Svuota cache WebView** e protetto da conferma.
+- Cancella la cache delle risorse, cookie, storage JavaScript/Web SQL e credenziali HTTP/form memorizzate dalla WebView. Il successivo accesso richiede nuovamente il login; non vengono eliminate le conversazioni archiviate nell'account ChatGPT.
+- Versione 0.5.51 / versionCode 73. Build, 50 test JVM, test DOM, lint (0 errori/20 avvisi), firma permanente e allineamento 16 KB superati. SHA-256 APK `89b1957424206b56e148bd05ffb8480eb49db4f76ee896fb959a65de0bd38ecd`. Prova sul Galaxy ancora da fare.
+
 ## Sorgente 0.5.50 — pulizia mirata cache WebView
 
 - La schermata principale aggiunge **Svuota cache WebView**. Cancella la cache delle risorse con `WebView.clearCache(true)` e ricarica il preloader per richiedere nuovamente gli asset.
