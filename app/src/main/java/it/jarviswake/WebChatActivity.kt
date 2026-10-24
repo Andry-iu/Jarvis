@@ -26,6 +26,7 @@ import android.webkit.WebResourceRequest
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import android.net.Uri
 import android.widget.Toast
 import java.lang.ref.WeakReference
 import org.json.JSONObject
@@ -628,6 +629,9 @@ class WebChatActivity : Activity() {
             webViewClient = object : WebViewClient() {
                 override fun onPageStarted(view: WebView, url: String, favicon: android.graphics.Bitmap?) {
                     if (webDestroyed || active.get() !== this@WebChatActivity) return
+                    val webViewVersion = WebView.getCurrentWebViewPackage()?.versionName
+                    DiagnosticLog.record(this@WebChatActivity, DiagnosticLog.Event.WEBVIEW_RUNTIME,
+                        cycleToken, webRuntimeVersion = webViewVersion)
                     automationPageReady = false
                     voiceReadyLogged = false
                     documentGeneration++
@@ -659,12 +663,25 @@ class WebChatActivity : Activity() {
                 }
 
                 override fun onReceivedError(view: WebView, request: WebResourceRequest, error: WebResourceError) {
-                    if (!webDestroyed && request.isForMainFrame) failLoading("Caricamento ChatGPT fallito: errore ${error.errorCode}.")
+                    if (webDestroyed) return
+                    if (request.isForMainFrame) {
+                        failLoading("Caricamento ChatGPT fallito: errore ${error.errorCode}.")
+                    } else {
+                        DiagnosticLog.record(this@WebChatActivity,
+                            DiagnosticLog.Event.WEB_SUBRESOURCE_LOAD_FAILED, cycleToken,
+                            webResourceHost = request.url.host, webErrorCode = error.errorCode)
+                    }
                 }
 
                 override fun onReceivedHttpError(view: WebView, request: WebResourceRequest, response: WebResourceResponse) {
-                    if (!webDestroyed && request.isForMainFrame && response.statusCode >= 400)
+                    if (webDestroyed || response.statusCode < 400) return
+                    if (request.isForMainFrame) {
                         failLoading("Caricamento ChatGPT fallito: HTTP ${response.statusCode}.")
+                    } else {
+                        DiagnosticLog.record(this@WebChatActivity,
+                            DiagnosticLog.Event.WEB_SUBRESOURCE_HTTP_ERROR, cycleToken,
+                            webResourceHost = request.url.host, webHttpStatus = response.statusCode)
+                    }
                 }
 
                 override fun onRenderProcessGone(view: WebView, detail: RenderProcessGoneDetail): Boolean {
@@ -674,6 +691,27 @@ class WebChatActivity : Activity() {
                 }
             }
             webChromeClient = object : WebChromeClient() {
+                override fun onConsoleMessage(message: android.webkit.ConsoleMessage): Boolean {
+                    if (!webDestroyed) {
+                        val text = message.message().lowercase(java.util.Locale.ROOT)
+                        val category = when {
+                            "failed to fetch dynamically imported module" in text -> "dynamic_module_fetch"
+                            "failed to load module script" in text -> "module_script_fetch"
+                            "mime type" in text -> "module_mime_type"
+                            "cors" in text && "fail" in text -> "cors_failure"
+                            "net::err_" in text -> "network_error"
+                            else -> null
+                        }
+                        if (category != null) {
+                            val sourceHost = runCatching { Uri.parse(message.sourceId()).host }.getOrNull()
+                            DiagnosticLog.record(this@WebChatActivity,
+                                DiagnosticLog.Event.WEB_MODULE_CONSOLE_ERROR, cycleToken,
+                                webResourceHost = sourceHost, webErrorCategory = category)
+                        }
+                    }
+                    return super.onConsoleMessage(message)
+                }
+
                 override fun onPermissionRequest(request: PermissionRequest) {
                     runOnUiThread {
                         if (isFinishing || isDestroyed || webDestroyed ||

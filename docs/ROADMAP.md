@@ -1,10 +1,16 @@
 # Roadmap — JarvisWake
 
+## Release 0.5.52 — diagnostica errore modulo Voice
+
+- Registra errori di caricamento delle risorse secondarie con host, codice Android o stato HTTP; classifica messaggi console pertinenti a import dinamici, errori di rete, MIME e CORS. Registra anche la versione del runtime WebView. Non salva URL completi o messaggi della pagina.
+- La 0.5.51 ha cancellato cache, cookie e storage locali, ma l'utente ha riferito che l'errore persiste dopo un nuovo login. La causa resta aperta.
+- Versione 0.5.52 / versionCode 74. Build, 50 test JVM, test DOM, lint (0 errori/20 avvisi), firma permanente e allineamento 16 KB verificati. SHA-256 APK `b8f85fdc299ff21ce0ef4c31d605ee38ac35f40458d87819ecc573740779d065`.
+
 ## Release 0.5.51 — eliminazione dati locali ChatGPT
 
 - Aggiunto alla schermata principale **Elimina dati locali ChatGPT**, distinto da **Svuota cache WebView** e protetto da conferma.
 - Cancella la cache delle risorse, cookie, storage JavaScript/Web SQL e credenziali HTTP/form memorizzate dalla WebView. Il successivo accesso richiede nuovamente il login; non vengono eliminate le conversazioni archiviate nell'account ChatGPT.
-- Versione 0.5.51 / versionCode 73. Build, 50 test JVM, test DOM, lint (0 errori/20 avvisi), firma permanente e allineamento 16 KB superati. SHA-256 APK `89b1957424206b56e148bd05ffb8480eb49db4f76ee896fb959a65de0bd38ecd`. Prova sul Galaxy ancora da fare.
+- Versione 0.5.51 / versionCode 73. Build, 50 test JVM, test DOM, lint (0 errori/20 avvisi), firma permanente e allineamento 16 KB superati. SHA-256 APK `89b1957424206b56e148bd05ffb8480eb49db4f76ee896fb959a65de0bd38ecd`. L'utente ha provato il reset: dopo il nuovo accesso l'errore è rimasto.
 
 ## Sorgente 0.5.50 — pulizia mirata cache WebView
 

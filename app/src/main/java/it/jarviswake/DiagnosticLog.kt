@@ -6,7 +6,7 @@ import java.io.File
 import java.time.Instant
 import java.util.concurrent.Executors
 
-/** Bounded, asynchronous diagnostic events. Never include user text, audio, URLs or credentials. */
+/** Bounded, asynchronous diagnostic events. Never include user text, audio, full URLs or credentials. */
 internal object DiagnosticLog {
     private val executor = Executors.newSingleThreadExecutor { task ->
         Thread(task, "JarvisDiagnostic").apply { isDaemon = true }
@@ -30,7 +30,12 @@ internal object DiagnosticLog {
         visibleNodes: Int? = null,
         eligibleNodes: Int? = null,
         stableNodes: Int? = null,
-        documentGeneration: Int? = null
+        documentGeneration: Int? = null,
+        webResourceHost: String? = null,
+        webErrorCode: Int? = null,
+        webHttpStatus: Int? = null,
+        webErrorCategory: String? = null,
+        webRuntimeVersion: String? = null
     ) {
         val directory = File(context.applicationContext.filesDir, "diagnostics")
         val timestamp = Instant.now().toString()
@@ -48,7 +53,12 @@ internal object DiagnosticLog {
             "visibleNodes=${visibleNodes?.takeIf { it >= 0 } ?: "-"}",
             "eligibleNodes=${eligibleNodes?.takeIf { it >= 0 } ?: "-"}",
             "stableNodes=${stableNodes?.takeIf { it >= 0 } ?: "-"}",
-            "documentGeneration=${documentGeneration?.takeIf { it >= 0 } ?: "-"}"
+            "documentGeneration=${documentGeneration?.takeIf { it >= 0 } ?: "-"}",
+            "webHost=${webResourceHost?.lowercase()?.takeIf { it.matches(Regex("[a-z0-9.-]{1,253}")) } ?: "-"}",
+            "webError=${webErrorCode?.takeIf { it in -1000..10000 } ?: "-"}",
+            "webHttp=${webHttpStatus?.takeIf { it in 100..599 } ?: "-"}",
+            "webCategory=${webErrorCategory?.takeIf { it.matches(Regex("[a-z0-9_]{1,32}")) } ?: "-"}",
+            "webView=${webRuntimeVersion?.takeIf { it.matches(Regex("[0-9A-Za-z.+_-]{1,40}")) } ?: "-"}"
         ).joinToString("\t")
         val line = "$timestamp\t$elapsed\t${event.name}\t${cycleId ?: "-"}\t$details\n"
         executor.execute {
@@ -82,6 +92,7 @@ internal object DiagnosticLog {
         WEB_PAGE_READY, VOICE_CONTROL_READY, VOICE_DISPATCHED_FIRST,
         WEB_PRELOAD_STARTED, WEB_PRELOAD_PAGE_READY, WEB_PRELOAD_VOICE_FOUND,
         WEB_PRELOAD_REUSED, WEB_PRELOAD_VOICE_SEEDED, WEB_PRELOAD_FAILED, WEB_PRELOAD_DISCARDED,
+        WEBVIEW_RUNTIME, WEB_SUBRESOURCE_LOAD_FAILED, WEB_SUBRESOURCE_HTTP_ERROR, WEB_MODULE_CONSOLE_ERROR,
         VOICE_INPUT_TRACK_LIVE, VOICE_MEDIA_PLAYING, VOICE_MEDIA_PLAYBACK_STARTED,
         VOICE_MEDIA_PLAYBACK_STOPPED,
         ASSISTANT_RESPONSE_SEEN, ASSISTANT_RESPONSE_UPDATED, ASSISTANT_RESPONSE_DUPLICATE,

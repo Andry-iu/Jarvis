@@ -1,4 +1,4 @@
-# JarvisWake 0.5.51 — assistente Android e ChatGPT Voice
+# JarvisWake 0.5.52 — assistente Android e ChatGPT Voice
 
 App Kotlin per Android 12–16 (minSdk 31, targetSdk 36), APK ARM64 destinato alla prova su Samsung Galaxy S24+ Android 16.
 
@@ -13,6 +13,8 @@ La frase inviata dopo l'attivazione di Voice resta configurabile dalla schermata
 La 0.5.49 aggiunge la configurazione persistente dell'indirizzo del progetto ChatGPT. Il valore iniziale è `https://chatgpt.com/g/g-p-6adc87c2850c8191b52e9df5d94bfba6/project`; dalla schermata principale si può modificarlo e salvarlo. Il preloader e il ciclo wake leggono la stessa preferenza. Sono accettati soltanto URL HTTPS di progetti su `chatgpt.com`. Build pulita, 50 test JVM, test DOM, lint e firma permanente verificati; resta la prova sul Galaxy S24+.
 
 La 0.5.50 aggiunge **Svuota cache WebView**. Poiché l'utente ha segnalato che l'errore Voice persiste, la 0.5.51 aggiunge anche **Elimina dati locali ChatGPT**: dopo conferma cancella cache, cookie e storage locale della WebView e richiede un nuovo accesso. Non elimina conversazioni salvate nell'account. Build, 50 test JVM, test DOM, lint e firma permanente sono verificati; resta il collaudo sul Galaxy S24+.
+
+L'utente ha provato anche la 0.5.51: dopo il reset completo e un nuovo login, l'errore rosso Voice è rimasto. La 0.5.52 aggiunge diagnostica limitata agli errori delle risorse WebView e della console: registra host, codice/stato, categoria e versione WebView, senza URL completi né testo della pagina. L'obiettivo è identificare il fetch del modulo Voice che fallisce; la causa non è ancora confermata.
 
 ## Documentazione e continuità
 

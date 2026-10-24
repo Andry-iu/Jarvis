@@ -2,7 +2,7 @@ Riprendi JarvisWake dal branch `main`. Prima di intervenire leggi `AGENTS.md`, `
 
 ## Baseline
 
-Sorgenti: **0.5.51 / versionCode 73**. Oltre a «Svuota cache WebView», aggiunge «Elimina dati locali ChatGPT»: con conferma cancella cache, cookie e storage della WebView, richiedendo un nuovo login ma senza eliminare le conversazioni nell'account. Build, 50 test JVM, test DOM, lint, firma permanente e allineamento 16 KB verificati. SHA-256 APK `89b1957424206b56e148bd05ffb8480eb49db4f76ee896fb959a65de0bd38ecd`. Collaudo Galaxy ancora da fare.
+Sorgenti: **0.5.52 / versionCode 74**. La 0.5.51 ha aggiunto il reset completo dei dati locali ChatGPT, ma l'utente ha riferito che l'errore rosso Voice persiste dopo il nuovo login. La 0.5.52 registra host, codice/stato e categoria degli errori delle risorse secondarie/console JS e versione WebView, senza URL completi o testo pagina. Build, 50 test JVM, test DOM, lint, firma permanente e allineamento 16 KB verificati. SHA-256 APK `b8f85fdc299ff21ce0ef4c31d605ee38ac35f40458d87819ecc573740779d065`. Prossimo passo: riprodurre e riesportare la diagnostica.
 
 ## 0.5.49: release verificata
 

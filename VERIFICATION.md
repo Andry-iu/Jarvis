@@ -1,3 +1,12 @@
+# 0.5.52 — diagnostica fetch Voice, APK firmato
+
+- Diagnostica estesa: registra fallimenti di caricamento delle risorse secondarie con host e codice errore, errori HTTP con host e stato, messaggi console classificati in categorie fisse (import dinamico, modulo, MIME, CORS, rete), versione runtime WebView. Nessun URL completo, query, messaggio console libero o testo pagina è scritto nel log.
+- Motivazione: l'utente ha cancellato cache e dati locali ChatGPT con la 0.5.51, ha effettuato nuovamente il login e ha riferito che l'errore rosso Voice è rimasto. I callback precedenti ignoravano errori non riferiti al main frame, quindi non potevano identificare il fetch del modulo Silero.
+- Build locale JDK 17 / Gradle 8.13 / Android SDK 36 / Build Tools 36.0.0: `clean testDebugUnitTest lintDebug assembleDebug -PjarvisUnsigned=true` — `BUILD SUCCESSFUL`.
+- Test JVM: 50 superati, 0 falliti, 0 errori, 0 saltati. `node scripts/test-web-voice.cjs`: superato. Lint: 0 errori, 20 avvisi.
+- APK `it.jarviswake`, versionName `0.5.52`, versionCode `74`, minSdk `31`, target/compile SDK `36`, ABI `arm64-v8a`. Certificato permanente SHA-256 `a8ddfbe2b78be5460e72df57afbc3434411e3cc27328b13bc16b4daaba13389a`; schema v3 verificato.
+- Allineamento 16 KB e ZIP CRC superati. SHA-256 APK `b8f85fdc299ff21ce0ef4c31d605ee38ac35f40458d87819ecc573740779d065`, in `releases/0.5.52/SHA256SUMS`. La causa è ancora sconosciuta: serve riproduzione sul telefono e nuova esportazione diagnostica.
+
 # 0.5.51 — eliminazione dati locali ChatGPT, APK firmato
 
 - Aggiunto il pulsante **Elimina dati locali ChatGPT** separato dalla sola pulizia cache. Una finestra di conferma avvisa che la sessione sarà cancellata e richiederà un nuovo accesso; le conversazioni conservate nell'account non vengono eliminate.
@@ -5,7 +14,7 @@
 - Build locale JDK 17 / Gradle 8.13 / Android SDK 36 / Build Tools 36.0.0: `clean testDebugUnitTest lintDebug assembleDebug -PjarvisUnsigned=true` — `BUILD SUCCESSFUL`.
 - Test JVM: 50 superati, 0 falliti, 0 errori, 0 saltati. `node scripts/test-web-voice.cjs`: superato. Lint: 0 errori, 20 avvisi.
 - APK `it.jarviswake`, versionName `0.5.51`, versionCode `73`, minSdk `31`, target/compile SDK `36`, ABI `arm64-v8a`. Certificato permanente SHA-256 `a8ddfbe2b78be5460e72df57afbc3434411e3cc27328b13bc16b4daaba13389a`; schema v3 verificato.
-- `zipalign -c -P 16 -v 4` e `unzip -t`: superati. SHA-256 APK `89b1957424206b56e148bd05ffb8480eb49db4f76ee896fb959a65de0bd38ecd`, registrato in `releases/0.5.51/SHA256SUMS`. Resta la prova sul Galaxy S24+; non è confermato che questo reset risolva l'errore Voice.
+- `zipalign -c -P 16 -v 4` e `unzip -t`: superati. SHA-256 APK `89b1957424206b56e148bd05ffb8480eb49db4f76ee896fb959a65de0bd38ecd`, registrato in `releases/0.5.51/SHA256SUMS`. L'utente ha verificato sul telefono: errore persistente dopo nuovo login.
 
 # 0.5.50 — pulizia mirata della cache WebView, APK firmato
 
