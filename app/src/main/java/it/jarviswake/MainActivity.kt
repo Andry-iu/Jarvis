@@ -95,6 +95,13 @@ class MainActivity : Activity() {
             startActivity(Intent(this, WebChatActivity::class.java))
         }
         button("Imposta modello e livello ChatGPT") { openChatSettings() }
+        button(getString(R.string.chatgpt_webview_clear_cache)) {
+            if (ChatGptPreloader.clearResourceCache(this, contentRoot)) {
+                Toast.makeText(this, getString(R.string.chatgpt_webview_cache_cleared), Toast.LENGTH_SHORT).show()
+            } else {
+                Toast.makeText(this, getString(R.string.chatgpt_webview_cache_clear_failed), Toast.LENGTH_SHORT).show()
+            }
+        }
         text(getString(R.string.chatgpt_project_url_label), 16f)
         projectUrlInput = EditText(this).apply {
             setSingleLine(true)

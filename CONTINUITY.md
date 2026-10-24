@@ -1,4 +1,6 @@
-Aggiornato il 24 ottobre 2026. La 0.5.49 aggiunge un campo per configurare e salvare l'indirizzo del progetto ChatGPT; il valore iniziale è quello fornito dall'utente. Preloader e ciclo Voice usano la stessa preferenza. Build pulita, 50 test JVM, test DOM e lint (0 errori, 20 avvisi) superati. APK ARM64 firmato col certificato permanente; dettagli e checksum in `VERIFICATION.md`. Il collaudo sul Galaxy S24+ resta da fare.
+Aggiornato il 24 ottobre 2026. La versione 0.5.50 aggiunge **Svuota cache WebView**: pulisce le risorse memorizzate e ricarica il preloader, senza eliminare cookie o storage e senza uscire da ChatGPT. Build, test, lint, firma e checksum verificati; l'APK è pronto per il collaudo sul Galaxy S24+.
+
+Diagnostica recente: l'errore Silero VAD scompare in Chrome dopo la pulizia dei dati di navigazione, ma resta in Jarvis dopo la pulizia cache dell'app. La chiusura immediata della cover era invece dovuta al servizio Accessibilità Jarvis disattivato; l'utente lo ha riattivato. La prova 0.5.50 deve verificare se svuotare la cache specifica della WebView aggiorna l'asset Silero.
 
 La 0.5.48 ricostruita aggiunge accesso interattivo dalla schermata Jarvis allo stesso WebView ChatGPT del preloader e lo swipe sinistro durante Voice per tornare alla chat. Il commit remoto `bf40ac2` registra la versione firmata. La 0.5.49 permette di configurare e salvare l'URL del progetto; l'URL iniziale è `https://chatgpt.com/g/g-p-6adc87c2850c8191b52e9df5d94bfba6/project`.
 Istruzioni di ripresa: PROMPT_CONTINUITA.txt. Prima di pubblicare, aggiornare i riferimenti remoti e verificare Git; non usare force-push. La build richiede JDK 17, Gradle 8.13, Android SDK 36 e Build Tools 36.0.0.
@@ -8,7 +10,7 @@ Aggiornato il 21 ottobre 2026 per la 0.5.42. Lo screenshot della prova 0.5.41 mo
 
 ## Stato attuale
 
-- Versione sorgenti: **0.5.49**, versionCode **71**. Aggiunge configurazione persistente dell'URL progetto. Build, 50 test JVM, test DOM, lint e firma permanente verificati; prova sul telefono da fare. Pacchetto `it.jarviswake`, minSdk 31, compile/target SDK 36, Build Tools 36.0.0, Gradle 8.13, JDK 17, ABI `arm64-v8a`.
+- Versione sorgenti: **0.5.50**, versionCode **72**, build/test/firma verificati; collaudo fisico aperto. Pacchetto `it.jarviswake`, minSdk 31, compile/target SDK 36, Build Tools 36.0.0, Gradle 8.13, JDK 17, ABI `arm64-v8a`. SHA-256 APK `4754116efc4ede6deba51d3c8c6e90e9acb8257be4211a41794521f4c93cf2f5`.
 - Repository di riferimento: `https://github.com/Andry-iu/Jarvis`, branch `main`. Usare sempre il `main` remoto più recente come baseline; non assumere che la 0.5.30 sia ancora HEAD.
 - URL iniziale del progetto ChatGPT: `https://chatgpt.com/g/g-p-6adc87c2850c8191b52e9df5d94bfba6/project`. In 0.5.49 l'utente può modificarlo e salvarlo dalla schermata principale; il valore è persistente e condiviso fra preloader e ciclo Voice.
 - La 0.5.33 mantiene Vosk Model/Recognizer per tutta la vita del servizio, tiene attiva la cattura per 30 secondi dopo screen-off e riprende subito all'accensione riusando il modello. Sul Galaxy S24+ l'utente ha confermato wake entro la finestra, nessun avvio dopo la scadenza e ripresa immediata all'accensione.
@@ -41,6 +43,7 @@ Aggiornato il 21 ottobre 2026 per la 0.5.42. Lo screenshot della prova 0.5.41 mo
 
 | Versione | Codice | Stato delle informazioni |
 | --- | ---: | --- |
+| 0.5.50 | 72 | Pulsante per svuotare la cache risorse WebView e ricaricare il preloader; cookie/storage preservati. Build, 50 test JVM, DOM, lint, firma permanente e allineamento 16 KB verificati. SHA-256 `4754116efc4ede6deba51d3c8c6e90e9acb8257be4211a41794521f4c93cf2f5`. Collaudo sul telefono aperto. |
 | 0.5.49 | 71 | Campo per configurare e salvare l'URL del progetto ChatGPT. La preferenza persistente viene letta dal preloader e dall'attività Voice; salvando un URL diverso, la pagina precaricata viene ricreata. URL limitato a HTTPS e al percorso progetto su `chatgpt.com`. Build pulita, 50 test JVM, test DOM, lint e firma permanente verificati; APK SHA-256 `c8458def818f02489e1ee651c81a020041ee99084fe6d840d9179f8e92348e04`. Prova Galaxy da fare. |
 | 0.5.48 | 70 | Apre in modalità interattiva il WebView usato dal ciclo wake per impostare modello e intensità dello sforzo; aggiunge swipe sinistro per fermare Voice e lasciare la chat utilizzabile, con wake successiva sulla stessa pagina. APK firmato e verificato; prova Galaxy da fare. |
 | 0.5.45 | 67 | Campo per personalizzare la frase dopo l'attivazione di Voice, persistente nelle preferenze locali e codificata in sicurezza nello script DOM. Test JVM, lint, build Android e test DOM superati; APK firmato col certificato permanente `a8ddfbe2b78be5460e72df57afbc3434411e3cc27328b13bc16b4daaba13389a`, firma v3 e allineamento 16 KB verificati. SHA-256 APK `24cc53e03d46dda28f1ca1b9b829f8d1a42a4fb6229ae8dec60591c800994299`. Collaudo Galaxy da fare. |

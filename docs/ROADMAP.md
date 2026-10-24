@@ -1,5 +1,11 @@
 # Roadmap — JarvisWake
 
+## Sorgente 0.5.50 — pulizia mirata cache WebView
+
+- La schermata principale aggiunge **Svuota cache WebView**. Cancella la cache delle risorse con `WebView.clearCache(true)` e ricarica il preloader per richiedere nuovamente gli asset.
+- Cookie e DOM storage non vengono cancellati, quindi il login ChatGPT resta disponibile. Il comando non è eseguibile durante un ciclo Voice attivo.
+- Versione 0.5.50 / versionCode 72. Build, 50 test JVM, test DOM, lint (0 errori/20 avvisi), firma permanente e allineamento 16 KB superati. SHA-256 APK `4754116efc4ede6deba51d3c8c6e90e9acb8257be4211a41794521f4c93cf2f5`. Collaudo Galaxy ancora da fare.
+
 ## Sorgente 0.5.49 — URL ChatGPT configurabile
 
 - La schermata principale presenta l'URL del progetto ChatGPT, inizialmente impostato all'indirizzo fornito dall'utente, e consente di salvarne una modifica nelle preferenze locali.

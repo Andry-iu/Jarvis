@@ -1,3 +1,12 @@
+# 0.5.50 — pulizia mirata della cache WebView, APK firmato
+
+- Aggiunto alla schermata principale il pulsante **Svuota cache WebView**. Usa `WebView.clearCache(true)` per eliminare la cache delle risorse dell'app e ricarica il WebView precaricato; non rimuove cookie né DOM storage, quindi non cancella il login ChatGPT.
+- Se non esiste un preloader, una WebView temporanea pulisce la cache condivisa nell'app e viene poi ricreato il preloader. L'azione viene rifiutata durante un ciclo Voice attivo.
+- Build locale con JDK 17, Gradle 8.13, Android SDK 36 e Build Tools 36.0.0: `clean testDebugUnitTest lintDebug assembleDebug -PjarvisUnsigned=true` — `BUILD SUCCESSFUL`.
+- Test JVM: 50 superati, 0 falliti, 0 errori, 0 saltati. `node scripts/test-web-voice.cjs`: superato. Lint: 0 errori, 20 avvisi.
+- APK firmato: `it.jarviswake`, versionName `0.5.50`, versionCode `72`, minSdk `31`, target/compile SDK `36`, ABI `arm64-v8a`. Certificato permanente SHA-256 `a8ddfbe2b78be5460e72df57afbc3434411e3cc27328b13bc16b4daaba13389a`; firma v3 verificata (v2 non abilitata nell'APK, compatibile con minSdk 31).
+- `zipalign -c -P 16 -v 4` e `unzip -t`: superati. SHA-256 APK firmato `4754116efc4ede6deba51d3c8c6e90e9acb8257be4211a41794521f4c93cf2f5`, registrato in `releases/0.5.50/SHA256SUMS`. Collaudo sul Galaxy S24+ ancora da fare.
+
 # 0.5.49 — configurazione URL progetto e APK firmato
 
 - Aggiunto un campo persistente nella schermata principale con l'indirizzo fornito dall'utente come valore iniziale. Il preloader e `WebChatActivity` leggono la stessa preferenza, perciò anche il ciclo wake usa la destinazione salvata. Quando il valore cambia, il WebView precaricato viene scartato e ricreato.

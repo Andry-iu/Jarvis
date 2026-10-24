@@ -131,6 +131,27 @@ internal object ChatGptPreloader {
         }
     }
 
+    /** Clears only the app-wide WebView resource cache, preserves login/site storage, and reloads ChatGPT. */
+    fun clearResourceCache(context: Context, container: FrameLayout): Boolean {
+        if (VoiceCycle.active) return false
+        return runCatching {
+            val current = web.get()
+            if (current != null) {
+                current.clearCache(true)
+                current.reload()
+            } else {
+                WebView(context).let { temporary ->
+                    try {
+                        temporary.clearCache(true)
+                    } finally {
+                        temporary.destroy()
+                    }
+                }
+                prepare(context, container)
+            }
+        }.isSuccess
+    }
+
     /** Shows the same authenticated WebView as an interactive settings page. */
     fun showForConfiguration(host: FrameLayout): Boolean = moveConfigurationWebView(host, visible = true)
 

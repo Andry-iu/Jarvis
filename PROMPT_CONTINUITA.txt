@@ -2,7 +2,7 @@ Riprendi JarvisWake dal branch `main`. Prima di intervenire leggi `AGENTS.md`, `
 
 ## Baseline
 
-Sorgenti: **0.5.49 / versionCode 71**. Consentono di configurare e salvare l'URL del progetto ChatGPT dalla schermata principale; preloader e ciclo wake usano la stessa preferenza. Il valore iniziale è `https://chatgpt.com/g/g-p-6adc87c2850c8191b52e9df5d94bfba6/project`. Build pulita, 50 test JVM, test DOM, lint e firma permanente superati. Collaudo sul Galaxy S24+ ancora da fare. SHA-256 APK `c8458def818f02489e1ee651c81a020041ee99084fe6d840d9179f8e92348e04`.
+Sorgenti: **0.5.50 / versionCode 72**. Aggiunge il pulsante «Svuota cache WebView», che pulisce le sole risorse temporanee e ricarica il preloader, preservando cookie, storage e accesso ChatGPT. Build, 50 test JVM, test DOM, lint, firma permanente e allineamento 16 KB verificati. SHA-256 APK `4754116efc4ede6deba51d3c8c6e90e9acb8257be4211a41794521f4c93cf2f5`. Collaudo Galaxy ancora da fare.
 
 ## 0.5.49: release verificata
 
