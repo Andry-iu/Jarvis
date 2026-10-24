@@ -1,4 +1,4 @@
-# JarvisWake 0.5.48 — assistente Android e ChatGPT Voice
+# JarvisWake 0.5.49 — assistente Android e ChatGPT Voice
 
 App Kotlin per Android 12–16 (minSdk 31, targetSdk 36), APK ARM64 destinato alla prova su Samsung Galaxy S24+ Android 16.
 
@@ -6,9 +6,11 @@ La 0.5.47 rende verificabile anche il funzionamento del rilevatore: registra inv
 
 Il file `JarvisWake-0.5.47-test-bundle.zip` contiene l'APK ARM64 firmato col certificato permanente e le istruzioni per riprodurre la diagnostica. L'APK non firmato è disponibile separatamente; `scripts/firma-jarvis-0.5.47-termux.sh` verifica il suo checksum e il certificato permanente prima di firmarlo in Termux. Non installare un APK non firmato sopra una versione già presente. I checksum dei tre artefatti sono in `releases/0.5.47/SHA256SUMS`.
 
-La 0.5.48 è stata ricostruita dal bytecode dell'APK firmato fornito dall'utente: apre la stessa WebView autenticata per impostare modello e livello; durante Voice lo swipe sinistro ferma Voice e lascia la chat utilizzabile, mentre la wake successiva riporta alla stessa conversazione. Lo swipe verso il basso continua a tornare alla Home. I sorgenti originali non erano nel commit Git 0.5.47. La ricostruzione compila e i test locali passano; la build unsigned non è installabile come aggiornamento. La firma permanente e il collaudo Galaxy restano aperti.
+La 0.5.48 è stata ricostruita dal bytecode dell'APK storico fornito dall'utente: apre la stessa WebView autenticata per impostare modello e livello; durante Voice lo swipe sinistro ferma Voice e lascia la chat utilizzabile, mentre la wake successiva riporta alla stessa conversazione. Lo swipe verso il basso continua a tornare alla Home. Build e firma permanente sono verificate; il collaudo Galaxy resta aperto.
 
 La frase inviata dopo l'attivazione di Voice resta configurabile dalla schermata principale e salvata nelle preferenze locali; «ciao jarvis» è il valore predefinito. Mantiene inoltre lo stop Voice della 0.5.44.
+
+La 0.5.49 aggiunge la configurazione persistente dell'indirizzo del progetto ChatGPT. Il valore iniziale è `https://chatgpt.com/g/g-p-6adc87c2850c8191b52e9df5d94bfba6/project`; dalla schermata principale si può modificarlo e salvarlo. Il preloader e il ciclo wake leggono la stessa preferenza. Sono accettati soltanto URL HTTPS di progetti su `chatgpt.com`. Build pulita, 50 test JVM, test DOM, lint e firma permanente verificati; resta la prova sul Galaxy S24+.
 
 ## Documentazione e continuità
 
@@ -23,7 +25,7 @@ La frase inviata dopo l'attivazione di Voice resta configurabile dalla schermata
 
 JarvisWake riconosce localmente “Hey Jarvis”, vibra, libera il microfono e apre ChatGPT Voice usando una sessione **ChatGPT Web autenticata con l'account dell'utente**. Questo percorso conserva l'ambiente ChatGPT dell'account, invece di ricostruire memoria e istruzioni tramite API separate.
 
-La destinazione è il progetto ChatGPT **JarvisRuntime**, configurato dall'utente con memoria «Solo progetto». L'app apre l'URL del progetto. La creazione automatica verificata di una nuova conversazione per ogni ciclo non è ancora dimostrata: non presumere che la pagina di progetto apra sempre una chat nuova.
+La destinazione predefinita è il progetto ChatGPT indicato dall'utente; l'URL è modificabile dalla schermata principale e salvato localmente. La creazione automatica verificata di una nuova conversazione per ogni ciclo non è ancora dimostrata: non presumere che la pagina di progetto apra sempre una chat nuova.
 
 ## Configurazione iniziale
 
@@ -31,7 +33,8 @@ La destinazione è il progetto ChatGPT **JarvisRuntime**, configurato dall'utent
 2. Abilitare **JarvisWake: avvio Voice** nelle impostazioni Accessibilità e consentire l'HUD sopra altre app.
 3. Aprire JarvisWake, scegliere **Configura accesso a ChatGPT** e accedere al proprio account.
 4. Tornare a JarvisWake. La sessione e i cookie restano nel profilo WebView privato dell'app.
-5. Premere **Imposta Jarvis come assistente del telefono** e selezionare JarvisWake nella richiesta Android. Il sistema userà Jarvis al posto dell'assistente precedente per i richiami di sistema.
+5. Controllare il campo **Indirizzo del progetto ChatGPT** nella schermata principale. Modificarlo se serve e premere **Salva indirizzo ChatGPT**; il nuovo indirizzo verrà usato sia dalle impostazioni interattive sia dai cicli wake.
+6. Premere **Imposta Jarvis come assistente del telefono** e selezionare JarvisWake nella richiesta Android. Il sistema userà Jarvis al posto dell'assistente precedente per i richiami di sistema.
 
 La frase inviata quando si attiva Voice si modifica dalla schermata principale, nel campo **Frase da inviare dopo l'attivazione di Voice**. Premi **Salva frase**: la scelta resta memorizzata dopo la chiusura dell'app. **Ripristina «ciao jarvis»** ripristina il testo iniziale.
 

@@ -1,5 +1,12 @@
 # Roadmap — JarvisWake
 
+## Sorgente 0.5.49 — URL ChatGPT configurabile
+
+- La schermata principale presenta l'URL del progetto ChatGPT, inizialmente impostato all'indirizzo fornito dall'utente, e consente di salvarne una modifica nelle preferenze locali.
+- Preloader e `WebChatActivity` caricano la medesima destinazione salvata; il ciclo wake eredita quindi il WebView del progetto configurato.
+- La convalida accetta soltanto URL HTTPS su `chatgpt.com` che corrispondono a un percorso progetto. Salvando un URL diverso, Jarvis scarta e ricrea il preloader.
+- Versione sorgenti 0.5.49 / versionCode 71. Build pulita, 50 test JVM, test DOM, lint (0 errori/20 avvisi) e firma permanente superati; collaudo sul Galaxy S24+ da fare. SHA-256 APK `c8458def818f02489e1ee651c81a020041ee99084fe6d840d9179f8e92348e04`.
+
 Sorgenti ricostruiti: 0.5.48, versionCode 70. L'APK storico fornito dall'utente è stato decompilato; le differenze osservabili sono state portate in Kotlin. Build pulita, 45 test JVM, lint e test DOM superati. APK firmato con la chiave permanente e fingerprint verificato; hash e dettagli in `VERIFICATION.md`. Collaudo sul Galaxy S24+ da fare. Il commit storico originale disponibile conteneva la 0.5.47.
 
 ## Ambito 0.5.48 ricostruito; verifiche ancora aperte

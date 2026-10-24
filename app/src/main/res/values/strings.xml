@@ -3,4 +3,13 @@
     <string name="assistant_service_label">JarvisWake</string>
     <string name="main_subtitle">%1$s • Assistente Android / ChatGPT Voice</string>
     <string name="accessibility_description">Dopo Hey Jarvis, controlla la sessione ChatGPT Web di JarvisWake per aprire una nuova chat e Voice. Non registra l’audio o il contenuto delle conversazioni.</string>
+
+    <!-- 0.5.49: project URL is stored locally and shared by the preloader and Voice WebView. -->
+    <string name="chatgpt_project_url_label">Indirizzo del progetto ChatGPT</string>
+    <string name="chatgpt_project_url_hint">https://chatgpt.com/g/g-p-…/project</string>
+    <string name="chatgpt_project_url_description">Jarvis usa questo progetto sia per le impostazioni interattive sia all’avvio con la wake word.</string>
+    <string name="chatgpt_project_url_save">Salva indirizzo ChatGPT</string>
+    <string name="chatgpt_project_url_invalid">Inserisci l’URL HTTPS di un progetto su chatgpt.com</string>
+    <string name="chatgpt_project_url_saved_changed">Indirizzo salvato; il prossimo ciclo userà il nuovo progetto.</string>
+    <string name="chatgpt_project_url_saved">Indirizzo ChatGPT salvato.</string>
 </resources>

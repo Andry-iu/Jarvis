@@ -17,8 +17,6 @@ import java.lang.ref.WeakReference
 
 /** Loads the authenticated project page before wake and transfers the same WebView to Voice. */
 internal object ChatGptPreloader {
-    private const val PROJECT_URL =
-        "https://chatgpt.com/g/g-p-6ad5d9f2d9f48191a7c4860050aa43cc-jarvisruntime/project"
     private val main = Handler(Looper.getMainLooper())
     private var web = WeakReference<WebView>(null)
     private var app: Context? = null
@@ -126,7 +124,7 @@ internal object ChatGptPreloader {
             // touch dispatch and make every control in MainActivity appear frozen.
             container.addView(view, 0, FrameLayout.LayoutParams(-1, -1))
             DiagnosticLog.record(context, DiagnosticLog.Event.WEB_PRELOAD_STARTED)
-            view.loadUrl(PROJECT_URL)
+            view.loadUrl(ChatGptProjectSettings.getUrl(context))
         } catch (_: RuntimeException) {
             DiagnosticLog.record(context, DiagnosticLog.Event.WEB_PRELOAD_FAILED)
             discard()

@@ -35,7 +35,6 @@ import org.json.JSONTokener
 class WebChatActivity : Activity() {
     companion object {
         const val EXTRA_AUTOMATION = "automation"
-        private const val CHATGPT_URL = "https://chatgpt.com/g/g-p-6ad5d9f2d9f48191a7c4860050aa43cc-jarvisruntime/project"
         private const val MICROPHONE_REQUEST_CODE = 41
         private val FILL_GREETING_SCRIPT = """
             (() => {
@@ -743,7 +742,7 @@ class WebChatActivity : Activity() {
         setContentView(root)
         if (preparedPage == null) {
             val restored = savedInstanceState?.getBundle("web_state")?.let { webView.restoreState(it) }
-            if (restored == null || restored.size == 0) webView.loadUrl(CHATGPT_URL)
+            if (restored == null || restored.size == 0) webView.loadUrl(ChatGptProjectSettings.getUrl(this))
             else State.setAttempt(this, "WebView ripristinato; attendo caricamento pagina.")
         } else {
             State.setAttempt(this, if (preparedPage.pageReady)

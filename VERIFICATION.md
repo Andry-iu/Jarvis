@@ -1,3 +1,12 @@
+# 0.5.49 — configurazione URL progetto e APK firmato
+
+- Aggiunto un campo persistente nella schermata principale con l'indirizzo fornito dall'utente come valore iniziale. Il preloader e `WebChatActivity` leggono la stessa preferenza, perciò anche il ciclo wake usa la destinazione salvata. Quando il valore cambia, il WebView precaricato viene scartato e ricreato.
+- La convalida limita l'URL a HTTPS su `chatgpt.com` con percorso `/g/g-p-…/project`, senza porta, credenziali, query o frammento. Le nuove stringhe sono in `res/values/strings.xml` con commento XML sullo scopo della preferenza.
+- Build pulita con JDK 17.0.21, Gradle 8.13, Android SDK 36 e Build Tools 36.0.0: `clean testDebugUnitTest lintDebug assembleDebug -PjarvisUnsigned=true` — `BUILD SUCCESSFUL`.
+- Test JVM: 50 superati, 0 falliti, 0 errori, 0 saltati. `node scripts/test-web-voice.cjs`: superato. Lint: 0 errori, 20 avvisi.
+- APK firmato: `it.jarviswake`, versionName `0.5.49`, versionCode `71`, minSdk `31`, target/compile SDK `36`, ABI `arm64-v8a`. Firma v2 verificata per API 24 e v3 per API 31+. Fingerprint SHA-256 certificato permanente `a8ddfbe2b78be5460e72df57afbc3434411e3cc27328b13bc16b4daaba13389a`.
+- Allineamento a 16 KB e integrità ZIP verificati. SHA-256 APK firmato `c8458def818f02489e1ee651c81a020041ee99084fe6d840d9179f8e92348e04`; registrato in `releases/0.5.49/SHA256SUMS`. Prova sul Galaxy S24+ ancora da fare.
+
 # 0.5.48 — ricostruzione dal bytecode e build
 
 - APK storico fornito dall'utente: `it.jarviswake`, versionCode 70, ARM64, firmato col certificato permanente SHA-256 `a8ddfbe2b78be5460e72df57afbc3434411e3cc27328b13bc16b4daaba13389a`; SHA-256 `1cd72be0dc60c3eabd2801f856b90f37b4aa0e426ba23dd27eaed9239e8a9213`.

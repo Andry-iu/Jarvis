@@ -2,14 +2,19 @@ Riprendi JarvisWake dal branch `main`. Prima di intervenire leggi `AGENTS.md`, `
 
 ## Baseline
 
-Sorgenti in lavorazione: **0.5.48 / versionCode 70**, ricostruiti dall'APK firmato fornito dall'utente (SHA-256 `1cd72be0dc60c3eabd2801f856b90f37b4aa0e426ba23dd27eaed9239e8a9213`). Il codice Git originale non è stato trovato. Build pulita, 45 test JVM, lint e test DOM superati. APK unsigned con checksum in `releases/0.5.48/SHA256SUMS`; non installabile come aggiornamento. Il backup age della firma permanente è integro, ma la passphrase non è nelle istruzioni Git recuperate né nel contesto disponibile. Firma e prova Galaxy S24+ restano aperte.
+Sorgenti: **0.5.49 / versionCode 71**. Consentono di configurare e salvare l'URL del progetto ChatGPT dalla schermata principale; preloader e ciclo wake usano la stessa preferenza. Il valore iniziale è `https://chatgpt.com/g/g-p-6adc87c2850c8191b52e9df5d94bfba6/project`. Build pulita, 50 test JVM, test DOM, lint e firma permanente superati. Collaudo sul Galaxy S24+ ancora da fare. SHA-256 APK `c8458def818f02489e1ee651c81a020041ee99084fe6d840d9179f8e92348e04`.
 
-## 0.5.48: verifiche e completamento richiesti
+## 0.5.49: release verificata
 
-- Dalla schermata principale Jarvis deve essere possibile usare in modo interattivo lo stesso WebView/sessione ChatGPT già usato dal preloader per impostare e riutilizzare modello e intensità dello sforzo. L'obiettivo espresso dall'utente è sforzo alto o molto alto.
-- Uno swipe verso sinistra durante Voice deve fermare Voice e nascondere la cover lasciando la pagina interattiva. La wake successiva deve riportare la cover sulla stessa pagina/sessione mantenuta.
-- Conserva lo swipe verso il basso che ferma Voice e torna alla Home e tutti i vincoli consolidati. Non sostituire la sessione autenticata con API separate.
-- La 0.5.48 è ricostruita dal bytecode, non recuperata come sorgente originale. Compilazione e test locali superati. Non dichiarare completata la firma permanente o il collaudo fisico.
+- Il campo URL accetta solo HTTPS su `chatgpt.com` e percorsi progetto `/g/g-p-…/project`.
+- Il valore salvato è condiviso fra preloader, configurazione interattiva e ciclo wake. Quando cambia, il preloader precedente viene scartato e caricato nuovamente.
+- Build, 50 test JVM, test DOM, lint e firma permanente superati. L'APK è pronto per il collaudo sul Galaxy S24+.
+
+## 0.5.48: baseline firmata
+
+- La schermata principale apre il WebView ChatGPT mantenuto dal preloader per impostare modello e sforzo. Lo swipe sinistro durante Voice ferma Voice e lascia la chat interattiva; la wake successiva riusa la stessa pagina.
+- Build, 45 test JVM, lint, test DOM e firma permanente risultano verificati nel commit remoto `bf40ac2`. Il collaudo fisico resta da fare.
+- Le modifiche 0.5.48 sono state ricostruite dal bytecode dell'APK, non recuperate come sorgenti originali.
 
 ## Requisiti permanenti
 

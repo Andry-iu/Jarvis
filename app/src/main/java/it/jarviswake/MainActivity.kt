@@ -50,6 +50,7 @@ class MainActivity : Activity() {
     private lateinit var attemptStatus: TextView
     private lateinit var coverButton: Button
     private lateinit var greetingInput: EditText
+    private lateinit var projectUrlInput: EditText
     private lateinit var contentRoot: FrameLayout
     private lateinit var homeScreen: ScrollView
     private var chatSettingsLayer: FrameLayout? = null
@@ -94,6 +95,19 @@ class MainActivity : Activity() {
             startActivity(Intent(this, WebChatActivity::class.java))
         }
         button("Imposta modello e livello ChatGPT") { openChatSettings() }
+        text(getString(R.string.chatgpt_project_url_label), 16f)
+        projectUrlInput = EditText(this).apply {
+            setSingleLine(true)
+            inputType = android.text.InputType.TYPE_CLASS_TEXT or
+                android.text.InputType.TYPE_TEXT_VARIATION_URI
+            setHorizontallyScrolling(true)
+            hint = getString(R.string.chatgpt_project_url_hint)
+            setText(ChatGptProjectSettings.getUrl(this@MainActivity))
+            contentDescription = "Indirizzo del progetto ChatGPT usato da Jarvis"
+        }
+        layout.addView(projectUrlInput, LinearLayout.LayoutParams(-1, -2))
+        text(getString(R.string.chatgpt_project_url_description), 13f)
+        button(getString(R.string.chatgpt_project_url_save)) { saveChatGptProjectUrl() }
         text("Frase da inviare dopo l’attivazione di Voice", 16f)
         greetingInput = EditText(this).apply {
             setSingleLine(true)
@@ -184,6 +198,27 @@ class MainActivity : Activity() {
 
     private fun prepareChatGpt() {
         if (::contentRoot.isInitialized) ChatGptPreloader.prepare(this, contentRoot)
+    }
+
+    private fun saveChatGptProjectUrl() {
+        val url = projectUrlInput.text?.toString().orEmpty().trim()
+        if (!ChatGptProjectSettings.isValidProjectUrl(url)) {
+            projectUrlInput.error = getString(R.string.chatgpt_project_url_invalid)
+            return
+        }
+        val changed = url != ChatGptProjectSettings.getUrl(this)
+        if (!ChatGptProjectSettings.save(this, url)) return
+        projectUrlInput.error = null
+        if (changed) {
+            ChatGptPreloader.discard()
+            prepareChatGpt()
+        }
+        Toast.makeText(
+            this,
+            if (changed) getString(R.string.chatgpt_project_url_saved_changed)
+            else getString(R.string.chatgpt_project_url_saved),
+            Toast.LENGTH_LONG
+        ).show()
     }
 
     private fun openChatSettings() {
