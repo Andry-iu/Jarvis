@@ -2,7 +2,7 @@ Riprendi JarvisWake dal branch `main`. Prima di intervenire leggi `AGENTS.md`, `
 
 ## Baseline
 
-Sorgenti: **0.5.52 / versionCode 74**. Il reset completo 0.5.51 non ha risolto. La diagnostica 0.5.52 registra HTTP 404 da `persistent.oaistatic.com` nel ciclo Voice fallito; l'utente ha aperto l'URL completo in Chrome e ha ricevuto `BlobNotFound`. L'asset remoto non esiste all'URL richiesto: Jarvis non può correggerlo localmente; serve una pubblicazione/correzione lato ChatGPT. APK SHA-256 `b8f85fdc299ff21ce0ef4c31d605ee38ac35f40458d87819ecc573740779d065`.
+Sorgenti: **0.5.52 / versionCode 74**. L'URL del modulo Silero restituisce `BlobNotFound`. Gli ultimi due cicli hanno entrambi HTTP 404 da `persistent.oaistatic.com`, una traccia microfono live e un solo `GREETING_SENT` ciascuno. La traccia live non dimostra che l'audio sia captato; il VAD remoto mancante è il probabile motivo del microfono muto. Nessun doppio invio del saluto da Jarvis; il doppio audio resta da spiegare, possibile saluto automatico Voice più frase di avvio. APK SHA-256 `b8f85fdc299ff21ce0ef4c31d605ee38ac35f40458d87819ecc573740779d065`.
 
 ## 0.5.49: release verificata
 

@@ -7,6 +7,7 @@
 - APK `it.jarviswake`, versionName `0.5.52`, versionCode `74`, minSdk `31`, target/compile SDK `36`, ABI `arm64-v8a`. Certificato permanente SHA-256 `a8ddfbe2b78be5460e72df57afbc3434411e3cc27328b13bc16b4daaba13389a`; schema v3 verificato.
 - Allineamento 16 KB e ZIP CRC superati. SHA-256 APK `b8f85fdc299ff21ce0ef4c31d605ee38ac35f40458d87819ecc573740779d065`, in `releases/0.5.52/SHA256SUMS`.
 - Diagnostica caricata dall'utente: un `WEB_SUBRESOURCE_HTTP_ERROR` per `persistent.oaistatic.com`, HTTP 404, nello stesso ciclo Voice e circa 225 ms dopo l'attivazione. In seguito l'utente ha aperto in Chrome l'URL completo visualizzato nell'errore e ha ricevuto XML `BlobNotFound`. L'oggetto remoto richiesto non esiste a quell'indirizzo: causa confermata lato asset/riferimento remoto, non risolvibile cancellando dati locali Jarvis. Il file ZIP originale non è conservato nel repository.
+- Secondo ZIP, ultimi due cicli (15:20 e 15:22 UTC): ogni ciclo contiene `VOICE_DISPATCHED_FIRST`, `VOICE_STATE_ACTIVE`, `VOICE_INPUT_TRACK_LIVE`, un `WEB_SUBRESOURCE_HTTP_ERROR` 404 su `persistent.oaistatic.com` e un solo `GREETING_SENT`. Il permesso e la traccia WebView risultano attivi, ma i log non misurano audio PCM né confermano che la voce sia stata captata o inviata. Nessun doppio invio del saluto da Jarvis nei due cicli. Resta possibile un saluto automatico della UI Voice oltre al singolo prompt inviato; il log non include testo o audio per provarlo.
 
 # 0.5.51 — eliminazione dati locali ChatGPT, APK firmato
 

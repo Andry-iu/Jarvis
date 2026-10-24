@@ -4,6 +4,7 @@
 
 - Registra errori di caricamento delle risorse secondarie con host, codice Android o stato HTTP; classifica messaggi console pertinenti a import dinamici, errori di rete, MIME e CORS. Registra anche la versione del runtime WebView. Non salva URL completi o messaggi della pagina.
 - La 0.5.51 ha cancellato cache, cookie e storage locali, ma l'errore persiste dopo un nuovo login. La diagnostica registra HTTP 404 durante Voice; l'utente ha aperto l'URL completo in Chrome e ha ottenuto `BlobNotFound`. L'asset remoto non esiste all'indirizzo richiesto; la correzione è lato servizio ChatGPT.
+- Nei due cicli più recenti: un invio saluto per ciclo, traccia audio WebView live e HTTP 404 ripetuto sullo stesso host. Il log non misura audio campionato; VAD remoto mancante è la spiegazione più probabile dell'input muto. L'origine del doppio saluto udibile resta non determinata.
 - Il log 0.5.52 fornito dall'utente registra HTTP 404 da `persistent.oaistatic.com` circa 225 ms dopo l'attivazione Voice, nello stesso ciclo. L'utente ha aperto l'URL completo e il servizio ha restituito `BlobNotFound`, confermando l'assenza dell'oggetto remoto.
 - Versione 0.5.52 / versionCode 74. Build, 50 test JVM, test DOM, lint (0 errori/20 avvisi), firma permanente e allineamento 16 KB verificati. SHA-256 APK `b8f85fdc299ff21ce0ef4c31d605ee38ac35f40458d87819ecc573740779d065`.
 
