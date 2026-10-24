@@ -14,11 +14,43 @@ internal object DiagnosticLog {
     private const val MAX_BYTES = 256 * 1024L
     private const val MAX_FILES = 3
 
-    fun record(context: Context, event: Event, cycleId: String? = null) {
+    fun record(
+        context: Context,
+        event: Event,
+        cycleId: String? = null,
+        responseId: Int? = null,
+        revision: Int? = null,
+        chars: Int? = null,
+        duplicateOf: Int? = null,
+        repeatCount: Int? = null,
+        sequence: Int? = null,
+        monitorStatus: String? = null,
+        roleNodes: Int? = null,
+        assistantNodes: Int? = null,
+        visibleNodes: Int? = null,
+        eligibleNodes: Int? = null,
+        stableNodes: Int? = null,
+        documentGeneration: Int? = null
+    ) {
         val directory = File(context.applicationContext.filesDir, "diagnostics")
         val timestamp = Instant.now().toString()
         val elapsed = SystemClock.elapsedRealtime()
-        val line = "$timestamp\t$elapsed\t${event.name}\t${cycleId ?: "-"}\n"
+        val details = listOf(
+            "response=${responseId?.takeIf { it > 0 } ?: "-"}",
+            "revision=${revision?.takeIf { it > 0 } ?: "-"}",
+            "chars=${chars?.takeIf { it >= 0 } ?: "-"}",
+            "duplicateOf=${duplicateOf?.takeIf { it > 0 } ?: "-"}",
+            "repeats=${repeatCount?.takeIf { it > 0 } ?: "-"}",
+            "sequence=${sequence?.takeIf { it > 0 } ?: "-"}",
+            "monitor=${monitorStatus?.takeIf { it.matches(Regex("[a-z_]{1,24}")) } ?: "-"}",
+            "roleNodes=${roleNodes?.takeIf { it >= 0 } ?: "-"}",
+            "assistantNodes=${assistantNodes?.takeIf { it >= 0 } ?: "-"}",
+            "visibleNodes=${visibleNodes?.takeIf { it >= 0 } ?: "-"}",
+            "eligibleNodes=${eligibleNodes?.takeIf { it >= 0 } ?: "-"}",
+            "stableNodes=${stableNodes?.takeIf { it >= 0 } ?: "-"}",
+            "documentGeneration=${documentGeneration?.takeIf { it >= 0 } ?: "-"}"
+        ).joinToString("\t")
+        val line = "$timestamp\t$elapsed\t${event.name}\t${cycleId ?: "-"}\t$details\n"
         executor.execute {
             runCatching {
                 if (!directory.exists() && !directory.mkdirs()) return@runCatching
@@ -35,6 +67,11 @@ internal object DiagnosticLog {
         }
     }
 
+    /** Run a snapshot/export after all earlier diagnostic writes have finished. */
+    fun afterPendingWrites(action: () -> Unit) {
+        executor.execute(action)
+    }
+
     enum class Event {
         CYCLE_STARTED, WEB_OPENED, VOICE_DISPATCHED, CYCLE_CANCELLED,
         WAKE_DETECTED, MICROPHONE_CAPTURE_STARTED, MICROPHONE_CAPTURE_RELEASED,
@@ -45,7 +82,11 @@ internal object DiagnosticLog {
         WEB_PAGE_READY, VOICE_CONTROL_READY, VOICE_DISPATCHED_FIRST,
         WEB_PRELOAD_STARTED, WEB_PRELOAD_PAGE_READY, WEB_PRELOAD_VOICE_FOUND,
         WEB_PRELOAD_REUSED, WEB_PRELOAD_VOICE_SEEDED, WEB_PRELOAD_FAILED, WEB_PRELOAD_DISCARDED,
-        VOICE_INPUT_TRACK_LIVE, VOICE_MEDIA_PLAYING,
+        VOICE_INPUT_TRACK_LIVE, VOICE_MEDIA_PLAYING, VOICE_MEDIA_PLAYBACK_STARTED,
+        VOICE_MEDIA_PLAYBACK_STOPPED,
+        ASSISTANT_RESPONSE_SEEN, ASSISTANT_RESPONSE_UPDATED, ASSISTANT_RESPONSE_DUPLICATE,
+        ASSISTANT_RESPONSE_INTERNAL_REPEAT,
+        ASSISTANT_MONITOR_QUERY, ASSISTANT_MONITOR_RESULT, ASSISTANT_MONITOR_INVALID_RESULT,
         VOICE_CONTROL_SEMANTIC, VOICE_CONTROL_COMPOSER,
         VOICE_STATE_ACTIVE, VOICE_STATE_START_READY, VOICE_STATE_NOT_FOUND, VOICE_STATE_UNAVAILABLE,
         VOICE_STOP_TARGET_FOUND, VOICE_STOP_TARGET_NOT_FOUND, VOICE_STOP_COORDINATES_REPLAYED,

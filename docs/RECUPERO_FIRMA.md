@@ -48,4 +48,6 @@ La configurazione Gradle attuale usa una sola variabile `JARVIS_SIGNING_PASSWORD
 
 Il keystore è stato mantenuto anche nel telefono in `~/jarvis-signing/jarvis-signing.jks`. La procedura `scripts/firma-jarvis-0.5.30-termux.sh` risolve l'errore PerfettoTrace degli strumenti Java Termux, ma accetta **solo** l'APK 0.5.30 il cui hash è fissato nello script. Per una versione successiva occorre aggiornarne intenzionalmente nome, hash dell'APK e verifica, poi ricontrollare il certificato. Non usare lo script 0.5.30 su un APK diverso: si fermerà al controllo hash.
 
+Per la build diagnostica 0.5.47 è incluso `scripts/firma-jarvis-0.5.47-termux.sh`: accetta esclusivamente l'APK non firmato con SHA-256 fissato nello script, chiede le password solo nel terminale Termux, verifica il fingerprint permanente, firma v2/v3 e ricontrolla il certificato prima di scrivere il risultato. Non installare l'APK non firmato sopra l'app esistente.
+
 Per ogni versione, la verifica firmata deve precedere l'installazione sopra l'app esistente. Il checksum APK e il fingerprint certificato vanno riportati nella documentazione della release; il keystore, le password, la passphrase e l'APK binario restano fuori da Git.

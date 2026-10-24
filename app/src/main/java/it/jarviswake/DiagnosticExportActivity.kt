@@ -40,7 +40,7 @@ class DiagnosticExportActivity : Activity() {
     }
 
     private fun export(uri: Uri) {
-        Thread({
+        DiagnosticLog.afterPendingWrites {
             val success = runCatching {
                 val logs = java.io.File(filesDir, "diagnostics").listFiles()
                     ?.filter { it.isFile && it.name.matches(Regex("events-[0-9]+\\.log")) }
@@ -60,6 +60,6 @@ class DiagnosticExportActivity : Activity() {
                     "Esportazione diagnostica non riuscita.", Toast.LENGTH_LONG).show()
                 finish()
             }
-        }, "JarvisDiagnosticExport").start()
+        }
     }
 }

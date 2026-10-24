@@ -1,3 +1,32 @@
+# 0.5.47 — verifica della sonda diagnostica
+
+- La sonda ora registra `ASSISTANT_MONITOR_QUERY` ogni 5 secondi durante il polling, `ASSISTANT_MONITOR_RESULT` quando i conteggi cambiano e con heartbeat di 5 secondi, e `ASSISTANT_MONITOR_INVALID_RESULT` per callback non-stringa, JSON/schema non validi o errore di valutazione. I conteggi distinguono nodi con attributo ruolo, selettore assistant, nodi visibili, candidati leggibili e candidati stabili; ogni evento è correlato alla generazione documento.
+- L'esportazione attende che la coda di scrittura del log completi gli eventi precedenti prima di copiare i file nell'archivio.
+- Il log resta privo di testo, hash, audio, URL e credenziali. L'assenza di risposta ora è classificabile: query inviata senza callback, errore callback, zero nodi selezionati, nodi non visibili/non leggibili o risposta stabile senza evento duplicato.
+- `node scripts/test-web-voice.cjs`: superato, compresi esiti di monitor con selettore corrispondente e non corrispondente, stabilità, aggiornamenti, duplicati esatti e ripetizioni interne senza esportare testo. Test JVM: 43 superati, 0 falliti, 0 errori, 0 saltati. `lintDebug`: 0 errori/18 avvisi.
+- `clean testDebugUnitTest lintDebug assembleDebug -PjarvisUnsigned=true`: `BUILD SUCCESSFUL` con JDK 17, Gradle 8.13, SDK 36 e Build Tools 36.0.0. Nessun dispositivo collegato.
+- APK non firmato: pacchetto `it.jarviswake`, versionCode 69, versionName `0.5.47`, minSdk 31, target/compile SDK 36, ABI arm64-v8a; SHA-256 `cfdce6f36140dcfe2d6719bc049e1a942e065747db69e3bc19cfb23caf1f8c91`. CRC ZIP e allineamento 16 KB superati; `apksigner` conferma che non è firmato. Lo script Termux dedicato controlla hash e certificato permanente prima di firmare.
+- APK firmato incluso nel pacchetto di prova: SHA-256 `dae84a27f83675a2916bececb98ae123c706b7d188f2cbbc9fa52caf7e14fe93`; certificato permanente `a8ddfbe2b78be5460e72df57afbc3434411e3cc27328b13bc16b4daaba13389a`, schemi v2/v3 e allineamento 16 KB verificati. Pacchetto `JarvisWake-0.5.47-test-bundle.zip`, CRC verificato; SHA-256 `7d10f774891577b51dc0b8b2938869cee4b5cba161b2d6c07d65a6521bad81ff`.
+- Resta il test sul Galaxy S24+: firmare dal Termux, installare l'APK firmato, riprodurre il duplicato e poi esportare il log.
+
+# 0.5.46 — diagnostica delle risposte ripetute
+
+- Il WebView osserva i soli container visibili dell'assistente `[data-message-author-role="assistant"]`. Una risposta viene riportata dopo 1,2 secondi senza modifiche, con ID, revisione e lunghezza. Il testo viene confrontato solo in memoria nel WebView per riconoscere risposte identiche tra messaggi e frasi ripetute nello stesso messaggio. Il log esportato non contiene testo, hash, audio, URL o credenziali.
+- `VOICE_MEDIA_PLAYBACK_STARTED` e `VOICE_MEDIA_PLAYBACK_STOPPED` registrano ogni transizione osservata della riproduzione media; `sequence` conta gli avvii. `ASSISTANT_RESPONSE_*` include `response`, `revision`, `chars`, `duplicateOf` e `repeats` quando pertinenti.
+- Test: 43 test JVM superati; `node scripts/test-web-voice.cjs` superato; lint 0 errori/18 avvisi. `clean testDebugUnitTest lintDebug` e `assembleDebug -PjarvisUnsigned=true` superati con JDK 17, Gradle 8.13, SDK 36 e Build Tools 36.0.0. Test DOM: stabilità, aggiornamento, duplicazione tra due messaggi, ripetizione di frasi e assenza del testo nei dati restituiti.
+- APK firmato con il certificato permanente. Certificato SHA-256 `a8ddfbe2b78be5460e72df57afbc3434411e3cc27328b13bc16b4daaba13389a`; schema v2 verificato per API 24–27 e v3 per API 31+; allineamento 16 KB e CRC ZIP superati. Pacchetto `it.jarviswake`, versionCode 68, versionName `0.5.46`, minSdk 31, target/compile SDK 36, ABI arm64-v8a. SHA-256 APK `68db2837289d9c218f6679a0a7f410f2c722c3c91e24396f28c95fd8289bb023`.
+- Sul Galaxy S24+ riprodurre una risposta che in precedenza si è ripetuta, attendere qualche secondo e poi esportare il log. `ASSISTANT_RESPONSE_DUPLICATE` indica due container distinti con testo esattamente uguale; `ASSISTANT_RESPONSE_INTERNAL_REPEAT` segnala frasi duplicate nel medesimo container; più sequenze `VOICE_MEDIA_PLAYBACK_STARTED` segnalano ripartenze osservate del media. Le frasi minime corte (<10 caratteri) sono ignorate dal rilevatore di ripetizioni interne.
+- Limite: il rilevatore dipende dall'attributo DOM corrente di ChatGPT e dal polling dello stato Voice. Se la pagina cambia markup o se la ripetizione avviene solo nell'audio senza transizione media osservabile, il log potrebbe non catturarla; il test fisico resta necessario.
+
+# 0.5.45 — frase configurabile dopo l'attivazione Voice
+
+- Aggiunto nella schermata principale un campo con i comandi Salva e Ripristina «ciao jarvis». Le preferenze sono locali all'app e persistono dopo la chiusura; una frase vuota non sovrascrive quella salvata.
+- La frase configurata viene letta all'inizio del ciclo di invio e codificata con `JSONObject.quote` prima di inserirla nello script della pagina. Le protezioni esistenti contro bozze sovrascritte e invii duplicati restano attive.
+- Test aggiunto per normalizzazione e rifiuto del campo vuoto; test DOM esteso con apostrofo e virgolette nel testo configurato. `node scripts/test-web-voice.cjs`: superato.
+- `./gradlew --no-daemon --no-watch-fs clean testDebugUnitTest lintDebug assembleDebug -PjarvisUnsigned=true`: superato con JDK 17, Gradle 8.13 e Android SDK 36. Test unitari e lint superati.
+- APK firmato con la chiave permanente. Certificato SHA-256 `a8ddfbe2b78be5460e72df57afbc3434411e3cc27328b13bc16b4daaba13389a`; firma v2 verificata per API 24–27 e v3 per API 31+. `zipalign -c -P 16 -v 4` e CRC ZIP: superati. Pacchetto `it.jarviswake`, versionCode 67, versionName 0.5.45, minSdk 31, targetSdk 36, ABI arm64-v8a. SHA-256 `24cc53e03d46dda28f1ca1b9b829f8d1a42a4fb6229ae8dec60591c800994299`.
+- Prova ChatGPT reale sul Galaxy S24+ da fare.
+
 # 0.5.44 — X Voice corrente nell'angolo inferiore destro
 
 - La schermata attiva viene interrogata al momento dello swipe. Sono candidati i controlli visibili, abilitati e raggiungibili, compatti e nella fascia inferiore destra; viene selezionato il più a destra senza richiedere un'etichetta Voice/X. Il punto iniziale non viene conservato né riusato.

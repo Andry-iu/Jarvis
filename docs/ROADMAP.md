@@ -1,6 +1,31 @@
 # Roadmap — JarvisWake
 
-Stato release 0.5.44, versionCode 66. L'utente ha identificato che la X si sposta in basso nella Voice attiva. Allo swipe la logica cerca un controllo compatto, visibile, raggiungibile e nell'angolo inferiore destro della UI corrente; tra più controlli seleziona quello più a destra. Invia un unico tocco nativo DOWN/UP e verifica lo stop. Build e test locali superati. APK firmato col certificato permanente `a8ddfbe2b78be5460e72df57afbc3434411e3cc27328b13bc16b4daaba13389a`; schemi v2/v3 e allineamento 16 KB verificati. SHA-256 APK `9ce6d51bb2b00e6645f0388acb319211a59f98c53be23341b453b3199cace18f`. Resta il collaudo sul Galaxy S24+.
+Release di prova 0.5.47, versionCode 69. Aggiunge diagnostica sul funzionamento della sonda delle risposte: heartbeat, esito e conteggi dei nodi di ruolo/assistente rilevati, visibili, leggibili e stabili, errori di parsing e generazione del documento. Mantiene la classificazione di risposte ripetute e le transizioni media della 0.5.46. Il log non contiene testo o hash. Test DOM e build superati; APK non firmato in questo ambiente, script incluso per firmarlo in Termux solo dopo verifica del checksum e del certificato permanente. Collaudo sul Galaxy S24+ da fare.
+
+## Prossima release richiesta: 0.5.48
+
+- Dalla schermata principale Jarvis deve essere possibile aprire in modalità interattiva la stessa sessione WebView ChatGPT del preloader per scegliere modello e intensità dello sforzo. L'utente vuole poter selezionare sforzo alto o molto alto; non sostituire la sessione autenticata con API.
+- Uno swipe verso sinistra durante Voice deve fermare Voice, nascondere la cover e lasciare la chat utilizzabile. La wake successiva deve ripristinare la cover sulla stessa pagina mantenuta.
+- Mantenere lo swipe verso il basso già consolidato (stop Voice e Home) e il vincolo di un singolo gesto Voice per ciclo.
+- Questo comportamento non è implementato nella baseline 0.5.47. Registrare separatamente codice, test, build, firma e collaudo sul Galaxy S24+.
+
+Versione precedente 0.5.46, versionCode 68. Aggiunge diagnostica delle risposte per indagare la duplicazione: messaggi stabili, aggiornamenti, duplicati identici tra messaggi e frasi ripetute all'interno di un messaggio; registra inoltre ogni transizione osservata di riproduzione media. Il confronto del testo avviene nel WebView e solo ID, revisioni, lunghezze e conteggi vengono trasferiti al log. 43 test JVM, lint (0 errori/18 avvisi), test DOM, build pulita e firma permanente verificati. SHA-256 APK `68db2837289d9c218f6679a0a7f410f2c722c3c91e24396f28c95fd8289bb023`. Il collaudo ChatGPT reale resta da fare sul Galaxy S24+.
+
+Versione precedente 0.5.45, versionCode 67. La schermata principale consente di modificare e salvare nelle preferenze locali la frase inviata dopo Voice, con «ciao jarvis» come predefinito. APK firmato col certificato permanente `a8ddfbe2b78be5460e72df57afbc3434411e3cc27328b13bc16b4daaba13389a`, SHA-256 APK `24cc53e03d46dda28f1ca1b9b829f8d1a42a4fb6229ae8dec60591c800994299`.
+
+## Implementato nella 0.5.46
+
+- Il WebView riconosce i container visibili `[data-message-author-role="assistant"]`. Dopo 1,2 secondi senza modifiche registra un ID numerico locale al documento, revisione e numero di caratteri. Confronta localmente risposte identiche e frasi duplicate, senza trasferire o salvare testo/hash.
+- Ogni passaggio osservato da media non in riproduzione a media in riproduzione (e viceversa) viene registrato, così un singolo messaggio duplicato nella pagina è distinguibile da una riproduzione avviata più volte.
+- Il test DOM copre stabilizzazione, aggiornamento, duplicazione tra messaggi, ripetizione di frase nello stesso messaggio e assenza del testo nei dati esportati. Collaudo sul Galaxy ancora necessario per verificare selettori DOM e corrispondenza con il difetto reale.
+
+Versione precedente 0.5.44, versionCode 66: allo swipe la logica cerca un controllo compatto, visibile, raggiungibile e nell'angolo inferiore destro della UI corrente; tra più controlli seleziona quello più a destra. Invia un unico tocco nativo DOWN/UP e verifica lo stop. APK firmato col certificato permanente `a8ddfbe2b78be5460e72df57afbc3434411e3cc27328b13bc16b4daaba13389a`; schemi v2/v3 e allineamento 16 KB verificati. SHA-256 APK `9ce6d51bb2b00e6645f0388acb319211a59f98c53be23341b453b3199cace18f`. Resta il collaudo sul Galaxy S24+.
+
+## Implementato nella 0.5.45
+
+- Nella schermata principale, il campo «Frase da inviare dopo l'attivazione di Voice» salva la frase in `SharedPreferences` dell'app. Salva rifiuta il testo vuoto senza cancellare la frase esistente; Ripristina torna a «ciao jarvis».
+- Il testo viene codificato JSON prima di inserirlo nello script DOM. Il test DOM verifica una frase personalizzata contenente apostrofi e virgolette, oltre alle protezioni contro bozze e invii doppi.
+- Build Android completata, APK firmato e verificato; prova sul dispositivo ancora da fare.
 
 Stato precedente: 0.5.39, versionCode 61. La prova della 0.5.38 sul Galaxy S24+ ha mostrato che lo swipe non produce effetti. La cover interna è posizionata sotto il padding della barra di stato ma riutilizzava l'inset assoluto del display nelle coordinate locali; la 0.5.39 sottrae la posizione sullo schermo della vista e amplia la zona superiore interna. Build e 37 test locali superati; APK firmato col certificato permanente, SHA-256 `4f5e310c45a0da250507f385a883b7910d872068acc87f7df81ad5f752c49396`. Firme v2/v3 e allineamento 16 KB verificati; collaudo sul dispositivo da completare.
 

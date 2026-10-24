@@ -45,6 +45,7 @@ class MainActivity : Activity() {
     private lateinit var status: TextView
     private lateinit var attemptStatus: TextView
     private lateinit var coverButton: Button
+    private lateinit var greetingInput: EditText
     private lateinit var contentRoot: FrameLayout
     private val update = object : Runnable {
         override fun run() {
@@ -84,6 +85,29 @@ class MainActivity : Activity() {
         button("Configura accesso a ChatGPT") {
             ChatGptPreloader.discard()
             startActivity(Intent(this, WebChatActivity::class.java))
+        }
+        text("Frase da inviare dopo l’attivazione di Voice", 16f)
+        greetingInput = EditText(this).apply {
+            setSingleLine(true)
+            inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_FLAG_CAP_SENTENCES
+            hint = VoiceGreetingSettings.DEFAULT_PHRASE
+            setText(VoiceGreetingSettings.get(this@MainActivity))
+            contentDescription = "Frase inviata all’attivazione di Voice"
+        }
+        layout.addView(greetingInput, LinearLayout.LayoutParams(-1, -2))
+        text("La frase salvata viene usata alla prossima attivazione. Lascia il campo vuoto per mantenere quella attuale.", 13f)
+        button("Salva frase") {
+            if (VoiceGreetingSettings.save(this, greetingInput.text.toString())) {
+                greetingInput.setText(VoiceGreetingSettings.get(this))
+                Toast.makeText(this, "Frase salvata.", Toast.LENGTH_SHORT).show()
+            } else {
+                Toast.makeText(this, "Inserisci una frase prima di salvare.", Toast.LENGTH_SHORT).show()
+            }
+        }
+        button("Ripristina «ciao jarvis»") {
+            VoiceGreetingSettings.reset(this)
+            greetingInput.setText(VoiceGreetingSettings.get(this))
+            Toast.makeText(this, "Frase predefinita ripristinata.", Toast.LENGTH_SHORT).show()
         }
         button("Abilita automazione Voice") {
             startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
@@ -213,7 +237,7 @@ class MainActivity : Activity() {
     }
 
     private fun writeDiagnostics(uri: Uri) {
-        Thread({
+        DiagnosticLog.afterPendingWrites {
             val result = runCatching {
                 val files = java.io.File(filesDir, "diagnostics").listFiles()
                     ?.filter { it.isFile && it.name.matches(Regex("events-[0-9]+\\.log")) }
@@ -232,7 +256,7 @@ class MainActivity : Activity() {
                 State.set(this, if (result.isSuccess) "Diagnostica esportata." else
                     "Esportazione diagnostica non riuscita: ${result.exceptionOrNull()?.javaClass?.simpleName}")
             }
-        }, "JarvisDiagnosticExport").start()
+        }
     }
 
     private fun updateCoverButton() {

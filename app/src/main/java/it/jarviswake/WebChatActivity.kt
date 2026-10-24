@@ -78,7 +78,7 @@ class WebChatActivity : Activity() {
                 return JSON.stringify({result:'composer_waiting'});
               const current = (target.value || target.innerText || target.textContent || '').trim();
               if (current) return JSON.stringify({result:'composer_not_empty'});
-              const message = 'ciao jarvis';
+              const message = __JARVIS_GREETING_JSON__;
               if (target.isContentEditable) {
                 // Update the editor DOM without focusing it, which can open Android's keyboard.
                 const before = new InputEvent('beforeinput', {
@@ -354,6 +354,67 @@ class WebChatActivity : Activity() {
     candidateCount:controls.length});
 })()
         """.trimIndent()
+        /**
+         * Observe only visible assistant message containers. Text is inspected in the
+         * page process for exact-repeat detection, but only counts and numeric IDs cross
+         * into Android diagnostics. A snapshot is emitted after 1.2s without DOM changes.
+         */
+        private val ASSISTANT_RESPONSE_DIAGNOSTICS_SCRIPT = """
+(() => {
+  const key = '__jarvisResponseDiagnostics';
+  const state = window[key] || (window[key] = {
+    nodes:new WeakMap(), nextId:1, lastStable:new Map()
+  });
+  const now = Date.now();
+  const roleNodes = document.querySelectorAll('[data-message-author-role]').length;
+  const selectedNodes = [...document.querySelectorAll('[data-message-author-role="assistant"]')];
+  const visible = element => {
+    const rect = element.getBoundingClientRect();
+    const style = getComputedStyle(element);
+    return rect.width > 0 && rect.height > 0 && style.visibility !== 'hidden' &&
+      style.display !== 'none' && style.opacity !== '0' && rect.bottom > 0 &&
+      rect.right > 0 && rect.top < innerHeight && rect.left < innerWidth;
+  };
+  const nodes = selectedNodes.filter(visible);
+  const output = [];
+  let eligibleNodes = 0;
+  let stableNodes = 0;
+  for (const node of nodes) {
+    const text = (node.innerText || node.textContent || '').trim();
+    if (text.length < 16) continue;
+    eligibleNodes++;
+    let item = state.nodes.get(node);
+    if (!item) {
+      item = {id:state.nextId++, text:'', revision:0, changedAt:now, reported:''};
+      state.nodes.set(node, item);
+    }
+    if (text !== item.text) { item.text = text; item.changedAt = now; }
+    if (now - item.changedAt < 1200) continue;
+    stableNodes++;
+    if (text === item.reported) continue;
+    item.revision++;
+    item.reported = text;
+    let duplicateOf = null;
+    for (const [knownText, knownId] of state.lastStable) {
+      if (knownId !== item.id && knownText === text) { duplicateOf = knownId; break; }
+    }
+    if (!duplicateOf) {
+      state.lastStable.set(text, item.id);
+      while (state.lastStable.size > 100) state.lastStable.delete(state.lastStable.keys().next().value);
+    }
+    const sentenceCounts = new Map();
+    for (const sentence of text.toLocaleLowerCase().normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '').split(/[.!?\n]+/)
+      .map(part => part.replace(/[^a-z0-9]+/g, ' ').trim()).filter(part => part.length >= 10)) {
+      sentenceCounts.set(sentence, (sentenceCounts.get(sentence) || 0) + 1);
+    }
+    const repeats = [...sentenceCounts.values()].reduce((sum, count) => sum + Math.max(0, count - 1), 0);
+    output.push({id:item.id, revision:item.revision, chars:text.length, duplicateOf, repeats});
+  }
+  return JSON.stringify({roleNodes, selectorNodes:selectedNodes.length,
+    visibleNodes:nodes.length, eligibleNodes, stableNodes, responses:output});
+})()
+        """.trimIndent()
         internal fun preloadVoiceControlScript(): String =
             VOICE_CONTROL_LOCATION_SCRIPT.replace("__JARVIS_LOCKED__", "false")
         @Volatile private var active = WeakReference<WebChatActivity>(null)
@@ -510,7 +571,13 @@ class WebChatActivity : Activity() {
     private var stableVoiceCandidateCount = 0
     private var voiceReadyLogged = false
     private var voiceInputTrackLogged = false
-    private var voiceMediaPlayingLogged = false
+    private var lastVoiceOutputPlaying: Boolean? = null
+    private var voiceOutputPlaybackCount = 0
+    private var lastAssistantMonitorQueryAt = 0L
+    private var lastAssistantMonitorResultAt = 0L
+    private var lastAssistantMonitorSignature: String? = null
+    private var lastAssistantMonitorError: String? = null
+    private var lastAssistantMonitorErrorAt = 0L
     private var preloadedVoiceLocation: PreloadedVoiceLocation? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -565,6 +632,11 @@ class WebChatActivity : Activity() {
                     automationPageReady = false
                     voiceReadyLogged = false
                     documentGeneration++
+                    lastAssistantMonitorQueryAt = 0L
+                    lastAssistantMonitorResultAt = 0L
+                    lastAssistantMonitorSignature = null
+                    lastAssistantMonitorError = null
+                    lastAssistantMonitorErrorAt = 0L
                     resetVoiceCandidate()
                     super.onPageStarted(view, url, favicon)
                 }
@@ -908,6 +980,70 @@ class WebChatActivity : Activity() {
             return
         }
         val generation = documentGeneration
+        val queryNow = SystemClock.elapsedRealtime()
+        if (queryNow - lastAssistantMonitorQueryAt >= 5_000L) {
+            lastAssistantMonitorQueryAt = queryNow
+            DiagnosticLog.record(this, DiagnosticLog.Event.ASSISTANT_MONITOR_QUERY, cycleToken,
+                monitorStatus = "sent", documentGeneration = generation)
+        }
+        try {
+            webView.evaluateJavascript(ASSISTANT_RESPONSE_DIAGNOSTICS_SCRIPT) { responseRaw ->
+                if (!isValidCycle() || webDestroyed || generation != documentGeneration) return@evaluateJavascript
+                val encoded = runCatching { JSONTokener(responseRaw).nextValue() as? String }.getOrNull()
+                if (encoded == null) {
+                    logAssistantMonitorInvalid("non_string", generation)
+                    return@evaluateJavascript
+                }
+                val result = runCatching { JSONObject(encoded) }.getOrNull()
+                if (result == null) {
+                    logAssistantMonitorInvalid("invalid_json", generation)
+                    return@evaluateJavascript
+                }
+                val roleNodes = result.optInt("roleNodes", -1)
+                val assistantNodes = result.optInt("selectorNodes", -1)
+                val visibleNodes = result.optInt("visibleNodes", -1)
+                val eligibleNodes = result.optInt("eligibleNodes", -1)
+                val stableNodes = result.optInt("stableNodes", -1)
+                val responses = result.optJSONArray("responses")
+                if (listOf(roleNodes, assistantNodes, visibleNodes, eligibleNodes, stableNodes).any { it < 0 } ||
+                    responses == null) {
+                    logAssistantMonitorInvalid("missing_fields", generation)
+                    return@evaluateJavascript
+                }
+                lastAssistantMonitorError = null
+                val signature = "$roleNodes:$assistantNodes:$visibleNodes:$eligibleNodes:$stableNodes"
+                val resultNow = SystemClock.elapsedRealtime()
+                if (signature != lastAssistantMonitorSignature ||
+                    resultNow - lastAssistantMonitorResultAt >= 5_000L) {
+                    lastAssistantMonitorSignature = signature
+                    lastAssistantMonitorResultAt = resultNow
+                    DiagnosticLog.record(this@WebChatActivity, DiagnosticLog.Event.ASSISTANT_MONITOR_RESULT,
+                        cycleToken, monitorStatus = "ok", roleNodes = roleNodes,
+                        assistantNodes = assistantNodes, visibleNodes = visibleNodes,
+                        eligibleNodes = eligibleNodes, stableNodes = stableNodes,
+                        documentGeneration = generation)
+                }
+                for (index in 0 until responses.length()) {
+                    val response = responses.optJSONObject(index) ?: continue
+                    val id = response.optInt("id", 0).takeIf { it > 0 } ?: continue
+                    val revision = response.optInt("revision", 0).takeIf { it > 0 } ?: continue
+                    val chars = response.optInt("chars", -1).takeIf { it >= 0 } ?: continue
+                    val duplicateOf = response.optInt("duplicateOf", 0).takeIf { it > 0 }
+                    val repeats = response.optInt("repeats", 0).takeIf { it > 0 }
+                    val event = when {
+                        duplicateOf != null -> DiagnosticLog.Event.ASSISTANT_RESPONSE_DUPLICATE
+                        repeats != null -> DiagnosticLog.Event.ASSISTANT_RESPONSE_INTERNAL_REPEAT
+                        revision == 1 -> DiagnosticLog.Event.ASSISTANT_RESPONSE_SEEN
+                        else -> DiagnosticLog.Event.ASSISTANT_RESPONSE_UPDATED
+                    }
+                    DiagnosticLog.record(this@WebChatActivity, event, cycleToken,
+                        responseId = id, revision = revision, chars = chars,
+                        duplicateOf = duplicateOf, repeatCount = repeats)
+                }
+            }
+        } catch (_: Exception) {
+            logAssistantMonitorInvalid("eval_error", generation)
+        }
         webView.evaluateJavascript(voiceControlLocationScript()) { rawResult ->
             if (!isValidCycle() || webDestroyed || generation != documentGeneration) {
                 callback(WebVoicePageState.UNAVAILABLE)
@@ -922,10 +1058,20 @@ class WebChatActivity : Activity() {
                         voiceInputTrackLogged = true
                         DiagnosticLog.record(this@WebChatActivity, DiagnosticLog.Event.VOICE_INPUT_TRACK_LIVE, cycleToken)
                     }
-                    if (value.optBoolean("outputPlaying") && !voiceMediaPlayingLogged) {
-                        voiceMediaPlayingLogged = true
-                        DiagnosticLog.record(this@WebChatActivity, DiagnosticLog.Event.VOICE_MEDIA_PLAYING, cycleToken)
+                    val outputPlaying = value.optBoolean("outputPlaying")
+                    if (outputPlaying && lastVoiceOutputPlaying != true) {
+                        voiceOutputPlaybackCount++
+                        if (voiceOutputPlaybackCount == 1)
+                            DiagnosticLog.record(this@WebChatActivity, DiagnosticLog.Event.VOICE_MEDIA_PLAYING, cycleToken)
+                        DiagnosticLog.record(this@WebChatActivity,
+                            DiagnosticLog.Event.VOICE_MEDIA_PLAYBACK_STARTED, cycleToken,
+                            sequence = voiceOutputPlaybackCount)
+                    } else if (!outputPlaying && lastVoiceOutputPlaying == true) {
+                        DiagnosticLog.record(this@WebChatActivity,
+                            DiagnosticLog.Event.VOICE_MEDIA_PLAYBACK_STOPPED, cycleToken,
+                            sequence = voiceOutputPlaybackCount)
                     }
+                    lastVoiceOutputPlaying = outputPlaying
                     WebVoicePageState.ACTIVE
                 }
                 // Both semantic and composer-scoped candidates are selected by the
@@ -939,6 +1085,16 @@ class WebChatActivity : Activity() {
         }
     }
 
+    private fun logAssistantMonitorInvalid(status: String, generation: Int) {
+        val now = SystemClock.elapsedRealtime()
+        if (status != lastAssistantMonitorError || now - lastAssistantMonitorErrorAt >= 5_000L) {
+            lastAssistantMonitorError = status
+            lastAssistantMonitorErrorAt = now
+            DiagnosticLog.record(this, DiagnosticLog.Event.ASSISTANT_MONITOR_INVALID_RESULT, cycleToken,
+                monitorStatus = status, documentGeneration = generation)
+        }
+    }
+
     private fun sendGreetingToVoice(callback: (VoiceGreetingResult) -> Unit) {
         if (!isValidCycle() || webDestroyed) { callback(VoiceGreetingResult.UNAVAILABLE); return }
         if (!resumed || !hasWindowFocus() || !automationPageReady) {
@@ -946,7 +1102,8 @@ class WebChatActivity : Activity() {
             return
         }
         val generation = documentGeneration
-        webView.evaluateJavascript(FILL_GREETING_SCRIPT) { rawResult ->
+        val greeting = JSONObject.quote(VoiceGreetingSettings.get(this))
+        webView.evaluateJavascript(FILL_GREETING_SCRIPT.replace("__JARVIS_GREETING_JSON__", greeting)) { rawResult ->
             if (!isValidCycle() || webDestroyed || generation != documentGeneration) {
                 callback(VoiceGreetingResult.UNAVAILABLE)
                 return@evaluateJavascript
