@@ -57,7 +57,8 @@ class LaunchActivity : Activity() {
         hud = HolographicOverlayView(this).apply {
             setStatus("AVVIO CHATGPT")
             setCoverActions(
-                singleTap = { CoverSettings.setOpaque(this@LaunchActivity, !CoverSettings.isOpaque(this@LaunchActivity)) },
+                singleTap = { /* The microphone is available only after Voice starts. */ },
+                belowTap = { CoverSettings.setOpaque(this@LaunchActivity, !CoverSettings.isOpaque(this@LaunchActivity)) },
                 close = { cancel() },
                 export = { DiagnosticExportActivity.open(this@LaunchActivity) },
                 hide = { cancel() }

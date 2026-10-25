@@ -26,8 +26,9 @@ class HolographicOverlayView(context: Context) : View(context) {
     private val startedAt = SystemClock.uptimeMillis()
     private val versionName = readVersionName()
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
-    private val cyan = Color.rgb(54, 222, 255)
-    private val blue = Color.rgb(30, 116, 255)
+    private var microphoneMuted = false
+    private val cyan get() = if (microphoneMuted) Color.rgb(185, 24, 98) else Color.rgb(54, 222, 255)
+    private val blue get() = if (microphoneMuted) Color.rgb(130, 16, 50) else Color.rgb(30, 116, 255)
     private var voiceActive = false
     private var modelConfirmed = false
     private var statusText = "PREPARAZIONE CHATGPT"
@@ -36,6 +37,7 @@ class HolographicOverlayView(context: Context) : View(context) {
     private val coverPreferences = CoverSettings.preferences(context)
     private var backgroundAlpha = if (CoverSettings.isOpaque(context)) 255 else 128
     private var onSingleTap: (() -> Unit)? = null
+    private var onBelowTap: (() -> Unit)? = null
     private var onClose: (() -> Unit)? = null
     private var onExport: (() -> Unit)? = null
     private var onHide: (() -> Unit)? = null
@@ -52,12 +54,14 @@ class HolographicOverlayView(context: Context) : View(context) {
 
     fun setCoverActions(
         singleTap: () -> Unit,
+        belowTap: () -> Unit,
         close: () -> Unit,
         export: () -> Unit,
         hide: () -> Unit,
         revealChat: (() -> Unit)? = null
     ) {
         onSingleTap = singleTap
+        onBelowTap = belowTap
         onClose = close
         onExport = export
         onHide = hide
@@ -108,8 +112,12 @@ class HolographicOverlayView(context: Context) : View(context) {
                 val dy = event.y - downY
                 val slop = 36f * resources.displayMetrics.density
                 if (kotlin.math.abs(dx) > slop || kotlin.math.abs(dy) > slop) return true
-                val target = tapTarget(event.x, event.y)
+                val target = CoverTapTarget.at(event.x, event.y, width, height)
                 if (target == 0) return true
+                if (target == CoverTapTarget.BELOW) {
+                    onBelowTap?.invoke()
+                    return true
+                }
                 val now = SystemClock.uptimeMillis()
                 if (target == lastTapTarget && now - lastTapAt <= 350L) {
                     pendingSingleTap?.let(gestureHandler::removeCallbacks)
@@ -154,14 +162,6 @@ class HolographicOverlayView(context: Context) : View(context) {
         }
     }
 
-    private fun tapTarget(x: Float, y: Float): Int {
-        if (x > width * 0.78f && y < height * 0.16f) return 2
-        val cx = width / 2f
-        val cy = height * 0.43f
-        val radius = minOf(width, height) * 0.31f
-        return if ((x - cx) * (x - cx) + (y - cy) * (y - cy) <= radius * radius) 1 else 0
-    }
-
     override fun onAttachedToWindow() {
         super.onAttachedToWindow()
         coverPreferences.registerOnSharedPreferenceChangeListener(coverListener)
@@ -169,6 +169,10 @@ class HolographicOverlayView(context: Context) : View(context) {
     }
 
     override fun onDetachedFromWindow() {
+        pendingSingleTap?.let(gestureHandler::removeCallbacks)
+        pendingSingleTap = null
+        lastTapAt = 0L
+        lastTapTarget = 0
         coverPreferences.unregisterOnSharedPreferenceChangeListener(coverListener)
         super.onDetachedFromWindow()
     }
@@ -314,6 +318,11 @@ class HolographicOverlayView(context: Context) : View(context) {
 
     fun setVoiceActive() {
         voiceActive = true
+        invalidate()
+    }
+
+    fun setMicrophoneMuted(value: Boolean) {
+        microphoneMuted = value
         invalidate()
     }
 

@@ -1,5 +1,10 @@
 # Roadmap — JarvisWake
 
+## Release 0.5.53 — cover e mute microfono
+
+Tocco singolo centrale: mute/riattivazione delle tracce microfono Voice; animazione fucsia scuro tendente al rosso durante il mute confermato. Tocco sotto i cerchi: alterna opaco/semitrasparente. Doppio tocco centrale: chiude il ciclo; doppio tocco in alto a destra: esporta diagnostica. Swipe verso il basso: Home; swipe sinistro: chat interattiva.
+Mute applicato alle tracce audio senza fermare Voice o modificare l’audio in uscita; errore visibile se non ci sono tracce attive. Verifiche locali in VERIFICATION.md; prova sul Galaxy da eseguire.
+
 ## Release 0.5.52 — diagnostica errore modulo Voice
 
 - Registra errori di caricamento delle risorse secondarie con host, codice Android o stato HTTP; classifica messaggi console pertinenti a import dinamici, errori di rete, MIME e CORS. Registra anche la versione del runtime WebView. Non salva URL completi o messaggi della pagina.
@@ -73,7 +78,7 @@ Stato precedente: 0.5.39, versionCode 61. La prova della 0.5.38 sul Galaxy S24+ 
 
 ## In prova nella 0.5.38
 
-- Tocco singolo sui cerchi: alterna cover opaca e semitrasparente. Doppio tocco al centro: chiude il ciclo. Doppio tocco in alto a destra: esporta la diagnostica. Il pulsante X è stato rimosso.
+- Tocco singolo centrale: alterna mute e riattivazione del microfono Voice (animazione fucsia scuro in mute). Tocco sotto i cerchi: alterna cover opaca e semitrasparente. Doppio tocco al centro: chiude il ciclo. Doppio tocco in alto a destra: esporta la diagnostica. Il pulsante X è stato rimosso.
 - Swipe iniziato nella fascia alta interna, appena sotto la barra di stato: il rilevatore si attiva durante il movimento e termina la modalità Voice, nasconde la cover e torna alla Home. La pagina e la conversazione WebView restano aperte in background; la wake word «Ehi Jarvis» dovrebbe riportare alla stessa sessione e riattivare Voice.
 - Indicazione visiva nella parte alta della cover per mostrare la direzione del gesto e la zona di avvio, tenuta fuori dal bordo che Android usa per la tendina di sistema.
 - APK firmato permanentemente pronto. Test sul Galaxy S24+ necessario per confermare il gesto, il rilascio reale del microfono, l'ascolto wake in background e la ripresa della stessa conversazione.

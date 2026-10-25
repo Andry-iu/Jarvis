@@ -1,4 +1,4 @@
-# JarvisWake 0.5.52 — assistente Android e ChatGPT Voice
+# JarvisWake 0.5.53 — assistente Android e ChatGPT Voice
 
 App Kotlin per Android 12–16 (minSdk 31, targetSdk 36), APK ARM64 destinato alla prova su Samsung Galaxy S24+ Android 16.
 
@@ -17,6 +17,11 @@ La 0.5.50 aggiunge **Svuota cache WebView**. Poiché l'utente ha segnalato che l
 L'utente ha provato anche la 0.5.51: dopo il reset completo e un nuovo login, l'errore rosso Voice è rimasto. La diagnostica 0.5.52 ha registrato un HTTP 404 da `persistent.oaistatic.com` durante il ciclo. Aprendo in Chrome l'URL completo del modulo, l'utente ha ricevuto `BlobNotFound`: l'asset remoto non esiste all'indirizzo richiesto e la correzione deve avvenire lato servizio ChatGPT.
 
 Nella diagnostica successiva, esportata il 24 ottobre 2026 alle 17:46, tre cicli hanno ciascuno un solo `GREETING_SENT` e un HTTP 404 da `persistent.oaistatic.com`. Il monitor ha riportato `assistantNodes=0` dopo l'invio: il log non mostra il testo della risposta e non permette di verificare se ChatGPT abbia seguito il prompt. L'utente ha osservato premesse e saluti ridondanti; l'invio singolo da Jarvis non garantisce una risposta conforme. Non è stata implementata una correzione.
+
+## Cover 0.5.53
+
+Tocco singolo centrale: mute/riattivazione delle tracce microfono Voice; animazione fucsia scuro tendente al rosso durante il mute confermato. Tocco sotto i cerchi: alterna opaco/semitrasparente. Doppio tocco centrale: chiude il ciclo; doppio tocco in alto a destra: esporta diagnostica. Swipe verso il basso: Home; swipe sinistro: chat interattiva.
+Il tocco centrale è confermato dopo la finestra del doppio tocco, così la chiusura non provoca un mute intermedio. Il mute riguarda le tracce del microfono nella sessione WebView, non la riproduzione di ChatGPT. Prima dell’avvio di Voice non modifica il microfono. Il collaudo sul Galaxy resta necessario.
 
 ## Documentazione e continuità
 
@@ -85,11 +90,11 @@ Il DOM e la traccia microfono non certificano che il collegamento remoto Voice s
 
 L'HUD ha il **fondo opaco come impostazione iniziale**, il nome `J.A.R.V.I.S.`, la versione sotto il nome e le note più in basso. Quando Voice è attiva, le note vengono nascoste.
 
-Il pulsante **Copertura** nella schermata principale indica l'impostazione corrente e permette di alternare fondo opaco e semitrasparente al 50%. La scelta è salvata e resta valida dopo la chiusura dell'app e il riavvio del telefono. Si applica a tutte le cover (sblocco, caricamento e Voice), anche se già visibili; non modifica l'aspetto o il funzionamento della X.
+Il pulsante **Copertura** nella schermata principale indica l'impostazione corrente e permette di alternare fondo opaco e semitrasparente al 50%. La scelta è salvata e resta valida dopo la chiusura dell'app e il riavvio del telefono. Si applica a tutte le cover (sblocco, caricamento e Voice), anche se già visibili. La stessa opzione si alterna toccando sotto l’animazione; la cover non presenta il pulsante X.
 
-La schermata iniziale e quella di caricamento hanno una propria **X**. Finché il telefono è bloccato viene usata la cover interna al WebView, con X e pulsante di sblocco. La cover intercetta i tocchi fisici per evitare che raggiungano le pagine dell'account sottostanti; l'avvio Voice continua a inviare una sola sequenza touch direttamente al WebView. Le note di preparazione sono aggiornate anche sulla cover interna.
+Finché il telefono è bloccato viene usata la cover interna al WebView, senza X e con pulsante di sblocco. Il doppio tocco centrale chiude il ciclo. La cover intercetta i tocchi fisici per evitare che raggiungano le pagine dell'account sottostanti; l'avvio Voice continua a inviare una sola sequenza touch direttamente al WebView. Le note di preparazione sono aggiornate anche sulla cover interna.
 
-Dopo lo sblocco, la cover di accessibilità con X separata sostituisce quella interna soltanto se entrambe le finestre sono state aggiunte correttamente. Se l'HUD esterno non è disponibile, rimangono cover e X interne. I controlli Jarvis non possono sostituire o sovrapporsi alle richieste di autenticazione protette di Android.
+Dopo lo sblocco, la cover di accessibilità sostituisce quella interna quando disponibile. Se l'HUD esterno non è disponibile, rimane la cover interna con gli stessi gesti. I controlli Jarvis non possono sostituire o sovrapporsi alle richieste di autenticazione protette di Android.
 
 ## Privacy e limiti
 

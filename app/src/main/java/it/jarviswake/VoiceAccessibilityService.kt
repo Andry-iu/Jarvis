@@ -49,6 +49,11 @@ class VoiceAccessibilityService : AccessibilityService() {
             instance.get()?.takeIf { VoiceCycle.matches(token) }?.hideCover(returnHome)
         }
 
+        fun showMicrophoneMuted(token: String, muted: Boolean) {
+            instance.get()?.takeIf { VoiceCycle.matches(token) }?.overlay?.setMicrophoneMuted(muted)
+            WebChatActivity.showMicrophoneMuted(token, muted)
+        }
+
         fun showCoverStatus(token: String, message: String) {
             instance.get()?.takeIf { VoiceCycle.matches(token) }?.overlay?.setGestureMessage(message)
             WebChatActivity.showCoverStatus(token, message)
@@ -233,9 +238,10 @@ class VoiceAccessibilityService : AccessibilityService() {
         val keyguard = getSystemService(KeyguardManager::class.java)
         if (keyguard.isDeviceLocked || keyguard.isKeyguardLocked) return
         val manager = getSystemService(WindowManager::class.java)
-        val hud = HolographicOverlayView(this)
+        val hud = HolographicOverlayView(this).apply { setMicrophoneMuted(VoiceCycle.microphoneMuted) }
         hud.setCoverActions(
-            singleTap = { CoverSettings.setOpaque(this, !CoverSettings.isOpaque(this)) },
+            singleTap = { WebChatActivity.toggleMicrophone(token) },
+            belowTap = { CoverSettings.setOpaque(this, !CoverSettings.isOpaque(this)) },
             close = { VoiceCycle.cancel(this, token, "Jarvis chiuso. Ascolto Hey Jarvis riattivato.") },
             export = { openDiagnosticsExport() },
             hide = { VoiceCycle.hideForWake(this, token, returnHome = true) },

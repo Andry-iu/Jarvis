@@ -2,7 +2,9 @@ Riprendi JarvisWake dal branch `main`. Prima di intervenire leggi `AGENTS.md`, `
 
 ## Baseline
 
-Sorgenti: **0.5.52 / versionCode 74**. L'utente ha aperto in Chrome l'URL del modulo Voice e ha ricevuto `BlobNotFound`; nelle diagnostiche il fetch su `persistent.oaistatic.com` continua a restituire HTTP 404. Nell'ultimo archivio (17:45–17:46 locali) risultano tre cicli: ciascuno ha un solo `GREETING_SENT`, ma i controlli successivi rilevano `assistantNodes=0`. I log non contengono il prompt effettivo, la risposta, né campioni audio: dimostrano l'invio singolo, non la conformità della risposta o l'effettiva acquisizione della voce. L'utente ha riportato risposte con premesse e saluti semanticamente duplicati; il prompt da solo non garantisce l'output e nessuna correzione è stata implementata. APK SHA-256 `b8f85fdc299ff21ce0ef4c31d605ee38ac35f40458d87819ecc573740779d065`.
+Sorgenti attuali: **0.5.53 / versionCode 75**. Tocco singolo centrale: mute/riattivazione delle tracce microfono Voice; animazione fucsia scuro tendente al rosso durante il mute confermato. Tocco sotto i cerchi: alterna opaco/semitrasparente. Doppio tocco centrale: chiude il ciclo; doppio tocco in alto a destra: esporta diagnostica. Swipe verso il basso: Home; swipe sinistro: chat interattiva. Verifiche locali e firma in VERIFICATION.md; collaudo fisico aperto.
+
+Diagnostica precedente 0.5.52: L'utente ha aperto in Chrome l'URL del modulo Voice e ha ricevuto `BlobNotFound`; nelle diagnostiche il fetch su `persistent.oaistatic.com` continua a restituire HTTP 404. Nell'ultimo archivio (17:45–17:46 locali) risultano tre cicli: ciascuno ha un solo `GREETING_SENT`, ma i controlli successivi rilevano `assistantNodes=0`. I log non contengono il prompt effettivo, la risposta, né campioni audio: dimostrano l'invio singolo, non la conformità della risposta o l'effettiva acquisizione della voce. L'utente ha riportato risposte con premesse e saluti semanticamente duplicati; il prompt da solo non garantisce l'output e nessuna correzione è stata implementata. APK SHA-256 `b8f85fdc299ff21ce0ef4c31d605ee38ac35f40458d87819ecc573740779d065`.
 
 ## 0.5.49: release verificata
 
@@ -18,7 +20,7 @@ Sorgenti: **0.5.52 / versionCode 74**. L'utente ha aperto in Chrome l'URL del mo
 
 ## Requisiti permanenti
 
-Wake locale Vosk; un solo gesto Voice per ciclo; saluto configurabile con «ciao jarvis» predefinito; cover opaca/semitrasparente persistente senza X; doppio tocco centrale per chiudere e doppio tocco in alto a destra per esportare diagnostica; swipe verso il basso per Home; wake successiva sulla pagina mantenuta. Non presumere che il progetto crei automaticamente una nuova chat. Vedere `AGENTS.md` e `CONTINUITY.md` per i requisiti completi.
+Wake locale Vosk; un solo gesto Voice per ciclo; saluto configurabile con «ciao jarvis» predefinito; cover opaca/semitrasparente persistente senza X (tocco sotto i cerchi); tocco singolo centrale per mute/riattivazione, animazione fucsia scuro in mute; doppio tocco centrale per chiudere e doppio tocco in alto a destra per esportare diagnostica; swipe verso il basso per Home; wake successiva sulla pagina mantenuta. Non presumere che il progetto crei automaticamente una nuova chat. Vedere `AGENTS.md` e `CONTINUITY.md` per i requisiti completi.
 
 ## Build, firma e Git
 

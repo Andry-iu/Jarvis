@@ -148,14 +148,32 @@ class WebChatActivity : Activity() {
   // Observe actual streams, including when WebView caches permission grants.
   // No audio or transcript is read; only track lifecycle is inspected.
   if (!window.__jarvisWakeMedia && navigator.mediaDevices?.getUserMedia) {
-    const media = { tracks: new Set(), pending: 0, error: null, requested: false };
+    const media = { tracks: new Set(), pending: 0, error: null, requested: false,
+      muted: false, restored: new Map() };
+    media.applyMute = track => {
+      if (track.readyState !== 'live') return;
+      if (media.muted) {
+        if (!media.restored.has(track)) media.restored.set(track, track.enabled);
+        track.enabled = false;
+      } else if (media.restored.has(track)) {
+        track.enabled = media.restored.get(track);
+        media.restored.delete(track);
+      }
+    };
+    media.setMuted = muted => {
+      media.muted = muted;
+      media.tracks.forEach(media.applyMute);
+    };
     const original = navigator.mediaDevices.getUserMedia;
     navigator.mediaDevices.getUserMedia = async function(...args) {
       const audio = !!args[0]?.audio;
       if (audio) { media.pending++; media.error = null; media.requested = true; }
       try {
         const stream = await original.apply(this, args);
-        if (audio) stream.getAudioTracks().forEach(track => media.tracks.add(track));
+        if (audio) stream.getAudioTracks().forEach(track => {
+          media.tracks.add(track);
+          media.applyMute(track);
+        });
         return stream;
       } catch (error) {
         if (audio) media.error = error.name || 'MediaError';
@@ -167,11 +185,12 @@ class WebChatActivity : Activity() {
     window.__jarvisWakeMedia = media;
   }
   const media = window.__jarvisWakeMedia;
+  if (media) media.setMuted(__JARVIS_MIC_MUTED__);
   const mediaActive = media && [...media.tracks].some(track => track.readyState === 'live');
   const outputPlaying = [...document.querySelectorAll('audio,video')].some(element =>
     !element.paused && element.readyState >= 2 && !element.muted && element.volume > 0);
   if (media) [...media.tracks].filter(track => track.readyState === 'ended')
-    .forEach(track => media.tracks.delete(track));
+    .forEach(track => { media.tracks.delete(track); media.restored.delete(track); });
   const visible = element => {
     const rect = element.getBoundingClientRect();
     const style = getComputedStyle(element);
@@ -415,8 +434,62 @@ class WebChatActivity : Activity() {
     visibleNodes:nodes.length, eligibleNodes, stableNodes, responses:output});
 })()
         """.trimIndent()
+        private val MICROPHONE_CONTROL_SCRIPT = """
+(() => {
+  const media = window.__jarvisWakeMedia;
+  const live = media ? [...media.tracks].filter(track => track.readyState === 'live') : [];
+  if (!media?.setMuted || !live.length) return JSON.stringify({available:false});
+  const previous = media.muted;
+  try {
+    media.setMuted(__JARVIS_MIC_MUTED__);
+    if (media.muted && !live.every(track => track.enabled === false)) throw new Error('mute');
+    return JSON.stringify({available:true, muted:media.muted});
+  } catch (_) {
+    media.setMuted(previous);
+    return JSON.stringify({available:false});
+  }
+})()
+        """.trimIndent()
+
+        fun toggleMicrophone(token: String) {
+            val activity = active.get()?.takeIf { it.cycleToken == token } ?: return
+            activity.runOnUiThread {
+                if (!activity.isValidCycle() || activity.webDestroyed || activity.microphoneTogglePending ||
+                    VoiceCycle.phase != VoiceCycleState.Phase.VOICE || VoiceCycle.hiddenForWake) return@runOnUiThread
+                activity.microphoneTogglePending = true
+                val generation = activity.documentGeneration
+                val muted = !VoiceCycle.microphoneMuted
+                activity.webView.evaluateJavascript(
+                    MICROPHONE_CONTROL_SCRIPT.replace("__JARVIS_MIC_MUTED__", muted.toString())
+                ) { raw ->
+                    activity.microphoneTogglePending = false
+                    if (!activity.isValidCycle() || activity.webDestroyed || generation != activity.documentGeneration ||
+                        VoiceCycle.hiddenForWake) return@evaluateJavascript
+                    val confirmed = runCatching {
+                        val encoded = JSONTokener(raw).nextValue() as? String ?: return@runCatching false
+                        val value = JSONObject(encoded)
+                        value.optBoolean("available") && value.optBoolean("muted") == muted
+                    }.getOrDefault(false)
+                    if (confirmed) {
+                        VoiceCycle.confirmMicrophoneMuted(token, muted)
+                        VoiceAccessibilityService.showMicrophoneMuted(token, muted)
+                        VoiceAccessibilityService.showCoverStatus(token, if (muted) "MICROFONO IN MUTE" else "MICROFONO RIATTIVATO")
+                        DiagnosticLog.record(activity, if (muted) DiagnosticLog.Event.MICROPHONE_MUTED
+                            else DiagnosticLog.Event.MICROPHONE_UNMUTED, token)
+                    } else {
+                        VoiceAccessibilityService.showCoverStatus(token, "ERRORE: MICROFONO NON DISPONIBILE")
+                    }
+                }
+            }
+        }
+
+        fun showMicrophoneMuted(token: String, muted: Boolean) {
+            active.get()?.takeIf { it.cycleToken == token }?.localHud?.setMicrophoneMuted(muted)
+        }
+
         internal fun preloadVoiceControlScript(): String =
             VOICE_CONTROL_LOCATION_SCRIPT.replace("__JARVIS_LOCKED__", "false")
+                .replace("__JARVIS_MIC_MUTED__", "false")
         @Volatile private var active = WeakReference<WebChatActivity>(null)
         @Volatile private var automationPageReady = false
         fun isAutomationPageReady(): Boolean = active.get()?.let {
@@ -555,6 +628,7 @@ class WebChatActivity : Activity() {
 
     private lateinit var webView: WebView
     private var pendingMicrophoneRequest: PermissionRequest? = null
+    private var microphoneTogglePending = false
     private var voiceTapInFlight = false
     private var cycleToken: String? = null
     private var resumed = false
@@ -751,9 +825,11 @@ class WebChatActivity : Activity() {
         root.addView(webView, FrameLayout.LayoutParams(-1, -1))
         if (cycleToken != null) {
             localHud = HolographicOverlayView(this).apply {
+                setMicrophoneMuted(VoiceCycle.microphoneMuted)
                 setStatus("CARICAMENTO CHATGPT")
                 setCoverActions(
-                    singleTap = { CoverSettings.setOpaque(this@WebChatActivity, !CoverSettings.isOpaque(this@WebChatActivity)) },
+                    singleTap = { cycleToken?.let { toggleMicrophone(it) } },
+                    belowTap = { CoverSettings.setOpaque(this@WebChatActivity, !CoverSettings.isOpaque(this@WebChatActivity)) },
                     close = { VoiceCycle.cancel(this@WebChatActivity, cycleToken!!, "Jarvis chiuso. Ascolto Hey Jarvis riattivato.") },
                     export = { DiagnosticExportActivity.open(this@WebChatActivity) },
                     hide = { VoiceCycle.hideForWake(this@WebChatActivity, cycleToken!!) },
@@ -892,6 +968,7 @@ class WebChatActivity : Activity() {
         val keyguard = getSystemService(KeyguardManager::class.java)
         val locked = keyguard.isDeviceLocked || keyguard.isKeyguardLocked
         return VOICE_CONTROL_LOCATION_SCRIPT.replace("__JARVIS_LOCKED__", locked.toString())
+            .replace("__JARVIS_MIC_MUTED__", VoiceCycle.microphoneMuted.toString())
     }
 
     /**
@@ -1015,7 +1092,7 @@ class WebChatActivity : Activity() {
 
     private fun inspectVoiceState(callback: (WebVoicePageState) -> Unit) {
         if (!isValidCycle() || !resumed || !hasWindowFocus() || webDestroyed ||
-            !automationPageReady || !::webView.isInitialized) {
+            microphoneTogglePending || !automationPageReady || !::webView.isInitialized) {
             callback(WebVoicePageState.UNAVAILABLE)
             return
         }

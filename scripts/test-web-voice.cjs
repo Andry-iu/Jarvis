@@ -29,7 +29,7 @@ function page({controls = [], headings = [], composer = null, locked = false,
         query.startsWith('h1') ? headings :
         query.startsWith('textarea') ? (composer ? [composer] : []) :
         query.startsWith('button') ? controls : []}});
-  const runScript = script.replace('__JARVIS_LOCKED__', String(locked));
+  const runScript = script.replace('__JARVIS_LOCKED__', String(locked)).replace('__JARVIS_MIC_MUTED__', 'false');
   return {context, inspect: () => { const value = vm.runInContext(runScript, context); return value ? JSON.parse(value) : null; },
     stop: () => JSON.parse(vm.runInContext(stopScript, context))};
 }

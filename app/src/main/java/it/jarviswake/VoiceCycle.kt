@@ -17,6 +17,11 @@ internal object VoiceCycle {
     const val EXTRA_ID = "it.jarviswake.CYCLE_ID"
     private var state = VoiceCycleState()
     private var hideStopInFlightToken: String? = null
+    var microphoneMuted = false
+        private set
+    fun confirmMicrophoneMuted(token: String, muted: Boolean) {
+        if (matches(token)) microphoneMuted = muted
+    }
     private val main = Handler(Looper.getMainLooper())
     private var app: Application? = null
     val active: Boolean get() = state.id != null
@@ -50,6 +55,7 @@ internal object VoiceCycle {
     fun start(context: Context, existingCycleId: String? = null) {
         if (active) return
         state = VoiceCycleState()
+        microphoneMuted = false
         hideStopInFlightToken = null
         val token = existingCycleId ?: UUID.randomUUID().toString()
         state.begin(token, SystemClock.elapsedRealtime())
