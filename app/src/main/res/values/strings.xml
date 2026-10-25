@@ -30,6 +30,7 @@
     <string name="waiting_audio_choose">Scegli audio di attesa</string>
     <string name="waiting_audio_description">Se attivo, ripete il file all’apertura della cover, da wake word o avvio manuale, fino alla conferma di Voice attiva (massimo 40 secondi). Il volume scelto viene salvato e dipende anche dal volume multimediale del telefono; 0% rende silenzioso il loop. File audio fino a 64 MB; conservato solo nell’app.</string>
     <string name="waiting_audio_volume">Volume audio di attesa: %1$d%%</string>
+    <string name="waiting_audio_volume_preview">Ogni variazione del volume riavvia il brano per il tempo minimo impostato, oppure per 2 secondi se il minimo è zero. L’anteprima funziona anche con l’audio di attesa disattivato e si ferma quando lasci questa schermata. Seleziona prima un file audio.</string>
     <string name="waiting_audio_minimum">Tempo minimo audio prima di Voice: %1$d s</string>
     <string name="waiting_audio_minimum_description">Salvataggio automatico. Dal prossimo ciclo, Voice attende almeno questi secondi dall’inizio della riproduzione. Se diventa pronta dopo, parte appena disponibile. Zero disattiva l’attesa minima. Audio disattivato, assente o interrotto non aggiunge attesa.</string>
     <string name="waiting_audio_none">Nessun audio selezionato.</string>

@@ -16,6 +16,7 @@ internal object WaitingAudio {
     private val main = Handler(Looper.getMainLooper())
     private var player: MediaPlayer? = null
     private var playerPrepared = false
+    private var previewing = false
     private var audioManager: AudioManager? = null
     private var focusRequest: AudioFocusRequest? = null
     private val timeout = Runnable { stop() }
@@ -34,6 +35,24 @@ internal object WaitingAudio {
             return
         }
         if (!state.request(token, enabled = true, fileAvailable = true)) return
+        startPlayer(context, token)
+    }
+
+    /** A user-requested preview never creates a Voice cycle or arms its minimum gate. */
+    fun preview(context: Context) {
+        if (VoiceCycle.active && !VoiceCycle.hiddenForWake) return
+        stop()
+        if (!WaitingAudioSettings.file(context).isFile) return
+        previewing = true
+        val seconds = WaitingAudioSettings.minimumSeconds(context).takeIf { it > 0 } ?: 2
+        startPlayer(context, token = null, previewDurationMs = seconds * 1_000L)
+    }
+
+    fun stopPreview() {
+        if (previewing) stop()
+    }
+
+    private fun startPlayer(context: Context, token: String?, previewDurationMs: Long = 0L) {
         val candidate = try { MediaPlayer() } catch (_: RuntimeException) { stop(); return }
         player = candidate
         main.postDelayed(timeout, 40_000L)
@@ -55,13 +74,18 @@ internal object WaitingAudio {
                 return
             }
             candidate.setOnPreparedListener {
-                if (player === it && state.mayPlay(token) && VoiceCycle.matches(token)) {
+                if (player === it && (if (token == null) previewing && (!VoiceCycle.active || VoiceCycle.hiddenForWake)
+                    else state.mayPlay(token) && VoiceCycle.matches(token))) {
                     try {
                         playerPrepared = true
                         updateVolume(WaitingAudioSettings.volume(context))
                         it.isLooping = true
                         it.start()
-                        minimum.playbackStarted(token, SystemClock.elapsedRealtime())
+                        if (token != null) minimum.playbackStarted(token, SystemClock.elapsedRealtime())
+                        else {
+                            main.removeCallbacks(timeout)
+                            main.postDelayed(timeout, previewDurationMs)
+                        }
                     } catch (_: RuntimeException) { stop() }
                 }
             }
@@ -76,6 +100,7 @@ internal object WaitingAudio {
     }
 
     fun voiceActive(token: String) {
+        if (previewing) return // A late callback from the hidden cycle must not stop a preview.
         if (state.finish(token)) stop()
     }
 
@@ -92,6 +117,7 @@ internal object WaitingAudio {
         minimum.stop()
         main.removeCallbacks(timeout)
         val previous = player
+        previewing = false
         playerPrepared = false
         player = null // Invalidate queued prepared/error callbacks before releasing.
         previous?.release()

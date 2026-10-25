@@ -117,12 +117,16 @@ class MainActivity : Activity() {
                 override fun onProgressChanged(seekBar: SeekBar, value: Int, fromUser: Boolean) {
                     audioVolumeLabel.text = getString(R.string.waiting_audio_volume, value)
                     seekBar.contentDescription = audioVolumeLabel.text
-                    if (fromUser) WaitingAudioSettings.setVolume(this@MainActivity, value)
+                    if (fromUser) {
+                        WaitingAudioSettings.setVolume(this@MainActivity, value)
+                        WaitingAudio.preview(this@MainActivity)
+                    }
                 }
                 override fun onStartTrackingTouch(seekBar: SeekBar) = Unit
                 override fun onStopTrackingTouch(seekBar: SeekBar) = Unit
             })
         }, LinearLayout.LayoutParams(-1, -2))
+        text(getString(R.string.waiting_audio_volume_preview), 13f)
         val audioMinimumLabel = text(getString(R.string.waiting_audio_minimum,
             WaitingAudioSettings.minimumSeconds(this)), 16f)
         layout.addView(SeekBar(this).apply {
@@ -303,6 +307,7 @@ class MainActivity : Activity() {
     }
 
     private fun openChatSettings() {
+        WaitingAudio.stopPreview()
         if (chatSettingsLayer != null) return
         if (VoiceCycle.active) {
             Toast.makeText(this, "Termina prima il ciclo Voice per modificare la chat.", Toast.LENGTH_SHORT).show()
@@ -495,6 +500,7 @@ class MainActivity : Activity() {
         handler.post(update)
     }
     override fun onPause() {
+        WaitingAudio.stopPreview()
         handler.removeCallbacks(update)
         if (VoiceCycle.active && chatSettingsLayer != null) closeChatSettings()
         super.onPause()
