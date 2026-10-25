@@ -1,5 +1,7 @@
 # 0.5.53 — cover, mute e trasparenza
 
+Ricompilazione per consegna diretta del 25 ottobre 2026 dal main aggiornato (baseline `b6bcbf2`), senza modifiche al codice. 56 test JVM e le due suite JavaScript superati; lint completato. Firma permanente, versione/ABI, CRC ZIP e allineamento 16 KB ricontrollati. Temporanei di firma rimossi. Il checksum qui sotto si riferisce a questa ricompilazione.
+
 Verifica locale del 25 ottobre 2026, JDK 17 / Gradle 8.13 / SDK 36 / Build Tools 36.0.0.
 
 - Tocco singolo centrale: alterna mute e riattivazione delle tracce audio WebView; animazione fucsia scuro/rosso dopo conferma del mute. Il tocco sotto i cerchi alterna l’opacità persistente.
@@ -9,7 +11,7 @@ Verifica locale del 25 ottobre 2026, JDK 17 / Gradle 8.13 / SDK 36 / Build Tools
 - `node scripts/test-web-voice.cjs` e `node scripts/test-cover-microphone.cjs`: superati. Le prove del mute coprono ingresso assente/terminato, mute/unmute, nuove tracce durante mute e conservazione dell’audio in uscita.
 - `bash gradlew --offline --no-daemon --max-workers=4 testDebugUnitTest lintDebug assembleDebug -PjarvisUnsigned=true`: BUILD SUCCESSFUL. 56 test JVM superati, 0 falliti/errori/saltati; sei nuove prove delle aree di tocco. Lint: 0 errori e 20 avvisi.
 - APK `it.jarviswake`, 0.5.53 / 75, minSdk 31, target SDK 36, ARM64, modello Vosk incluso. Integrità ZIP e allineamento 16 KB verificati. Firma permanente v3 per API 31+ e v2 separatamente per API 24–27; certificato SHA-256 `a8ddfbe2b78be5460e72df57afbc3434411e3cc27328b13bc16b4daaba13389a`.
-- SHA-256 APK firmato: `f0ee21b2222b776620b19d019c14a0e1979f221ee760bab0b075fcb04977f158`. I temporanei con chiave e password sono stati rimossi; APK e segreti fuori da Git.
+- SHA-256 APK firmato: `ea575b87c1ac1be569aa6c2950394efca7e466e97e1195917c844dea413f04f0`. I temporanei con chiave e password sono stati rimossi; APK e segreti fuori da Git.
 - Non è stato eseguito il collaudo sul Galaxy S24+: verificare mute effettivo della voce trasmessa, ripresa al tocco successivo, colore e area della semitrasparenza con cover interna ed esterna. La modifica non corregge il precedente HTTP 404 del modulo Voice remoto.
 
 # 0.5.52 — diagnostica fetch Voice, APK firmato

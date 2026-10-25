@@ -20,7 +20,7 @@ Aggiornato il 21 ottobre 2026 per la 0.5.42. Lo screenshot della prova 0.5.41 mo
 
 ## Stato attuale
 
-- Versione sorgenti: **0.5.53**, versionCode **75**; verifica locale e stato firma in VERIFICATION.md; collaudo fisico aperto. Pacchetto `it.jarviswake`, minSdk 31, compile/target SDK 36, Build Tools 36.0.0, Gradle 8.13, JDK 17, ABI `arm64-v8a`. SHA-256 APK `b8f85fdc299ff21ce0ef4c31d605ee38ac35f40458d87819ecc573740779d065`.
+- Versione sorgenti: **0.5.53**, versionCode **75**; verifica locale e stato firma in VERIFICATION.md; collaudo fisico aperto. Pacchetto `it.jarviswake`, minSdk 31, compile/target SDK 36, Build Tools 36.0.0, Gradle 8.13, JDK 17, ABI `arm64-v8a`. SHA-256 APK `ea575b87c1ac1be569aa6c2950394efca7e466e97e1195917c844dea413f04f0`.
 - Repository di riferimento: `https://github.com/Andry-iu/Jarvis`, branch `main`. Usare sempre il `main` remoto più recente come baseline; non assumere che la 0.5.30 sia ancora HEAD.
 - URL iniziale del progetto ChatGPT: `https://chatgpt.com/g/g-p-6adc87c2850c8191b52e9df5d94bfba6/project`. In 0.5.49 l'utente può modificarlo e salvarlo dalla schermata principale; il valore è persistente e condiviso fra preloader e ciclo Voice.
 - La 0.5.33 mantiene Vosk Model/Recognizer per tutta la vita del servizio, tiene attiva la cattura per 30 secondi dopo screen-off e riprende subito all'accensione riusando il modello. Sul Galaxy S24+ l'utente ha confermato wake entro la finestra, nessun avvio dopo la scadenza e ripresa immediata all'accensione.
