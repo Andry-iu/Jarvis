@@ -24,6 +24,8 @@ Wake locale Vosk; un solo gesto Voice per ciclo; saluto configurabile con «ciao
 
 ## Build, firma e Git
 
+Autorizzazione permanente dell’utente (25 ottobre 2026): a ogni rilascio APK eseguire il push fast-forward su `main` di tutti i sorgenti, test, documentazione e checksum pertinenti, senza chiedere nuovamente conferma. Verificare la coincidenza di `HEAD` e `origin/main` prima della consegna. Restano esclusi APK, output di build, chiavi e credenziali; nessun force-push. Questa autorizzazione al push Git non autorizza la pubblicazione dell’ambiente cloud.
+
 Build e firma locali con JDK 17, Gradle Wrapper 8.13, Android SDK 36 e Build Tools 36.0.0; niente GitHub Actions. In una sessione nuova verificare prima se il toolchain è presente e ripristinarlo se serve. Gli APK restano fuori da Git. Per la firma leggere `docs/RECUPERO_FIRMA.md`, verificare il certificato permanente SHA-256 `a8ddfbe2b78be5460e72df57afbc3434411e3cc27328b13bc16b4daaba13389a` e usare il branch cifrato `signing-handoff-2026-10-19`. La passphrase non va inserita in Git, chat, argomenti di processo o log: consultare le istruzioni del progetto e usarla solo in un prompt locale protetto; rimuovere i temporanei in chiaro.
 
 Prima di modificare o pubblicare: aggiornare i riferimenti remoti, preservare la cronologia, verificare che il branch sia fast-forward e non usare force-push. A ogni rilascio committare sorgenti, test, documentazione e checksum su `main`, senza APK o credenziali; verificare che `HEAD` e `origin/main` coincidano prima di consegnare l'APK. Se il push non riesce, il rilascio non è allineato e va dichiarato. Registrare distintamente test locali, firma permanente e prova fisica.

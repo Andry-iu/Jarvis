@@ -17,6 +17,8 @@ Prima di modificare il progetto leggere `README.md`, `CONTINUITY.md` e `VERIFICA
 
 ## Build, firma e consegna APK — regola operativa consolidata
 
+- Autorizzazione permanente dell’utente (25 ottobre 2026): a ogni rilascio APK eseguire il push fast-forward su `main` di tutti i sorgenti, test, documentazione e checksum pertinenti, senza chiedere nuovamente conferma. Verificare la coincidenza di `HEAD` e `origin/main` prima della consegna. Restano esclusi APK, output di build, chiavi e credenziali; nessun force-push. Questa autorizzazione al push Git non autorizza la pubblicazione dell’ambiente cloud.
+
 - Compilare localmente con JDK 17, Gradle Wrapper 8.13, Android SDK 36 e Build Tools 36.0.0. I workflow GitHub non devono compilare automaticamente sui push; non usare GitHub Actions per build o firma.
 - Quando l'utente chiede un APK, eseguire davvero test/build locali, verificare versione, ABI, integrità ZIP, allineamento e certificato. Consegnare l'APK direttamente, non un archivio ZIP, e indicare esplicitamente se non è firmato con il certificato permanente.
 - Consegnare direttamente il file `.apk` pronto da installare, non un link a uno ZIP, quando il file è effettivamente disponibile e verificato nell'ambiente corrente. Non inventare link locali né dichiarare verifiche non eseguite.
