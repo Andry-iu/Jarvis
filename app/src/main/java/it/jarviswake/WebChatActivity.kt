@@ -1062,6 +1062,13 @@ class WebChatActivity : Activity() {
                     else DiagnosticLog.Event.VOICE_CONTROL_COMPOSER, cycleToken)
             }
 
+            // Re-probe the DOM on the next poll; never cache coordinates across the wait.
+            if (!WaitingAudio.canActivateVoice(cycleToken!!)) {
+                voiceTapInFlight = false
+                callback(WebVoiceTapResult.UNAVAILABLE)
+                return@evaluateJavascript
+            }
+
             // Latch BEFORE dispatch: even an unaccepted touch must never be repeated.
             VoiceCycle.voiceDispatched(cycleToken!!)
             val downTime = SystemClock.uptimeMillis()

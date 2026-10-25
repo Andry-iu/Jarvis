@@ -18,6 +18,12 @@ internal object WaitingAudioSettings {
     }
     fun name(context: Context): String? = prefs(context).getString("name", null)
     fun volume(context: Context) = prefs(context).getInt("volume_percent", 100).coerceIn(0, 100)
+    fun minimumSeconds(context: Context) = prefs(context).getInt("minimum_seconds", 0)
+        .coerceIn(0, WaitingAudioMinimum.MAX_SECONDS)
+    fun setMinimumSeconds(context: Context, seconds: Int) {
+        prefs(context).edit().putInt("minimum_seconds",
+            seconds.coerceIn(0, WaitingAudioMinimum.MAX_SECONDS)).apply()
+    }
     fun setVolume(context: Context, percent: Int) {
         val value = percent.coerceIn(0, 100)
         prefs(context).edit().putInt("volume_percent", value).apply()

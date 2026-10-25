@@ -1,3 +1,7 @@
+# Aggiornamento 0.5.56 — tempo minimo audio
+
+Implementato cursore 0–30 secondi con salvataggio automatico e conteggio dall’avvio player. Voice pronta prima attende, Voice pronta dopo parte alla prima verifica DOM utile. Rilascio del vincolo su audio non disponibile/interrotto; invariati un solo gesto e le cancellazioni. Collaudo fisico aperto.
+
 # Aggiornamento 0.5.55 — volume audio di attesa
 
 Implementato cursore 0–100% con salvataggio automatico, applicato al solo loop di attesa. Default 100%; zero silenzioso. Collaudo sul Galaxy ancora aperto.

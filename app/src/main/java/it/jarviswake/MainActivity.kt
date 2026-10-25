@@ -123,6 +123,25 @@ class MainActivity : Activity() {
                 override fun onStopTrackingTouch(seekBar: SeekBar) = Unit
             })
         }, LinearLayout.LayoutParams(-1, -2))
+        val audioMinimumLabel = text(getString(R.string.waiting_audio_minimum,
+            WaitingAudioSettings.minimumSeconds(this)), 16f)
+        layout.addView(SeekBar(this).apply {
+            id = View.generateViewId()
+            audioMinimumLabel.labelFor = id
+            max = WaitingAudioMinimum.MAX_SECONDS
+            progress = WaitingAudioSettings.minimumSeconds(this@MainActivity)
+            contentDescription = audioMinimumLabel.text
+            setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+                override fun onProgressChanged(seekBar: SeekBar, value: Int, fromUser: Boolean) {
+                    audioMinimumLabel.text = getString(R.string.waiting_audio_minimum, value)
+                    seekBar.contentDescription = audioMinimumLabel.text
+                    if (fromUser) WaitingAudioSettings.setMinimumSeconds(this@MainActivity, value)
+                }
+                override fun onStartTrackingTouch(seekBar: SeekBar) = Unit
+                override fun onStopTrackingTouch(seekBar: SeekBar) = Unit
+            })
+        }, LinearLayout.LayoutParams(-1, -2))
+        text(getString(R.string.waiting_audio_minimum_description), 13f)
         button("Avvia ascolto Hey Jarvis") { requestStart() }
         button("Ferma ascolto") {
             startService(Intent(this, WakeService::class.java).setAction("STOP"))

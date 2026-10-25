@@ -59,7 +59,7 @@ internal object VoiceCycle {
         hideStopInFlightToken = null
         val token = existingCycleId ?: UUID.randomUUID().toString()
         state.begin(token, SystemClock.elapsedRealtime())
-        WaitingAudio.begin(token)
+        WaitingAudio.begin(context, token)
         DiagnosticLog.record(context, DiagnosticLog.Event.CYCLE_STARTED, token)
         app = context.applicationContext as Application
         try {
@@ -122,7 +122,7 @@ internal object VoiceCycle {
 
     fun resumeHidden(context: Context, token: String?): Boolean {
         if (!hiddenForWake || token == null || !state.resumeFromWake(token, SystemClock.elapsedRealtime())) return false
-        WaitingAudio.begin(token)
+        WaitingAudio.begin(context, token)
         DiagnosticLog.record(context, DiagnosticLog.Event.WAKE_RESUMED_HIDDEN_CYCLE, token)
         WakeService.pauseForVoiceCycle()
         VoiceAccessibilityService.resumeWeb(token)

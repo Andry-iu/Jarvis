@@ -7,10 +7,12 @@ import android.media.AudioManager
 import android.media.MediaPlayer
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 
 /** Main-thread owner: keep playing through the LaunchActivity/WebView handoff. */
 internal object WaitingAudio {
     private val state = WaitingAudioState()
+    private val minimum = WaitingAudioMinimum()
     private val main = Handler(Looper.getMainLooper())
     private var player: MediaPlayer? = null
     private var playerPrepared = false
@@ -18,15 +20,21 @@ internal object WaitingAudio {
     private var focusRequest: AudioFocusRequest? = null
     private val timeout = Runnable { stop() }
 
-    fun begin(token: String) {
+    fun begin(context: Context, token: String) {
         stop()
         state.begin(token)
+        if (WaitingAudioSettings.enabled(context) && WaitingAudioSettings.file(context).isFile)
+            minimum.begin(token, WaitingAudioSettings.minimumSeconds(context))
     }
 
     fun coverShown(context: Context, token: String) {
-        if (!VoiceCycle.matches(token) || VoiceCycle.hiddenForWake ||
-            !state.request(token, WaitingAudioSettings.enabled(context), WaitingAudioSettings.file(context).isFile)) return
-        val candidate = MediaPlayer()
+        if (!VoiceCycle.matches(token) || VoiceCycle.hiddenForWake) return
+        if (!WaitingAudioSettings.enabled(context) || !WaitingAudioSettings.file(context).isFile) {
+            stop()
+            return
+        }
+        if (!state.request(token, enabled = true, fileAvailable = true)) return
+        val candidate = try { MediaPlayer() } catch (_: RuntimeException) { stop(); return }
         player = candidate
         main.postDelayed(timeout, 40_000L)
         try {
@@ -53,6 +61,7 @@ internal object WaitingAudio {
                         updateVolume(WaitingAudioSettings.volume(context))
                         it.isLooping = true
                         it.start()
+                        minimum.playbackStarted(token, SystemClock.elapsedRealtime())
                     } catch (_: RuntimeException) { stop() }
                 }
             }
@@ -70,6 +79,8 @@ internal object WaitingAudio {
         if (state.finish(token)) stop()
     }
 
+    fun canActivateVoice(token: String) = !minimum.shouldWait(token, SystemClock.elapsedRealtime())
+
     fun updateVolume(percent: Int) {
         if (!playerPrepared) return // Preparation will read the latest saved setting.
         val gain = percent.coerceIn(0, 100) / 100f
@@ -78,6 +89,7 @@ internal object WaitingAudio {
     }
 
     fun stop() {
+        minimum.stop()
         main.removeCallbacks(timeout)
         val previous = player
         playerPrepared = false

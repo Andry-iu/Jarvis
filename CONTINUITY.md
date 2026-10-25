@@ -1,3 +1,5 @@
+Aggiornamento 0.5.56 / versionCode 78 — tempo minimo audio configurabile 0–30 secondi, salvato automaticamente e acquisito per ciclo (default 0). Conta da MediaPlayer.start(); il comando Voice pronto attende la scadenza senza essere consumato. DOM ricontrollato, nessun riuso di coordinate o gesto extra. Audio non disponibile/interrotto libera il vincolo; resta il limite di sicurezza 40 secondi. Collaudo Galaxy aperto.
+
 Aggiornamento 0.5.55 / versionCode 77 — cursore volume audio di attesa 0–100%, percentuale visibile e salvataggio automatico. Default 100%, zero silenzioso, applicazione alla preparazione e durante la riproduzione; nessuna modifica al volume globale o alla Voice ChatGPT. Collaudo fisico aperto.
 
 Aggiornamento 0.5.54 / versionCode 76 — audio di attesa da file scelto, interruttore persistente (default OFF), wake e avvio manuale approvati dall’utente. Stop su conferma DOM Voice attiva, cancellazione, screen-off, perdita focus audio o limite 40 secondi. File privato escluso dal backup; nessun audio in Git. Ripartenza anche alla wake di un ciclo nascosto; un solo player tra le cover. Collaudo Galaxy aperto.
@@ -24,7 +26,7 @@ Aggiornato il 21 ottobre 2026 per la 0.5.42. Lo screenshot della prova 0.5.41 mo
 
 ## Stato attuale
 
-- Versione sorgenti: **0.5.55**, versionCode **77**; verifica locale e stato firma in VERIFICATION.md; collaudo fisico aperto. Pacchetto `it.jarviswake`, minSdk 31, compile/target SDK 36, Build Tools 36.0.0, Gradle 8.13, JDK 17, ABI `arm64-v8a`. Checksum corrente in `releases/0.5.55/SHA256SUMS`.
+- Versione sorgenti: **0.5.56**, versionCode **78**; verifica locale e stato firma in VERIFICATION.md; collaudo fisico aperto. Pacchetto `it.jarviswake`, minSdk 31, compile/target SDK 36, Build Tools 36.0.0, Gradle 8.13, JDK 17, ABI `arm64-v8a`. Checksum corrente in `releases/0.5.56/SHA256SUMS`.
 - Repository di riferimento: `https://github.com/Andry-iu/Jarvis`, branch `main`. Usare sempre il `main` remoto più recente come baseline; non assumere che la 0.5.30 sia ancora HEAD.
 - URL iniziale del progetto ChatGPT: `https://chatgpt.com/g/g-p-6adc87c2850c8191b52e9df5d94bfba6/project`. In 0.5.49 l'utente può modificarlo e salvarlo dalla schermata principale; il valore è persistente e condiviso fra preloader e ciclo Voice.
 - La 0.5.33 mantiene Vosk Model/Recognizer per tutta la vita del servizio, tiene attiva la cattura per 30 secondi dopo screen-off e riprende subito all'accensione riusando il modello. Sul Galaxy S24+ l'utente ha confermato wake entro la finestra, nessun avvio dopo la scadenza e ripresa immediata all'accensione.
