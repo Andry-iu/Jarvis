@@ -1,3 +1,5 @@
+Regola operativa permanente — raccolta prima del via: le singole richieste si raccolgono e non autorizzano modifiche al progetto né compilazioni. Prima riepilogare tutte le modifiche concordate, poi attendere il via esplicito dell’utente all’intero gruppo. Solo dopo implementarle insieme e preparare un’unica compilazione/rilascio APK, senza rilasci intermedi per ogni richiesta. Le correzioni necessarie alla verifica fanno parte dello stesso rilascio. Restano autorizzate le sole modifiche documentali esplicitamente richieste, come registrare questa regola; non costituiscono un via allo sviluppo. L’autorizzazione al push resta distinta. Stato attuale: in attesa di nuove modifiche e del via; nessuna nuova compilazione autorizzata.
+
 Aggiornamento 0.5.57 / versionCode 79 — ogni variazione manuale del volume riavvia un’anteprima del file dall’inizio al nuovo livello per il minimo impostato (2 secondi se minimo 0). Disponibile anche con audio OFF, senza avviare Voice. Un solo player; anteprima annullata su nuova variazione, uscita dalla Home Jarvis, focus perso o inizio ciclo. Non sostituisce un ciclo Voice già attivo. Collaudo Galaxy aperto.
 
 Aggiornamento 0.5.56 / versionCode 78 — tempo minimo audio configurabile 0–30 secondi, salvato automaticamente e acquisito per ciclo (default 0). Conta da MediaPlayer.start(); il comando Voice pronto attende la scadenza senza essere consumato. DOM ricontrollato, nessun riuso di coordinate o gesto extra. Audio non disponibile/interrotto libera il vincolo; resta il limite di sicurezza 40 secondi. Collaudo Galaxy aperto.
@@ -55,7 +57,7 @@ Aggiornato il 21 ottobre 2026 per la 0.5.42. Lo screenshot della prova 0.5.41 mo
 10. Le diagnostiche devono essere locali, esportabili manualmente e prive di audio, trascrizioni, cookie, credenziali o testo della conversazione.
 11. Ogni APK installabile sopra l'app esistente deve usare il certificato permanente. Keystore e password non entrano in chiaro nel repository. Non usare GitHub Actions per compilare: build e firma sono locali.
 12. Prima di proporre una nuova ipotesi tecnica, leggere codice e documentazione pertinenti, verificare più fonti primarie quando si dipende da API Android o dal comportamento web, e distinguere chiaramente fatti, stime e prove su dispositivo.
-13. Prima discutere l'intero ambito delle modifiche proposte. Non iniziare lo sviluppo finché l'utente non autorizza esplicitamente l'implementazione; la regola vale anche per le attività su Git.
+13. Raccogliere e riepilogare tutte le modifiche prima dello sviluppo. Ogni singola richiesta incrementa la raccolta e non autorizza interventi o compilazioni. Attendere il via esplicito all’intero gruppo, poi implementarlo insieme per un’unica compilazione/rilascio APK. Vedere la regola operativa permanente in apertura e AGENTS.md; vale anche riprendendo da Git.
 
 ## Evoluzione ricostruita delle versioni
 
