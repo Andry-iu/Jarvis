@@ -1,4 +1,4 @@
-# JarvisWake 0.5.53 — assistente Android e ChatGPT Voice
+# JarvisWake 0.5.54 — assistente Android e ChatGPT Voice
 
 App Kotlin per Android 12–16 (minSdk 31, targetSdk 36), APK ARM64 destinato alla prova su Samsung Galaxy S24+ Android 16.
 
@@ -17,6 +17,14 @@ La 0.5.50 aggiunge **Svuota cache WebView**. Poiché l'utente ha segnalato che l
 L'utente ha provato anche la 0.5.51: dopo il reset completo e un nuovo login, l'errore rosso Voice è rimasto. La diagnostica 0.5.52 ha registrato un HTTP 404 da `persistent.oaistatic.com` durante il ciclo. Aprendo in Chrome l'URL completo del modulo, l'utente ha ricevuto `BlobNotFound`: l'asset remoto non esiste all'indirizzo richiesto e la correzione deve avvenire lato servizio ChatGPT.
 
 Nella diagnostica successiva, esportata il 24 ottobre 2026 alle 17:46, tre cicli hanno ciascuno un solo `GREETING_SENT` e un HTTP 404 da `persistent.oaistatic.com`. Il monitor ha riportato `assistantNodes=0` dopo l'invio: il log non mostra il testo della risposta e non permette di verificare se ChatGPT abbia seguito il prompt. L'utente ha osservato premesse e saluti ridondanti; l'invio singolo da Jarvis non garantisce una risposta conforme. Non è stata implementata una correzione.
+
+## Audio di attesa 0.5.54
+
+La schermata principale offre «Scegli audio di attesa» e l’interruttore persistente «Audio di attesa attivo», inizialmente disattivato. Selezionare un file audio riproducibile (massimo 64 MiB) e attivare l’interruttore. Il file viene copiato nella memoria privata esclusa dal backup; non serve mantenere il file originale né concedere accesso generale alla memoria. Annullare la selezione o importare un file non valido conserva la selezione precedente. Disattivare l’opzione conserva il file.
+
+Il loop parte all’apertura della cover dopo wake word, avvio manuale o ripresa di un ciclo nascosto. Continua attraverso il passaggio dalla schermata iniziale alla WebView senza sovrapporre riproduttori. Si ferma quando la pagina conferma Voice attiva, alla chiusura/cancellazione del ciclo, allo spegnimento dello schermo, alla perdita del focus audio o dopo 40 secondi di sicurezza. Il solo dispatch del tocco Voice non interrompe l’attesa. Un errore di riproduzione non blocca l’avvio Voice. Si usa il volume multimediale del telefono; l’avvio asincrono evita di bloccare la UI, ma non garantisce latenza zero.
+
+Il saluto testuale esistente resta configurato separatamente. Il collaudo reale sul Galaxy S24+ è ancora da eseguire; non è una correzione dell’HTTP 404 remoto di Voice.
 
 ## Cover 0.5.53
 

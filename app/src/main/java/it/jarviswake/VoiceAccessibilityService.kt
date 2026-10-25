@@ -140,7 +140,10 @@ class VoiceAccessibilityService : AccessibilityService() {
                     WebVoiceTapResult.DISPATCHED, WebVoiceTapResult.BLOCKED, WebVoiceTapResult.ACTIVE -> {
                         VoiceCycle.voiceDispatched(token)
                         preferences.edit().putLong(CLICKED_AT, SystemClock.elapsedRealtime()).apply()
-                        if (result == WebVoiceTapResult.ACTIVE) preferences.edit().putBoolean(OBSERVED, true).apply()
+                        if (result == WebVoiceTapResult.ACTIVE) {
+                            WaitingAudio.voiceActive(token)
+                            preferences.edit().putBoolean(OBSERVED, true).apply()
+                        }
                     }
                     WebVoiceTapResult.NOT_FOUND -> {
                         overlay?.setStatus("RICERCA PULSANTE VOICE")
@@ -166,6 +169,7 @@ class VoiceAccessibilityService : AccessibilityService() {
                 }
                 when (state) {
                     WebVoicePageState.ACTIVE -> {
+                        WaitingAudio.voiceActive(token)
                         preferences.edit().putBoolean(OBSERVED, true).remove(INACTIVE_SINCE).apply()
                         tryGreeting(token, now)
                     }
@@ -257,6 +261,7 @@ class VoiceAccessibilityService : AccessibilityService() {
         try {
             manager.addView(hud, hudParams)
             overlay = hud
+            hud.post { WaitingAudio.coverShown(this, token) }
             if (VoiceCycle.phase == VoiceCycleState.Phase.VOICE) hud.setVoiceActive()
             WebChatActivity.setExternalCoverVisible(token, true)
         } catch (e: RuntimeException) {

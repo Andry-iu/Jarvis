@@ -45,12 +45,14 @@ class MainActivity : Activity() {
     private val assistantPermissionRequest = 2
     private val assistantRoleRequest = 3
     private val diagnosticsExportRequest = 4
+    private val waitingAudioRequest = 5
     private val handler = Handler(Looper.getMainLooper())
     private lateinit var status: TextView
     private lateinit var attemptStatus: TextView
     private lateinit var coverButton: Button
     private lateinit var greetingInput: EditText
     private lateinit var projectUrlInput: EditText
+    private lateinit var waitingAudioName: TextView
     private lateinit var contentRoot: FrameLayout
     private lateinit var homeScreen: ScrollView
     private var chatSettingsLayer: FrameLayout? = null
@@ -59,6 +61,7 @@ class MainActivity : Activity() {
         override fun run() {
             status.text = (if (State.running) "● " else "○ ") + State.get(this@MainActivity)
             attemptStatus.text = State.getAttempt(this@MainActivity)
+            if (::waitingAudioName.isInitialized) updateWaitingAudioName()
             handler.postDelayed(this, 1000)
         }
     }
@@ -85,6 +88,23 @@ class MainActivity : Activity() {
         status = text("", 17f)
         attemptStatus = text("", 13f)
         button("Avvia ciclo completo: ChatGPT Voice") { startVoiceCycle() }
+        layout.addView(Switch(this).apply {
+            text = getString(R.string.waiting_audio_enabled)
+            setTextColor(Color.WHITE)
+            isChecked = WaitingAudioSettings.enabled(this@MainActivity)
+            setOnCheckedChangeListener { _, checked ->
+                WaitingAudioSettings.setEnabled(this@MainActivity, checked)
+            }
+        })
+        waitingAudioName = text("", 13f)
+        updateWaitingAudioName()
+        button(getString(R.string.waiting_audio_choose)) {
+            startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+                addCategory(Intent.CATEGORY_OPENABLE)
+                type = "audio/*"
+            }, waitingAudioRequest)
+        }
+        text(getString(R.string.waiting_audio_description), 13f)
         button("Avvia ascolto Hey Jarvis") { requestStart() }
         button("Ferma ascolto") {
             startService(Intent(this, WakeService::class.java).setAction("STOP"))
@@ -357,6 +377,19 @@ class MainActivity : Activity() {
     @Deprecated("Android RoleManager returns its selection through an activity result")
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == waitingAudioRequest) {
+            if (resultCode == RESULT_OK) data?.data?.let { uri ->
+                Toast.makeText(this, R.string.waiting_audio_importing, Toast.LENGTH_SHORT).show()
+                WaitingAudioSettings.import(this, uri) { success ->
+                    if (!isDestroyed && !isFinishing) {
+                        updateWaitingAudioName()
+                        Toast.makeText(this, if (success) R.string.waiting_audio_saved
+                            else R.string.waiting_audio_failed, Toast.LENGTH_LONG).show()
+                    }
+                }
+            }
+            return
+        }
         if (requestCode == diagnosticsExportRequest) {
             if (resultCode == RESULT_OK) data?.data?.let { writeDiagnostics(it) }
             return
@@ -409,6 +442,13 @@ class MainActivity : Activity() {
         } else {
             "Copertura: semitrasparente\nPassa a opaca"
         }
+    }
+
+    private fun updateWaitingAudioName() {
+        waitingAudioName.text = if (WaitingAudioSettings.file(this).isFile)
+            getString(R.string.waiting_audio_file, WaitingAudioSettings.name(this)
+                ?: getString(R.string.waiting_audio_selected))
+        else getString(R.string.waiting_audio_none)
     }
 
     override fun onResume() {

@@ -80,6 +80,7 @@ class LaunchActivity : Activity() {
             insets
         }
         setContentView(root)
+        hud.post { WaitingAudio.coverShown(this, token) }
         State.setAttempt(this, "Schermata Jarvis pronta; avvio Voice senza richiedere lo sblocco.")
     }
 

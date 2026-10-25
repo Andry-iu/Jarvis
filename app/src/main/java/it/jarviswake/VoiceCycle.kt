@@ -59,6 +59,7 @@ internal object VoiceCycle {
         hideStopInFlightToken = null
         val token = existingCycleId ?: UUID.randomUUID().toString()
         state.begin(token, SystemClock.elapsedRealtime())
+        WaitingAudio.begin(token)
         DiagnosticLog.record(context, DiagnosticLog.Event.CYCLE_STARTED, token)
         app = context.applicationContext as Application
         try {
@@ -111,6 +112,7 @@ internal object VoiceCycle {
                 State.setAttempt(context, "Non ho potuto fermare Voice in sicurezza; la cover resta visibile.")
                 return@endVoiceForWake
             }
+            WaitingAudio.stop()
             DiagnosticLog.record(context, if (returnHome) DiagnosticLog.Event.COVER_HIDDEN_FOR_WAKE
                 else DiagnosticLog.Event.CHAT_REVEALED_FOR_INTERACTION, token)
             VoiceAccessibilityService.coverHidden(token, returnHome)
@@ -120,6 +122,7 @@ internal object VoiceCycle {
 
     fun resumeHidden(context: Context, token: String?): Boolean {
         if (!hiddenForWake || token == null || !state.resumeFromWake(token, SystemClock.elapsedRealtime())) return false
+        WaitingAudio.begin(token)
         DiagnosticLog.record(context, DiagnosticLog.Event.WAKE_RESUMED_HIDDEN_CYCLE, token)
         WakeService.pauseForVoiceCycle()
         VoiceAccessibilityService.resumeWeb(token)
@@ -130,6 +133,7 @@ internal object VoiceCycle {
 
     fun cancel(context: Context, token: String, message: String) {
         if (!state.cancel(token)) return
+        WaitingAudio.stop()
         if (hideStopInFlightToken == token) hideStopInFlightToken = null
         DiagnosticLog.record(context, DiagnosticLog.Event.CYCLE_CANCELLED, token)
         // Invalidate first. Every pending launch/DOM callback now belongs to a dead cycle.

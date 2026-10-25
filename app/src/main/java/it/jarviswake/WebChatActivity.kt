@@ -855,6 +855,7 @@ class WebChatActivity : Activity() {
             insets
         }
         setContentView(root)
+        cycleToken?.let { token -> localHud?.post { WaitingAudio.coverShown(this, token) } }
         if (preparedPage == null) {
             val restored = savedInstanceState?.getBundle("web_state")?.let { webView.restoreState(it) }
             if (restored == null || restored.size == 0) webView.loadUrl(ChatGptProjectSettings.getUrl(this))
@@ -878,6 +879,7 @@ class WebChatActivity : Activity() {
         resumed = true
         if (cycleToken != null && !VoiceCycle.matches(cycleToken)) { releaseWebView(); finish(); return }
         updateLockScreenUi()
+        cycleToken?.let { token -> localHud?.post { WaitingAudio.coverShown(this, token) } }
         if (cycleToken != null) State.setAttempt(this, "ChatGPT visibile; attendo pagina e controllo Voice.")
     }
 

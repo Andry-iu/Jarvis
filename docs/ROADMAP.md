@@ -1,3 +1,7 @@
+# Aggiornamento 0.5.54 — audio di attesa
+
+Implementati: selezione e copia privata del file, opzione persistente ON/OFF, loop da wake e avvio manuale, stop alla conferma Voice attiva e sulle uscite dal ciclo. Test/build locali e collaudo dispositivo distinti in VERIFICATION.md. Prova Galaxy ancora aperta.
+
 # Roadmap — JarvisWake
 
 ## Release 0.5.53 — cover e mute microfono
