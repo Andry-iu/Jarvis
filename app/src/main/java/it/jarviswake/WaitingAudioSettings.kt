@@ -17,6 +17,12 @@ internal object WaitingAudioSettings {
         if (!enabled) WaitingAudio.stop()
     }
     fun name(context: Context): String? = prefs(context).getString("name", null)
+    fun volume(context: Context) = prefs(context).getInt("volume_percent", 100).coerceIn(0, 100)
+    fun setVolume(context: Context, percent: Int) {
+        val value = percent.coerceIn(0, 100)
+        prefs(context).edit().putInt("volume_percent", value).apply()
+        WaitingAudio.updateVolume(value)
+    }
 
     /** Copy while the picker grant is valid; preserve the old file on any failure. */
     fun import(context: Context, uri: Uri, done: (Boolean) -> Unit) {

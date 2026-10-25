@@ -105,6 +105,24 @@ class MainActivity : Activity() {
             }, waitingAudioRequest)
         }
         text(getString(R.string.waiting_audio_description), 13f)
+        val audioVolumeLabel = text(getString(R.string.waiting_audio_volume,
+            WaitingAudioSettings.volume(this)), 16f)
+        layout.addView(SeekBar(this).apply {
+            id = View.generateViewId()
+            audioVolumeLabel.labelFor = id
+            max = 100
+            progress = WaitingAudioSettings.volume(this@MainActivity)
+            contentDescription = audioVolumeLabel.text
+            setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+                override fun onProgressChanged(seekBar: SeekBar, value: Int, fromUser: Boolean) {
+                    audioVolumeLabel.text = getString(R.string.waiting_audio_volume, value)
+                    seekBar.contentDescription = audioVolumeLabel.text
+                    if (fromUser) WaitingAudioSettings.setVolume(this@MainActivity, value)
+                }
+                override fun onStartTrackingTouch(seekBar: SeekBar) = Unit
+                override fun onStopTrackingTouch(seekBar: SeekBar) = Unit
+            })
+        }, LinearLayout.LayoutParams(-1, -2))
         button("Avvia ascolto Hey Jarvis") { requestStart() }
         button("Ferma ascolto") {
             startService(Intent(this, WakeService::class.java).setAction("STOP"))

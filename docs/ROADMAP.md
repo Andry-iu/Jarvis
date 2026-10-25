@@ -1,3 +1,7 @@
+# Aggiornamento 0.5.55 — volume audio di attesa
+
+Implementato cursore 0–100% con salvataggio automatico, applicato al solo loop di attesa. Default 100%; zero silenzioso. Collaudo sul Galaxy ancora aperto.
+
 # Aggiornamento 0.5.54 — audio di attesa
 
 Implementati: selezione e copia privata del file, opzione persistente ON/OFF, loop da wake e avvio manuale, stop alla conferma Voice attiva e sulle uscite dal ciclo. Test/build locali e collaudo dispositivo distinti in VERIFICATION.md. Prova Galaxy ancora aperta.

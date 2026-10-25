@@ -1,3 +1,13 @@
+# 0.5.55 — volume audio di attesa persistente
+
+- Cursore 0–100% nella schermata principale, etichetta percentuale accessibile e salvataggio automatico in SharedPreferences a ogni modifica dell’utente. Default 100% per mantenere il comportamento 0.5.54; zero è silenzioso. Il livello è indipendente dal file scelto e dall’interruttore ON/OFF.
+- Applicazione ai due canali del solo MediaPlayer di attesa tramite `setVolume`, dopo la preparazione e prima di `start()`. Durante la preparazione viene letto il valore salvato più recente; durante la riproduzione il cursore aggiorna il player pronto. Nessuna chiamata a `AudioManager.setStreamVolume`, nessuna modifica al volume globale o al player WebView. Il volume reale dipende anche dal volume multimediale/routing Android.
+- Riferimento primario consultato: [MediaPlayer.setVolume nei sorgenti AOSP](https://github.com/aosp-mirror/platform_frameworks_base/blob/master/media/java/android/media/MediaPlayer.java), valori scalari 0–1 e distinzione dal volume di tutti gli stream di AudioManager. La percentuale viene limitata a 0–100 e convertita in un guadagno 0–1.
+- Verifiche locali: build JDK 17 / Gradle Wrapper 8.13 / SDK 36 / Build Tools 36.0.0; 63 test JVM e le suite `test-web-voice.cjs` e `test-cover-microphone.cjs` superati; lint 0 errori e 20 avvisi. Nessuna prova su dispositivo collegato.
+- APK permanente `JarvisWake-0.5.55-debug-arm64-permanent.apk`: `it.jarviswake`, 0.5.55 / 77, minSdk 31, target SDK 36, ARM64, Vosk incluso; 56.027.989 byte. ZIP CRC, allineamento 16 KB, firma v3 per API 31+ e v2 per API 24–27 verificati. Certificato SHA-256 `a8ddfbe2b78be5460e72df57afbc3434411e3cc27328b13bc16b4daaba13389a`, verificato prima e dopo la firma; temporanei segreti rimossi. SHA-256 APK `f9ca2bd50f1c35b848f4f0b34d6bb2e0228c800cc8e18d92ea89836a7e4a4d03`, in `releases/0.5.55/SHA256SUMS`.
+
+- Collaudo Galaxy aperto: impostare 0%, un valore intermedio e 100%; chiudere e riaprire l’app e controllare il valore; provare wake, avvio manuale e ripresa del ciclo nascosto. Verificare volume realmente udibile, stop su Voice e volume della risposta ChatGPT. I test JVM non verificano SharedPreferences Android, slider o MediaPlayer reali.
+
 # 0.5.54 — audio di attesa opzionale
 
 - Selettore Android ACTION_OPEN_DOCUMENT per audio, copia su worker nella memoria privata esclusa dal backup, limite 64 MiB, validazione con MediaPlayer prima della sostituzione atomica del file precedente. Nessun permesso generale di lettura memoria. Nome selezionato visibile nella schermata principale; interruttore salvato separatamente, inizialmente OFF.

@@ -13,6 +13,7 @@ internal object WaitingAudio {
     private val state = WaitingAudioState()
     private val main = Handler(Looper.getMainLooper())
     private var player: MediaPlayer? = null
+    private var playerPrepared = false
     private var audioManager: AudioManager? = null
     private var focusRequest: AudioFocusRequest? = null
     private val timeout = Runnable { stop() }
@@ -48,6 +49,8 @@ internal object WaitingAudio {
             candidate.setOnPreparedListener {
                 if (player === it && state.mayPlay(token) && VoiceCycle.matches(token)) {
                     try {
+                        playerPrepared = true
+                        updateVolume(WaitingAudioSettings.volume(context))
                         it.isLooping = true
                         it.start()
                     } catch (_: RuntimeException) { stop() }
@@ -67,9 +70,17 @@ internal object WaitingAudio {
         if (state.finish(token)) stop()
     }
 
+    fun updateVolume(percent: Int) {
+        if (!playerPrepared) return // Preparation will read the latest saved setting.
+        val gain = percent.coerceIn(0, 100) / 100f
+        try { player?.setVolume(gain, gain) }
+        catch (_: IllegalStateException) { stop() }
+    }
+
     fun stop() {
         main.removeCallbacks(timeout)
         val previous = player
+        playerPrepared = false
         player = null // Invalidate queued prepared/error callbacks before releasing.
         previous?.release()
         focusRequest?.let { audioManager?.abandonAudioFocusRequest(it) }

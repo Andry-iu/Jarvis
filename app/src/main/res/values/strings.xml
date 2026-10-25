@@ -28,7 +28,8 @@
     <!-- 0.5.54: private imported waiting sound and persistent opt-in. -->
     <string name="waiting_audio_enabled">Audio di attesa attivo</string>
     <string name="waiting_audio_choose">Scegli audio di attesa</string>
-    <string name="waiting_audio_description">Se attivo, ripete il file all’apertura della cover, da wake word o avvio manuale, fino alla conferma di Voice attiva (massimo 40 secondi). Volume multimediale del telefono. File audio fino a 64 MB; conservato solo nell’app.</string>
+    <string name="waiting_audio_description">Se attivo, ripete il file all’apertura della cover, da wake word o avvio manuale, fino alla conferma di Voice attiva (massimo 40 secondi). Il volume scelto viene salvato e dipende anche dal volume multimediale del telefono; 0% rende silenzioso il loop. File audio fino a 64 MB; conservato solo nell’app.</string>
+    <string name="waiting_audio_volume">Volume audio di attesa: %1$d%%</string>
     <string name="waiting_audio_none">Nessun audio selezionato.</string>
     <string name="waiting_audio_file">Audio salvato: %1$s</string>
     <string name="waiting_audio_selected">Audio selezionato</string>

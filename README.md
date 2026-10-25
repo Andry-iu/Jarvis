@@ -1,4 +1,4 @@
-# JarvisWake 0.5.54 — assistente Android e ChatGPT Voice
+# JarvisWake 0.5.55 — assistente Android e ChatGPT Voice
 
 App Kotlin per Android 12–16 (minSdk 31, targetSdk 36), APK ARM64 destinato alla prova su Samsung Galaxy S24+ Android 16.
 
@@ -17,6 +17,10 @@ La 0.5.50 aggiunge **Svuota cache WebView**. Poiché l'utente ha segnalato che l
 L'utente ha provato anche la 0.5.51: dopo il reset completo e un nuovo login, l'errore rosso Voice è rimasto. La diagnostica 0.5.52 ha registrato un HTTP 404 da `persistent.oaistatic.com` durante il ciclo. Aprendo in Chrome l'URL completo del modulo, l'utente ha ricevuto `BlobNotFound`: l'asset remoto non esiste all'indirizzo richiesto e la correzione deve avvenire lato servizio ChatGPT.
 
 Nella diagnostica successiva, esportata il 24 ottobre 2026 alle 17:46, tre cicli hanno ciascuno un solo `GREETING_SENT` e un HTTP 404 da `persistent.oaistatic.com`. Il monitor ha riportato `assistantNodes=0` dopo l'invio: il log non mostra il testo della risposta e non permette di verificare se ChatGPT abbia seguito il prompt. L'utente ha osservato premesse e saluti ridondanti; l'invio singolo da Jarvis non garantisce una risposta conforme. Non è stata implementata una correzione.
+
+## Volume audio di attesa 0.5.55
+
+Cursore «Volume audio di attesa» da 0 a 100%, con percentuale visibile e salvataggio automatico. Il livello viene mantenuto riaprendo l’app e nei cicli successivi; il valore iniziale è 100% per conservare il comportamento precedente. Zero silenzia il loop. La regolazione agisce sui due canali del solo MediaPlayer di attesa, anche quando già in riproduzione; resta soggetta al volume multimediale e al dispositivo di uscita del telefono.
 
 ## Audio di attesa 0.5.54
 
