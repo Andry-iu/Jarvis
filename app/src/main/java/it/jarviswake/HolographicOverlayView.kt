@@ -38,6 +38,7 @@ class HolographicOverlayView(context: Context) : View(context) {
     private var backgroundAlpha = if (CoverSettings.isOpaque(context)) 255 else 128
     private var onSingleTap: (() -> Unit)? = null
     private var onBelowTap: (() -> Unit)? = null
+    private var opacityBottomAnchor: View? = null
     private var onClose: (() -> Unit)? = null
     private var onExport: (() -> Unit)? = null
     private var onHide: (() -> Unit)? = null
@@ -69,6 +70,20 @@ class HolographicOverlayView(context: Context) : View(context) {
     }
 
     private val gestureHandler = Handler(Looper.getMainLooper())
+
+    /** The sibling unlock button keeps its own touch handling and an empty margin above it. */
+    fun setOpacityBottomAnchor(view: View) {
+        opacityBottomAnchor = view
+    }
+
+    private fun opacityBottom(): Float {
+        val anchor = opacityBottomAnchor?.takeIf { it.visibility == VISIBLE } ?: return height.toFloat()
+        val anchorLocation = IntArray(2)
+        val coverLocation = IntArray(2)
+        anchor.getLocationOnScreen(anchorLocation)
+        getLocationOnScreen(coverLocation)
+        return anchorLocation[1] - coverLocation[1] - 16f * resources.displayMetrics.density
+    }
     private var pendingSingleTap: Runnable? = null
     private var downX = 0f
     private var downY = 0f
@@ -112,7 +127,7 @@ class HolographicOverlayView(context: Context) : View(context) {
                 val dy = event.y - downY
                 val slop = 36f * resources.displayMetrics.density
                 if (kotlin.math.abs(dx) > slop || kotlin.math.abs(dy) > slop) return true
-                val target = CoverTapTarget.at(event.x, event.y, width, height)
+                val target = CoverTapTarget.at(event.x, event.y, width, height, opacityBottom())
                 if (target == 0) return true
                 if (target == CoverTapTarget.BELOW) {
                     onBelowTap?.invoke()

@@ -23,6 +23,8 @@ Nella diagnostica successiva, esportata il 24 ottobre 2026 alle 17:46, tre cicli
 Tocco singolo centrale: mute/riattivazione delle tracce microfono Voice; animazione fucsia scuro tendente al rosso durante il mute confermato. Tocco sotto i cerchi: alterna opaco/semitrasparente. Doppio tocco centrale: chiude il ciclo; doppio tocco in alto a destra: esporta diagnostica. Swipe verso il basso: Home; swipe sinistro: chat interattiva.
 Il tocco centrale è confermato dopo la finestra del doppio tocco, così la chiusura non provoca un mute intermedio. Il mute riguarda le tracce del microfono nella sessione WebView, non la riproduzione di ChatGPT. Prima dell’avvio di Voice non modifica il microfono. Il collaudo sul Galaxy resta necessario.
 
+
+La zona della semitrasparenza è limitata alla fascia sotto i cerchi e, quando «Sblocca telefono» è visibile, termina 16 dp prima del pulsante. Il pulsante conserva la precedenza ai tocchi; la parte bassa dello schermo non è un comando di opacità.
 ## Documentazione e continuità
 
 - [docs/INSTALLAZIONE_NUOVO_DISPOSITIVO.md](docs/INSTALLAZIONE_NUOVO_DISPOSITIVO.md): checklist completa per installazione pulita, permessi Android, Accessibilità, assistente, firma APK e collaudo su telefono bloccato.

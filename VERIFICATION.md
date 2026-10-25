@@ -3,12 +3,13 @@
 Verifica locale del 25 ottobre 2026, JDK 17 / Gradle 8.13 / SDK 36 / Build Tools 36.0.0.
 
 - Tocco singolo centrale: alterna mute e riattivazione delle tracce audio WebView; animazione fucsia scuro/rosso dopo conferma del mute. Il tocco sotto i cerchi alterna l’opacità persistente.
+- La semitrasparenza è limitata alla fascia sotto i cerchi e termina 16 dp sopra il pulsante Sblocca telefono quando visibile, misurandone la posizione sullo schermo. Le prove coprono il limite superiore del pulsante e l’esclusione del fondo dello schermo.
 - Doppio tocco centrale, esportazione diagnostica e swipe mantengono le azioni precedenti. I tocchi singoli pendenti sono rimossi quando la cover viene staccata.
 - Stato mute condiviso fra cover interna ed esterna, mantenuto durante il ciclo e azzerato per un nuovo ciclo. Le nuove acquisizioni audio ereditano il mute prima che lo stream venga restituito alla pagina. Riattivazione senza alterare tracce già disabilitate dalla pagina; audio in uscita invariato. Nessun campione audio letto o registrato.
 - `node scripts/test-web-voice.cjs` e `node scripts/test-cover-microphone.cjs`: superati. Le prove del mute coprono ingresso assente/terminato, mute/unmute, nuove tracce durante mute e conservazione dell’audio in uscita.
-- `bash gradlew --offline --no-daemon --max-workers=4 testDebugUnitTest lintDebug assembleDebug -PjarvisUnsigned=true`: BUILD SUCCESSFUL. 54 test JVM superati, 0 falliti/errori/saltati; quattro nuove prove delle aree di tocco. Lint: 0 errori e 20 avvisi.
+- `bash gradlew --offline --no-daemon --max-workers=4 testDebugUnitTest lintDebug assembleDebug -PjarvisUnsigned=true`: BUILD SUCCESSFUL. 56 test JVM superati, 0 falliti/errori/saltati; sei nuove prove delle aree di tocco. Lint: 0 errori e 20 avvisi.
 - APK `it.jarviswake`, 0.5.53 / 75, minSdk 31, target SDK 36, ARM64, modello Vosk incluso. Integrità ZIP e allineamento 16 KB verificati. Firma permanente v3 per API 31+ e v2 separatamente per API 24–27; certificato SHA-256 `a8ddfbe2b78be5460e72df57afbc3434411e3cc27328b13bc16b4daaba13389a`.
-- SHA-256 APK firmato: `e6e933aecc9dc402ce120ff7d4da1d99ab7a40e27ac33e6d3468d6fa0b29680c`. I temporanei con chiave e password sono stati rimossi; APK e segreti fuori da Git.
+- SHA-256 APK firmato: `f0ee21b2222b776620b19d019c14a0e1979f221ee760bab0b075fcb04977f158`. I temporanei con chiave e password sono stati rimossi; APK e segreti fuori da Git.
 - Non è stato eseguito il collaudo sul Galaxy S24+: verificare mute effettivo della voce trasmessa, ripresa al tocco successivo, colore e area della semitrasparenza con cover interna ed esterna. La modifica non corregge il precedente HTTP 404 del modulo Voice remoto.
 
 # 0.5.52 — diagnostica fetch Voice, APK firmato

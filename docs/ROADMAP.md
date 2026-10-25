@@ -5,6 +5,8 @@
 Tocco singolo centrale: mute/riattivazione delle tracce microfono Voice; animazione fucsia scuro tendente al rosso durante il mute confermato. Tocco sotto i cerchi: alterna opaco/semitrasparente. Doppio tocco centrale: chiude il ciclo; doppio tocco in alto a destra: esporta diagnostica. Swipe verso il basso: Home; swipe sinistro: chat interattiva.
 Mute applicato alle tracce audio senza fermare Voice o modificare l’audio in uscita; errore visibile se non ci sono tracce attive. Verifiche locali in VERIFICATION.md; prova sul Galaxy da eseguire.
 
+La zona della semitrasparenza è limitata alla fascia sotto i cerchi e, quando «Sblocca telefono» è visibile, termina 16 dp prima del pulsante. Il pulsante conserva la precedenza ai tocchi; la parte bassa dello schermo non è un comando di opacità.
+
 ## Release 0.5.52 — diagnostica errore modulo Voice
 
 - Registra errori di caricamento delle risorse secondarie con host, codice Android o stato HTTP; classifica messaggi console pertinenti a import dinamici, errori di rete, MIME e CORS. Registra anche la versione del runtime WebView. Non salva URL completi o messaggi della pagina.

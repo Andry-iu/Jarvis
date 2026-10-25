@@ -26,4 +26,15 @@ class CoverTapTargetTest {
         assertEquals(CoverTapTarget.CENTER, CoverTapTarget.at(1200f, 464f, 2400, 1080))
         assertEquals(CoverTapTarget.BELOW, CoverTapTarget.at(1200f, 900f, 2400, 1080))
     }
+
+    @Test fun opacityEndsBeforeTheUnlockButtonAndItsMargin() {
+        assertEquals(CoverTapTarget.BELOW, CoverTapTarget.at(540f, 1450f, 1080, 2400, 1500f))
+        assertEquals(CoverTapTarget.NONE, CoverTapTarget.at(540f, 1500f, 1080, 2400, 1500f))
+        assertEquals(CoverTapTarget.NONE, CoverTapTarget.at(540f, 1580f, 1080, 2400, 1500f))
+        assertEquals(CoverTapTarget.CENTER, CoverTapTarget.at(540f, 1032f, 1080, 2400, 1500f))
+    }
+
+    @Test fun bottomOfScreenIsNotAnOpacityControlEvenWithoutUnlockButton() {
+        assertEquals(CoverTapTarget.NONE, CoverTapTarget.at(540f, 2100f, 1080, 2400))
+    }
 }

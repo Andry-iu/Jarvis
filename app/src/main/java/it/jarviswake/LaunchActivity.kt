@@ -73,6 +73,7 @@ class LaunchActivity : Activity() {
         root.addView(unlock, FrameLayout.LayoutParams(-2, -2, Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL).apply {
             bottomMargin = dp(112)
         })
+        hud.setOpacityBottomAnchor(unlock)
         root.setOnApplyWindowInsetsListener { view, insets ->
             val bars = insets.getInsets(WindowInsets.Type.systemBars())
             view.setPadding(bars.left, bars.top, bars.right, bars.bottom)

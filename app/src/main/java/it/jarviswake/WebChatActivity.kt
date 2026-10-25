@@ -846,6 +846,7 @@ class WebChatActivity : Activity() {
             }
             root.addView(localUnlock, FrameLayout.LayoutParams(-2, -2,
                 Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL).apply { bottomMargin = (112 * density).toInt() })
+            localUnlock?.let { localHud?.setOpacityBottomAnchor(it) }
             updateLockScreenUi()
         }
         root.setOnApplyWindowInsetsListener { view, insets ->

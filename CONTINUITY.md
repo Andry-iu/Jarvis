@@ -1,6 +1,8 @@
 Aggiornamento 0.5.53 / versionCode 75 — modifica cover richiesta il 25 ottobre 2026.
 Tocco singolo centrale: mute/riattivazione delle tracce microfono Voice; animazione fucsia scuro tendente al rosso durante il mute confermato. Tocco sotto i cerchi: alterna opaco/semitrasparente. Doppio tocco centrale: chiude il ciclo; doppio tocco in alto a destra: esporta diagnostica. Swipe verso il basso: Home; swipe sinistro: chat interattiva.
 Il mute è per ciclo, condiviso fra cover locale ed esterna; viene applicato alle tracce audio WebView e alle nuove acquisizioni. Il colore cambia solo dopo conferma dello script. Un ciclo nuovo parte senza mute. Nessuna modifica al saluto o al problema HTTP 404 di Voice; collaudo fisico da eseguire. Verifiche della 0.5.53 in VERIFICATION.md.
+La zona della semitrasparenza è limitata alla fascia sotto i cerchi e, quando «Sblocca telefono» è visibile, termina 16 dp prima del pulsante. Il pulsante conserva la precedenza ai tocchi; la parte bassa dello schermo non è un comando di opacità.
+
 
 Aggiornato il 24 ottobre 2026. La 0.5.51 ha richiesto un nuovo login dopo la cancellazione dei dati locali, ma l'errore rosso Voice è rimasto. La diagnostica 0.5.52 registra, nello stesso ciclo Voice fallito, HTTP 404 da `persistent.oaistatic.com` circa 225 ms dopo l'attivazione. L'utente ha poi aperto in Chrome l'URL completo del modulo segnalato e ha ricevuto `BlobNotFound` dal servizio di storage remoto. Questo conferma che l'oggetto richiesto non esiste a quell'indirizzo; non è un problema risolvibile svuotando i dati locali di Jarvis.
 
