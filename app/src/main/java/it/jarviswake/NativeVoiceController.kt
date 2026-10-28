@@ -19,6 +19,8 @@ internal class NativeVoiceController(private val service: VoiceAccessibilityServ
     private var stableSince = 0L
     private var lastStatus: String? = null
     private var lastProbe: Pair<Int, Int>? = null
+    private var exporting = false
+    private var snapshotPhase = ""
     private var snapshotCount = 0
     private var snapshotAt = 0L
     private var snapshotFingerprint: Int? = null
@@ -30,7 +32,7 @@ internal class NativeVoiceController(private val service: VoiceAccessibilityServ
             singleTap = { toggleMute() },
             belowTap = { CoverSettings.setOpaque(service, !CoverSettings.isOpaque(service)) },
             close = { VoiceCycle.cancel(service, token, "Ciclo nativo chiuso.") },
-            export = { status("TERMINA IL CICLO PRIMA DI ESPORTARE") },
+            export = { exportControls() },
             hide = { VoiceCycle.cancel(service, token, "Voice nativa terminata.") },
             revealChat = { status("MODALITÀ APP: COVER MANTENUTA") }
         )
@@ -45,6 +47,39 @@ internal class NativeVoiceController(private val service: VoiceAccessibilityServ
             NativeChatSettings.launch(service)
             DiagnosticLog.record(service, DiagnosticLog.Event.NATIVE_SHORTCUT_OPENED, token)
         }
+    }
+
+    private fun exportControls() {
+        if (exporting) return
+        val current = nodes()
+        if (current.isEmpty()) { status("CHATGPT NON VISIBILE: RIPROVA L'ESPORTAZIONE"); return }
+        NativeControlSnapshot.save(service, token, 1,
+            "phase=manual_export startSent=$startSent stopping=${ending != null}\n" + NativeControlSnapshot.describe(current))
+        exporting = true
+        hud?.visibility = android.view.View.GONE
+        runCatching { DiagnosticExportActivity.open(service, token) }.onFailure { restoreAfterExport() }
+    }
+    fun restoreAfterExport() {
+        if (!VoiceCycle.matches(token)) return
+        exporting = false
+        hud?.visibility = android.view.View.VISIBLE
+    }
+    private fun captureControls(nodes: List<AccessibilityNodeInfo>, phase: String) {
+        if (phase != snapshotPhase) {
+            snapshotPhase = phase
+            snapshotCount = 0
+            snapshotAt = 0L
+            snapshotFingerprint = null
+        }
+        val now = SystemClock.elapsedRealtime()
+        if (snapshotCount >= 3 || (snapshotCount != 0 && now - snapshotAt < 1500L)) return
+        snapshotAt = now
+        val snapshot = NativeControlSnapshot.describe(nodes)
+        val fingerprint = snapshot.hashCode()
+        if (fingerprint == snapshotFingerprint) return
+        snapshotFingerprint = fingerprint
+        snapshotCount++
+        NativeControlSnapshot.save(service, token, snapshotCount, "phase=$phase\n" + snapshot)
     }
 
     private fun nodes(): List<AccessibilityNodeInfo> {
@@ -80,7 +115,7 @@ internal class NativeVoiceController(private val service: VoiceAccessibilityServ
         }
     }
     fun poll() {
-        if (!VoiceCycle.matches(token)) return
+        if (!VoiceCycle.matches(token) || exporting) return
         val nodes = nodes()
         if (nodes.isEmpty()) { status("ATTENDO LA FINESTRA CHATGPT"); return }
         val stop = target(nodes, NativeVoiceLabels.stop)
@@ -89,6 +124,7 @@ internal class NativeVoiceController(private val service: VoiceAccessibilityServ
         val active = stop != null && (mute != null || unmute != null)
         val starts = targets(nodes, NativeVoiceLabels.start)
         val start = starts.singleOrNull()
+        if (startSent) captureControls(nodes, if (ending != null) "stopping" else "after_voice_command")
         if (ending != null) {
             if (stop != null && !stopSent) {
                 stopSent = true
@@ -99,24 +135,16 @@ internal class NativeVoiceController(private val service: VoiceAccessibilityServ
                 val message = ending!!
                 startSent = false
                 service.finishNative(token, message)
-            } else status("ARRESTO DA VERIFICARE — MICROFONO WAKE SOSPESO")
+            } else status(if (stop == null && !stopSent)
+                "CHIUSURA NON RICONOSCIUTA — DOPPIO TOCCO IN ALTO A DESTRA: ESPORTA"
+                else "ARRESTO DA VERIFICARE — MICROFONO WAKE SOSPESO")
             return
         }
         if (!startSent) {
             if (active) { VoiceCycle.cancel(service, token, "Voice era già attiva: nessun nuovo comando inviato."); return }
             if (!projectVisible(nodes)) { status("ATTENDO CONFERMA DEL PROGETTO"); return }
             if (start == null) {
-                val now = SystemClock.elapsedRealtime()
-                if (snapshotCount < 3 && (snapshotCount == 0 || now - snapshotAt >= 1500L)) {
-                    snapshotAt = now
-                    val snapshot = NativeControlSnapshot.describe(nodes)
-                    val fingerprint = snapshot.hashCode()
-                    if (fingerprint != snapshotFingerprint) {
-                        snapshotFingerprint = fingerprint
-                        snapshotCount++
-                        NativeControlSnapshot.save(service, token, snapshotCount, snapshot)
-                    }
-                }
+                captureControls(nodes, "before_voice_command")
                 val labelled = nodes.count { labels(it).any(NativeVoiceLabels.start::contains) }
                 val probe = labelled to starts.size
                 if (lastProbe != probe) {

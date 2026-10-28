@@ -26,6 +26,10 @@ class VoiceAccessibilityService : AccessibilityService() {
         private const val GREETING_DONE = "greeting_done"
         private var instance = WeakReference<VoiceAccessibilityService>(null)
 
+        fun restoreNativeAfterExport(token: String?) {
+            instance.get()?.nativeController?.takeIf { it.token == token }?.restoreAfterExport()
+        }
+
         fun launchNative(token: String): Boolean {
             val service = instance.get() ?: return false
             val controller = NativeVoiceController(service, token)

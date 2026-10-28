@@ -13,10 +13,17 @@ import java.util.zip.ZipOutputStream
 class DiagnosticExportActivity : Activity() {
     companion object {
         private const val REQUEST_EXPORT = 901
-        fun open(context: Context) {
+        private const val NATIVE_TOKEN = "native_export_token"
+        fun open(context: Context, nativeToken: String? = null) {
             context.startActivity(Intent(context, DiagnosticExportActivity::class.java)
+                .putExtra(NATIVE_TOKEN, nativeToken)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_ANIMATION))
         }
+    }
+
+    override fun onDestroy() {
+        if (isFinishing) VoiceAccessibilityService.restoreNativeAfterExport(intent.getStringExtra(NATIVE_TOKEN))
+        super.onDestroy()
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
