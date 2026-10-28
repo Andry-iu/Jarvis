@@ -105,6 +105,10 @@ class LaunchActivity : Activity() {
     private fun advance() {
         if (!VoiceCycle.matches(token)) { finish(); return }
         if (handedOff || !resumed || !hasWindowFocus()) return
+        if (NativeChatSettings.enabled(this) && getSystemService(KeyguardManager::class.java).isKeyguardLocked) {
+            hud.setStatus("SBLOCCA IL TELEFONO PER CHATGPT APP")
+            return
+        }
         // Both this Activity and the cycle's Web Activity can remain resumed above keyguard.
         if (VoiceCycle.openWeb(this, token, resumed, hasWindowFocus())) {
             handedOff = true

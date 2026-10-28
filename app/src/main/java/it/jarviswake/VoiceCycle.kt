@@ -132,6 +132,7 @@ internal object VoiceCycle {
     }
 
     fun cancel(context: Context, token: String, message: String) {
+        if (matches(token) && VoiceAccessibilityService.endNative(context, token, message)) return
         if (!state.cancel(token)) return
         WaitingAudio.stop()
         if (hideStopInFlightToken == token) hideStopInFlightToken = null

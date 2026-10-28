@@ -26,6 +26,27 @@ class VoiceAccessibilityService : AccessibilityService() {
         private const val GREETING_DONE = "greeting_done"
         private var instance = WeakReference<VoiceAccessibilityService>(null)
 
+        fun launchNative(token: String): Boolean {
+            val service = instance.get() ?: return false
+            val controller = NativeVoiceController(service, token)
+            service.nativeController = controller
+            service.preferences.edit().putString("native_token", token).apply()
+            controller.launch()
+            return true
+        }
+
+        fun endNative(context: Context, token: String, message: String): Boolean {
+            val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            if (prefs.getString("native_token", null) != token) return false
+            val controller = instance.get()?.nativeController?.takeIf { it.token == token }
+            val mustWait = controller?.requestEnd(message) ?: !VoiceCycle.touchGate.canDispatch
+            if (mustWait) {
+                prefs.edit().putBoolean("native_stop", true).apply()
+                State.setAttempt(context, "Arresto Voice nativa da confermare; microfono wake sospeso.")
+            }
+            return mustWait
+        }
+
         fun isEnabled(context: Context): Boolean {
             val expected = ComponentName(context, VoiceAccessibilityService::class.java)
             val enabled = Settings.Secure.getString(context.contentResolver,
@@ -74,6 +95,14 @@ class VoiceAccessibilityService : AccessibilityService() {
     }
 
     private val main = Handler(Looper.getMainLooper())
+    private var nativeController: NativeVoiceController? = null
+
+    internal fun finishNative(token: String, message: String) {
+        nativeController?.destroy()
+        nativeController = null
+        preferences.edit().remove("native_token").remove("native_stop").apply()
+        VoiceCycle.cancel(this, token, message)
+    }
     private val preferences by lazy { getSharedPreferences(PREFS, Context.MODE_PRIVATE) }
     private var overlay: HolographicOverlayView? = null
     private var overlayFailed = false
@@ -106,6 +135,8 @@ class VoiceAccessibilityService : AccessibilityService() {
     }
 
     private fun stopPolling() {
+        nativeController?.destroy()
+        nativeController = null
         main.removeCallbacks(poll)
         probePending = false
         greetingPending = false
@@ -121,6 +152,27 @@ class VoiceAccessibilityService : AccessibilityService() {
 
     private fun processAutomation() {
         val token = currentToken() ?: return
+        nativeController?.let {
+            runCatching { it.poll() }.onFailure {
+                VoiceCycle.cancel(this, token, "Interazione nativa non disponibile; arresto da verificare.")
+            }
+            return
+        }
+        if (preferences.getString("native_token", null) == token) {
+            if (!getSystemService(KeyguardManager::class.java).isKeyguardLocked) {
+                val recovered = NativeVoiceController(this, token)
+                nativeController = recovered
+                runCatching {
+                    recovered.launch(openShortcut = false)
+                    if (preferences.getBoolean("native_stop", false)) recovered.requestEnd("Ciclo nativo chiuso.")
+                }.onFailure {
+                    recovered.destroy()
+                    nativeController = null
+                    State.setAttempt(this, "Cover nativa non disponibile; automazione sospesa.")
+                }
+            }
+            return
+        }
         if (VoiceCycle.hiddenForWake) return
         showOverlay(token)
         if (VoiceCycle.phase == VoiceCycleState.Phase.VOICE && !activeShown) {

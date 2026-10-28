@@ -151,9 +151,35 @@ class MainActivity : Activity() {
             startService(Intent(this, WakeService::class.java).setAction("STOP"))
         }
         button("Imposta Jarvis come assistente del telefono") { requestAssistantRole() }
+        val destination = RadioGroup(this).apply { orientation = RadioGroup.VERTICAL }
+        val webOption = RadioButton(this).apply { id = View.generateViewId(); text = "ChatGPT nel WebView" }
+        val nativeOption = RadioButton(this).apply { id = View.generateViewId(); text = "App ChatGPT del telefono (shortcut)" }
+        destination.addView(webOption)
+        destination.addView(nativeOption)
+        destination.check(if (NativeChatSettings.enabled(this)) nativeOption.id else webOption.id)
+        destination.setOnCheckedChangeListener { _, checked ->
+            if (VoiceCycle.active) {
+                destination.check(if (NativeChatSettings.enabled(this)) nativeOption.id else webOption.id)
+                Toast.makeText(this, "Termina prima il ciclo attivo.", Toast.LENGTH_SHORT).show()
+            } else NativeChatSettings.enable(this, checked == nativeOption.id)
+        }
+        layout.addView(destination)
+        button("Seleziona collegamento ChatGPT") { selectNativeShortcut() }
+        button("Prova collegamento app ChatGPT (senza Voice)") {
+            if (VoiceCycle.active) Toast.makeText(this, "Termina prima il ciclo attivo.", Toast.LENGTH_SHORT).show()
+            else runCatching { NativeChatSettings.launch(this) }.onFailure {
+                Toast.makeText(this, it.message ?: "Collegamento non disponibile.", Toast.LENGTH_LONG).show()
+            }
+        }
         button("Configura accesso a ChatGPT") {
-            ChatGptPreloader.discard()
-            startActivity(Intent(this, WebChatActivity::class.java))
+            if (NativeChatSettings.enabled(this)) {
+                runCatching { NativeChatSettings.launch(this) }.onFailure {
+                    Toast.makeText(this, it.message ?: "Collegamento non disponibile.", Toast.LENGTH_LONG).show()
+                }
+            } else {
+                ChatGptPreloader.discard()
+                startActivity(Intent(this, WebChatActivity::class.java))
+            }
         }
         button("Imposta modello e livello ChatGPT") { openChatSettings() }
         button(getString(R.string.chatgpt_webview_clear_cache)) {
@@ -256,6 +282,48 @@ class MainActivity : Activity() {
         }
     }.getOrNull()?.takeIf { it.isNotBlank() } ?: ""
 
+    private fun selectNativeShortcut() {
+        if (VoiceCycle.active) {
+            Toast.makeText(this, "Termina prima il ciclo attivo.", Toast.LENGTH_LONG).show()
+            return
+        }
+        val shortcuts = try { NativeChatSettings.shortcuts(this) } catch (e: RuntimeException) {
+            android.app.AlertDialog.Builder(this).setMessage(e.message ?: "Shortcut non accessibili.")
+                .setPositiveButton("OK", null).show()
+            return
+        }
+        if (shortcuts.isEmpty()) {
+            android.app.AlertDialog.Builder(this)
+                .setMessage("ChatGPT non espone collegamenti accessibili a Jarvis. Crea il collegamento al progetto nell'app ChatGPT e verifica che Jarvis sia l'assistente selezionato. Nessun altro collegamento verrà aperto al suo posto.")
+                .setPositiveButton("OK", null).show()
+            return
+        }
+        android.app.AlertDialog.Builder(this).setTitle("Collegamento al progetto ChatGPT")
+            .setItems(shortcuts.map { it.shortLabel?.toString().orEmpty() }.toTypedArray()) { _, index ->
+                val selected = shortcuts[index]
+                val projectName = EditText(this).apply {
+                    setSingleLine(true)
+                    setText(NativeChatSettings.project(this@MainActivity))
+                    hint = "Nome esatto del progetto nella pagina ChatGPT"
+                }
+                val dialog = android.app.AlertDialog.Builder(this)
+                    .setTitle("Conferma nome progetto")
+                    .setMessage("Jarvis avvierà Voice soltanto quando questo nome è visibile nella pagina ChatGPT. Il collegamento selezionato rimane nell'app nativa.")
+                    .setView(projectName).setNegativeButton("Annulla", null).setPositiveButton("Salva", null).create()
+                dialog.setOnShowListener {
+                    dialog.getButton(android.app.AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                        if (projectName.text.toString().isBlank()) projectName.error = "Inserisci il nome del progetto"
+                        else {
+                            NativeChatSettings.select(this, selected, projectName.text.toString())
+                            Toast.makeText(this, "Collegamento salvato. Seleziona App ChatGPT per usarlo alla wake.", Toast.LENGTH_LONG).show()
+                            dialog.dismiss()
+                        }
+                    }
+                }
+                dialog.show()
+            }.setNegativeButton("Annulla", null).show()
+    }
+
     private fun requestStart() {
         if (State.running) {
             prepareChatGpt()
@@ -282,6 +350,7 @@ class MainActivity : Activity() {
     }
 
     private fun prepareChatGpt() {
+        if (NativeChatSettings.enabled(this)) return
         if (::contentRoot.isInitialized) ChatGptPreloader.prepare(this, contentRoot)
     }
 
@@ -308,6 +377,12 @@ class MainActivity : Activity() {
 
     private fun openChatSettings() {
         WaitingAudio.stopPreview()
+        if (NativeChatSettings.enabled(this)) {
+            if (!VoiceCycle.active) runCatching { NativeChatSettings.launch(this) }.onFailure {
+                Toast.makeText(this, it.message ?: "Collegamento non disponibile.", Toast.LENGTH_LONG).show()
+            }
+            return
+        }
         if (chatSettingsLayer != null) return
         if (VoiceCycle.active) {
             Toast.makeText(this, "Termina prima il ciclo Voice per modificare la chat.", Toast.LENGTH_SHORT).show()

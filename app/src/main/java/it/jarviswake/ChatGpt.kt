@@ -12,6 +12,10 @@ object ChatGpt {
             return
         }
         try {
+            if (NativeChatSettings.enabled(context)) {
+                check(VoiceAccessibilityService.launchNative(token)) { "Servizio Accessibilità non connesso." }
+                return
+            }
             context.startActivity(Intent(context, WebChatActivity::class.java)
                 .putExtra(WebChatActivity.EXTRA_AUTOMATION, true)
                 .putExtra(VoiceCycle.EXTRA_ID, token)
