@@ -1,3 +1,7 @@
+# Consegna Google Drive 0.5.58 — 28 ottobre 2026
+
+APK permanente consegnato nell’account Google Drive scelto dall’utente. Upload confermato e metadati riletti: JarvisWake-0.5.58-debug-arm64-permanent.apk, 55.733.272 byte, MIME application/vnd.android.package-archive. File: https://drive.google.com/file/d/1y_WD8-6MIKWdrDMdvkh5b_EHJa2Ulv03/view . Nessuna nuova compilazione o firma; stesso artefatto già verificato. Collaudo fisico ancora aperto. Il precedente blocco Library rimane nello storico ma la consegna è completata tramite Drive.
+
 # Completamento firma 0.5.58 — 28 ottobre 2026
 
 - Password di recupero fornita dall’utente e impiegata esclusivamente tramite prompt protetto, senza registrarla in Git o nei file di lavoro. Backup cifrato verificato contro SHA-256 155b8afc72265dae8bfe5e8d4a09a49929375d88e9972bd9b2777723d2502e58 e autenticato in decrittazione.

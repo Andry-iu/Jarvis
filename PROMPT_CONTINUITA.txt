@@ -1,4 +1,4 @@
-Stato 0.5.58: build/test locali superati; APK firmato con il certificato permanente e verificato. Collaudo Galaxy aperto. Consegna Library bloccata da errore di rete prima del trasferimento; vedere VERIFICATION.md.
+Stato 0.5.58: build/test locali superati; APK firmato con il certificato permanente e verificato, consegnato su Google Drive il 28 ottobre 2026. Collaudo Galaxy aperto; vedere VERIFICATION.md.
 
 La 0.5.58 / versionCode 80 richiede ChatGPT desktop sia nel preloader sia nella schermata Voice/login: user agent Linux desktop derivato dalla versione Chromium installata, wide viewport e overview, meta viewport di 980 CSS px a pagina caricata. La policy condivisa evita di riscrivere un UA identico durante handoff. URL progetto, cookie, wake, cover, saluto e singolo comando Voice restano invariati. Nessun percorso dot aggiunto. User-Agent Client Hints restano gestiti dal runtime: non si dichiara equivalenza con Chrome desktop. Layout, login e Voice reali richiedono collaudo sul Galaxy; nessuna correzione garantita per il precedente HTTP 404 remoto.
 

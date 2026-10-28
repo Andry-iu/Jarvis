@@ -1,4 +1,4 @@
-Stato 0.5.58: build/test locali superati; APK firmato con il certificato permanente e verificato. Collaudo Galaxy aperto. Consegna Library bloccata da errore di rete prima del trasferimento; vedere VERIFICATION.md.
+Stato 0.5.58: build/test locali superati; APK firmato con il certificato permanente e verificato, consegnato su Google Drive il 28 ottobre 2026. Collaudo Galaxy aperto; vedere VERIFICATION.md.
 
 # JarvisWake 0.5.58 — assistente Android e ChatGPT Voice
 
