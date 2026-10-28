@@ -10,6 +10,13 @@ class NativeControlResolverTest {
         labels = { listOf(NativeVoiceLabels.normalize(it.label)) }, parent = { it.parent },
         visible = { it.visible }, enabled = { it.enabled }, clickable = { it.clickable })
 
+    @Test fun resolvesExactGalaxyChatGptLabelFromDiagnosticSnapshot() {
+        val button = Node(clickable = true)
+        val icon = Node("Avvia una conversazione vocale", parent = button)
+        assertEquals(listOf(button), resolve(icon, button))
+        assertTrue(resolve(Node("Menu", clickable = true), Node("Microphone", clickable = true)).isEmpty())
+    }
+
     @Test fun labelledChildResolvesToItsButtonOnce() {
         val button = Node("Voice", clickable = true)
         val icon = Node("Voice", parent = button)

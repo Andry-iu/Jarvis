@@ -1,3 +1,11 @@
+# 0.5.64 — etichetta Voice verificata sul Galaxy
+
+- Analizzato ZIP utente jarvis-diagnostics _3_.zip in sola lettura. Nel file native-controls.log tre snapshot del ciclo 09f6344d (20:10:15, 20:10:17, 20:10:18 UTC) espongono esattamente Avvia una conversazione vocale, su android.view.View non cliccabile figlio diretto di android.view.View cliccabile/abilitato con ACTION_CLICK. ID risorsa vuoto; bounds variano fra snapshot, quindi nessuna coordinata fissata. Il log non contiene NATIVE_VOICE_COMMAND per quel ciclo.
+- Identificata mancata corrispondenza: il vocabolario accettava Avvia conversazione vocale ma mancava una. Aggiunta solo la variante rilevata. Ricostruzione offline dei tre snapshot trova ogni volta una sola etichetta esatta e un unico antenato azionabile. Correzione parent/child della 0.5.62 già sufficiente per questa struttura; nessuna ulteriore modifica di algoritmo.
+- Aggiunto test di regressione con etichetta reale su figlio e padre cliccabile; menu e microfono esclusi. 80 test JVM zero errori/fallimenti, tre suite Node superate; testDebugUnitTest lintDebug assembleDebug JDK17/Gradle8.13/SDK36/BuildTools36.0.0 riusciti, lint 0 errori/23 avvisi.
+- APK permanente 0.5.64 / 86, minSdk31 target36 ARM64, 55.782.424 byte. Certificato permanente a8ddfbe2b78be5460e72df57afbc3434411e3cc27328b13bc16b4daaba13389a verificato prima della firma; v3 API31+ e v2 API24–27, CRC ZIP e zipalign16KB superati. SHA256 f54436a7f59b5e0fef5a57860a0204f68293cb76f3e3a54115016614cabbe685. Temporanei firma rimossi.
+- Collaudo Galaxy ancora necessario: aggiornare mantenendo shortcut/nome JarvisRuntime e provare wake; verificare che il comando parta una sola volta e Voice risponda. Correzione della selezione sostenuta dai dati; non dichiarati provati click reale, connessione Voice, controlli di stop/mute o audio bidirezionale. Nessun dump grezzo o ZIP utente committato.
+
 # 0.5.63 — esportazione metadati controlli nativi
 
 - Richiesta esplicita dell’utente: rilevare etichette e salvarle nel log per analizzarle. Il precedente ZIP dimostra nel ciclo acc0e315 apertura shortcut riuscita, zero etichette corrispondenti e zero candidati (19:32:51 UTC), senza NATIVE_VOICE_COMMAND. Nessun testo della UI effettiva disponibile in quel log.
