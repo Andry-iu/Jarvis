@@ -23,6 +23,7 @@ internal object ChatGptPreloader {
     private var web = WeakReference<WebView>(null)
     private var app: Context? = null
     private var pageReady = false
+    private var challengePage = false
     private var stopped = false
     private var polls = 0
     private var foundLogged = false
@@ -94,6 +95,7 @@ internal object ChatGptPreloader {
             webViewClient = object : WebViewClient() {
                 override fun onPageStarted(view: WebView, url: String, favicon: android.graphics.Bitmap?) {
                     if (stopped || web.get() !== view) return
+                    challengePage = false
                     pageReady = false
                     voiceLocation = null
                     polls = 0
@@ -103,6 +105,7 @@ internal object ChatGptPreloader {
 
                 override fun onPageFinished(view: WebView, url: String) {
                     if (stopped || web.get() !== view) return
+                    if (challengePage) return
                     view.evaluateJavascript(DesktopWeb.viewportScript, null)
                     pageReady = true
                     app?.let { DiagnosticLog.record(it, DiagnosticLog.Event.WEB_PRELOAD_PAGE_READY) }
@@ -117,6 +120,15 @@ internal object ChatGptPreloader {
                 ) {
                     if (!request.isForMainFrame || stopped) return
                     app?.let { DiagnosticLog.record(it, DiagnosticLog.Event.WEB_PRELOAD_FAILED) }
+                }
+
+                override fun onReceivedHttpError(view: WebView, request: android.webkit.WebResourceRequest,
+                                                response: android.webkit.WebResourceResponse) {
+                    if (!request.isForMainFrame || stopped) return
+                    challengePage = WebNavigationPolicy.challenged(response.responseHeaders)
+                    app?.let { DiagnosticLog.record(it, DiagnosticLog.Event.WEB_MAIN_HTTP_ERROR,
+                        webResourceHost = request.url.host, webHttpStatus = response.statusCode,
+                        webErrorCategory = if (challengePage) "cloudflare_challenge" else "http_error") }
                 }
             }
         }

@@ -628,6 +628,7 @@ class WebChatActivity : Activity() {
 
     private lateinit var webView: WebView
     private var pendingMicrophoneRequest: PermissionRequest? = null
+    private var challengePage = false
     private var microphoneTogglePending = false
     private var voiceTapInFlight = false
     private var cycleToken: String? = null
@@ -704,6 +705,7 @@ class WebChatActivity : Activity() {
             webViewClient = object : WebViewClient() {
                 override fun onPageStarted(view: WebView, url: String, favicon: android.graphics.Bitmap?) {
                     if (webDestroyed || active.get() !== this@WebChatActivity) return
+                    challengePage = false
                     val webViewVersion = WebView.getCurrentWebViewPackage()?.versionName
                     DiagnosticLog.record(this@WebChatActivity, DiagnosticLog.Event.WEBVIEW_RUNTIME,
                         cycleToken, webRuntimeVersion = webViewVersion)
@@ -721,7 +723,9 @@ class WebChatActivity : Activity() {
 
                 override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
                     val uri = request.url
-                    return if (uri.scheme == "https") false else {
+                    return if (WebNavigationPolicy.allowed(uri.toString(), request.isForMainFrame)) false else {
+                        DiagnosticLog.record(this@WebChatActivity, DiagnosticLog.Event.WEB_NAVIGATION_BLOCKED, cycleToken,
+                            webResourceHost = uri.host, webErrorCategory = "blocked_scheme")
                         Toast.makeText(this@WebChatActivity, "Collegamento non consentito: ${uri.scheme}", Toast.LENGTH_LONG).show()
                         true
                     }
@@ -730,6 +734,11 @@ class WebChatActivity : Activity() {
                 override fun onPageFinished(view: WebView, url: String) {
                     super.onPageFinished(view, url)
                     if (webDestroyed || active.get() !== this@WebChatActivity) return
+                    if (challengePage) {
+                        automationPageReady = false
+                        State.set(this@WebChatActivity, "Verifica Cloudflare richiesta. Completala manualmente da Configura accesso a ChatGPT.")
+                        return
+                    }
                     view.evaluateJavascript(DesktopWeb.viewportScript, null)
                     automationPageReady = true
                     if (cycleToken != null && isValidCycle()) DiagnosticLog.record(this@WebChatActivity, DiagnosticLog.Event.WEB_PAGE_READY, cycleToken)
@@ -752,6 +761,15 @@ class WebChatActivity : Activity() {
                 override fun onReceivedHttpError(view: WebView, request: WebResourceRequest, response: WebResourceResponse) {
                     if (webDestroyed || response.statusCode < 400) return
                     if (request.isForMainFrame) {
+                        DiagnosticLog.record(this@WebChatActivity, DiagnosticLog.Event.WEB_MAIN_HTTP_ERROR, cycleToken,
+                            webResourceHost = request.url.host, webHttpStatus = response.statusCode,
+                            webErrorCategory = if (WebNavigationPolicy.challenged(response.responseHeaders)) "cloudflare_challenge" else "http_error")
+                        if (WebNavigationPolicy.challenged(response.responseHeaders)) {
+                            challengePage = true
+                            automationPageReady = false
+                            State.setAttempt(this@WebChatActivity, "Verifica Cloudflare richiesta (HTTP ${response.statusCode}); pagina conservata per verifica manuale.")
+                            return
+                        }
                         failLoading("Caricamento ChatGPT fallito: HTTP ${response.statusCode}.")
                     } else {
                         DiagnosticLog.record(this@WebChatActivity,
