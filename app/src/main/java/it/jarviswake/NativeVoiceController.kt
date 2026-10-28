@@ -15,6 +15,7 @@ internal class NativeVoiceController(private val service: VoiceAccessibilityServ
     private var stopSent = false
     private var ending: String? = null
     private var observed = false
+    private val exitConfirmation = NativeExitConfirmation()
     private var stableCandidate: Pair<Int, android.graphics.Rect>? = null
     private var stableSince = 0L
     private var lastStatus: String? = null
@@ -115,25 +116,35 @@ internal class NativeVoiceController(private val service: VoiceAccessibilityServ
         }
     }
     fun poll() {
-        if (!VoiceCycle.matches(token) || exporting) return
+        if (!VoiceCycle.matches(token) || exporting) { exitConfirmation.reset(); return }
         val nodes = nodes()
-        if (nodes.isEmpty()) { status("ATTENDO LA FINESTRA CHATGPT"); return }
-        val stop = target(nodes, NativeVoiceLabels.stop)
-        val mute = target(nodes, NativeVoiceLabels.mute)
-        val unmute = target(nodes, NativeVoiceLabels.unmute)
-        val active = stop != null && (mute != null || unmute != null)
+        if (nodes.isEmpty()) { exitConfirmation.reset(); status("ATTENDO LA FINESTRA CHATGPT"); return }
+        val stops = targets(nodes, NativeVoiceLabels.stop)
+        val mutes = targets(nodes, NativeVoiceLabels.mute)
+        val unmutes = targets(nodes, NativeVoiceLabels.unmute)
+        val stop = stops.singleOrNull()
+        val mute = mutes.singleOrNull()
+        val unmute = unmutes.singleOrNull()
+        val active = stop != null && ((mute != null) != (unmute != null))
         val starts = targets(nodes, NativeVoiceLabels.start)
         val start = starts.singleOrNull()
+        val startKey = start?.let { node ->
+            val bounds = android.graphics.Rect().also { node.getBoundsInScreen(it) }
+            "${node.windowId}:$bounds"
+        }
+        val closed = if (startSent) exitConfirmation.observe(SystemClock.elapsedRealtime(), startKey,
+            stops.isNotEmpty() || mutes.isNotEmpty() || unmutes.isNotEmpty()) else false
         if (startSent) captureControls(nodes, if (ending != null) "stopping" else "after_voice_command")
         if (ending != null) {
-            if (stop != null && !stopSent) {
+            if (stop != null && active && !stopSent) {
                 stopSent = true
                 DiagnosticLog.record(service, DiagnosticLog.Event.NATIVE_STOP_COMMAND, token)
                 stop.performAction(AccessibilityNodeInfo.ACTION_CLICK)
                 status("ATTENDO CONFERMA ARRESTO VOICE")
-            } else if (!active && start != null && projectVisible(nodes)) {
+            } else if (closed) {
                 val message = ending!!
                 startSent = false
+                DiagnosticLog.record(service, DiagnosticLog.Event.NATIVE_STOP_CONFIRMED, token)
                 service.finishNative(token, message)
             } else status(if (stop == null && !stopSent)
                 "CHIUSURA NON RICONOSCIUTA — DOPPIO TOCCO IN ALTO A DESTRA: ESPORTA"
@@ -175,7 +186,8 @@ internal class NativeVoiceController(private val service: VoiceAccessibilityServ
             VoiceCycle.voiceDispatched(token)
             hud?.setVoiceActive()
             hud?.setMicrophoneMuted(unmute != null)
-        } else if (observed && start != null && projectVisible(nodes)) {
+        } else if (observed && closed) {
+            DiagnosticLog.record(service, DiagnosticLog.Event.NATIVE_STOP_CONFIRMED, token)
             startSent = false
             service.finishNative(token, "Voice nativa terminata; ascolto riattivato.")
         }

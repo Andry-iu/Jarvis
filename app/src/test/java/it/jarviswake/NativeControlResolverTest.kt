@@ -17,6 +17,18 @@ class NativeControlResolverTest {
         assertTrue(resolve(Node("Menu", clickable = true), Node("Microphone", clickable = true)).isEmpty())
     }
 
+    @Test fun resolvesGalaxyEndAndMicrophoneLabels() {
+        val endButton = Node(clickable = true)
+        val endIcon = Node("Termina", parent = endButton)
+        val microphone = Node("Disattiva microfono", parent = Node(clickable = true))
+        val controls = listOf(endIcon, endButton, microphone)
+        val ends = NativeControlResolver.targets(controls, NativeVoiceLabels.stop,
+            labels = { listOf(NativeVoiceLabels.normalize(it.label)) }, parent = { it.parent },
+            visible = { it.visible }, enabled = { it.enabled }, clickable = { it.clickable })
+        assertEquals(listOf(endButton), ends)
+        assertTrue("disattiva microfono" in NativeVoiceLabels.mute)
+    }
+
     @Test fun labelledChildResolvesToItsButtonOnce() {
         val button = Node("Voice", clickable = true)
         val icon = Node("Voice", parent = button)
