@@ -101,11 +101,32 @@ class VoiceAccessibilityService : AccessibilityService() {
     private val main = Handler(Looper.getMainLooper())
     private var nativeController: NativeVoiceController? = null
 
+    internal fun requestNativeExit(token: String, returnHome: Boolean) {
+        if (!VoiceCycle.matches(token) || nativeController?.token != token ||
+            preferences.getBoolean("native_stop", false)) return
+        // Keep the first requested destination, including across a service reconnection.
+        preferences.edit().putBoolean("native_return_home", returnHome).apply()
+        DiagnosticLog.record(this, if (returnHome) DiagnosticLog.Event.HIDE_GESTURE_RECOGNIZED
+            else DiagnosticLog.Event.CHAT_REVEAL_GESTURE_RECOGNIZED, token)
+        val message = if (returnHome) "Voice terminata; ritorno alla Home."
+            else "Voice terminata; conversazione ChatGPT disponibile."
+        if (!endNative(this, token, message)) finishNative(token, message)
+    }
+
     internal fun finishNative(token: String, message: String) {
+        if (!VoiceCycle.matches(token) || preferences.getString("native_token", null) != token) return
+        val returnHome = preferences.getBoolean("native_return_home", false)
         nativeController?.destroy()
         nativeController = null
-        preferences.edit().remove("native_token").remove("native_stop").apply()
+        preferences.edit().remove("native_token").remove("native_stop").remove("native_return_home").apply()
         VoiceCycle.cancel(this, token, message)
+        // Only reached after confirmed Voice exit, or before any Voice command was sent.
+        if (returnHome) {
+            val accepted = performGlobalAction(GLOBAL_ACTION_HOME)
+            DiagnosticLog.record(this, if (accepted) DiagnosticLog.Event.NATIVE_HOME_COMMAND
+                else DiagnosticLog.Event.NATIVE_HOME_REJECTED, token)
+            if (!accepted) State.setAttempt(this, "Voice terminata; comando Home rifiutato da Android.")
+        }
     }
     private val preferences by lazy { getSharedPreferences(PREFS, Context.MODE_PRIVATE) }
     private var overlay: HolographicOverlayView? = null

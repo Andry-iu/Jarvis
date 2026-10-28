@@ -34,8 +34,8 @@ internal class NativeVoiceController(private val service: VoiceAccessibilityServ
             belowTap = { CoverSettings.setOpaque(service, !CoverSettings.isOpaque(service)) },
             close = { VoiceCycle.cancel(service, token, "Ciclo nativo chiuso.") },
             export = { exportControls() },
-            hide = { VoiceCycle.cancel(service, token, "Voice nativa terminata.") },
-            revealChat = { status("MODALITÀ APP: COVER MANTENUTA") }
+            hide = { service.requestNativeExit(token, returnHome = true) },
+            revealChat = { service.requestNativeExit(token, returnHome = false) }
         )
         val params = WindowManager.LayoutParams(-1, -1, WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
