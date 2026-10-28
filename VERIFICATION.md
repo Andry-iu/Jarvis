@@ -1,3 +1,11 @@
+# 0.5.60 — confronto isolato User-Agent
+
+- Ambito autorizzato: indagare la regressione di accesso mantenendo il layout desktop; nessuna estensione ad API o dot. Rimossa solo la trasformazione User-Agent introdotta nella 0.5.58. Identità originale Android WebView e Client Hints del runtime conservati; viewport 980 CSS px, wide viewport, overview e flusso applicativo invariati. Il server potrebbe scegliere la variante mobile: è un limite esplicito della prova e non un risultato desktop end-to-end verificato.
+- Eliminati DesktopUserAgent e i due test della trasformazione ora rimossa; test di viewport, Voice e mute mantenuti e superati. Build locale JDK17/Gradle8.13/SDK36/BuildTools36.0.0: testDebugUnitTest lintDebug assembleDebug superati; 73 test JVM, zero fallimenti/errori; tre suite Node superate; lint 0 errori/21 avvisi.
+- APK firmato permanente 0.5.60 / 82, minSdk31, target36, ARM64, 55.733.272 byte. Certificato permanente SHA256 a8ddfbe2b78be5460e72df57afbc3434411e3cc27328b13bc16b4daaba13389a verificato prima della firma; apksigner v3 API31+ e v2 API24–27, CRC ZIP e zipalign16KB superati. SHA256 APK: 75433bedbb749fcdcec35803c5416fe7c09e4729307be2340722e07e2bb16723. Materiale temporaneo di firma rimosso.
+- Consegna Drive confermata: https://drive.google.com/file/d/1DSawCwk4SLpSbQ_BTGCcrAuaesEgkTW9/view .
+- Collaudo necessario sul Galaxy: chiudere e riaprire Jarvis dopo l’aggiornamento, senza reset dati; verificare accesso dalla configurazione e layout; quindi wake e risposta vocale. Se il loop scompare, UA modificato è un fattore probabile, non prova causale assoluta. Se permane, non dichiarare risolto né procedere a cambiare altri fattori senza riscontro. La cover deve restare visibile durante la wake.
+
 # 0.5.59 — verifica Cloudflare con desktop attivo
 
 - Riscontro utente Galaxy: 0.5.58 ripete verifica e HTTP 403; Chrome sulla stessa connessione con Sito desktop entra. Questo restringe il problema al percorso incorporato, senza dimostrare il criterio di rifiuto remoto.

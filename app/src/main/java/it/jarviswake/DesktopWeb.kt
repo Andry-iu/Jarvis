@@ -2,18 +2,16 @@ package it.jarviswake
 
 import android.webkit.WebSettings
 
-/** One desktop request policy for the preloader, login and Voice surfaces. */
+/** Desktop layout shared by login and Voice, retaining the real WebView identity. */
 internal object DesktopWeb {
     fun configure(settings: WebSettings) {
-        val desktopAgent = DesktopUserAgent.from(settings.userAgentString)
-        // Avoid reloading the handed-off WebView by setting an identical UA again.
-        if (settings.userAgentString != desktopAgent) settings.userAgentString = desktopAgent
+        // Leave the runtime UA and Client Hints intact, including during handoff.
         settings.useWideViewPort = true
         settings.loadWithOverviewMode = true
     }
 
     // A mobile meta viewport would otherwise keep the responsive phone layout even
-    // with a desktop UA. Change layout only; the Voice locator reads live CSS sizes.
+    // on the real Android runtime. Change layout only; Voice reads live CSS sizes.
     val viewportScript = """
         (() => {
           if (!document.head) return;
