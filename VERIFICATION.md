@@ -1,3 +1,14 @@
+# 0.5.58 — ChatGPT desktop (28 ottobre 2026)
+
+- Via esplicito dell’utente: mantenere il comportamento attuale e richiedere ChatGPT desktop nel WebView; dot esclusi dall’ambito.
+- Policy condivisa prima del caricamento: UA Linux desktop con versione Chromium del runtime, rimozione dei token Android/WebView/mobile, wide viewport e overview. Meta viewport portato a 980 CSS px su page-finished in entrambe le superfici. Nessuna modifica ai selettori Voice o al latch del singolo gesto. UA identico non riscritto durante handoff.
+- Client Hints lasciati al runtime (nessuna API AndroidX aggiunta); la modalità richiesta non rende WebView equivalente a Chrome desktop. La pagina può modificare nuovamente il proprio viewport; resa definitiva, SPA, autenticazione e voce richiedono prova reale.
+- Build locale con JDK 17.0.21, wrapper Gradle 8.13, SDK 36/Build Tools 36.0.0: testDebugUnitTest lintDebug assembleDebug superati. 73 test JVM, zero errori/fallimenti; tre suite Node (Voice, mute cover, viewport desktop) superate. Lint: 0 errori, 21 avvisi. Il daemon Kotlin non è partito nell’ambiente e la compilazione fallback è riuscita. Nessuna GitHub Actions.
+- APK unsigned: it.jarviswake, 0.5.58 / 80, minSdk 31, targetSdk 36, solo ARM64, 14 file modello Vosk. 55.720.445 byte; CRC ZIP e zipalign -c -P 16 4 superati. SHA-256: 43141ae6ed407d9364598af8c10712329f3b89d3989af2b03e5740b2559c721e.
+- Firma permanente BLOCCATA per materiale non configurato: JARVIS_KEYSTORE_PATH e JARVIS_SIGNING_PASSWORD assenti, passphrase di recupero non disponibile nel contesto. Nessuna chiave sostitutiva. apksigner conferma assenza firma; NON installabile sopra l’app esistente. Predisposto scripts/firma-jarvis-0.5.58-termux.sh con hash esatto e controllo certificato permanente; sintassi bash verificata, firma reale non eseguita.
+- Collaudo Galaxy aperto: layout desktop in login/impostazioni/wake, progetto e sessione conservati, un solo avvio Voice, microfono/risposta udibili, cover, mute, ritorno e ripresa. Nessuna promessa di risolvere il precedente HTTP 404 remoto.
+- Fonti primarie: https://developer.android.com/reference/android/webkit/WebSettings e https://developer.chrome.com/blog/desktop-mode (UA, viewport e differenze da browser desktop).
+
 # 0.5.57 — anteprima audio al cambio volume
 
 - Solo i cambi volume `fromUser` salvano il livello e richiedono l’anteprima; inizializzazione/ripristino del cursore non avviano audio. Ogni richiesta rilascia il player precedente e ne prepara uno nuovo dall’inizio, usando il livello salvato. Il player comune conserva le protezioni su identità del callback/focus e il rilascio dei timer, senza riproduttori sovrapposti. Una conferma Voice tardiva del ciclo nascosto non può fermare il player in modalità anteprima.

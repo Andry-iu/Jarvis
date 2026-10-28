@@ -1,3 +1,7 @@
+# Aggiornamento 0.5.58 — ChatGPT desktop
+
+La 0.5.58 / versionCode 80 richiede ChatGPT desktop sia nel preloader sia nella schermata Voice/login: user agent Linux desktop derivato dalla versione Chromium installata, wide viewport e overview, meta viewport di 980 CSS px a pagina caricata. La policy condivisa evita di riscrivere un UA identico durante handoff. URL progetto, cookie, wake, cover, saluto e singolo comando Voice restano invariati. Nessun percorso dot aggiunto. User-Agent Client Hints restano gestiti dal runtime: non si dichiara equivalenza con Chrome desktop. Layout, login e Voice reali richiedono collaudo sul Galaxy; nessuna correzione garantita per il precedente HTTP 404 remoto.
+
 # Aggiornamento 0.5.57 — anteprima volume
 
 Implementata ripartenza del file al cambio manuale volume, per il minimo configurato (2 secondi con minimo zero). Anteprime sostituite senza sovrapposizioni; stop uscendo dalla schermata/focus perso/nuovo ciclo. Nessun avvio Voice da anteprima; nessuna sostituzione del player durante un ciclo attivo. Collaudo fisico aperto.

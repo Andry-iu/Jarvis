@@ -1,4 +1,8 @@
-# JarvisWake 0.5.57 — assistente Android e ChatGPT Voice
+Stato consegna 0.5.58: build/test locali superati, APK disponibile solo unsigned; firma permanente da completare (materiale non configurato), collaudo Galaxy aperto. Vedere VERIFICATION.md e scripts/firma-jarvis-0.5.58-termux.sh.
+
+# JarvisWake 0.5.58 — assistente Android e ChatGPT Voice
+
+La 0.5.58 / versionCode 80 richiede ChatGPT desktop sia nel preloader sia nella schermata Voice/login: user agent Linux desktop derivato dalla versione Chromium installata, wide viewport e overview, meta viewport di 980 CSS px a pagina caricata. La policy condivisa evita di riscrivere un UA identico durante handoff. URL progetto, cookie, wake, cover, saluto e singolo comando Voice restano invariati. Nessun percorso dot aggiunto. User-Agent Client Hints restano gestiti dal runtime: non si dichiara equivalenza con Chrome desktop. Layout, login e Voice reali richiedono collaudo sul Galaxy; nessuna correzione garantita per il precedente HTTP 404 remoto.
 
 App Kotlin per Android 12–16 (minSdk 31, targetSdk 36), APK ARM64 destinato alla prova su Samsung Galaxy S24+ Android 16.
 

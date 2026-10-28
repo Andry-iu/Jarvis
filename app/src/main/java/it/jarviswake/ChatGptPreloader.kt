@@ -82,6 +82,7 @@ internal object ChatGptPreloader {
             isFocusable = false
             importantForAccessibility = WebView.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS
             settings.apply {
+                DesktopWeb.configure(this)
                 javaScriptEnabled = true
                 domStorageEnabled = true
                 mediaPlaybackRequiresUserGesture = true
@@ -102,6 +103,7 @@ internal object ChatGptPreloader {
 
                 override fun onPageFinished(view: WebView, url: String) {
                     if (stopped || web.get() !== view) return
+                    view.evaluateJavascript(DesktopWeb.viewportScript, null)
                     pageReady = true
                     app?.let { DiagnosticLog.record(it, DiagnosticLog.Event.WEB_PRELOAD_PAGE_READY) }
                     main.removeCallbacks(poll)

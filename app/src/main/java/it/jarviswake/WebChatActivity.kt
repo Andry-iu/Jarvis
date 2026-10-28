@@ -692,6 +692,7 @@ class WebChatActivity : Activity() {
             isFocusable = true
             importantForAccessibility = WebView.IMPORTANT_FOR_ACCESSIBILITY_YES
             settings.apply {
+                DesktopWeb.configure(this)
                 javaScriptEnabled = true
                 domStorageEnabled = true
                 mediaPlaybackRequiresUserGesture = false
@@ -729,6 +730,7 @@ class WebChatActivity : Activity() {
                 override fun onPageFinished(view: WebView, url: String) {
                     super.onPageFinished(view, url)
                     if (webDestroyed || active.get() !== this@WebChatActivity) return
+                    view.evaluateJavascript(DesktopWeb.viewportScript, null)
                     automationPageReady = true
                     if (cycleToken != null && isValidCycle()) DiagnosticLog.record(this@WebChatActivity, DiagnosticLog.Event.WEB_PAGE_READY, cycleToken)
                     localHud?.setStatus("PAGINA CARICATA — PREPARAZIONE VOICE")
