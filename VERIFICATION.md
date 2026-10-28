@@ -1,3 +1,13 @@
+# 0.5.62 — controllo Voice nativo annidato
+
+- Riscontro Galaxy: progetto JarvisRuntime aperto correttamente; il nome salvato inizialmente conteneva uno spazio. Dopo correzione il progetto viene riconosciuto, ma la cover segnala pulsante Voice non riconosciuto o ambiguo; screenshot mostra icona Voice blu a destra del microfono di dettatura. Nessun dump accessibilità disponibile: screenshot non dimostra l’etichetta né la struttura dei nodi.
+- Correzione mirata della ricerca: etichetta semanticamente esatta su un nodo visibile risolta al più vicino antenato cliccabile/abilitato/visibile, massimo tre livelli, sempre nel pacchetto ChatGPT. Deduplicazione di nodi che risolvono allo stesso controllo. Nessun fallback a coordinate o al microfono. Un solo comando per ciclo conservato. Aggiunto candidato esatto Start voice, già presente nella semantica del percorso WebView.
+- Diagnostica NATIVE_CONTROL_PROBE soltanto su variazione dei conteggi etichette/candidati. Stati distinti nessun candidato / più candidati sulla cover. Nessun testo utente o descrizione grezza registrati.
+- Quattro test nuovi: figlio etichettato e padre cliccabile deduplicati, ambiguità fra controlli distinti, esclusione microfono e controlli disabilitati/invisibili, limite risalita. Totale 79 test JVM, zero errori/fallimenti; tre suite Node superate. testDebugUnitTest lintDebug assembleDebug con JDK17/Gradle8.13/SDK36/BuildTools36.0.0: superati; lint 0 errori/23 avvisi.
+- APK permanente 0.5.62 / 84, minSdk31 target36 ARM64, 55.782.424 byte. Certificato permanente a8ddfbe2b78be5460e72df57afbc3434411e3cc27328b13bc16b4daaba13389a verificato prima della firma; v3 API31+ e v2 API24–27, CRC ZIP e zipalign16KB verificati. SHA256 APK b1eb836a35828f8060dd496a473554b6c2a2c9f6585815c24db2bdce749b2de5. Temporanei firma rimossi.
+- Drive upload e metadati confermati: https://drive.google.com/file/d/1purrrCvkp4l221uL_BXCXoEfsn2VXJ3w/view .
+- Collaudo Galaxy necessario: riprovare wake con nome progetto corretto e shortcut già selezionato, osservare stato cover e verificare avvio vocale una sola volta. La correzione non è dichiarata riuscita sul telefono sulla sola base dei test sintetici. Se nessun candidato persiste, serve riscontro della semantica accessibile effettiva; non dedurre etichette dall’icona visibile.
+
 # 0.5.61 — shortcut progetto e controller Voice nativo
 
 - Ambito autorizzato: opzione persistente WebView/App ChatGPT, selezione shortcut reale Jarvis Runtime e tentativo singolo Voice con cover. Baseline main e111fa4 verificata pulita/allineata prima dello sviluppo. Default WebView conservato.
