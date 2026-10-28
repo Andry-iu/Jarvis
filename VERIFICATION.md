@@ -1,3 +1,11 @@
+# Completamento firma 0.5.58 — 28 ottobre 2026
+
+- Password di recupero fornita dall’utente e impiegata esclusivamente tramite prompt protetto, senza registrarla in Git o nei file di lavoro. Backup cifrato verificato contro SHA-256 155b8afc72265dae8bfe5e8d4a09a49929375d88e9972bd9b2777723d2502e58 e autenticato in decrittazione.
+- APK esistente firmato senza ricompilazione né modifiche al codice. Certificato verificato prima e dopo: a8ddfbe2b78be5460e72df57afbc3434411e3cc27328b13bc16b4daaba13389a. Keystore e file password temporanei rimossi dopo la firma.
+- JarvisWake-0.5.58-debug-arm64-permanent.apk: 55.733.272 byte; SHA-256 3cccc6284703217a8b421cea49330b7445686b1227b333815ecf0f315fd2a3a0. apksigner v3 per API 31+ e v2 separatamente per API 24–27 verificati; zipalign -c -P 16 4 e CRC ZIP superati. Rimangono versione 0.5.58 / 80, minSdk 31, target 36, ABI ARM64 e modello della build già verificata.
+- Upload Library del file firmato fallito prima del trasferimento: hosted apps tools/list request failed: network. Nessun allegato Library confermato. Salvataggio del secret GitHub non effettuato: autenticazione CLI non valida. Nessuna GitHub Actions utilizzata.
+- Prova di installazione, layout desktop e Voice sul Galaxy ancora da eseguire.
+
 # 0.5.58 — ChatGPT desktop (28 ottobre 2026)
 
 - Via esplicito dell’utente: mantenere il comportamento attuale e richiedere ChatGPT desktop nel WebView; dot esclusi dall’ambito.
@@ -5,7 +13,7 @@
 - Client Hints lasciati al runtime (nessuna API AndroidX aggiunta); la modalità richiesta non rende WebView equivalente a Chrome desktop. La pagina può modificare nuovamente il proprio viewport; resa definitiva, SPA, autenticazione e voce richiedono prova reale.
 - Build locale con JDK 17.0.21, wrapper Gradle 8.13, SDK 36/Build Tools 36.0.0: testDebugUnitTest lintDebug assembleDebug superati. 73 test JVM, zero errori/fallimenti; tre suite Node (Voice, mute cover, viewport desktop) superate. Lint: 0 errori, 21 avvisi. Il daemon Kotlin non è partito nell’ambiente e la compilazione fallback è riuscita. Nessuna GitHub Actions.
 - APK unsigned: it.jarviswake, 0.5.58 / 80, minSdk 31, targetSdk 36, solo ARM64, 14 file modello Vosk. 55.720.445 byte; CRC ZIP e zipalign -c -P 16 4 superati. SHA-256: 43141ae6ed407d9364598af8c10712329f3b89d3989af2b03e5740b2559c721e.
-- Firma permanente BLOCCATA per materiale non configurato: JARVIS_KEYSTORE_PATH e JARVIS_SIGNING_PASSWORD assenti, passphrase di recupero non disponibile nel contesto. Nessuna chiave sostitutiva. apksigner conferma assenza firma; NON installabile sopra l’app esistente. Predisposto scripts/firma-jarvis-0.5.58-termux.sh con hash esatto e controllo certificato permanente; sintassi bash verificata, firma reale non eseguita.
+- Stato iniziale della firma (poi risolto, vedere aggiornamento sotto): materiale non configurato: JARVIS_KEYSTORE_PATH e JARVIS_SIGNING_PASSWORD assenti, passphrase di recupero non disponibile nel contesto. Nessuna chiave sostitutiva. apksigner conferma assenza firma; NON installabile sopra l’app esistente. Predisposto scripts/firma-jarvis-0.5.58-termux.sh con hash esatto e controllo certificato permanente; sintassi bash verificata, firma reale non eseguita.
 - Collaudo Galaxy aperto: layout desktop in login/impostazioni/wake, progetto e sessione conservati, un solo avvio Voice, microfono/risposta udibili, cover, mute, ritorno e ripresa. Nessuna promessa di risolvere il precedente HTTP 404 remoto.
 - Fonti primarie: https://developer.android.com/reference/android/webkit/WebSettings e https://developer.chrome.com/blog/desktop-mode (UA, viewport e differenze da browser desktop).
 

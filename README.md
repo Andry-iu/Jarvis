@@ -1,4 +1,4 @@
-Stato consegna 0.5.58: build/test locali superati, APK disponibile solo unsigned; firma permanente da completare (materiale non configurato), collaudo Galaxy aperto. Vedere VERIFICATION.md e scripts/firma-jarvis-0.5.58-termux.sh.
+Stato 0.5.58: build/test locali superati; APK firmato con il certificato permanente e verificato. Collaudo Galaxy aperto. Consegna Library bloccata da errore di rete prima del trasferimento; vedere VERIFICATION.md.
 
 # JarvisWake 0.5.58 — assistente Android e ChatGPT Voice
 
