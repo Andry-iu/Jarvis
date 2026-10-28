@@ -19,6 +19,9 @@ internal class NativeVoiceController(private val service: VoiceAccessibilityServ
     private var stableSince = 0L
     private var lastStatus: String? = null
     private var lastProbe: Pair<Int, Int>? = null
+    private var snapshotCount = 0
+    private var snapshotAt = 0L
+    private var snapshotFingerprint: Int? = null
 
     fun launch(openShortcut: Boolean = true) {
         check(!service.getSystemService(KeyguardManager::class.java).isKeyguardLocked) { "Sblocca il telefono per aprire l'app ChatGPT." }
@@ -103,6 +106,17 @@ internal class NativeVoiceController(private val service: VoiceAccessibilityServ
             if (active) { VoiceCycle.cancel(service, token, "Voice era già attiva: nessun nuovo comando inviato."); return }
             if (!projectVisible(nodes)) { status("ATTENDO CONFERMA DEL PROGETTO"); return }
             if (start == null) {
+                val now = SystemClock.elapsedRealtime()
+                if (snapshotCount < 3 && (snapshotCount == 0 || now - snapshotAt >= 1500L)) {
+                    snapshotAt = now
+                    val snapshot = NativeControlSnapshot.describe(nodes)
+                    val fingerprint = snapshot.hashCode()
+                    if (fingerprint != snapshotFingerprint) {
+                        snapshotFingerprint = fingerprint
+                        snapshotCount++
+                        NativeControlSnapshot.save(service, token, snapshotCount, snapshot)
+                    }
+                }
                 val labelled = nodes.count { labels(it).any(NativeVoiceLabels.start::contains) }
                 val probe = labelled to starts.size
                 if (lastProbe != probe) {
