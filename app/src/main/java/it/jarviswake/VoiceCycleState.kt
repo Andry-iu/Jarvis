@@ -23,6 +23,15 @@ internal class VoiceCycleState {
         return true
     }
 
+    fun restoreNativeExit(token: String): Boolean {
+        if (id!=null || token.isBlank()) return false
+        id=token
+        phase=Phase.VOICE
+        hiddenForWake=false
+        touchGate.block()
+        return true
+    }
+
     fun matches(token: String?) = token != null && token == id
 
     fun openWeb(token: String, now: Long, resumed: Boolean, focused: Boolean,

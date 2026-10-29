@@ -51,6 +51,38 @@ class VoiceAccessibilityService : AccessibilityService() {
             return mustWait
         }
 
+        internal fun restoreInterruptedNative(context: Context) {
+            if (VoiceCycle.active) return
+            val p=context.getSharedPreferences(PREFS,Context.MODE_PRIVATE)
+            val token=p.getString("native_token",null) ?: return
+            if (!VoiceCycle.restoreNativeExit(context,token)) return
+            val edit=p.edit().putString(CYCLE,token).putBoolean("native_start_sent",true)
+                .putBoolean("native_stop",true).putBoolean("native_cover_dismissed",true)
+            if (!p.contains("native_exit_at")) edit.putLong("native_exit_at",SystemClock.elapsedRealtime())
+            edit.apply()
+            instance.get()?.startPolling()
+        }
+
+        internal fun pendingNativeExit(context: Context): String? {
+            val p=context.getSharedPreferences(PREFS,Context.MODE_PRIVATE)
+            return p.getString("native_token",null)?.takeIf {
+                VoiceCycle.matches(it) && p.getBoolean("native_stop",false)
+            }
+        }
+
+        internal fun finishReleasedNative(context: Context,token: String): Boolean {
+            if (pendingNativeExit(context)!=token || !NativeAudioRelease.confirmed(context,token)) return false
+            val service=instance.get()
+            if (service!=null) return service.finishNative(token,"Audio Voice rilasciato; ripresa wake richiesta.")
+            val p=context.getSharedPreferences(PREFS,Context.MODE_PRIVATE)
+            val home=p.getBoolean("native_return_home",false)
+            p.edit().remove("native_token").remove("native_stop").apply()
+            DiagnosticLog.record(context,DiagnosticLog.Event.NATIVE_AUDIO_RELEASED,token)
+            VoiceCycle.cancel(context,token,"Audio Voice rilasciato; ripresa wake richiesta.")
+            if (home) DiagnosticLog.record(context,DiagnosticLog.Event.NATIVE_HOME_REJECTED,token,monitorStatus="service_unavailable")
+            return true
+        }
+
         fun isEnabled(context: Context): Boolean {
             val expected = ComponentName(context, VoiceAccessibilityService::class.java)
             val enabled = Settings.Secure.getString(context.contentResolver,
@@ -131,7 +163,7 @@ class VoiceAccessibilityService : AccessibilityService() {
         }, token)
         if (!requestStop) return // Already stopping: UI stays dismissed, never repeat stop or change destination.
         val message = "Cover chiusa; arresto Voice da confermare."
-        if (!endNative(this, token, message)) finishNative(token, "Ciclo chiuso; ascolto riattivato.")
+        if (!endNative(this, token, message)) finishNative(token, "Ciclo chiuso; ripresa wake richiesta.")
         else {
             State.setAttempt(this, "Cover chiusa. Se Voice resta attiva, terminala in ChatGPT; wake sospesa.")
             // Let the touch callback finish first. Accessibility actions cannot hold the cover on screen.
@@ -145,6 +177,12 @@ class VoiceAccessibilityService : AccessibilityService() {
     internal fun nativeCoverDismissed(token: String): Boolean =
         preferences.getString("native_token", null) == token && preferences.getBoolean("native_cover_dismissed", false)
 
+    internal fun nativeStartSent(token: String): Boolean =
+        preferences.getString("native_token",null)==token && preferences.getBoolean("native_start_sent",false)
+    internal fun markNativeStart(token: String) {
+        if (VoiceCycle.matches(token)) preferences.edit().putBoolean("native_start_sent",true).apply()
+    }
+
     internal fun nativeStopSent(token: String): Boolean =
         preferences.getString("native_token", null) == token && preferences.getBoolean("native_stop_sent", false)
 
@@ -153,6 +191,12 @@ class VoiceAccessibilityService : AccessibilityService() {
         val state = nativeExitState()
         if (!state.consumeStop()) return false
         saveNativeExit(state) // Persist before dispatch, including uncertain/rejected actions.
+        return true
+    }
+
+    internal fun consumeNativeExitKeyboard(token: String): Boolean {
+        if (!VoiceCycle.matches(token) || preferences.getBoolean("native_exit_keyboard",false)) return false
+        preferences.edit().putBoolean("native_exit_keyboard",true).apply()
         return true
     }
 
@@ -258,8 +302,15 @@ class VoiceAccessibilityService : AccessibilityService() {
         if (VoiceCycle.matches(token)) preferences.edit().putInt("native_greeting_stage", stage).apply()
     }
 
-    internal fun finishNative(token: String, message: String) {
-        if (!VoiceCycle.matches(token) || preferences.getString("native_token", null) != token) return
+    internal fun finishNative(token: String, message: String): Boolean {
+        if (!VoiceCycle.matches(token) || preferences.getString("native_token", null) != token) return false
+        val mayHaveStarted=nativeStartSent(token) || !VoiceCycle.touchGate.canDispatch
+        if (mayHaveStarted && !NativeAudioRelease.confirmed(this,token)) {
+            // Preserve pending closure even if the ordinary composer disappears on the next tick.
+            preferences.edit().putBoolean("native_stop",true).apply()
+            return false
+        }
+        if (mayHaveStarted) DiagnosticLog.record(this,DiagnosticLog.Event.NATIVE_AUDIO_RELEASED,token)
         val returnHome = preferences.getBoolean("native_return_home", false)
         nativeController?.destroy()
         nativeController = null
@@ -272,6 +323,7 @@ class VoiceAccessibilityService : AccessibilityService() {
                 else DiagnosticLog.Event.NATIVE_HOME_REJECTED, token)
             if (!accepted) State.setAttempt(this, "Voice terminata; comando Home rifiutato da Android.")
         }
+        return true
     }
     private val preferences by lazy { getSharedPreferences(PREFS, Context.MODE_PRIVATE) }
     private var overlay: HolographicOverlayView? = null
@@ -284,8 +336,13 @@ class VoiceAccessibilityService : AccessibilityService() {
     private var lastGreetingResult: VoiceGreetingResult? = null
     private val poll = object : Runnable {
         override fun run() {
-            processAutomation()
-            if (currentToken() != null) main.postDelayed(this, 100L)
+            try { processAutomation() }
+            catch (e: Exception) {
+                State.setAttempt(this@VoiceAccessibilityService,"Controllo Voice interrotto; recupero in corso.")
+                currentToken()?.let { NativeRuntimeSnapshot.save(this@VoiceAccessibilityService,it,"recovery","reason=poll_error") }
+            } finally {
+                if (currentToken()!=null) main.postDelayed(this,100L)
+            }
         }
     }
 

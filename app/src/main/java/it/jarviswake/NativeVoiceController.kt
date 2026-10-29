@@ -8,10 +8,10 @@ import android.view.Gravity
 import android.view.WindowManager
 import android.view.accessibility.AccessibilityNodeInfo
 
-/** Native session never uses WebView scripts or coordinates. Owned by the accessibility service. */
+/** Native session owned by accessibility; greeting uses the user-authorized coordinate tap. */
 internal class NativeVoiceController(private val service: VoiceAccessibilityService, val token: String) {
     private var hud: HolographicOverlayView? = null
-    private var startSent = !VoiceCycle.touchGate.canDispatch
+    private var startSent = service.nativeStartSent(token) || !VoiceCycle.touchGate.canDispatch
     private var stopSent = service.nativeStopSent(token)
     private var ending: String? = null
     private var observed = false
@@ -180,16 +180,21 @@ internal class NativeVoiceController(private val service: VoiceAccessibilityServ
         val closed = if (startSent) exitConfirmation.observe(SystemClock.elapsedRealtime(), startKey,
             stops.isNotEmpty() || mutes.isNotEmpty() || unmutes.isNotEmpty()) else false
         if (ending != null) {
-            if (stop != null && active && !stopSent && service.consumeNativeStop(token)) {
+            if (stop != null && !stopSent && service.consumeNativeStop(token)) {
                 stopSent = true
                 DiagnosticLog.record(service, DiagnosticLog.Event.NATIVE_STOP_COMMAND, token)
-                stop.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+                val accepted=runCatching { stop.performAction(AccessibilityNodeInfo.ACTION_CLICK) }.getOrDefault(false)
+                DiagnosticLog.record(service,DiagnosticLog.Event.NATIVE_STOP_RESULT,token,
+                    monitorStatus=if (accepted) "accepted" else "rejected_or_error")
                 status("ATTENDO CONFERMA ARRESTO VOICE")
             } else if (closed) {
                 val message = ending!!
-                startSent = false
-                DiagnosticLog.record(service, DiagnosticLog.Event.NATIVE_STOP_CONFIRMED, token)
-                service.finishNative(token, message)
+                if (service.finishNative(token,message)) DiagnosticLog.record(service,DiagnosticLog.Event.NATIVE_STOP_CONFIRMED,token)
+            } else if (stop==null && service.windows.any { it.type==android.view.accessibility.AccessibilityWindowInfo.TYPE_INPUT_METHOD } &&
+                service.consumeNativeExitKeyboard(token)) {
+                val accepted=service.performGlobalAction(AccessibilityService.GLOBAL_ACTION_BACK)
+                DiagnosticLog.record(service,DiagnosticLog.Event.NATIVE_EXIT_KEYBOARD,token,
+                    monitorStatus=if (accepted) "accepted" else "rejected")
             } else status(if (stop == null && !stopSent)
                 "CHIUSURA NON RICONOSCIUTA — DOPPIO TOCCO IN ALTO A DESTRA: ESPORTA"
                 else "ARRESTO DA VERIFICARE — MICROFONO WAKE SOSPESO")
@@ -230,6 +235,7 @@ internal class NativeVoiceController(private val service: VoiceAccessibilityServ
             // Consume before dispatch, including rejected or uncertain actions. Never auto-retry.
             startSent = true
             VoiceCycle.touchGate.block()
+            service.markNativeStart(token)
             captureButtons(nodes, "before_voice")
             DiagnosticLog.record(service, DiagnosticLog.Event.NATIVE_VOICE_COMMAND, token)
             start.performAction(AccessibilityNodeInfo.ACTION_CLICK)
@@ -244,9 +250,8 @@ internal class NativeVoiceController(private val service: VoiceAccessibilityServ
             hud?.setMicrophoneMuted(unmute != null)
 
         } else if (observed && closed) {
-            DiagnosticLog.record(service, DiagnosticLog.Event.NATIVE_STOP_CONFIRMED, token)
-            startSent = false
-            service.finishNative(token, "Voice nativa terminata; ascolto riattivato.")
+            if (service.finishNative(token,"Voice nativa terminata; ripresa wake richiesta."))
+                DiagnosticLog.record(service,DiagnosticLog.Event.NATIVE_STOP_CONFIRMED,token)
         }
         if (startSent && ending == null && !closed && (observed || service.nativeGreetingStarted(token))) {
             runCatching { tryGreeting(nodes, allowWrite = active) }

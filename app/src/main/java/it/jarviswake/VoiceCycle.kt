@@ -52,6 +52,18 @@ internal object VoiceCycle {
         }
     }
 
+    fun restoreNativeExit(context: Context,token: String): Boolean {
+        if (!state.restoreNativeExit(token)) return false
+        app=context.applicationContext as Application
+        val filter=IntentFilter(Intent.ACTION_SCREEN_OFF)
+        runCatching {
+            if (Build.VERSION.SDK_INT>=33) app!!.registerReceiver(screenOff,filter,Context.RECEIVER_NOT_EXPORTED)
+            else app!!.registerReceiver(screenOff,filter)
+        }
+        DiagnosticLog.record(context,DiagnosticLog.Event.NATIVE_EXIT_RESTORED,token)
+        return true
+    }
+
     fun start(context: Context, existingCycleId: String? = null) {
         if (active) return
         state = VoiceCycleState()
@@ -146,6 +158,6 @@ internal object VoiceCycle {
         WebChatActivity.closeForCycle(token)
         State.setAttempt(context, message)
         State.set(context, message)
-        WakeService.resumeExisting()
+        WakeService.resumeAfterVoice(context)
     }
 }
