@@ -22,11 +22,8 @@ internal class NativeVoiceController(private val service: VoiceAccessibilityServ
     private var lastProbe: Pair<Int, Int>? = null
     private var lastWindowMetadata: String? = null
     private var lastGreetingMetadata: String? = null
-    private var lastComposerMetadata: String? = null
-    private var composerObservation = NativeNodeObservation<AccessibilityNodeInfo>()
-    private data class ComposerCandidate(val node: AccessibilityNodeInfo, val field: AccessibilityNodeInfo,
-        val buttonBounds: android.graphics.Rect, val fieldBounds: android.graphics.Rect)
-    private val composerStability = NativeSendStability<ComposerCandidate>()
+    private val tapStability = NativeSendStability<NativeCoordinateSend.Plan>()
+    private val tapHandler = android.os.Handler(android.os.Looper.getMainLooper())
     private val buttonPhases = HashSet<String>()
     private var pendingButtonPhase: String? = null
     private var exporting = false
@@ -106,7 +103,6 @@ internal class NativeVoiceController(private val service: VoiceAccessibilityServ
     }
 
     private fun nodes(): List<AccessibilityNodeInfo> {
-        composerObservation = NativeNodeObservation()
         val windows = service.windows
         val roots = windows.associate { window -> window.id to runCatching { window.root }.getOrNull() }
         val descriptors = windows.map { window ->
@@ -139,7 +135,6 @@ internal class NativeVoiceController(private val service: VoiceAccessibilityServ
         val capture = NativeObservationWalker.capture(root,
             visible = { it.isVisibleToUser }, childCount = { it.childCount }, child = { node, index -> node.getChild(index) },
             composerLeaf = { it.isEditable || it.isPassword || it.className?.toString() == "android.widget.Button" })
-        composerObservation = capture.graph
         return capture.visible
     }
 
@@ -151,39 +146,6 @@ internal class NativeVoiceController(private val service: VoiceAccessibilityServ
             visible = { it.isVisibleToUser }, enabled = { it.isEnabled }, clickable = { it.isClickable })
     private fun target(nodes: List<AccessibilityNodeInfo>, vocabulary: Set<String>): AccessibilityNodeInfo? =
         targets(nodes, vocabulary).singleOrNull()
-    private fun composerSend(nodes: List<AccessibilityNodeInfo>, field: AccessibilityNodeInfo): AccessibilityNodeInfo? {
-        val observation = composerObservation
-        val fieldIndex = observation.indexOfIdentity(field)
-        val missingCounts = observation.missingEdges.groupingBy { it.parent }.eachCount()
-        val descriptors = observation.entries.mapIndexed { index, entry ->
-            val node = entry.value
-            val bounds = android.graphics.Rect().also(node::getBoundsInScreen)
-            NativeComposerSendSelector.Node(
-                parent = entry.parent,
-                box = NativeComposerSendSelector.Box(bounds.left, bounds.top, bounds.right, bounds.bottom),
-                sameAppWindow = node.isVisibleToUser && node.packageName?.toString() == NativeChatSettings.PACKAGE && node.windowId == field.windowId,
-                enabled = node.isEnabled, editable = node.isEditable, focused = node.isFocused,
-                clickable = node.isClickable, clickAction = node.actionList.any { it.id == AccessibilityNodeInfo.ACTION_CLICK },
-                button = node.className?.toString() == "android.widget.Button",
-                labelled = !node.contentDescription.isNullOrBlank() || (!node.isEditable && !node.text.isNullOrBlank()),
-                password = node.isPassword, unresolvedChildren = missingCounts[index] ?: 0)
-        }
-        val inspection = NativeComposerSendSelector.inspect(descriptors, fieldIndex)
-        val rejected = observation.entries.getOrNull(inspection.rejected)?.value
-        val details = listOf(inspection.field, inspection.composer, inspection.rejected).distinct().mapNotNull { index ->
-            descriptors.getOrNull(index)?.let { n ->
-                "node=$index,parent=${n.parent},box=${n.box.left},${n.box.top},${n.box.right},${n.box.bottom},context=${n.sameAppWindow},enabled=${n.enabled},editable=${n.editable},focused=${n.focused},clickable=${n.clickable},clickAction=${n.clickAction},button=${n.button},labelled=${n.labelled},password=${n.password},unresolved=${n.unresolvedChildren}"
-            }
-        }.joinToString("; ")
-        val unresolved = observation.missingEdges.joinToString(",", limit = 12) { "${it.parent}:${it.reason}" }
-        val sourceAliases = observation.entries.size - observation.entries.map { it.value }.distinct().size
-        val metadata = "reason=${inspection.reason} field=${inspection.field} composer=${inspection.composer} rejected=${inspection.rejected} controls=${inspection.controls} editors=${inspection.editors} invalidPaths=${inspection.invalidPaths} foreignNodes=${inspection.foreignNodes} visibleNodes=${nodes.size} observedNodes=${observation.entries.size} graph=local_child_edges sourceAliases=$sourceAliases missingEdges=${observation.missingEdges.size} missing=[$unresolved] rejectedHasDescription=${!rejected?.contentDescription.isNullOrBlank()} rejectedHasText=${rejected?.let { !it.isEditable && !it.text.isNullOrBlank() } == true}; $details"
-        if (metadata != lastComposerMetadata) {
-            lastComposerMetadata = metadata
-            NativeRuntimeSnapshot.save(service, token, "composer", metadata)
-        }
-        return inspection.candidate?.let { observation.entries[it].value }
-    }
     private fun projectVisible(nodes: List<AccessibilityNodeInfo>): Boolean {
         val expected = NativeVoiceLabels.normalize(NativeChatSettings.project(service))
         return expected.isNotEmpty() && nodes.any { !it.isEditable && labels(it).contains(expected) }
@@ -319,49 +281,31 @@ internal class NativeVoiceController(private val service: VoiceAccessibilityServ
                 (stage != NativeGreetingPolicy.WRITING || it.windowId == service.nativeGreetingWindow(token)) }.distinct()
         val field = fields.singleOrNull()
         val text = field?.takeUnless { it.isShowingHintText }?.text?.toString().orEmpty()
-        // These are conservative semantic candidates, not claimed Galaxy resource IDs.
-        val sendLabels = setOf("invia", "invia messaggio", "send", "send message")
-        val buttons = targets(nodes, sendLabels)
-        val send = buttons.singleOrNull()
-        val imeSend = field?.actionList?.singleOrNull {
-            field.isFocused && it.id == AccessibilityNodeInfo.AccessibilityAction.ACTION_IME_ENTER.id &&
-                NativeVoiceLabels.normalize(it.label?.toString().orEmpty()) in sendLabels
-        }
         if (stage == NativeGreetingPolicy.WRITING && text == phrase) {
             captureButtons(nodes, "after_greeting_write")
             if (field?.isFocused == true) captureButtons(nodes, "after_greeting_focus")
         }
         val canWrite = allowWrite && field?.actionList?.any { it.id == AccessibilityNodeInfo.ACTION_SET_TEXT } == true
-        if (stage == NativeGreetingPolicy.WRITING && field != null && text == phrase && buttons.isEmpty() && imeSend == null) {
-            service.prepareNativeEditor(token)
+        if (stage == NativeGreetingPolicy.WRITING && field != null && text == phrase) {
             if (!field.isFocused && field.actionList.any { it.id == AccessibilityNodeInfo.ACTION_FOCUS } &&
                 service.consumeNativeGreetingFocus(token)) {
                 val focused = runCatching { field.performAction(AccessibilityNodeInfo.ACTION_FOCUS) }.getOrNull()
                 DiagnosticLog.record(service, DiagnosticLog.Event.NATIVE_GREETING_RESULT, token,
                     monitorStatus = if (focused == true) "focus_accepted" else "focus_unavailable")
-                return // Re-observe focus and EditorInfo, do not send using the previous snapshot.
+                return // Re-observe focus and geometry before scheduling the tap.
             }
         }
-        val editor = service.nativeEditorState(token)
-        val editorSend = stage == NativeGreetingPolicy.WRITING && buttons.isEmpty() && imeSend == null &&
-            editor.allowsSend(field?.isFocused == true, text == phrase)
-        // Fallback explicitly authorized after the .73 Galaxy dump: local structure, not semantic identity.
-        val structural = if (stage == NativeGreetingPolicy.WRITING && fields.size == 1 && text == phrase &&
-            field != null && field.isFocused && buttons.isEmpty() && imeSend == null && !editorSend)
-            composerSend(nodes, field) else null
-        val candidate = structural?.let { button ->
-            ComposerCandidate(button, field!!, android.graphics.Rect().also(button::getBoundsInScreen),
-                android.graphics.Rect().also(field::getBoundsInScreen))
-        }
-        val structuralReady = composerStability.observe(candidate, SystemClock.elapsedRealtime())
-        val editorOwner = when (editor.owner) { NativeChatSettings.PACKAGE -> "chatgpt"; null -> "none"; else -> "other" }
-        val metadata = "stage=$stage fields=${fields.size} empty=${text.isBlank()} matches=${text == phrase} focused=${field?.isFocused == true} write=$canWrite sendButtons=${buttons.size} imeSend=${imeSend != null} editorReady=${editor.ready} editorOwner=$editorOwner editorStarted=${editor.started} editorConnection=${editor.connection} editorAction=${editor.options?.and(android.view.inputmethod.EditorInfo.IME_MASK_ACTION) ?: -1} editorSend=$editorSend composerCandidate=${structural != null} composerStable=$structuralReady voiceControls=$allowWrite window=${field?.windowId ?: -1}"
+        // Explicit user request: send this greeting with a real coordinate tap, not ACTION_CLICK.
+        val tap = if (stage == NativeGreetingPolicy.WRITING && fields.size == 1 && field != null &&
+            field.isFocused && text == phrase) coordinatePlan(nodes, field) else null
+        val tapReady = tapStability.observe(tap, SystemClock.elapsedRealtime())
+        val metadata = "stage=$stage fields=${fields.size} empty=${text.isBlank()} matches=${text == phrase} focused=${field?.isFocused == true} write=$canWrite coordinateCandidate=${tap != null} coordinateStable=$tapReady coordinateSource=${tap?.source ?: "none"} voiceControls=$allowWrite window=${field?.windowId ?: -1}"
         if (metadata != lastGreetingMetadata) {
             lastGreetingMetadata = metadata
             NativeRuntimeSnapshot.save(service, token, "greeting", metadata)
         }
         val decision = NativeGreetingPolicy.decide(stage, service.nativeGreetingElapsed(token), fields.size,
-            text.isBlank(), text == phrase, canWrite, send != null || (buttons.isEmpty() && imeSend != null) || editorSend || structuralReady)
+            text.isBlank(), text == phrase, canWrite, tapReady)
         when (decision) {
             NativeGreetingPolicy.Action.WRITE -> {
                 captureButtons(nodes, "before_greeting_write")
@@ -377,30 +321,100 @@ internal class NativeVoiceController(private val service: VoiceAccessibilityServ
                 if (accepted != true) abortGreeting("write_failed")
             }
             NativeGreetingPolicy.Action.SEND -> {
-                captureButtons(nodes, if (structuralReady) "before_composer_send" else "before_greeting_send")
+                captureButtons(nodes, "before_coordinate_send")
                 // Consume before dispatch, even if Android rejects it or the outcome is unknown.
                 service.setNativeGreetingStage(token, NativeGreetingPolicy.DISPATCHED)
                 DiagnosticLog.record(service, DiagnosticLog.Event.NATIVE_GREETING_COMMAND, token)
-                val accepted = runCatching {
-                    when {
-                        send != null -> send.performAction(AccessibilityNodeInfo.ACTION_CLICK)
-                        imeSend != null -> field?.performAction(imeSend.id) == true
-                        editorSend -> service.sendNativeGreetingThroughEditor(token, field?.isFocused == true, text == phrase)
-                        structuralReady -> structural?.performAction(AccessibilityNodeInfo.ACTION_CLICK) == true
-                        else -> false
-                    }
-                }.getOrNull()
-                DiagnosticLog.record(service, DiagnosticLog.Event.NATIVE_GREETING_RESULT, token,
-                    monitorStatus = if (accepted == true && editorSend) "editor_dispatched"
-                        else if (accepted == true && structuralReady) "composer_click_accepted"
-                        else if (accepted == true) "send_accepted" else if (accepted == false) "send_rejected" else "send_error")
-                if (accepted != true) abortGreeting("send_failed")
+                val queued = runCatching { dispatchCoordinateGreeting(tap!!) }.getOrDefault(false)
+                if (!queued) abortGreeting("coordinate_prepare_failed")
             }
             NativeGreetingPolicy.Action.ABORT -> {
                 abortGreeting(if (text.isNotBlank() && text != phrase) "draft_protected" else "controls_unavailable")
             }
             else -> Unit
         }
+    }
+
+    private fun coordinatePlan(nodes: List<AccessibilityNodeInfo>, field: AccessibilityNodeInfo): NativeCoordinateSend.Plan? {
+        fun box(r: android.graphics.Rect) = NativeCoordinateSend.Box(r.left,r.top,r.right,r.bottom)
+        fun bounds(node: AccessibilityNodeInfo) = android.graphics.Rect().also(node::getBoundsInScreen)
+        val window = service.windows.singleOrNull { it.id == field.windowId } ?: return null
+        val frame=android.graphics.Rect().also(window::getBoundsInScreen)
+        val blocked=service.windows.filter { it.type == android.view.accessibility.AccessibilityWindowInfo.TYPE_INPUT_METHOD }
+            .map { box(android.graphics.Rect().also(it::getBoundsInScreen)) }
+        val sendLabels=setOf("invia","invia messaggio","send","send message")
+        val controls=nodes.filter { it.packageName?.toString()==NativeChatSettings.PACKAGE && it.windowId==field.windowId &&
+            it.isVisibleToUser && !it.isEditable && !it.isPassword &&
+            (it.isClickable || it.actionList.any { a -> a.id==AccessibilityNodeInfo.ACTION_CLICK }) }.map {
+            val label=labels(it).filter(String::isNotBlank)
+            NativeCoordinateSend.Control(box(bounds(it)),it.isEnabled,label.isEmpty() || label.any(sendLabels::contains))
+        }
+        return NativeCoordinateSend.plan(box(bounds(field)),box(frame),field.windowId,
+            service.resources.displayMetrics.density,controls,blocked)
+    }
+
+    private fun dispatchCoordinateGreeting(plan: NativeCoordinateSend.Plan): Boolean {
+        val view=hud ?: return false
+        if (ending!=null || exporting || !VoiceCycle.matches(token) || service.nativeCoverDismissed(token)) return false
+        val manager=service.getSystemService(WindowManager::class.java)
+        val params=view.layoutParams as? WindowManager.LayoutParams ?: return false
+        val originalFlags=params.flags
+        val gate=NativeTapGate()
+        var restoreDeadline: Runnable?=null
+        fun result(code: String) = DiagnosticLog.record(service,DiagnosticLog.Event.NATIVE_GREETING_RESULT,token,monitorStatus=code)
+        fun finish(code: String) {
+            if (!gate.finish()) return
+            restoreDeadline?.let(tapHandler::removeCallbacks)
+            if (gate.mayRestore(hud===view,view.isAttachedToWindow,service.nativeCoverDismissed(token))) {
+                params.flags=originalFlags
+                runCatching { manager.updateViewLayout(view,params) }.onFailure {
+                    // Failed restoration must release the phone, never leave a blocking overlay.
+                    dismissForExit()
+                    runCatching { service.requestNativeExit(token,returnHome=false,emergency=true) }
+                }
+            }
+            result(code)
+        }
+        params.flags=originalFlags or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
+        if (runCatching { manager.updateViewLayout(view,params) }.isFailure) {
+            finish("coordinate_cover_prepare_error")
+            return false
+        }
+        result("coordinate_queued")
+        NativeRuntimeSnapshot.save(service,token,"coordinate","source=${plan.source} x=${plan.x} y=${plan.y} window=${plan.windowId}")
+        restoreDeadline=Runnable { finish("coordinate_timeout_uncertain") }
+        tapHandler.postDelayed(restoreDeadline!!,750L)
+        // Give WindowManager time to apply touch-through, then recheck the live target before injection.
+        tapHandler.postDelayed({
+            if (hud!==view || !view.isAttachedToWindow || ending!=null || exporting ||
+                !VoiceCycle.matches(token) || service.nativeCoverDismissed(token)) {
+                finish("coordinate_cancelled_before_dispatch")
+                return@postDelayed
+            }
+            val fresh=runCatching {
+                val current=nodes()
+                val fields=current.filter { it.isEditable && !it.isPassword && it.isEnabled &&
+                    it.packageName?.toString()==NativeChatSettings.PACKAGE && it.windowId==plan.windowId }
+                val field=fields.singleOrNull()
+                if (field==null || !field.isFocused || field.isShowingHintText || field.text?.toString()!=service.nativeGreetingText(token)) null
+                else coordinatePlan(current,field)
+            }.getOrNull()
+            if (!gate.dispatch(fresh==plan)) {
+                finish("coordinate_target_changed")
+                return@postDelayed
+            }
+            val accepted=runCatching {
+                val path=android.graphics.Path().apply { moveTo(plan.x,plan.y) }
+                val gesture=android.accessibilityservice.GestureDescription.Builder()
+                    .addStroke(android.accessibilityservice.GestureDescription.StrokeDescription(path,0L,60L)).build()
+                service.dispatchGesture(gesture,object : AccessibilityService.GestureResultCallback() {
+                    override fun onCompleted(gestureDescription: android.accessibilityservice.GestureDescription?) { finish("coordinate_completed") }
+                    override fun onCancelled(gestureDescription: android.accessibilityservice.GestureDescription?) { finish("coordinate_cancelled") }
+                },tapHandler)
+            }.getOrDefault(false)
+            if (accepted) result("coordinate_dispatched") else finish("coordinate_rejected")
+        },80L)
+        return true
     }
 
     private fun toggleMute() {
