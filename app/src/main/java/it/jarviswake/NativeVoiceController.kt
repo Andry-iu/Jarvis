@@ -28,24 +28,24 @@ internal class NativeVoiceController(private val service: VoiceAccessibilityServ
 
     fun launch(openShortcut: Boolean = true) {
         check(!service.getSystemService(KeyguardManager::class.java).isKeyguardLocked) { "Sblocca il telefono per aprire l'app ChatGPT." }
-        val view = HolographicOverlayView(service)
-        view.setCoverActions(
-            singleTap = { toggleMute() },
-            belowTap = { CoverSettings.setOpaque(service, !CoverSettings.isOpaque(service)) },
-            close = { VoiceCycle.cancel(service, token, "Ciclo nativo chiuso.") },
-            export = { exportControls() },
-            hide = { service.requestNativeExit(token, returnHome = true) },
-            revealChat = { service.requestNativeExit(token, returnHome = false) }
-        )
-        val params = WindowManager.LayoutParams(-1, -1, WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
-            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
-            PixelFormat.TRANSLUCENT).apply { gravity = Gravity.TOP or Gravity.START }
-        service.getSystemService(WindowManager::class.java).addView(view, params)
-        hud = view
-        if (service.nativeCoverDismissed(token)) view.visibility = android.view.View.GONE
-        if (service.nativeExitError(token)) view.setError("ARRESTO INCERTO — WAKE SOSPESA; ESPORTA LOG")
-        status("APERTURA PROGETTO CHATGPT")
-        WaitingAudio.coverShown(service, token)
+        if (!service.nativeCoverDismissed(token)) {
+            val view = HolographicOverlayView(service)
+            view.setCoverActions(
+                singleTap = { toggleMute() },
+                belowTap = { CoverSettings.setOpaque(service, !CoverSettings.isOpaque(service)) },
+                close = { dismissForExit(); service.requestNativeExit(token, returnHome = false, emergency = true) },
+                export = { exportControls() },
+                hide = { dismissForExit(); service.requestNativeExit(token, returnHome = true) },
+                revealChat = { dismissForExit(); service.requestNativeExit(token, returnHome = false) }
+            )
+            val params = WindowManager.LayoutParams(-1, -1, WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
+                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
+                PixelFormat.TRANSLUCENT).apply { gravity = Gravity.TOP or Gravity.START }
+            service.getSystemService(WindowManager::class.java).addView(view, params)
+            hud = view
+            status("APERTURA PROGETTO CHATGPT")
+            WaitingAudio.coverShown(service, token)
+        }
         if (openShortcut) {
             NativeChatSettings.launch(service)
             DiagnosticLog.record(service, DiagnosticLog.Event.NATIVE_SHORTCUT_OPENED, token)
@@ -68,8 +68,9 @@ internal class NativeVoiceController(private val service: VoiceAccessibilityServ
         hud?.visibility = if (service.nativeCoverDismissed(token)) android.view.View.GONE else android.view.View.VISIBLE
     }
     fun dismissForExit() {
-        hud?.visibility = android.view.View.GONE
-        DiagnosticLog.record(service, DiagnosticLog.Event.NATIVE_COVER_DISMISSED, token)
+        val hadHud = hud != null
+        detachHud()
+        if (hadHud) DiagnosticLog.record(service, DiagnosticLog.Event.NATIVE_COVER_DISMISSED, token)
     }
     private fun captureControls(nodes: List<AccessibilityNodeInfo>, phase: String) {
         if (phase != snapshotPhase) {
@@ -123,10 +124,7 @@ internal class NativeVoiceController(private val service: VoiceAccessibilityServ
     }
     fun poll() {
         if (!VoiceCycle.matches(token) || exporting) { exitConfirmation.reset(); return }
-        if (ending != null && service.revealNativeExitError(token)) {
-            hud?.visibility = android.view.View.VISIBLE
-            hud?.setError("ARRESTO INCERTO — WAKE SOSPESA; ESPORTA LOG")
-        }
+        if (ending != null) service.reportNativeExitTimeout(token)
         val nodes = nodes()
         if (nodes.isEmpty()) { exitConfirmation.reset(); status("ATTENDO LA FINESTRA CHATGPT"); return }
         val stops = targets(nodes, NativeVoiceLabels.stop)
@@ -197,7 +195,7 @@ internal class NativeVoiceController(private val service: VoiceAccessibilityServ
             VoiceCycle.voiceDispatched(token)
             hud?.setVoiceActive()
             hud?.setMicrophoneMuted(unmute != null)
-            tryGreeting(nodes)
+            // Automatic greeting suspended after the .69 lockup report; no text actions during this hotfix.
         } else if (observed && closed) {
             DiagnosticLog.record(service, DiagnosticLog.Event.NATIVE_STOP_CONFIRMED, token)
             startSent = false
@@ -268,8 +266,18 @@ internal class NativeVoiceController(private val service: VoiceAccessibilityServ
         val button = if ((mute == null) != (unmute == null)) mute ?: unmute else null
         button?.performAction(AccessibilityNodeInfo.ACTION_CLICK)
     }
-    fun destroy() {
-        hud?.let { runCatching { service.getSystemService(WindowManager::class.java).removeView(it) } }
+    private fun detachHud() {
+        val view = hud ?: return
         hud = null
+        view.visibility = android.view.View.GONE
+        view.isClickable = false
+        val manager = service.getSystemService(WindowManager::class.java)
+        val params = view.layoutParams as? WindowManager.LayoutParams
+        if (params != null) {
+            params.flags = params.flags or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
+            runCatching { manager.updateViewLayout(view, params) }
+        }
+        runCatching { manager.removeViewImmediate(view) }
     }
+    fun destroy() = detachHud()
 }

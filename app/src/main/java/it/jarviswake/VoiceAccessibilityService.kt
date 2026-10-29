@@ -101,21 +101,44 @@ class VoiceAccessibilityService : AccessibilityService() {
     private val main = Handler(Looper.getMainLooper())
     private var nativeController: NativeVoiceController? = null
 
-    internal fun requestNativeExit(token: String, returnHome: Boolean) {
-        if (!VoiceCycle.matches(token) || nativeController?.token != token ||
-            preferences.getBoolean("native_stop", false)) return
-        // Keep the first requested destination, including across a service reconnection.
-        preferences.edit().putBoolean("native_return_home", returnHome)
-            .putBoolean("native_cover_dismissed", true)
-            .putLong("native_exit_at", SystemClock.elapsedRealtime()).apply()
-        DiagnosticLog.record(this, if (returnHome) DiagnosticLog.Event.HIDE_GESTURE_RECOGNIZED
-            else DiagnosticLog.Event.CHAT_REVEAL_GESTURE_RECOGNIZED, token)
-        nativeController?.dismissForExit()
-        val message = if (returnHome) "Voice terminata; ritorno alla Home."
-            else "Voice terminata; conversazione ChatGPT disponibile."
-        if (!endNative(this, token, message)) finishNative(token, message)
-        else runCatching { nativeController?.poll() }.onFailure {
-            State.setAttempt(this, "Arresto Voice da verificare; microfono wake sospeso.")
+    private fun nativeExitState() = NativeExitState(
+        coverDismissed = preferences.getBoolean("native_cover_dismissed", false),
+        stopRequested = preferences.getBoolean("native_stop", false),
+        stopSent = preferences.getBoolean("native_stop_sent", false),
+        returnHome = preferences.getBoolean("native_return_home", false),
+        requestedAt = if (preferences.contains("native_exit_at")) preferences.getLong("native_exit_at", 0L) else null,
+        errorReported = preferences.getBoolean("native_exit_error", false)
+    )
+
+    private fun saveNativeExit(state: NativeExitState) {
+        preferences.edit().putBoolean("native_cover_dismissed", state.coverDismissed)
+            .putBoolean("native_stop", state.stopRequested).putBoolean("native_stop_sent", state.stopSent)
+            .putBoolean("native_return_home", state.returnHome).putBoolean("native_exit_error", state.errorReported)
+            .apply { state.requestedAt?.let { putLong("native_exit_at", it) } }.apply()
+    }
+
+    internal fun requestNativeExit(token: String, returnHome: Boolean, emergency: Boolean = false) {
+        // Release this HUD before checking cancellation/stop state. A repeated exit must still dismiss it.
+        nativeController?.takeIf { it.token == token }?.dismissForExit()
+        if (!VoiceCycle.matches(token) || preferences.getString("native_token", null) != token) return
+        val state = nativeExitState()
+        val requestStop = state.dismiss(returnHome, SystemClock.elapsedRealtime())
+        saveNativeExit(state)
+        DiagnosticLog.record(this, when {
+            emergency -> DiagnosticLog.Event.NATIVE_EMERGENCY_CLOSE
+            returnHome -> DiagnosticLog.Event.HIDE_GESTURE_RECOGNIZED
+            else -> DiagnosticLog.Event.CHAT_REVEAL_GESTURE_RECOGNIZED
+        }, token)
+        if (!requestStop) return // Already stopping: UI stays dismissed, never repeat stop or change destination.
+        val message = "Cover chiusa; arresto Voice da confermare."
+        if (!endNative(this, token, message)) finishNative(token, "Ciclo chiuso; ascolto riattivato.")
+        else {
+            State.setAttempt(this, "Cover chiusa. Se Voice resta attiva, terminala in ChatGPT; wake sospesa.")
+            // Let the touch callback finish first. Accessibility actions cannot hold the cover on screen.
+            main.post {
+                if (VoiceCycle.matches(token)) runCatching { nativeController?.takeIf { it.token == token }?.poll() }
+                    .onFailure { State.setAttempt(this, "Cover chiusa; Voice da terminare in ChatGPT. Wake sospesa.") }
+            }
         }
     }
 
@@ -126,22 +149,24 @@ class VoiceAccessibilityService : AccessibilityService() {
         preferences.getString("native_token", null) == token && preferences.getBoolean("native_stop_sent", false)
 
     internal fun consumeNativeStop(token: String): Boolean {
-        if (!VoiceCycle.matches(token) || preferences.getString("native_token", null) != token || nativeStopSent(token)) return false
-        // Persist before dispatch: a service reconnection must not repeat an uncertain stop.
-        preferences.edit().putBoolean("native_stop_sent", true).apply()
+        if (!VoiceCycle.matches(token) || preferences.getString("native_token", null) != token) return false
+        val state = nativeExitState()
+        if (!state.consumeStop()) return false
+        saveNativeExit(state) // Persist before dispatch, including uncertain/rejected actions.
         return true
     }
 
-    internal fun revealNativeExitError(token: String): Boolean {
-        if (!nativeCoverDismissed(token) || SystemClock.elapsedRealtime() -
-            preferences.getLong("native_exit_at", SystemClock.elapsedRealtime()) < 5000L) return false
-        preferences.edit().putBoolean("native_cover_dismissed", false).putBoolean("native_exit_error", true).apply()
+    internal fun reportNativeExitTimeout(token: String): Boolean {
+        if (!VoiceCycle.matches(token) || preferences.getString("native_token", null) != token) return false
+        val state = nativeExitState()
+        if (!state.reportTimeout(SystemClock.elapsedRealtime())) return false
+        saveNativeExit(state)
         DiagnosticLog.record(this, DiagnosticLog.Event.NATIVE_STOP_WAIT_TIMEOUT, token)
+        State.setAttempt(this, "Cover chiusa; arresto Voice incerto. Termina Voice in ChatGPT; wake sospesa.")
+        android.widget.Toast.makeText(this, "Arresto Voice da verificare in ChatGPT. Cover chiusa; wake sospesa.",
+            android.widget.Toast.LENGTH_LONG).show()
         return true
     }
-
-    internal fun nativeExitError(token: String): Boolean =
-        preferences.getString("native_token", null) == token && preferences.getBoolean("native_exit_error", false)
 
     internal fun nativeGreetingStage(token: String): Int =
         if (preferences.getString("native_token", null) == token) preferences.getInt("native_greeting_stage", 0)
