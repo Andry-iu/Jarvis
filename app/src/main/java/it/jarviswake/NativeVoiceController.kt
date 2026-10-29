@@ -276,13 +276,27 @@ internal class NativeVoiceController(private val service: VoiceAccessibilityServ
                 NativeVoiceLabels.normalize(it.label?.toString().orEmpty()) in sendLabels
         }
         val canWrite = allowWrite && field?.actionList?.any { it.id == AccessibilityNodeInfo.ACTION_SET_TEXT } == true
-        val metadata = "stage=$stage fields=${fields.size} empty=${text.isBlank()} matches=${text == phrase} write=$canWrite sendButtons=${buttons.size} imeSend=${imeSend != null} voiceControls=$allowWrite window=${field?.windowId ?: -1}"
+        if (stage == NativeGreetingPolicy.WRITING && field != null && text == phrase && buttons.isEmpty() && imeSend == null) {
+            service.prepareNativeEditor(token)
+            if (!field.isFocused && field.actionList.any { it.id == AccessibilityNodeInfo.ACTION_FOCUS } &&
+                service.consumeNativeGreetingFocus(token)) {
+                val focused = runCatching { field.performAction(AccessibilityNodeInfo.ACTION_FOCUS) }.getOrNull()
+                DiagnosticLog.record(service, DiagnosticLog.Event.NATIVE_GREETING_RESULT, token,
+                    monitorStatus = if (focused == true) "focus_accepted" else "focus_unavailable")
+                return // Re-observe focus and EditorInfo, do not send using the previous snapshot.
+            }
+        }
+        val editor = service.nativeEditorState(token)
+        val editorSend = stage == NativeGreetingPolicy.WRITING && buttons.isEmpty() && imeSend == null &&
+            editor.allowsSend(field?.isFocused == true, text == phrase)
+        val editorOwner = when (editor.owner) { NativeChatSettings.PACKAGE -> "chatgpt"; null -> "none"; else -> "other" }
+        val metadata = "stage=$stage fields=${fields.size} empty=${text.isBlank()} matches=${text == phrase} focused=${field?.isFocused == true} write=$canWrite sendButtons=${buttons.size} imeSend=${imeSend != null} editorReady=${editor.ready} editorOwner=$editorOwner editorStarted=${editor.started} editorConnection=${editor.connection} editorAction=${editor.options?.and(android.view.inputmethod.EditorInfo.IME_MASK_ACTION) ?: -1} editorSend=$editorSend voiceControls=$allowWrite window=${field?.windowId ?: -1}"
         if (metadata != lastGreetingMetadata) {
             lastGreetingMetadata = metadata
             NativeRuntimeSnapshot.save(service, token, "greeting", metadata)
         }
         val decision = NativeGreetingPolicy.decide(stage, service.nativeGreetingElapsed(token), fields.size,
-            text.isBlank(), text == phrase, canWrite, send != null || (buttons.isEmpty() && imeSend != null))
+            text.isBlank(), text == phrase, canWrite, send != null || (buttons.isEmpty() && imeSend != null) || editorSend)
         when (decision) {
             NativeGreetingPolicy.Action.WRITE -> {
                 service.setNativeGreetingStage(token, NativeGreetingPolicy.WRITING)
@@ -301,11 +315,16 @@ internal class NativeVoiceController(private val service: VoiceAccessibilityServ
                 service.setNativeGreetingStage(token, NativeGreetingPolicy.DISPATCHED)
                 DiagnosticLog.record(service, DiagnosticLog.Event.NATIVE_GREETING_COMMAND, token)
                 val accepted = runCatching {
-                    if (send != null) send.performAction(AccessibilityNodeInfo.ACTION_CLICK)
-                    else field?.performAction(imeSend!!.id) == true
+                    when {
+                        send != null -> send.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+                        imeSend != null -> field?.performAction(imeSend.id) == true
+                        editorSend -> service.sendNativeGreetingThroughEditor(token, field?.isFocused == true, text == phrase)
+                        else -> false
+                    }
                 }.getOrNull()
                 DiagnosticLog.record(service, DiagnosticLog.Event.NATIVE_GREETING_RESULT, token,
-                    monitorStatus = if (accepted == true) "send_accepted" else if (accepted == false) "send_rejected" else "send_error")
+                    monitorStatus = if (accepted == true && editorSend) "editor_dispatched"
+                        else if (accepted == true) "send_accepted" else if (accepted == false) "send_rejected" else "send_error")
                 if (accepted != true) abortGreeting("send_failed")
             }
             NativeGreetingPolicy.Action.ABORT -> {

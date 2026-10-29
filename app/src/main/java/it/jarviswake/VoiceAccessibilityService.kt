@@ -168,6 +168,64 @@ class VoiceAccessibilityService : AccessibilityService() {
         return true
     }
 
+    internal fun prepareNativeEditor(token: String) {
+        if (!VoiceCycle.matches(token) || nativeCoverDismissed(token) || android.os.Build.VERSION.SDK_INT < 33) return
+        val info = serviceInfo ?: return
+        if (info.flags and android.accessibilityservice.AccessibilityServiceInfo.FLAG_INPUT_METHOD_EDITOR == 0) {
+            info.flags = info.flags or android.accessibilityservice.AccessibilityServiceInfo.FLAG_INPUT_METHOD_EDITOR
+            serviceInfo = info
+        }
+    }
+
+    private fun disableNativeEditor() {
+        if (android.os.Build.VERSION.SDK_INT < 33) return
+        val info = serviceInfo ?: return
+        if (info.flags and android.accessibilityservice.AccessibilityServiceInfo.FLAG_INPUT_METHOD_EDITOR != 0) {
+            info.flags = info.flags and android.accessibilityservice.AccessibilityServiceInfo.FLAG_INPUT_METHOD_EDITOR.inv()
+            serviceInfo = info
+        }
+    }
+
+    internal fun consumeNativeGreetingFocus(token: String): Boolean {
+        if (!VoiceCycle.matches(token) || preferences.getBoolean("native_greeting_focus", false)) return false
+        preferences.edit().putBoolean("native_greeting_focus", true).apply()
+        return true
+    }
+
+    internal data class NativeEditorState(val ready: Boolean, val owner: String?, val started: Boolean,
+        val connection: Boolean, val options: Int?) {
+        fun allowsSend(focused: Boolean, matches: Boolean) = NativeEditorSendPolicy.canSend(owner,
+            NativeChatSettings.PACKAGE, started, connection, focused, matches, options,
+            android.view.inputmethod.EditorInfo.IME_MASK_ACTION, android.view.inputmethod.EditorInfo.IME_ACTION_SEND)
+    }
+
+    internal fun nativeEditorState(token: String): NativeEditorState {
+        if (!VoiceCycle.matches(token) || nativeCoverDismissed(token) || android.os.Build.VERSION.SDK_INT < 33)
+            return NativeEditorState(false, null, false, false, null)
+        return nativeEditorState33()
+    }
+
+    @android.annotation.TargetApi(33)
+    private fun nativeEditorState33(): NativeEditorState {
+        val method = inputMethod ?: return NativeEditorState(false, null, false, false, null)
+        val info = method.currentInputEditorInfo
+        val owner = info?.packageName
+        return NativeEditorState(true, owner, method.currentInputStarted, method.currentInputConnection != null,
+            if (owner == NativeChatSettings.PACKAGE) info?.imeOptions else null)
+    }
+
+    internal fun sendNativeGreetingThroughEditor(token: String, focused: Boolean, matches: Boolean): Boolean {
+        if (android.os.Build.VERSION.SDK_INT < 33 || !nativeEditorState(token).allowsSend(focused, matches)) return false
+        return dispatchNativeEditorSend33()
+    }
+
+    @android.annotation.TargetApi(33)
+    private fun dispatchNativeEditorSend33(): Boolean {
+        val connection = inputMethod?.currentInputConnection ?: return false
+        connection.performEditorAction(android.view.inputmethod.EditorInfo.IME_ACTION_SEND)
+        return true // Dispatch only: this void API does not acknowledge message acceptance.
+    }
+
     internal fun nativeGreetingStarted(token: String): Boolean =
         VoiceCycle.matches(token) && preferences.contains("native_greeting_at")
 
@@ -257,6 +315,7 @@ class VoiceAccessibilityService : AccessibilityService() {
         lastVoiceState = null
         lastGreetingResult = null
         hideOverlay()
+        runCatching { disableNativeEditor() } // Only after both HUDs are released.
     }
 
     // The single scheduled loop avoids concurrent DOM queries from accessibility events.
