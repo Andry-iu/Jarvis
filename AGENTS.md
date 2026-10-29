@@ -28,3 +28,9 @@ Prima di modificare il progetto leggere `README.md`, `CONTINUITY.md` e `VERIFICA
 - Preservare la firma permanente; non generare una chiave sostitutiva. Non chiedere o stampare password in chat. Non inserire keystore, password, cookie, audio, trascrizioni, cache o output di build in Git.
 - Mantenere il backup cifrato nel branch di handoff dedicato; verificare il certificato SHA-256 prima della firma e rimuovere i file in chiaro temporanei dopo.
 - Partire sempre da `main` completo e aggiornato. Quando una modifica culmina nel rilascio di un APK firmato per il collaudo, aggiornare nello stesso rilascio sorgenti, test e documentazione con un commit fast-forward su `main`, senza attendere un'ulteriore richiesta «Consolida». Verificare il branch remoto e non usare force-push.
+
+## Recupero della passphrase di firma
+
+- Indicazione dell’utente (29 ottobre 2026): la passphrase del backup cifrato di firma è già configurata come segreto dell’ambiente Jarvis; il riferimento è nelle istruzioni del progetto Jarvis. Prima di richiederla nuovamente, consultare tali istruzioni e usare il segreto configurato tramite i meccanismi dell’ambiente, senza stamparne il valore.
+- La presenza del segreto è dichiarata dall’utente; in ogni ambiente verificarne la disponibilità effettiva. Se non accessibile, descrivere il preciso problema di accesso o configurazione, senza presumere che la passphrase manchi e senza chiederne automaticamente il reinvio in chat.
+- Non copiare la passphrase nelle istruzioni Git, nel codice, nei commit o nei log. Conservare la chiave permanente e seguire `docs/RECUPERO_FIRMA.md` per ripristino e verifica del certificato.
