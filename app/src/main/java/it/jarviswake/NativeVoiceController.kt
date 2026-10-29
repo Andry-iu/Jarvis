@@ -12,7 +12,7 @@ import android.view.accessibility.AccessibilityNodeInfo
 internal class NativeVoiceController(private val service: VoiceAccessibilityService, val token: String) {
     private var hud: HolographicOverlayView? = null
     private var startSent = !VoiceCycle.touchGate.canDispatch
-    private var stopSent = false
+    private var stopSent = service.nativeStopSent(token)
     private var ending: String? = null
     private var observed = false
     private val exitConfirmation = NativeExitConfirmation()
@@ -42,6 +42,8 @@ internal class NativeVoiceController(private val service: VoiceAccessibilityServ
             PixelFormat.TRANSLUCENT).apply { gravity = Gravity.TOP or Gravity.START }
         service.getSystemService(WindowManager::class.java).addView(view, params)
         hud = view
+        if (service.nativeCoverDismissed(token)) view.visibility = android.view.View.GONE
+        if (service.nativeExitError(token)) view.setError("ARRESTO INCERTO — WAKE SOSPESA; ESPORTA LOG")
         status("APERTURA PROGETTO CHATGPT")
         WaitingAudio.coverShown(service, token)
         if (openShortcut) {
@@ -63,7 +65,11 @@ internal class NativeVoiceController(private val service: VoiceAccessibilityServ
     fun restoreAfterExport() {
         if (!VoiceCycle.matches(token)) return
         exporting = false
-        hud?.visibility = android.view.View.VISIBLE
+        hud?.visibility = if (service.nativeCoverDismissed(token)) android.view.View.GONE else android.view.View.VISIBLE
+    }
+    fun dismissForExit() {
+        hud?.visibility = android.view.View.GONE
+        DiagnosticLog.record(service, DiagnosticLog.Event.NATIVE_COVER_DISMISSED, token)
     }
     private fun captureControls(nodes: List<AccessibilityNodeInfo>, phase: String) {
         if (phase != snapshotPhase) {
@@ -117,6 +123,10 @@ internal class NativeVoiceController(private val service: VoiceAccessibilityServ
     }
     fun poll() {
         if (!VoiceCycle.matches(token) || exporting) { exitConfirmation.reset(); return }
+        if (ending != null && service.revealNativeExitError(token)) {
+            hud?.visibility = android.view.View.VISIBLE
+            hud?.setError("ARRESTO INCERTO — WAKE SOSPESA; ESPORTA LOG")
+        }
         val nodes = nodes()
         if (nodes.isEmpty()) { exitConfirmation.reset(); status("ATTENDO LA FINESTRA CHATGPT"); return }
         val stops = targets(nodes, NativeVoiceLabels.stop)
@@ -134,9 +144,8 @@ internal class NativeVoiceController(private val service: VoiceAccessibilityServ
         }
         val closed = if (startSent) exitConfirmation.observe(SystemClock.elapsedRealtime(), startKey,
             stops.isNotEmpty() || mutes.isNotEmpty() || unmutes.isNotEmpty()) else false
-        if (startSent) captureControls(nodes, if (ending != null) "stopping" else "after_voice_command")
         if (ending != null) {
-            if (stop != null && active && !stopSent) {
+            if (stop != null && active && !stopSent && service.consumeNativeStop(token)) {
                 stopSent = true
                 DiagnosticLog.record(service, DiagnosticLog.Event.NATIVE_STOP_COMMAND, token)
                 stop.performAction(AccessibilityNodeInfo.ACTION_CLICK)
@@ -149,8 +158,10 @@ internal class NativeVoiceController(private val service: VoiceAccessibilityServ
             } else status(if (stop == null && !stopSent)
                 "CHIUSURA NON RICONOSCIUTA — DOPPIO TOCCO IN ALTO A DESTRA: ESPORTA"
                 else "ARRESTO DA VERIFICARE — MICROFONO WAKE SOSPESO")
+            if (VoiceCycle.matches(token)) captureControls(nodes, "stopping")
             return
         }
+        if (startSent) captureControls(nodes, "after_voice_command")
         if (!startSent) {
             if (active) { VoiceCycle.cancel(service, token, "Voice era già attiva: nessun nuovo comando inviato."); return }
             if (!projectVisible(nodes)) { status("ATTENDO CONFERMA DEL PROGETTO"); return }

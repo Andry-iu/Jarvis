@@ -105,13 +105,43 @@ class VoiceAccessibilityService : AccessibilityService() {
         if (!VoiceCycle.matches(token) || nativeController?.token != token ||
             preferences.getBoolean("native_stop", false)) return
         // Keep the first requested destination, including across a service reconnection.
-        preferences.edit().putBoolean("native_return_home", returnHome).apply()
+        preferences.edit().putBoolean("native_return_home", returnHome)
+            .putBoolean("native_cover_dismissed", true)
+            .putLong("native_exit_at", SystemClock.elapsedRealtime()).apply()
         DiagnosticLog.record(this, if (returnHome) DiagnosticLog.Event.HIDE_GESTURE_RECOGNIZED
             else DiagnosticLog.Event.CHAT_REVEAL_GESTURE_RECOGNIZED, token)
+        nativeController?.dismissForExit()
         val message = if (returnHome) "Voice terminata; ritorno alla Home."
             else "Voice terminata; conversazione ChatGPT disponibile."
         if (!endNative(this, token, message)) finishNative(token, message)
+        else runCatching { nativeController?.poll() }.onFailure {
+            State.setAttempt(this, "Arresto Voice da verificare; microfono wake sospeso.")
+        }
     }
+
+    internal fun nativeCoverDismissed(token: String): Boolean =
+        preferences.getString("native_token", null) == token && preferences.getBoolean("native_cover_dismissed", false)
+
+    internal fun nativeStopSent(token: String): Boolean =
+        preferences.getString("native_token", null) == token && preferences.getBoolean("native_stop_sent", false)
+
+    internal fun consumeNativeStop(token: String): Boolean {
+        if (!VoiceCycle.matches(token) || preferences.getString("native_token", null) != token || nativeStopSent(token)) return false
+        // Persist before dispatch: a service reconnection must not repeat an uncertain stop.
+        preferences.edit().putBoolean("native_stop_sent", true).apply()
+        return true
+    }
+
+    internal fun revealNativeExitError(token: String): Boolean {
+        if (!nativeCoverDismissed(token) || SystemClock.elapsedRealtime() -
+            preferences.getLong("native_exit_at", SystemClock.elapsedRealtime()) < 5000L) return false
+        preferences.edit().putBoolean("native_cover_dismissed", false).putBoolean("native_exit_error", true).apply()
+        DiagnosticLog.record(this, DiagnosticLog.Event.NATIVE_STOP_WAIT_TIMEOUT, token)
+        return true
+    }
+
+    internal fun nativeExitError(token: String): Boolean =
+        preferences.getString("native_token", null) == token && preferences.getBoolean("native_exit_error", false)
 
     internal fun finishNative(token: String, message: String) {
         if (!VoiceCycle.matches(token) || preferences.getString("native_token", null) != token) return

@@ -1,6 +1,6 @@
 # Recupero della firma permanente JarvisWake
 
-Procedura per ripartire da un ambiente nuovo e firmare un APK compatibile con l'installazione esistente sul Samsung Galaxy S24+ (SM-S926B, Android 16). La chiave non è specifica del modello: Android richiede che l'APK di aggiornamento abbia lo stesso certificato dell'app installata.
+Procedura da eseguire nel cloud Jarvis esistente per recuperare il materiale temporaneo di firma e firmare un APK compatibile con l'installazione esistente sul Samsung Galaxy S24+ (SM-S926B, Android 16). La chiave non è specifica del modello: Android richiede che l'APK di aggiornamento abbia lo stesso certificato dell'app installata.
 
 ## Materiale versionato
 
@@ -13,11 +13,13 @@ Procedura per ripartire da un ambiente nuovo e firmare un APK compatibile con l'
 
 ## Limite deliberato: passphrase
 
-La passphrase age **non è salvata su Git** e non va aggiunta alla documentazione. Senza di essa non è possibile aprire il backup nel nuovo ambiente. Era stata fornita dall'utente nella conversazione precedente e il backup è stato decrittato con successo per la 0.5.30. Se il contesto non è più disponibile, occorre che l'utente la inserisca nel prompt locale di `age`; non chiederla in chiaro nella chat. In alternativa, il keystore permanente resta sul telefono in Termux al percorso `~/jarvis-signing/jarvis-signing.jks` e la password viene inserita localmente.
+Indicazione aggiornata del 29 ottobre 2026: usare prima il segreto `Passphrase` già configurato nel cloud Jarvis (`/workspace/Jarvis`, strumenti `/workspace/.jarvis-cloud`), senza leggerlo a video, copiarlo in comandi o richiederlo di nuovo. Verificarne presenza e utilizzabilità tramite ambiente e decrittazione autenticata. Il recupero di helper temporanei rimossi non autorizza a ricostruire la toolchain in un altro ambiente.
 
-## Recupero in un ambiente locale fidato
+La passphrase age **non è salvata su Git** e non va aggiunta alla documentazione. Senza di essa non è possibile aprire il backup nel nuovo ambiente. Era stata fornita dall'utente nella conversazione precedente e il backup è stato decrittato con successo per la 0.5.30. Se il segreto configurato non è accessibile, riportare il blocco preciso senza chiederne automaticamente il reinvio in chat. In alternativa, il keystore permanente resta sul telefono in Termux al percorso `~/jarvis-signing/jarvis-signing.jks` e la password viene inserita localmente.
 
-1. Clonare o aggiornare il repository senza clone shallow e controllare che la baseline sia il `main` remoto pulito. Non usare workflow GitHub Actions per build o firma.
+## Recupero nel cloud Jarvis fidato
+
+1. Riprendere esclusivamente il checkout `/workspace/Jarvis` nel cloud Jarvis e aggiornare i riferimenti remoti, preservando ogni modifica locale; controllare che la baseline sia il `main` remoto pulito. Non usare workflow GitHub Actions per build o firma.
 2. Recuperare il branch di handoff e verificare l'archivio cifrato:
 
    ```sh
@@ -26,7 +28,7 @@ La passphrase age **non è salvata su Git** e non va aggiunta alla documentazion
    printf '%s  %s\n' '155b8afc72265dae8bfe5e8d4a09a49929375d88e9972bd9b2777723d2502e58' '/tmp/jarvis-signing-backup.tar.age' | sha256sum -c -
    ```
 
-3. Installare `age`, `tar`, JDK 17 e Android SDK Build Tools 36.0.0. Creare una directory privata e lasciare che `age` chieda la passphrase interattivamente, senza passarla come argomento:
+3. Riutilizzare JDK 17, SDK/Build Tools 36.0.0 e cache già disponibili nel cloud Jarvis. Per aprire il backup usare `age` se presente oppure pyrage nel medesimo ambiente con il segreto configurato passato solo in memoria. Creare una directory privata e lasciare che `age` chieda la passphrase interattivamente, senza passarla come argomento:
 
    ```sh
    umask 077

@@ -23,12 +23,12 @@ import android.view.ViewConfiguration
 
 /** Original cinematic HUD animation shown while ChatGPT is being configured. */
 class HolographicOverlayView(context: Context) : View(context) {
-    private val startedAt = SystemClock.uptimeMillis()
+    private val animationClock = CoverAnimationClock(SystemClock.uptimeMillis())
     private val versionName = readVersionName()
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
     private var microphoneMuted = false
-    private val cyan get() = if (microphoneMuted) Color.rgb(185, 24, 98) else Color.rgb(54, 222, 255)
-    private val blue get() = if (microphoneMuted) Color.rgb(130, 16, 50) else Color.rgb(30, 116, 255)
+    private val cyan get() = if (microphoneMuted) Color.rgb(170, 170, 170) else Color.rgb(54, 222, 255)
+    private val blue get() = if (microphoneMuted) Color.rgb(100, 100, 100) else Color.rgb(30, 116, 255)
     private var voiceActive = false
     private var modelConfirmed = false
     private var statusText = "PREPARAZIONE CHATGPT"
@@ -199,27 +199,9 @@ class HolographicOverlayView(context: Context) : View(context) {
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
-        val seconds = (SystemClock.uptimeMillis() - startedAt) / 1000f
+        val seconds = animationClock.seconds(SystemClock.uptimeMillis())
         // Replace each frame's background so translucency never accumulates to opaque.
         canvas.drawColor(Color.argb(backgroundAlpha, 2, 8, 15), PorterDuff.Mode.SRC)
-
-        if (voiceActive) {
-            val density = resources.displayMetrics.density
-            val label = "↓ HOME   ← CHAT INTERATTIVA"
-            paint.style = Paint.Style.FILL
-            paint.typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
-            paint.textAlign = Paint.Align.CENTER
-            paint.textSize = width * 0.028f
-            paint.letterSpacing = 0.035f
-            paint.color = withAlpha(cyan, 0.70f)
-            canvas.drawText(label, width / 2f, 72f * density, paint)
-            gestureMessage?.let {
-                paint.textSize = width * 0.026f
-                paint.letterSpacing = 0.015f
-                paint.color = if (it.startsWith("ERRORE")) Color.rgb(255, 105, 105) else withAlpha(cyan, 0.92f)
-                canvas.drawText(it, width / 2f, 108f * density, paint)
-            }
-        }
 
         val cx = width / 2f
         val cy = height * 0.43f
@@ -306,7 +288,7 @@ class HolographicOverlayView(context: Context) : View(context) {
 
         // Status notes are useful only while setup is in progress. Keep the
         // HUD clean after Voice is assumed active, leaving its identity and version.
-        if (!voiceActive) {
+        if (!voiceActive || errorText != null || gestureMessage != null) {
             paint.textSize = width * 0.030f
             paint.letterSpacing = 0.055f
             paint.color = when {
@@ -315,7 +297,7 @@ class HolographicOverlayView(context: Context) : View(context) {
                 else -> withAlpha(cyan, 0.70f)
             }
             canvas.drawText(
-                errorText ?: if (modelConfirmed) "MODELLO WORK: 6 LUNA ✓" else statusText,
+                errorText ?: gestureMessage ?: if (modelConfirmed) "MODELLO WORK: 6 LUNA ✓" else statusText,
                 cx,
                 cy + base * 2.28f,
                 paint
@@ -328,7 +310,7 @@ class HolographicOverlayView(context: Context) : View(context) {
             }
         }
 
-        postInvalidateOnAnimation()
+        if (!microphoneMuted) postInvalidateOnAnimation()
     }
 
     fun setVoiceActive() {
@@ -337,6 +319,8 @@ class HolographicOverlayView(context: Context) : View(context) {
     }
 
     fun setMicrophoneMuted(value: Boolean) {
+        if (microphoneMuted == value) return
+        animationClock.setMuted(value, SystemClock.uptimeMillis())
         microphoneMuted = value
         invalidate()
     }
