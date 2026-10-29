@@ -1,0 +1,27 @@
+# Sanitized .76 exported composer: local indices and translated bounds; no labels, UI values, window or account IDs.
+# index parent left top right bottom role enabled clickable clickAction focused
+0 -1 0 0 1344 657 V true false false false
+1 0 1280 64 1344 160 V true false false false
+2 0 64 64 1280 449 V true false false false
+3 2 64 64 1280 449 V true false false false
+4 2 64 64 1280 449 E true true true true
+5 0 0 473 192 649 V true false false false
+6 5 8 473 184 649 V true false false false
+7 6 8 473 184 649 V true false false false
+8 7 0 465 192 657 V true true true false
+9 8 8 473 184 649 V true false false false
+10 8 48 513 144 609 V true false false false
+11 8 8 473 184 649 B true false false false
+12 0 776 465 1344 657 V true false false false
+13 12 776 465 1344 657 V true false false false
+14 13 776 473 952 649 V true false false false
+15 14 768 465 952 657 V true true true false
+16 15 800 497 928 625 V true false false false
+17 15 800 497 928 625 B true false false false
+18 13 952 465 1144 657 V true false false false
+19 18 952 465 1144 657 V true false false false
+20 19 952 465 1144 657 V true false false false
+21 13 1144 465 1336 657 V true false false false
+22 21 1144 465 1336 657 V true true true false
+23 22 1176 497 1304 625 V true false false false
+24 22 1144 465 1336 657 B true false false false

@@ -13,7 +13,7 @@ internal object NativeComposerSendSelector {
     data class Node(val parent: Int, val box: Box, val sameAppWindow: Boolean = true,
         val enabled: Boolean = true, val editable: Boolean = false, val focused: Boolean = false,
         val clickable: Boolean = false, val clickAction: Boolean = false,
-        val button: Boolean = false, val labelled: Boolean = false, val password: Boolean = false)
+        val button: Boolean = false, val labelled: Boolean = false, val password: Boolean = false, val unresolvedChildren: Int = 0)
 
     /** Numeric indices describe only this observation; they are never persisted as selectors. */
     data class Inspection(val candidate: Int? = null, val reason: String, val field: Int,
@@ -66,6 +66,9 @@ internal object NativeComposerSendSelector {
             val controls = subtree.filter { it != field && (nodes[it].clickable || nodes[it].clickAction) }
             controlCount = controls.size
             editorCount = subtree.count { nodes[it].editable }
+            // Only the local subtree containing the editor matters. Missing siblings in other
+            // parts of ChatGPT must not invalidate this complete, observed composer.
+            subtree.firstOrNull { nodes[it].unresolvedChildren > 0 }?.let { return report("composer_incomplete", it) }
             if (controls.size < 3) continue
             if (controls.size != 3) return report("action_count")
             if (editorCount != 1) return report("editor_count")
