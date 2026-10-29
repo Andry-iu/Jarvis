@@ -20,6 +20,8 @@ internal class NativeVoiceController(private val service: VoiceAccessibilityServ
     private var stableSince = 0L
     private var lastStatus: String? = null
     private var lastProbe: Pair<Int, Int>? = null
+    private var lastWindowMetadata: String? = null
+    private var lastGreetingMetadata: String? = null
     private var exporting = false
     private var snapshotPhase = ""
     private var snapshotCount = 0
@@ -91,16 +93,42 @@ internal class NativeVoiceController(private val service: VoiceAccessibilityServ
     }
 
     private fun nodes(): List<AccessibilityNodeInfo> {
-        val roots = service.windows.filter { it.isActive || it.isFocused }.mapNotNull { it.root }
-            .filter { it.packageName?.toString() == NativeChatSettings.PACKAGE }
-        if (roots.size != 1) return emptyList()
+        val windows = service.windows
+        val roots = windows.associate { window -> window.id to runCatching { window.root }.getOrNull() }
+        val descriptors = windows.map { window ->
+            val root = roots[window.id]
+            val kind = when (window.type) {
+                android.view.accessibility.AccessibilityWindowInfo.TYPE_APPLICATION -> NativeWindowSelector.Kind.APP
+                android.view.accessibility.AccessibilityWindowInfo.TYPE_INPUT_METHOD -> NativeWindowSelector.Kind.IME
+                android.view.accessibility.AccessibilityWindowInfo.TYPE_ACCESSIBILITY_OVERLAY -> NativeWindowSelector.Kind.OVERLAY
+                android.view.accessibility.AccessibilityWindowInfo.TYPE_SYSTEM -> NativeWindowSelector.Kind.SYSTEM
+                else -> NativeWindowSelector.Kind.OTHER
+            }
+            NativeWindowSelector.Window(window.id, kind, window.layer, window.isActive, window.isFocused,
+                root?.packageName?.toString(), root?.isVisibleToUser ?: true)
+        }
+        val selected = NativeWindowSelector.select(descriptors, NativeChatSettings.PACKAGE)
+        val metadata = "selected=${selected ?: -1}; " + descriptors.joinToString("; ") {
+            val owner = when (it.packageName) {
+                NativeChatSettings.PACKAGE -> "chatgpt"
+                service.packageName -> "jarvis"
+                null -> "unknown"
+                else -> "other"
+            }
+            "id=${it.id},type=${it.kind},layer=${it.layer},active=${it.active},focused=${it.focused},owner=$owner,visible=${it.visible},root=${roots[it.id] != null}"
+        }
+        if (metadata != lastWindowMetadata) {
+            lastWindowMetadata = metadata
+            NativeRuntimeSnapshot.save(service, token, "windows", metadata)
+        }
+        val root = selected?.let { roots[it] } ?: return emptyList()
         val result = ArrayList<AccessibilityNodeInfo>()
         fun visit(node: AccessibilityNodeInfo, depth: Int) {
             if (depth > 40 || result.size >= 1500) return
             if (node.isVisibleToUser) result.add(node)
             for (i in 0 until node.childCount) node.getChild(i)?.let { visit(it, depth + 1) }
         }
-        visit(roots.single(), 0)
+        visit(root, 0)
         return result
     }
     private fun labels(node: AccessibilityNodeInfo) = listOfNotNull(node.contentDescription?.toString(), node.text?.toString())
@@ -125,6 +153,7 @@ internal class NativeVoiceController(private val service: VoiceAccessibilityServ
     fun poll() {
         if (!VoiceCycle.matches(token) || exporting) { exitConfirmation.reset(); return }
         if (ending != null) service.reportNativeExitTimeout(token)
+        checkGreetingTimeout()
         val nodes = nodes()
         if (nodes.isEmpty()) { exitConfirmation.reset(); status("ATTENDO LA FINESTRA CHATGPT"); return }
         val stops = targets(nodes, NativeVoiceLabels.stop)
@@ -178,10 +207,15 @@ internal class NativeVoiceController(private val service: VoiceAccessibilityServ
             val bounds = android.graphics.Rect().also { start.getBoundsInScreen(it) }
             val candidate = start.windowId to bounds
             if (candidate != stableCandidate) {
-                stableCandidate = candidate; stableSince = SystemClock.elapsedRealtime(); return
+                stableCandidate = candidate
+                stableSince = SystemClock.elapsedRealtime()
+                status("PREPARO CHATGPT VOICE")
+                return
             }
-            if (SystemClock.elapsedRealtime() - stableSince < 250L || !WakeService.isMicrophoneReleased() ||
-                !WaitingAudio.canActivateVoice(token) || !VoiceCycle.touchGate.canDispatch) return
+            if (SystemClock.elapsedRealtime() - stableSince < 250L) return
+            if (!WakeService.isMicrophoneReleased()) { status("PREPARO IL MICROFONO VOICE"); return }
+            if (!WaitingAudio.canActivateVoice(token)) { status("AUDIO DI AVVIO IN CORSO"); return }
+            if (!VoiceCycle.touchGate.canDispatch) return
             // Consume before dispatch, including rejected or uncertain actions. Never auto-retry.
             startSent = true
             VoiceCycle.touchGate.block()
@@ -195,11 +229,15 @@ internal class NativeVoiceController(private val service: VoiceAccessibilityServ
             VoiceCycle.voiceDispatched(token)
             hud?.setVoiceActive()
             hud?.setMicrophoneMuted(unmute != null)
-            // Automatic greeting suspended after the .69 lockup report; no text actions during this hotfix.
+
         } else if (observed && closed) {
             DiagnosticLog.record(service, DiagnosticLog.Event.NATIVE_STOP_CONFIRMED, token)
             startSent = false
             service.finishNative(token, "Voice nativa terminata; ascolto riattivato.")
+        }
+        if (startSent && ending == null && !closed && (observed || service.nativeGreetingStarted(token))) {
+            runCatching { tryGreeting(nodes, allowWrite = active) }
+                .onFailure { abortGreeting("probe_error") }
         }
     }
     fun requestEnd(message: String): Boolean {
@@ -209,13 +247,24 @@ internal class NativeVoiceController(private val service: VoiceAccessibilityServ
         status("ARRESTO VOICE NATIVA")
         return true
     }
-    private fun tryGreeting(nodes: List<AccessibilityNodeInfo>) {
+    private fun abortGreeting(reason: String) {
+        service.setNativeGreetingStage(token, NativeGreetingPolicy.ABORTED)
+        DiagnosticLog.record(service, DiagnosticLog.Event.NATIVE_GREETING_UNAVAILABLE, token, monitorStatus = reason)
+    }
+    private fun checkGreetingTimeout() {
+        if (ending != null || !service.nativeGreetingStarted(token)) return
+        val stage = service.nativeGreetingStage(token)
+        if (stage != NativeGreetingPolicy.WAITING && stage != NativeGreetingPolicy.WRITING) return
+        if (service.nativeGreetingElapsed(token) >= 10000L) abortGreeting("timeout")
+    }
+    private fun tryGreeting(nodes: List<AccessibilityNodeInfo>, allowWrite: Boolean) {
         if (ending != null || !VoiceCycle.matches(token)) return
         val stage = service.nativeGreetingStage(token)
         if (stage == NativeGreetingPolicy.DISPATCHED || stage == NativeGreetingPolicy.ABORTED) return
         val phrase = service.nativeGreetingText(token)
         val fields = nodes.filter { it.packageName?.toString() == NativeChatSettings.PACKAGE &&
-            it.isEditable && !it.isPassword && it.isEnabled && it.isVisibleToUser }.distinct()
+            it.isEditable && !it.isPassword && it.isEnabled && it.isVisibleToUser &&
+                (stage != NativeGreetingPolicy.WRITING || it.windowId == service.nativeGreetingWindow(token)) }.distinct()
         val field = fields.singleOrNull()
         val text = field?.takeUnless { it.isShowingHintText }?.text?.toString().orEmpty()
         // These are conservative semantic candidates, not claimed Galaxy resource IDs.
@@ -226,33 +275,41 @@ internal class NativeVoiceController(private val service: VoiceAccessibilityServ
             field.isFocused && it.id == AccessibilityNodeInfo.AccessibilityAction.ACTION_IME_ENTER.id &&
                 NativeVoiceLabels.normalize(it.label?.toString().orEmpty()) in sendLabels
         }
-        val canWrite = field?.actionList?.any { it.id == AccessibilityNodeInfo.ACTION_SET_TEXT } == true
+        val canWrite = allowWrite && field?.actionList?.any { it.id == AccessibilityNodeInfo.ACTION_SET_TEXT } == true
+        val metadata = "stage=$stage fields=${fields.size} empty=${text.isBlank()} matches=${text == phrase} write=$canWrite sendButtons=${buttons.size} imeSend=${imeSend != null} voiceControls=$allowWrite window=${field?.windowId ?: -1}"
+        if (metadata != lastGreetingMetadata) {
+            lastGreetingMetadata = metadata
+            NativeRuntimeSnapshot.save(service, token, "greeting", metadata)
+        }
         val decision = NativeGreetingPolicy.decide(stage, service.nativeGreetingElapsed(token), fields.size,
             text.isBlank(), text == phrase, canWrite, send != null || (buttons.isEmpty() && imeSend != null))
         when (decision) {
             NativeGreetingPolicy.Action.WRITE -> {
                 service.setNativeGreetingStage(token, NativeGreetingPolicy.WRITING)
+                service.setNativeGreetingWindow(token, field!!.windowId)
                 DiagnosticLog.record(service, DiagnosticLog.Event.NATIVE_GREETING_WRITE, token)
                 val args = android.os.Bundle().apply {
                     putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, phrase)
                 }
-                if (field?.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, args) != true) {
-                    service.setNativeGreetingStage(token, NativeGreetingPolicy.ABORTED)
-                    DiagnosticLog.record(service, DiagnosticLog.Event.NATIVE_GREETING_UNAVAILABLE, token)
-                }
+                val accepted = runCatching { field.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, args) }.getOrNull()
+                DiagnosticLog.record(service, DiagnosticLog.Event.NATIVE_GREETING_RESULT, token,
+                    monitorStatus = if (accepted == true) "write_accepted" else if (accepted == false) "write_rejected" else "write_error")
+                if (accepted != true) abortGreeting("write_failed")
             }
             NativeGreetingPolicy.Action.SEND -> {
                 // Consume before dispatch, even if Android rejects it or the outcome is unknown.
                 service.setNativeGreetingStage(token, NativeGreetingPolicy.DISPATCHED)
                 DiagnosticLog.record(service, DiagnosticLog.Event.NATIVE_GREETING_COMMAND, token)
-                val accepted = if (send != null) send.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+                val accepted = runCatching {
+                    if (send != null) send.performAction(AccessibilityNodeInfo.ACTION_CLICK)
                     else field?.performAction(imeSend!!.id) == true
-                if (!accepted) DiagnosticLog.record(service, DiagnosticLog.Event.NATIVE_GREETING_UNAVAILABLE, token)
+                }.getOrNull()
+                DiagnosticLog.record(service, DiagnosticLog.Event.NATIVE_GREETING_RESULT, token,
+                    monitorStatus = if (accepted == true) "send_accepted" else if (accepted == false) "send_rejected" else "send_error")
+                if (accepted != true) abortGreeting("send_failed")
             }
             NativeGreetingPolicy.Action.ABORT -> {
-                service.setNativeGreetingStage(token, NativeGreetingPolicy.ABORTED)
-                DiagnosticLog.record(service, DiagnosticLog.Event.NATIVE_GREETING_UNAVAILABLE, token)
-                captureControls(nodes, "greeting_unavailable")
+                abortGreeting(if (text.isNotBlank() && text != phrase) "draft_protected" else "controls_unavailable")
             }
             else -> Unit
         }

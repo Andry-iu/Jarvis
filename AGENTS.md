@@ -48,4 +48,6 @@ Prima di modificare il progetto leggere `README.md`, `CONTINUITY.md` e `VERIFICA
 
 - Dalla .69 saluto nativo Live: un solo tentativo del testo configurato dopo conferma Voice, solo editor unico vuoto e Invia univoco; mai sovrascrivere/inviare bozze. Consuma fasi prima delle azioni e preservale alla riconnessione. Un comando non prova invio accettato o risposta vocale. Audio .68 confermato funzionante dopo aumento volume: non applicare automaticamente correzioni al player sulla base della segnalazione iniziale ritirata.
 
-- Correzione urgente .70: tentativo saluto nativo .69 sospeso nel runtime dopo segnalazione blocco; non riattivarlo implicitamente prima di completarne la verifica. La correzione di uscita non certifica il saluto.
+- Correzione urgente .70: tentativo saluto .69 inizialmente sospeso dopo segnalazione blocco. Il successivo via esplicito .71 autorizza la verifica/riattivazione con eccezioni isolate e timeout indipendente; la chiusura cover confermata resta vincolo prioritario e non certifica la risposta vocale.
+
+- .71: l’utente ha dato un nuovo via esplicito per finestra con tastiera e ripresa del saluto Live. Supera la sola sospensione saluto della .70; non supera il vincolo di uscita cover confermata. Avanzamento/timeout saluto separati dal riconoscimento dei controlli Voice, azioni fallite non devono annullare il ciclo o trattenere/riaprire HUD. Nessuna nuova scrittura senza Voice confermata e nessun invio di bozze.

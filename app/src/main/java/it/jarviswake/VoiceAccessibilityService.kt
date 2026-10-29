@@ -168,6 +168,16 @@ class VoiceAccessibilityService : AccessibilityService() {
         return true
     }
 
+    internal fun nativeGreetingStarted(token: String): Boolean =
+        VoiceCycle.matches(token) && preferences.contains("native_greeting_at")
+
+    internal fun nativeGreetingWindow(token: String): Int =
+        if (VoiceCycle.matches(token)) preferences.getInt("native_greeting_window", -1) else -1
+
+    internal fun setNativeGreetingWindow(token: String, window: Int) {
+        if (VoiceCycle.matches(token)) preferences.edit().putInt("native_greeting_window", window).apply()
+    }
+
     internal fun nativeGreetingStage(token: String): Int =
         if (preferences.getString("native_token", null) == token) preferences.getInt("native_greeting_stage", 0)
         else NativeGreetingPolicy.ABORTED

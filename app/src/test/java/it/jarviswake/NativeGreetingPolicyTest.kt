@@ -29,4 +29,13 @@ class NativeGreetingPolicyTest {
         assertEquals(NativeGreetingPolicy.Action.NONE, action(3))
         assertEquals(NativeGreetingPolicy.Action.ABORT, action(1, elapsed = 10000))
     }
+    @Test fun writingCanAdvanceAfterVoiceLabelsDisappearButCannotStartANewWrite() {
+        assertEquals(NativeGreetingPolicy.Action.WAIT, action(0, write = false))
+        assertEquals(NativeGreetingPolicy.Action.SEND, action(1, empty = false, matches = true, write = false))
+    }
+    @Test fun timeoutStillAbortsWritingWithNoVisibleEditor() {
+        assertEquals(NativeGreetingPolicy.Action.WAIT, action(1, elapsed = 9999, count = 0, write = false))
+        assertEquals(NativeGreetingPolicy.Action.ABORT, action(1, elapsed = 10000, count = 0, write = false))
+    }
+
 }
