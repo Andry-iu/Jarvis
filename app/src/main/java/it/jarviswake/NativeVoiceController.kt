@@ -22,6 +22,9 @@ internal class NativeVoiceController(private val service: VoiceAccessibilityServ
     private var lastProbe: Pair<Int, Int>? = null
     private var lastWindowMetadata: String? = null
     private var lastGreetingMetadata: String? = null
+    private data class ComposerCandidate(val node: AccessibilityNodeInfo, val field: AccessibilityNodeInfo,
+        val buttonBounds: android.graphics.Rect, val fieldBounds: android.graphics.Rect)
+    private val composerStability = NativeSendStability<ComposerCandidate>()
     private val buttonPhases = HashSet<String>()
     private var pendingButtonPhase: String? = null
     private var exporting = false
@@ -147,6 +150,22 @@ internal class NativeVoiceController(private val service: VoiceAccessibilityServ
             visible = { it.isVisibleToUser }, enabled = { it.isEnabled }, clickable = { it.isClickable })
     private fun target(nodes: List<AccessibilityNodeInfo>, vocabulary: Set<String>): AccessibilityNodeInfo? =
         targets(nodes, vocabulary).singleOrNull()
+    private fun composerSend(nodes: List<AccessibilityNodeInfo>, field: AccessibilityNodeInfo): AccessibilityNodeInfo? {
+        val indices = nodes.withIndex().associate { it.value to it.index }
+        val descriptors = nodes.map { node ->
+            val bounds = android.graphics.Rect().also(node::getBoundsInScreen)
+            NativeComposerSendSelector.Node(
+                parent = node.parent?.let { indices[it] } ?: -1,
+                box = NativeComposerSendSelector.Box(bounds.left, bounds.top, bounds.right, bounds.bottom),
+                sameAppWindow = node.packageName?.toString() == NativeChatSettings.PACKAGE && node.windowId == field.windowId,
+                enabled = node.isEnabled, editable = node.isEditable, focused = node.isFocused,
+                clickable = node.isClickable, clickAction = node.actionList.any { it.id == AccessibilityNodeInfo.ACTION_CLICK },
+                button = node.className?.toString() == "android.widget.Button",
+                labelled = !node.contentDescription.isNullOrBlank() || (!node.isEditable && !node.text.isNullOrBlank()),
+                password = node.isPassword)
+        }
+        return NativeComposerSendSelector.select(descriptors, indices[field] ?: return null)?.let(nodes::get)
+    }
     private fun projectVisible(nodes: List<AccessibilityNodeInfo>): Boolean {
         val expected = NativeVoiceLabels.normalize(NativeChatSettings.project(service))
         return expected.isNotEmpty() && nodes.any { !it.isEditable && labels(it).contains(expected) }
@@ -308,14 +327,23 @@ internal class NativeVoiceController(private val service: VoiceAccessibilityServ
         val editor = service.nativeEditorState(token)
         val editorSend = stage == NativeGreetingPolicy.WRITING && buttons.isEmpty() && imeSend == null &&
             editor.allowsSend(field?.isFocused == true, text == phrase)
+        // Fallback explicitly authorized after the .73 Galaxy dump: local structure, not semantic identity.
+        val structural = if (stage == NativeGreetingPolicy.WRITING && fields.size == 1 && text == phrase &&
+            field != null && field.isFocused && buttons.isEmpty() && imeSend == null && !editorSend)
+            composerSend(nodes, field) else null
+        val candidate = structural?.let { button ->
+            ComposerCandidate(button, field!!, android.graphics.Rect().also(button::getBoundsInScreen),
+                android.graphics.Rect().also(field::getBoundsInScreen))
+        }
+        val structuralReady = composerStability.observe(candidate, SystemClock.elapsedRealtime())
         val editorOwner = when (editor.owner) { NativeChatSettings.PACKAGE -> "chatgpt"; null -> "none"; else -> "other" }
-        val metadata = "stage=$stage fields=${fields.size} empty=${text.isBlank()} matches=${text == phrase} focused=${field?.isFocused == true} write=$canWrite sendButtons=${buttons.size} imeSend=${imeSend != null} editorReady=${editor.ready} editorOwner=$editorOwner editorStarted=${editor.started} editorConnection=${editor.connection} editorAction=${editor.options?.and(android.view.inputmethod.EditorInfo.IME_MASK_ACTION) ?: -1} editorSend=$editorSend voiceControls=$allowWrite window=${field?.windowId ?: -1}"
+        val metadata = "stage=$stage fields=${fields.size} empty=${text.isBlank()} matches=${text == phrase} focused=${field?.isFocused == true} write=$canWrite sendButtons=${buttons.size} imeSend=${imeSend != null} editorReady=${editor.ready} editorOwner=$editorOwner editorStarted=${editor.started} editorConnection=${editor.connection} editorAction=${editor.options?.and(android.view.inputmethod.EditorInfo.IME_MASK_ACTION) ?: -1} editorSend=$editorSend composerCandidate=${structural != null} composerStable=$structuralReady voiceControls=$allowWrite window=${field?.windowId ?: -1}"
         if (metadata != lastGreetingMetadata) {
             lastGreetingMetadata = metadata
             NativeRuntimeSnapshot.save(service, token, "greeting", metadata)
         }
         val decision = NativeGreetingPolicy.decide(stage, service.nativeGreetingElapsed(token), fields.size,
-            text.isBlank(), text == phrase, canWrite, send != null || (buttons.isEmpty() && imeSend != null) || editorSend)
+            text.isBlank(), text == phrase, canWrite, send != null || (buttons.isEmpty() && imeSend != null) || editorSend || structuralReady)
         when (decision) {
             NativeGreetingPolicy.Action.WRITE -> {
                 captureButtons(nodes, "before_greeting_write")
@@ -331,7 +359,7 @@ internal class NativeVoiceController(private val service: VoiceAccessibilityServ
                 if (accepted != true) abortGreeting("write_failed")
             }
             NativeGreetingPolicy.Action.SEND -> {
-                captureButtons(nodes, "before_greeting_send")
+                captureButtons(nodes, if (structuralReady) "before_composer_send" else "before_greeting_send")
                 // Consume before dispatch, even if Android rejects it or the outcome is unknown.
                 service.setNativeGreetingStage(token, NativeGreetingPolicy.DISPATCHED)
                 DiagnosticLog.record(service, DiagnosticLog.Event.NATIVE_GREETING_COMMAND, token)
@@ -340,11 +368,13 @@ internal class NativeVoiceController(private val service: VoiceAccessibilityServ
                         send != null -> send.performAction(AccessibilityNodeInfo.ACTION_CLICK)
                         imeSend != null -> field?.performAction(imeSend.id) == true
                         editorSend -> service.sendNativeGreetingThroughEditor(token, field?.isFocused == true, text == phrase)
+                        structuralReady -> structural?.performAction(AccessibilityNodeInfo.ACTION_CLICK) == true
                         else -> false
                     }
                 }.getOrNull()
                 DiagnosticLog.record(service, DiagnosticLog.Event.NATIVE_GREETING_RESULT, token,
                     monitorStatus = if (accepted == true && editorSend) "editor_dispatched"
+                        else if (accepted == true && structuralReady) "composer_click_accepted"
                         else if (accepted == true) "send_accepted" else if (accepted == false) "send_rejected" else "send_error")
                 if (accepted != true) abortGreeting("send_failed")
             }
