@@ -50,7 +50,7 @@ class DiagnosticExportActivity : Activity() {
         DiagnosticLog.afterPendingWrites {
             val success = runCatching {
                 val logs = java.io.File(filesDir, "diagnostics").listFiles()
-                    ?.filter { it.isFile && (it.name.matches(Regex("events-[0-9]+\\.log")) || it.name == NativeControlSnapshot.FILE_NAME || it.name == NativeRuntimeSnapshot.FILE_NAME) }
+                    ?.filter { it.isFile && (it.name.matches(Regex("events-[0-9]+\\.log")) || it.name == NativeControlSnapshot.FILE_NAME || it.name == NativeRuntimeSnapshot.FILE_NAME || it.name == NativeButtonSnapshot.FILE_NAME) }
                     ?.sortedBy { it.name }.orEmpty()
                 contentResolver.openOutputStream(uri, "w")?.use { output ->
                     ZipOutputStream(output).use { zip ->

@@ -22,6 +22,8 @@ internal class NativeVoiceController(private val service: VoiceAccessibilityServ
     private var lastProbe: Pair<Int, Int>? = null
     private var lastWindowMetadata: String? = null
     private var lastGreetingMetadata: String? = null
+    private val buttonPhases = HashSet<String>()
+    private var pendingButtonPhase: String? = null
     private var exporting = false
     private var snapshotPhase = ""
     private var snapshotCount = 0
@@ -60,6 +62,7 @@ internal class NativeVoiceController(private val service: VoiceAccessibilityServ
         if (current.isEmpty()) { status("CHATGPT NON VISIBILE: RIPROVA L'ESPORTAZIONE"); return }
         NativeControlSnapshot.save(service, token, 1,
             "phase=manual_export startSent=$startSent stopping=${ending != null}\n" + NativeControlSnapshot.describe(current))
+        captureButtons(current, "manual_export", force = true)
         exporting = true
         hud?.visibility = android.view.View.GONE
         runCatching { DiagnosticExportActivity.open(service, token) }.onFailure { restoreAfterExport() }
@@ -74,6 +77,11 @@ internal class NativeVoiceController(private val service: VoiceAccessibilityServ
         detachHud()
         if (hadHud) DiagnosticLog.record(service, DiagnosticLog.Event.NATIVE_COVER_DISMISSED, token)
     }
+    private fun captureButtons(nodes: List<AccessibilityNodeInfo>, phase: String, force: Boolean = false) {
+        if (!force && !buttonPhases.add(phase)) return
+        runCatching { NativeButtonSnapshot.capture(service, token, phase, nodes) }
+    }
+
     private fun captureControls(nodes: List<AccessibilityNodeInfo>, phase: String) {
         if (phase != snapshotPhase) {
             snapshotPhase = phase
@@ -156,6 +164,7 @@ internal class NativeVoiceController(private val service: VoiceAccessibilityServ
         checkGreetingTimeout()
         val nodes = nodes()
         if (nodes.isEmpty()) { exitConfirmation.reset(); status("ATTENDO LA FINESTRA CHATGPT"); return }
+        pendingButtonPhase?.let { captureButtons(nodes, it); pendingButtonPhase = null }
         val stops = targets(nodes, NativeVoiceLabels.stop)
         val mutes = targets(nodes, NativeVoiceLabels.mute)
         val unmutes = targets(nodes, NativeVoiceLabels.unmute)
@@ -185,7 +194,10 @@ internal class NativeVoiceController(private val service: VoiceAccessibilityServ
             } else status(if (stop == null && !stopSent)
                 "CHIUSURA NON RICONOSCIUTA — DOPPIO TOCCO IN ALTO A DESTRA: ESPORTA"
                 else "ARRESTO DA VERIFICARE — MICROFONO WAKE SOSPESO")
-            if (VoiceCycle.matches(token)) captureControls(nodes, "stopping")
+            if (VoiceCycle.matches(token)) {
+                captureControls(nodes, "stopping")
+                captureButtons(nodes, "stopping")
+            }
             return
         }
         if (startSent) captureControls(nodes, "after_voice_command")
@@ -219,12 +231,14 @@ internal class NativeVoiceController(private val service: VoiceAccessibilityServ
             // Consume before dispatch, including rejected or uncertain actions. Never auto-retry.
             startSent = true
             VoiceCycle.touchGate.block()
+            captureButtons(nodes, "before_voice")
             DiagnosticLog.record(service, DiagnosticLog.Event.NATIVE_VOICE_COMMAND, token)
             start.performAction(AccessibilityNodeInfo.ACTION_CLICK)
             status("COMANDO VOICE INVIATO — ATTENDO CONFERMA")
         } else if (active) {
             if (!observed) DiagnosticLog.record(service, DiagnosticLog.Event.NATIVE_VOICE_CONFIRMED, token)
             observed = true
+            captureButtons(nodes, "voice_active")
             WaitingAudio.voiceActive(token)
             VoiceCycle.voiceDispatched(token)
             hud?.setVoiceActive()
@@ -249,6 +263,7 @@ internal class NativeVoiceController(private val service: VoiceAccessibilityServ
     }
     private fun abortGreeting(reason: String) {
         service.setNativeGreetingStage(token, NativeGreetingPolicy.ABORTED)
+        pendingButtonPhase = "greeting_$reason"
         DiagnosticLog.record(service, DiagnosticLog.Event.NATIVE_GREETING_UNAVAILABLE, token, monitorStatus = reason)
     }
     private fun checkGreetingTimeout() {
@@ -275,6 +290,10 @@ internal class NativeVoiceController(private val service: VoiceAccessibilityServ
             field.isFocused && it.id == AccessibilityNodeInfo.AccessibilityAction.ACTION_IME_ENTER.id &&
                 NativeVoiceLabels.normalize(it.label?.toString().orEmpty()) in sendLabels
         }
+        if (stage == NativeGreetingPolicy.WRITING && text == phrase) {
+            captureButtons(nodes, "after_greeting_write")
+            if (field?.isFocused == true) captureButtons(nodes, "after_greeting_focus")
+        }
         val canWrite = allowWrite && field?.actionList?.any { it.id == AccessibilityNodeInfo.ACTION_SET_TEXT } == true
         if (stage == NativeGreetingPolicy.WRITING && field != null && text == phrase && buttons.isEmpty() && imeSend == null) {
             service.prepareNativeEditor(token)
@@ -299,6 +318,7 @@ internal class NativeVoiceController(private val service: VoiceAccessibilityServ
             text.isBlank(), text == phrase, canWrite, send != null || (buttons.isEmpty() && imeSend != null) || editorSend)
         when (decision) {
             NativeGreetingPolicy.Action.WRITE -> {
+                captureButtons(nodes, "before_greeting_write")
                 service.setNativeGreetingStage(token, NativeGreetingPolicy.WRITING)
                 service.setNativeGreetingWindow(token, field!!.windowId)
                 DiagnosticLog.record(service, DiagnosticLog.Event.NATIVE_GREETING_WRITE, token)
@@ -311,6 +331,7 @@ internal class NativeVoiceController(private val service: VoiceAccessibilityServ
                 if (accepted != true) abortGreeting("write_failed")
             }
             NativeGreetingPolicy.Action.SEND -> {
+                captureButtons(nodes, "before_greeting_send")
                 // Consume before dispatch, even if Android rejects it or the outcome is unknown.
                 service.setNativeGreetingStage(token, NativeGreetingPolicy.DISPATCHED)
                 DiagnosticLog.record(service, DiagnosticLog.Event.NATIVE_GREETING_COMMAND, token)
