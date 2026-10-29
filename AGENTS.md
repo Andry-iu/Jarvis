@@ -44,3 +44,5 @@ Prima di modificare il progetto leggere `README.md`, `CONTINUITY.md` e `VERIFICA
 - La compilazione «locale» richiesta nelle altre sezioni significa esecuzione degli strumenti all’interno del cloud Jarvis, senza GitHub Actions. Conservare la firma permanente e la procedura di rilascio/push già stabilita.
 
 - Cover dalla .68: parte alta priva di diciture; identità/versione soltanto sotto l’animazione. Swipe nativi nascondono subito la cover, ma solo la conferma di arresto autorizza ripresa wake e destinazione finale. Dopo 5 secondi di incertezza mostrare una sola volta errore/esportazione; mai ripetere lo stop o scambiare HUD nascosto per microfono rilasciato.
+
+- Dalla .69 saluto nativo Live: un solo tentativo del testo configurato dopo conferma Voice, solo editor unico vuoto e Invia univoco; mai sovrascrivere/inviare bozze. Consuma fasi prima delle azioni e preservale alla riconnessione. Un comando non prova invio accettato o risposta vocale. Audio .68 confermato funzionante dopo aumento volume: non applicare automaticamente correzioni al player sulla base della segnalazione iniziale ritirata.

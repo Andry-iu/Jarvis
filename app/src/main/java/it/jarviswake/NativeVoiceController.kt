@@ -197,6 +197,7 @@ internal class NativeVoiceController(private val service: VoiceAccessibilityServ
             VoiceCycle.voiceDispatched(token)
             hud?.setVoiceActive()
             hud?.setMicrophoneMuted(unmute != null)
+            tryGreeting(nodes)
         } else if (observed && closed) {
             DiagnosticLog.record(service, DiagnosticLog.Event.NATIVE_STOP_CONFIRMED, token)
             startSent = false
@@ -210,6 +211,55 @@ internal class NativeVoiceController(private val service: VoiceAccessibilityServ
         status("ARRESTO VOICE NATIVA")
         return true
     }
+    private fun tryGreeting(nodes: List<AccessibilityNodeInfo>) {
+        if (ending != null || !VoiceCycle.matches(token)) return
+        val stage = service.nativeGreetingStage(token)
+        if (stage == NativeGreetingPolicy.DISPATCHED || stage == NativeGreetingPolicy.ABORTED) return
+        val phrase = service.nativeGreetingText(token)
+        val fields = nodes.filter { it.packageName?.toString() == NativeChatSettings.PACKAGE &&
+            it.isEditable && !it.isPassword && it.isEnabled && it.isVisibleToUser }.distinct()
+        val field = fields.singleOrNull()
+        val text = field?.takeUnless { it.isShowingHintText }?.text?.toString().orEmpty()
+        // These are conservative semantic candidates, not claimed Galaxy resource IDs.
+        val sendLabels = setOf("invia", "invia messaggio", "send", "send message")
+        val buttons = targets(nodes, sendLabels)
+        val send = buttons.singleOrNull()
+        val imeSend = field?.actionList?.singleOrNull {
+            field.isFocused && it.id == AccessibilityNodeInfo.AccessibilityAction.ACTION_IME_ENTER.id &&
+                NativeVoiceLabels.normalize(it.label?.toString().orEmpty()) in sendLabels
+        }
+        val canWrite = field?.actionList?.any { it.id == AccessibilityNodeInfo.ACTION_SET_TEXT } == true
+        val decision = NativeGreetingPolicy.decide(stage, service.nativeGreetingElapsed(token), fields.size,
+            text.isBlank(), text == phrase, canWrite, send != null || (buttons.isEmpty() && imeSend != null))
+        when (decision) {
+            NativeGreetingPolicy.Action.WRITE -> {
+                service.setNativeGreetingStage(token, NativeGreetingPolicy.WRITING)
+                DiagnosticLog.record(service, DiagnosticLog.Event.NATIVE_GREETING_WRITE, token)
+                val args = android.os.Bundle().apply {
+                    putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, phrase)
+                }
+                if (field?.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, args) != true) {
+                    service.setNativeGreetingStage(token, NativeGreetingPolicy.ABORTED)
+                    DiagnosticLog.record(service, DiagnosticLog.Event.NATIVE_GREETING_UNAVAILABLE, token)
+                }
+            }
+            NativeGreetingPolicy.Action.SEND -> {
+                // Consume before dispatch, even if Android rejects it or the outcome is unknown.
+                service.setNativeGreetingStage(token, NativeGreetingPolicy.DISPATCHED)
+                DiagnosticLog.record(service, DiagnosticLog.Event.NATIVE_GREETING_COMMAND, token)
+                val accepted = if (send != null) send.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+                    else field?.performAction(imeSend!!.id) == true
+                if (!accepted) DiagnosticLog.record(service, DiagnosticLog.Event.NATIVE_GREETING_UNAVAILABLE, token)
+            }
+            NativeGreetingPolicy.Action.ABORT -> {
+                service.setNativeGreetingStage(token, NativeGreetingPolicy.ABORTED)
+                DiagnosticLog.record(service, DiagnosticLog.Event.NATIVE_GREETING_UNAVAILABLE, token)
+                captureControls(nodes, "greeting_unavailable")
+            }
+            else -> Unit
+        }
+    }
+
     private fun toggleMute() {
         if (!observed || ending != null) return
         val nodes = nodes()

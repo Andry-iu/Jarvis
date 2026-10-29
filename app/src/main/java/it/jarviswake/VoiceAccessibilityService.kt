@@ -143,6 +143,28 @@ class VoiceAccessibilityService : AccessibilityService() {
     internal fun nativeExitError(token: String): Boolean =
         preferences.getString("native_token", null) == token && preferences.getBoolean("native_exit_error", false)
 
+    internal fun nativeGreetingStage(token: String): Int =
+        if (preferences.getString("native_token", null) == token) preferences.getInt("native_greeting_stage", 0)
+        else NativeGreetingPolicy.ABORTED
+
+    internal fun nativeGreetingText(token: String): String {
+        if (!VoiceCycle.matches(token)) return ""
+        return preferences.getString("native_greeting_text", null) ?: VoiceGreetingSettings.get(this).also {
+            preferences.edit().putString("native_greeting_text", it).apply()
+        }
+    }
+
+    internal fun nativeGreetingElapsed(token: String): Long {
+        if (!VoiceCycle.matches(token)) return Long.MAX_VALUE
+        val now = SystemClock.elapsedRealtime()
+        if (!preferences.contains("native_greeting_at")) preferences.edit().putLong("native_greeting_at", now).apply()
+        return now - preferences.getLong("native_greeting_at", now)
+    }
+
+    internal fun setNativeGreetingStage(token: String, stage: Int) {
+        if (VoiceCycle.matches(token)) preferences.edit().putInt("native_greeting_stage", stage).apply()
+    }
+
     internal fun finishNative(token: String, message: String) {
         if (!VoiceCycle.matches(token) || preferences.getString("native_token", null) != token) return
         val returnHome = preferences.getBoolean("native_return_home", false)
