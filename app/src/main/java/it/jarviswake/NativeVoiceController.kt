@@ -22,6 +22,9 @@ internal class NativeVoiceController(private val service: VoiceAccessibilityServ
     private var lastProbe: Pair<Int, Int>? = null
     private var lastWindowMetadata: String? = null
     private var lastGreetingMetadata: String? = null
+    private var lastComposerMetadata: String? = null
+    private var composerObservation = NativeNodeObservation<AccessibilityNodeInfo>()
+    private var composerObservationComplete = false
     private data class ComposerCandidate(val node: AccessibilityNodeInfo, val field: AccessibilityNodeInfo,
         val buttonBounds: android.graphics.Rect, val fieldBounds: android.graphics.Rect)
     private val composerStability = NativeSendStability<ComposerCandidate>()
@@ -104,6 +107,7 @@ internal class NativeVoiceController(private val service: VoiceAccessibilityServ
     }
 
     private fun nodes(): List<AccessibilityNodeInfo> {
+        composerObservationComplete = false
         val windows = service.windows
         val roots = windows.associate { window -> window.id to runCatching { window.root }.getOrNull() }
         val descriptors = windows.map { window ->
@@ -134,12 +138,23 @@ internal class NativeVoiceController(private val service: VoiceAccessibilityServ
         }
         val root = selected?.let { roots[it] } ?: return emptyList()
         val result = ArrayList<AccessibilityNodeInfo>()
-        fun visit(node: AccessibilityNodeInfo, depth: Int) {
-            if (depth > 40 || result.size >= 1500) return
+        val observation = NativeNodeObservation<AccessibilityNodeInfo>()
+        composerObservation = observation
+        composerObservationComplete = true
+        fun visit(node: AccessibilityNodeInfo, depth: Int, parent: Int) {
+            if (depth > 40 || result.size >= 1500 || observation.entries.size >= 2500) {
+                composerObservationComplete = false
+                return
+            }
+            // Preserve the edge from getChild, never reconstruct it using source-ID equality.
+            val index = observation.add(node, parent)
             if (node.isVisibleToUser) result.add(node)
-            for (i in 0 until node.childCount) node.getChild(i)?.let { visit(it, depth + 1) }
+            for (i in 0 until node.childCount) {
+                val child = node.getChild(i)
+                if (child == null) composerObservationComplete = false else visit(child, depth + 1, index)
+            }
         }
-        visit(root, 0)
+        visit(root, 0, -1)
         return result
     }
     private fun labels(node: AccessibilityNodeInfo) = listOfNotNull(node.contentDescription?.toString(), node.text?.toString())
@@ -151,20 +166,39 @@ internal class NativeVoiceController(private val service: VoiceAccessibilityServ
     private fun target(nodes: List<AccessibilityNodeInfo>, vocabulary: Set<String>): AccessibilityNodeInfo? =
         targets(nodes, vocabulary).singleOrNull()
     private fun composerSend(nodes: List<AccessibilityNodeInfo>, field: AccessibilityNodeInfo): AccessibilityNodeInfo? {
-        val indices = nodes.withIndex().associate { it.value to it.index }
-        val descriptors = nodes.map { node ->
+        if (!composerObservationComplete) {
+            NativeRuntimeSnapshot.save(service, token, "composer", "reason=observation_incomplete")
+            return null
+        }
+        val observation = composerObservation
+        val fieldIndex = observation.indexOfIdentity(field)
+        val descriptors = observation.entries.map { entry ->
+            val node = entry.value
             val bounds = android.graphics.Rect().also(node::getBoundsInScreen)
             NativeComposerSendSelector.Node(
-                parent = node.parent?.let { indices[it] } ?: -1,
+                parent = entry.parent,
                 box = NativeComposerSendSelector.Box(bounds.left, bounds.top, bounds.right, bounds.bottom),
-                sameAppWindow = node.packageName?.toString() == NativeChatSettings.PACKAGE && node.windowId == field.windowId,
+                sameAppWindow = node.isVisibleToUser && node.packageName?.toString() == NativeChatSettings.PACKAGE && node.windowId == field.windowId,
                 enabled = node.isEnabled, editable = node.isEditable, focused = node.isFocused,
                 clickable = node.isClickable, clickAction = node.actionList.any { it.id == AccessibilityNodeInfo.ACTION_CLICK },
                 button = node.className?.toString() == "android.widget.Button",
                 labelled = !node.contentDescription.isNullOrBlank() || (!node.isEditable && !node.text.isNullOrBlank()),
                 password = node.isPassword)
         }
-        return NativeComposerSendSelector.select(descriptors, indices[field] ?: return null)?.let(nodes::get)
+        val inspection = NativeComposerSendSelector.inspect(descriptors, fieldIndex)
+        val rejected = observation.entries.getOrNull(inspection.rejected)?.value
+        val details = listOf(inspection.field, inspection.composer, inspection.rejected).distinct().mapNotNull { index ->
+            descriptors.getOrNull(index)?.let { n ->
+                "node=$index,parent=${n.parent},box=${n.box.left},${n.box.top},${n.box.right},${n.box.bottom},context=${n.sameAppWindow},enabled=${n.enabled},editable=${n.editable},focused=${n.focused},clickable=${n.clickable},clickAction=${n.clickAction},button=${n.button},labelled=${n.labelled},password=${n.password}"
+            }
+        }.joinToString("; ")
+        val sourceAliases = observation.entries.size - observation.entries.map { it.value }.distinct().size
+        val metadata = "reason=${inspection.reason} field=${inspection.field} composer=${inspection.composer} rejected=${inspection.rejected} controls=${inspection.controls} editors=${inspection.editors} invalidPaths=${inspection.invalidPaths} foreignNodes=${inspection.foreignNodes} visibleNodes=${nodes.size} observedNodes=${observation.entries.size} graph=child_edges sourceAliases=$sourceAliases rejectedHasDescription=${!rejected?.contentDescription.isNullOrBlank()} rejectedHasText=${rejected?.let { !it.isEditable && !it.text.isNullOrBlank() } == true}; $details"
+        if (metadata != lastComposerMetadata) {
+            lastComposerMetadata = metadata
+            NativeRuntimeSnapshot.save(service, token, "composer", metadata)
+        }
+        return inspection.candidate?.let { observation.entries[it].value }
     }
     private fun projectVisible(nodes: List<AccessibilityNodeInfo>): Boolean {
         val expected = NativeVoiceLabels.normalize(NativeChatSettings.project(service))

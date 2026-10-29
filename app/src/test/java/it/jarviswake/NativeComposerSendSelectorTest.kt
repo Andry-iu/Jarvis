@@ -73,4 +73,45 @@ class NativeComposerSendSelectorTest {
         assertFalse(stable.observe("b",1700))
         assertTrue(stable.observe("b",1950))
     }
+    @Test fun diagnosticDistinguishesGeometryFromRoleAndLabelsWithoutValues() {
+        fun reason(index: Int, f: (NativeComposerSendSelector.Node) -> NativeComposerSendSelector.Node) =
+            NativeComposerSendSelector.inspect(changed(index, f), 2)
+        val textLabel = reason(14) { it.copy(labelled=true) }
+        assertEquals("action_branch_labelled", textLabel.reason)
+        assertEquals(14, textLabel.rejected)
+        assertEquals(3, textLabel.controls)
+        assertEquals(1, textLabel.editors)
+        assertNull(textLabel.candidate)
+        assertEquals("action_button_role_missing", reason(14) { it.copy(button=false) }.reason)
+        assertEquals("action_outside_composer", reason(13) { it.copy(box=box(1192,1512,1500,1704)) }.reason)
+        assertEquals("action_above_field_bottom", reason(13) { it.copy(box=box(1192,1300,1384,1400)) }.reason)
+    }
+    @Test fun diagnosticSeparatesAncestryFailureFromMissingActions() {
+        val foreign = NativeComposerSendSelector.inspect(changed(0) { it.copy(sameAppWindow=false) },2)
+        assertEquals("parent_context", foreign.reason)
+        assertEquals(0, foreign.rejected)
+        assertTrue(foreign.invalidPaths > 0)
+        assertEquals(1, foreign.foreignNodes)
+        assertEquals("parent_cycle", NativeComposerSendSelector.inspect(changed(1) { it.copy(parent=1) },2).reason)
+        assertEquals("too_few_local_actions", NativeComposerSendSelector.inspect(changed(13) { it.copy(parent=-1) },2).reason)
+    }
+    @Test fun diagnosticsDoNotAuthorizeAmbiguousOrDisabledControls() {
+        val extra = fixture() + NativeComposerSendSelector.Node(0,box(300,1512,400,1704),clickable=true,clickAction=true)
+        val result = NativeComposerSendSelector.inspect(extra,2)
+        assertEquals("action_count", result.reason)
+        assertEquals(4, result.controls)
+        assertNull(result.candidate)
+        val disabled = NativeComposerSendSelector.inspect(changed(13) { it.copy(enabled=false) },2)
+        assertEquals("action_disabled", disabled.reason)
+        assertNull(disabled.candidate)
+    }
+    @Test fun candidateDiagnosticPreservesTheOriginalSelection() {
+        val result = NativeComposerSendSelector.inspect(fixture(),2)
+        assertEquals("candidate", result.reason)
+        assertEquals(13, result.candidate)
+        assertEquals(0, result.composer)
+        assertEquals(0, result.invalidPaths)
+        assertEquals(0, result.foreignNodes)
+    }
+
 }
