@@ -46,6 +46,7 @@ type codexLink struct {
 	At        string `json:"at"`
 }
 type codexClient struct {
+	machineID string
 	mu       sync.Mutex
 	writeMu  sync.Mutex
 	cmd      *exec.Cmd
@@ -323,6 +324,7 @@ func (r *Runtime) getCodexLocked() (*codexClient, error) {
 	}
 	c, e := startCodex(r.dir)
 	if e == nil {
+		c.machineID = r.MachineID
 		r.codex = c
 	}
 	return c, e
@@ -332,6 +334,7 @@ type codexAccount struct {
 	Account *struct {
 		Type string `json:"type"`
 		Plan string `json:"planType"`
+		Email string `json:"email"`
 	} `json:"account"`
 }
 type quotaWindow struct {
@@ -395,7 +398,8 @@ func codexAccountStatus(c *codexClient) (any, error) {
 	if v, ok := rates.ByID["codex"]; ok {
 		q = v
 	}
-	err := codexCostGuard(a, q)
+	proof, _ := readCodexCostProof()
+	err := codexCostGuardWithProof(a, q, proof, c.machineID, time.Now())
 	reason := ""
 	if err != nil {
 		reason = err.Error()
@@ -405,7 +409,12 @@ func codexAccountStatus(c *codexClient) (any, error) {
 		typ = a.Account.Type
 		plan = a.Account.Plan
 	}
-	return map[string]any{"version": c.version, "account_type": typ, "plan_type": plan, "quota": q, "inference_allowed": err == nil, "blocked_reason": reason, "api_fallback": false, "paid_credits_allowed": false, "checked_at": utcNow()}, nil
+	result := map[string]any{"version": c.version, "account_type": typ, "plan_type": plan, "quota": q, "inference_allowed": err == nil, "blocked_reason": reason, "api_fallback": false, "paid_credits_allowed": false, "checked_at": utcNow()}
+	if err == nil && q.Credits != nil && q.Credits.Balance == nil && proof != nil {
+		result["zero_credit_evidence"] = proof.Source
+		result["evidence_valid_until"] = proof.ValidUntil.UTC().Format(time.RFC3339)
+	}
+	return result, nil
 }
 func ensureCodexCost(c *codexClient) error {
 	v, e := codexAccountStatus(c)
