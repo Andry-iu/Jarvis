@@ -46,4 +46,8 @@ Leggere windows-mcp-agent/AGENTS.md, CONTINUITY.md, IMPROVEMENTS-0.6.1.md e PROJ
 
 Per rollback usare il binario 0.6.0 del backup verificando il suo SHA-256 68D7D4DB1B63576B81EC67E7DCAB137763F7BE38A6B841BA5A8B46F4B5A1DEFE, con arresto controllato e verifica health/MCP. Conservare sempre l'archivio della 0.6.1: il server 0.6.0 non lo consulta ma non lo elimina. Non ripristinare ciecamente uno snapshot di stato precedente o ripetere operazioni dall'esito incerto. Lo script di deploy effettua rollback del binario/config su errore di avvio, preservando lo stato piu recente.
 
-Il controllo finale di token elevato, catalogo, backup e allineamento remoto viene eseguito con scripts/verify-release-061.ps1 dopo la sincronizzazione di questo verbale. Il relativo risultato e diagnostics/v61-final-check.log.
+## Controllo finale confermato
+
+scripts/verify-release-061.ps1 e diagnostics/v61-final-check.log, 19:07:34 UTC: PASS. Listener PID 503652 con token elevato, hash installato invariato, 44 strumenti server (cinque queue_* e activity_history), 130 file JSON nel backup, 28 voci gia nell'archivio, zero listener temporanei, documenti locali presenti, update.go.bak preservato e prova costi identica al backup. HEAD/origin 1ca266200cc4b906a6436df774a3f7f63d85ad3d e tracciati puliti; successivo project_status alle 19:07:55 UTC conferma zero modifiche. Il primo riepilogo dopo il pull aveva mostrato nove modifiche transitorie, risolte dalla verifica completa senza ripristinare o riscrivere sorgenti.
+
+Coda finale vuota e sana, nessun turno o approvazione pendente. Questo aggiornamento successivo riguarda soltanto il verbale finale, senza modificare codice, binario o configurazioni. Verificare anche il successivo HEAD/origin al termine della sincronizzazione documentale.
