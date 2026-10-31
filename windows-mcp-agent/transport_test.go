@@ -74,4 +74,3 @@ func TestStreamableHTTPTransport(t *testing.T) {
 		t.Fatalf("malformed %d %v", s, r)
 	}
 }
-

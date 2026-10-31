@@ -70,6 +70,7 @@ try {
  $peerCall.machine_id=$script:machine;Call 'device_call' @{device_id='test-peer';call=$peerCall} -MustFail;Report 'PASS peer_identity_guard'
  Stop-Owned $processB;$processB=$null;$devices=Call 'device_list';if(($devices.devices|Where-Object device_id -eq 'test-peer').online){throw 'offline_peer_reported_online'};Report 'PASS peer_offline'
  $codex=Call 'codex_status';Report ('CODEX '+($codex|ConvertTo-Json -Compress -Depth 8))
+ $threads=Call 'codex_threads' @{project=$project;limit=5};Report ('PASS codex_session_listing count='+$threads.data.Count)
  if($CodexInference){if(-not $codex.inference_allowed){throw 'codex_cost_guard_blocked'}
   $thread=Call 'codex_start' @{project=$project;request_id=(New-RequestId)};Report ('CODEX_THREAD '+$thread.thread_id)
   $turn=Call 'codex_turn' @{project=$project;thread_id=$thread.thread_id;text='Reply with exactly JARVIS_MCP_OK. Do not use tools, access files or run commands.';request_id=(New-RequestId)}
