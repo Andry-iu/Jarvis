@@ -1,3 +1,7 @@
+# 31 ottobre 2026 — installer Desktop2 1.0.0
+
+Richiesta utente: installazione indipendente del secondo PC. Aggiunti wizard locale, credenziali/ID nuovi, task interattivo, configurazione tunnel locale, verifiche/ripristino non distruttivo e pacchetto con binario 0.6.1 verificato. Suite Windows isolata completata. Account Cloudflare/Access e nuovo plugin restano passaggi dell'utente; nessun secondo PC ancora configurato e nessuna modifica al servizio Desktop1. Sorgenti/test/manifest e builder su Git; [verbale e limiti](INSTALLER-DESKTOP2-1.0.0.md).
+
 # Registro significativo — Jarvis Windows MCP
 
 ## 31 ottobre 2026 — 0.6.1
