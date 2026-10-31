@@ -121,8 +121,8 @@ func TestRuntimeCommandCompletionTimeoutAndCancellation(t *testing.T) {
 			j := v.(Job)
 			if j.Status != "running" {
 				r.mu.Lock()
-                entry := r.queueFindLocked(queueByJob[id])
-                settled := entry != nil && terminalActivity(entry.Status)
+				entry := r.queueFindLocked(queueByJob[id])
+				settled := entry != nil && terminalActivity(entry.Status)
 				r.mu.Unlock()
 				if settled {
 					return j
@@ -154,5 +154,3 @@ func TestRuntimeCommandCompletionTimeoutAndCancellation(t *testing.T) {
 		t.Fatalf("cancel: %+v", j)
 	}
 }
-
-

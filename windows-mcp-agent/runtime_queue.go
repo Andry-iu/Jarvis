@@ -560,18 +560,18 @@ func (r *Runtime) queueDispatchLocked() {
 			return
 		}
 		if e.Request.Operation == "codex_turn" {
-            r.inflight.Add(1)
-            go r.dispatchCodexEntry(e)
-            running++
-            continue
-        }
-        var value any
+			r.inflight.Add(1)
+			go r.dispatchCodexEntry(e)
+			running++
+			continue
+		}
+		var value any
 		if e.Request.Operation == "command_start" {
 			value, err = r.startCommand(e.Request)
 		} else {
 			value, err = r.codexCallLocked(e.Request)
 		}
-		r.queueDispatchResultLocked(e,value,err)
+		r.queueDispatchResultLocked(e, value, err)
 		if r.queueSaveLocked() != nil {
 			return
 		}
@@ -584,46 +584,52 @@ func (r *Runtime) queueDispatchLocked() {
 		_ = r.queueSaveLocked()
 	}
 }
-func (r *Runtime) queueDispatchResultLocked(e *queueEntry,value any,err error) {
-		if err != nil {
-			status := "uncertain"
-			if e.Request.Operation == "command_start" {
-				status = "failed"
-			}
-			r.queueFailLocked(e, status, err.Error())
-		} else {
-			m, ok := value.(map[string]any)
-			if !ok {
-				r.queueFailLocked(e, "uncertain", "unexpected dispatch result")
-			} else if e.Request.Operation == "command_start" {
-				e.JobID, _ = m["job_id"].(string)
-				if e.JobID == "" {
-					r.queueFailLocked(e, "uncertain", "job ID missing")
-				} else {
-					e.Status = "running"
-				}
+func (r *Runtime) queueDispatchResultLocked(e *queueEntry, value any, err error) {
+	if err != nil {
+		status := "uncertain"
+		if e.Request.Operation == "command_start" {
+			status = "failed"
+		}
+		r.queueFailLocked(e, status, err.Error())
+	} else {
+		m, ok := value.(map[string]any)
+		if !ok {
+			r.queueFailLocked(e, "uncertain", "unexpected dispatch result")
+		} else if e.Request.Operation == "command_start" {
+			e.JobID, _ = m["job_id"].(string)
+			if e.JobID == "" {
+				r.queueFailLocked(e, "uncertain", "job ID missing")
 			} else {
-				turn, _ := m["turn"].(map[string]any)
-				e.TurnID, _ = turn["id"].(string)
-				if e.TurnID == "" {
-					r.queueFailLocked(e, "uncertain", "turn ID missing")
-				} else {
-					e.Status = "running"
-				}
+				e.Status = "running"
+			}
+		} else {
+			turn, _ := m["turn"].(map[string]any)
+			e.TurnID, _ = turn["id"].(string)
+			if e.TurnID == "" {
+				r.queueFailLocked(e, "uncertain", "turn ID missing")
+			} else {
+				e.Status = "running"
 			}
 		}
+	}
 }
+
 // Reservation is persisted before this worker exists. Slow preflight/start RPCs
 // do not occupy the scheduler; unrelated projects can be dispatched meanwhile.
 func (r *Runtime) dispatchCodexEntry(e *queueEntry) {
-    r.mu.Lock()
-    defer r.mu.Unlock()
-    defer r.inflight.Done()
-    if r.closing || e.Status!="starting" {return}
-    value,err:=r.codexCallLocked(e.Request)
-    if e.Status!="starting" {r.queueBroken=true;return}
-    r.queueDispatchResultLocked(e,value,err)
-    _=r.queueSaveLocked()
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	defer r.inflight.Done()
+	if r.closing || e.Status != "starting" {
+		return
+	}
+	value, err := r.codexCallLocked(e.Request)
+	if e.Status != "starting" {
+		r.queueBroken = true
+		return
+	}
+	r.queueDispatchResultLocked(e, value, err)
+	_ = r.queueSaveLocked()
 }
 func (r *Runtime) queueLoop(stop <-chan struct{}) {
 	ticker := time.NewTicker(500 * time.Millisecond)
