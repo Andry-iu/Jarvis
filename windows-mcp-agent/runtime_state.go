@@ -10,6 +10,7 @@ import (
  "os"
  "path/filepath"
  "regexp"
+ "strings"
  "sync"
  "time"
 )
@@ -66,6 +67,7 @@ func atomicJSON(path string,value any) error {
 }
 func newRuntime(dir string)(*Runtime,error){
  if !filepath.IsAbs(dir){return nil,errors.New("runtime state directory must be absolute")}
+ if root,e:=projectsRoot();e==nil{rel,err:=filepath.Rel(root,dir);if err==nil&&rel!=".."&&!strings.HasPrefix(rel,".."+string(filepath.Separator)){return nil,errors.New("runtime state must remain outside the authorized projects root")}}
  if e:=os.MkdirAll(dir,0700);e!=nil{return nil,e}
  if e:=protectRuntimeDirectory(dir);e!=nil{return nil,e}
  lock,e:=lockRuntime(filepath.Join(dir,"agent.lock"));if e!=nil{return nil,e}

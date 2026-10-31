@@ -281,7 +281,7 @@ func handler(a *Agent, token string, access *AccessVerifier) http.Handler {
 			http.Error(w, "method not allowed", 405)
 			return
 		}
-		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		_ = json.NewEncoder(w).Encode(map[string]any{"ok":true,"version":version})
 	})
 	mux.HandleFunc("/mcp", func(w http.ResponseWriter, r *http.Request) {
@@ -346,7 +346,7 @@ func handler(a *Agent, token string, access *AccessVerifier) http.Handler {
 		}
 		var q RPCRequest
 		if err := json.Unmarshal(data, &q); err != nil || q.JSONRPC != "2.0" || q.Method == "" {
-			w.Header().Set("Content-Type", "application/json")
+			w.Header().Set("Content-Type", "application/json; charset=utf-8")
 			w.WriteHeader(http.StatusBadRequest)
 			_ = json.NewEncoder(w).Encode(response(nil, nil, &RPCError{Code: -32700, Message: "invalid JSON-RPC request"}))
 			return
@@ -392,7 +392,7 @@ func handler(a *Agent, token string, access *AccessVerifier) http.Handler {
 		default:
 			res = response(q.ID, nil, &RPCError{Code: -32601, Message: "method not found"})
 		}
-		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.Header().Set("MCP-Protocol-Version", "2025-03-26")
 		_ = json.NewEncoder(w).Encode(res)
 	})

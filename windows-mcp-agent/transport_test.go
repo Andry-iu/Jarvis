@@ -46,7 +46,7 @@ func TestStreamableHTTPTransport(t *testing.T) {
 	if r["result"].(map[string]any)["protocolVersion"] != "2025-06-18" {
 		t.Fatalf("negotiation %v", r)
 	}
-	if h.Get("Content-Type") != "application/json" {
+	if h.Get("Content-Type") != "application/json; charset=utf-8" {
 		t.Fatal(h)
 	}
 	s, _, _ = call("POST", "application/json", "application/json", valid, init)
@@ -74,3 +74,4 @@ func TestStreamableHTTPTransport(t *testing.T) {
 		t.Fatalf("malformed %d %v", s, r)
 	}
 }
+
