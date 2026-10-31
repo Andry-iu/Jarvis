@@ -46,7 +46,7 @@ func pathDigest(root *os.Root,n string)(string,error){
  if e:=safePath(root,n,false);os.IsNotExist(e){return "missing",nil}else if e!=nil{return "",e}
  info,e:=root.Stat(n);if e!=nil{return "",e};if !info.IsDir(){b,e:=readRegular(root,n);return digest(b),e}
  h:=sha256.New();count:=0;total:=0
- e=fs.WalkDir(root.FS(),n,func(p string,d fs.DirEntry,err error)error{
+ e=fs.WalkDir(root.FS(),filepath.ToSlash(n),func(p string,d fs.DirEntry,err error)error{
   if err!=nil{return err};count++;if count>5000{return errors.New("directory fingerprint exceeds 5000 entries")};if e:=safePath(root,filepath.FromSlash(p),false);e!=nil{return e}
   rel,_:=filepath.Rel(n,filepath.FromSlash(p));fmt.Fprintf(h,"%s\x00%t\x00",filepath.ToSlash(rel),d.IsDir())
   if !d.IsDir(){b,e:=readRegular(root,filepath.FromSlash(p));if e!=nil{return e};total+=len(b);if total>64*maxFileBytes{return errors.New("directory fingerprint exceeds 64 MiB")};fmt.Fprint(h,digest(b))};return nil
