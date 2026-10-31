@@ -93,7 +93,7 @@ type quotaWindow struct{Used *float64 `json:"usedPercent"`;Resets *int64 `json:"
 type codexQuota struct{LimitID string `json:"limitId"`;Primary *quotaWindow `json:"primary"`;Secondary *quotaWindow `json:"secondary"`;Credits *struct{Has *bool `json:"hasCredits"`;Unlimited *bool `json:"unlimited"`;Balance *string `json:"balance"`} `json:"credits"`;SpendControl *bool `json:"spendControlReached"`;Reached json.RawMessage `json:"rateLimitReachedType"`}
 func codexCostGuard(a codexAccount,q codexQuota)error{
  if a.Account==nil||a.Account.Type!="chatgpt"||a.Account.Plan!="self_serve_business_prolite"{return errors.New("unverified account type/plan; ChatGPT Business subscription required, API fallback disabled")}
- if q.LimitID!="codex"||q.Credits==nil||q.Credits.Has==nil||*q.Credits.Has||q.Credits.Unlimited==nil||*q.Credits.Unlimited||(q.Credits.Balance!=nil&&*q.Credits.Balance!="0"){return errors.New("zero-credit subscription-only condition cannot be established; inference blocked")}
+ if q.LimitID!="codex"||q.Credits==nil||q.Credits.Has==nil||*q.Credits.Has||q.Credits.Unlimited==nil||*q.Credits.Unlimited||q.Credits.Balance==nil||*q.Credits.Balance!="0"{return errors.New("zero-credit subscription-only condition cannot be established; inference blocked")}
  if q.SpendControl!=nil&&*q.SpendControl||len(q.Reached)>0&&string(q.Reached)!="null"{return errors.New("quota/spend control reached; no purchase or fallback")}
  if q.Primary==nil{return errors.New("quota unavailable; inference blocked")}
  for _,w:=range []*quotaWindow{q.Primary,q.Secondary}{if w!=nil&&(w.Used==nil||*w.Used<0||*w.Used>=90||w.Resets==nil||*w.Resets<=time.Now().Unix()){return errors.New("quota insufficient, expired or unknown; inference blocked")}}
