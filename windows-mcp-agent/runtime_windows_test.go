@@ -88,6 +88,7 @@ func TestRuntimeCommandCompletionTimeoutAndCancellation(t *testing.T) {
 	r, dir := fixtureRuntime(t)
 	os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module runtime-fixture\n\ngo 1.27.0\n"), 0600)
 	os.WriteFile(filepath.Join(dir, "main.go"), []byte("package main\nfunc main() {}\n"), 0600)
+	queueByJob := map[string]string{}
 	run := func(profile string, timeout int) string {
 		v := mutateFile(t, r, runtimeRequest{Operation: "command_start", Project: "sample", Profile: profile, Timeout: timeout})
 		queueID := v.(map[string]any)["queue_id"].(string)
@@ -98,6 +99,7 @@ func TestRuntimeCommandCompletionTimeoutAndCancellation(t *testing.T) {
 			jobID, status, reason := entry.JobID, entry.Status, entry.Error
 			r.mu.Unlock()
 			if jobID != "" {
+				queueByJob[jobID] = queueID
 				return jobID
 			}
 			if status != "queued" && status != "starting" {
@@ -119,12 +121,8 @@ func TestRuntimeCommandCompletionTimeoutAndCancellation(t *testing.T) {
 			j := v.(Job)
 			if j.Status != "running" {
 				r.mu.Lock()
-				settled := false
-				for _, entry := range r.queue.Entries {
-					if entry.JobID == id && entry.Status != "running" && entry.Status != "starting" {
-						settled = true
-					}
-				}
+                entry := r.queueFindLocked(queueByJob[id])
+                settled := entry != nil && terminalActivity(entry.Status)
 				r.mu.Unlock()
 				if settled {
 					return j
@@ -156,4 +154,5 @@ func TestRuntimeCommandCompletionTimeoutAndCancellation(t *testing.T) {
 		t.Fatalf("cancel: %+v", j)
 	}
 }
+
 
