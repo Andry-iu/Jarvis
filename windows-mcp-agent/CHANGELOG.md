@@ -1,5 +1,12 @@
 # Windows MCP changelog
 
+## 0.5.8 — 31 ottobre 2026
+
+- Plugin aggiornato e strumenti diretti verificati.
+- Riscontro costi indipendente fornito dall'utente, associato ad account/PC e con scadenza; saldo API nullo mai accettato da solo. Crediti positivi/flag ignoti/quote esaurite restano bloccati.
+- Codex reale collaudato: risposte, storico, modifica file, steer, interrupt e resume dopo riavvio.
+- Installazione elevata, backup 0.5.7 e stato, rollback e riconnessione verificati. Nessuna API key, acquisto o modifica alle impostazioni di pagamento.
+
 ## 0.5.7 — 31 ottobre 2026
 
 - Identita stabile, catalogo progetti, ricevute con request_id e job persistenti, lock OS e ACL dello stato.

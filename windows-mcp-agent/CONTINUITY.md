@@ -1,3 +1,13 @@
+# Continuita Windows MCP — 0.5.8, 31 ottobre 2026
+
+Stato corrente: [STATUS](../docs/mcp-agent/STATUS.md), [collaudo Codex 0.5.8](../docs/mcp-agent/CODEX-0.5.8.md). Branch reconcile-windows-mcp-agent-20261031. Binario operativo D:\Jarvis\jarvis-mcp.exe, versione 0.5.8, elevazione verificata. Source commit 6b5530e8347502f35511aabdf696c58877836cee; SHA-256 04F369F365816BC076CBCE3F89589BAC63FE628385FFF8B96316E2E79115C1BE. Modifiche documentali successive non cambiano il codice compilato.
+
+L'utente ha aggiornato il plugin: 38 strumenti diretti verificati. Ha fornito la schermata con 88% quota residua, 0 crediti e ricarica automatica disattivata. Config/codex-cost-proof.json conserva solo il riscontro locale e un hash dell'account, mai token/email in Git. Per il saldo API nullo la 0.5.8 richiede riscontro valido per account/PC, zero crediti e ricarica disattivata; API hasCredits/unlimited, piano, limiti e quota vengono ricontrollati prima dei turni. Riscontro corrente valido fino al 7 novembre 2026 15:55 UTC; scaduto/ignoto/cambio account la guardia si chiude. Non acquistare crediti, usare API key o aggirare la guardia.
+
+Collaudi reali Codex: risposta e storico, steer, interruzione confermata, ripresa dopo riavvio, modifica file verificata tramite MCP. Dopo installazione Codex ha risposto JARVIS_INSTALL_OK dal plugin. Backup 0.5.7 e 16 file di stato verificati in D:\Jarvis\Backups\mcp-0.5.8-20261031; rollback isolato superato. Identita stabile e job .NET precedente conservati. Conservare tutti i backup, update.go.bak e stash backup update.go locale 20261031.
+
+Riprendere leggendo machine_info e project_catalog, poi job_list e codex_threads del progetto esatto. Non duplicare operazioni con esito incerto. Altri PC fisici, nuova chat/Voice e avvio dopo reboot non collaudati. Clone NestingOpt ancora sospeso. Lo storico 0.5.7 seguente descrive il precedente blocco, risolto nella 0.5.8 dopo la nuova prova fornita dall'utente.
+
 # Continuita Windows MCP — 0.5.7, 31 ottobre 2026
 
 Leggere [STATUS](../docs/mcp-agent/STATUS.md), [verbale](../docs/mcp-agent/VALIDATION-0.5.7-20261031.md), [contratto](../docs/mcp-agent/RUNTIME-0.5.7.md), [istruzioni client](../docs/mcp-agent/CLIENT-INSTRUCTIONS-0.5.7.md) e [regola release](../docs/mcp-agent/RELEASE_POLICY.md). Questo agente Windows e distinto dall'app Android.

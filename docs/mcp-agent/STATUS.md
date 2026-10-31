@@ -1,3 +1,11 @@
+# 0.5.8 — installata e verificata, Codex operativo
+
+31 ottobre 2026: plugin aggiornato dall'utente, 38 strumenti diretti disponibili. Schermata fornita dall'utente: quota residua 88%, zero crediti, ricarica automatica disattivata. La nuova guardia usa un riscontro privato associato ad account/PC soltanto per il saldo API nullo, con controlli API invariati e scadenza 7 novembre 2026 ore 15:55 UTC. Nessuna chiave API, acquisto o ricarica.
+
+Codex verificato realmente: risposta, storico, steer, interrupt confermato, ripresa dopo riavvio e modifica di un file di prova con digest controllato. Dopo installazione, turno completato dal plugin con risposta JARVIS_INSTALL_OK. Agente 0.5.8 elevato, identita e job 0.5.7 conservati; backup 0.5.7 e stato verificati, rollback isolato superato. Sorgente binario 6b5530e8347502f35511aabdf696c58877836cee; SHA-256 04F369F365816BC076CBCE3F89589BAC63FE628385FFF8B96316E2E79115C1BE.
+
+[Verbale 0.5.8](CODEX-0.5.8.md). Altri PC fisici, nuova chat/Voice e avvio dopo reboot restano da verificare; clone NestingOpt sospeso. Le sezioni seguenti sono lo storico dei rilasci precedenti.
+
 # 0.5.7 — installata e verificata, Codex in attesa del controllo costi
 
 31 ottobre 2026: test Go, go vet, compilazione Windows, backup e rollback isolato superati; agente operativo 0.5.7 con token elevato verificato. File/cartelle, immagini MCP dirette, test/build Go e build .NET 9 verificati anche tramite plugin da questa chat. Stato, job e ricevute persistenti; routing autenticato verificato fra due istanze sullo stesso PC. Nessun altro PC fisico configurato o verificato in questo rilascio.
