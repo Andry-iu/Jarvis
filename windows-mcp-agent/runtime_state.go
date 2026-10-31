@@ -33,6 +33,8 @@ type Job struct {
  CreatedAt string `json:"created_at"`
  FinishedAt string `json:"finished_at,omitempty"`
  Output string `json:"output,omitempty"`
+ Stdout string `json:"stdout,omitempty"`
+ Stderr string `json:"stderr,omitempty"`
  DroppedBytes int64 `json:"dropped_bytes,omitempty"`
  ExitCode *int `json:"exit_code,omitempty"`
  cancel func()

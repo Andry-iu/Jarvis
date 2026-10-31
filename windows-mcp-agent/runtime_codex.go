@@ -63,12 +63,13 @@ func(c *codexClient)readLoop(out io.Reader){
  for scanner.Scan(){var m codexMessage;if json.Unmarshal(scanner.Bytes(),&m)!=nil{continue}
   if m.Method==""&&len(m.ID)>0{c.mu.Lock();ch:=c.waiters[string(m.ID)];c.mu.Unlock();if ch!=nil{ch<-m};continue}
   if m.Method==""{continue}
-  var scope struct{ThreadID string `json:"threadId"`;TurnID string `json:"turnId"`;Turn struct{ID string `json:"id"`;Status string `json:"status"`} `json:"turn"`};json.Unmarshal(m.Params,&scope)
+  var scope struct{ThreadID string `json:"threadId"`;TurnID string `json:"turnId"`;RequestID json.RawMessage `json:"requestId"`;Turn struct{ID string `json:"id"`;Status string `json:"status"`} `json:"turn"`};json.Unmarshal(m.Params,&scope)
   if scope.ThreadID==""{if len(m.ID)>0{_ = c.send(map[string]any{"id":m.ID,"error":map[string]any{"code":-32601,"message":"unsupported host request"}})};continue}
   c.mu.Lock();if !c.loaded[scope.ThreadID]{c.mu.Unlock();if len(m.ID)>0{_ = c.send(map[string]any{"id":m.ID,"error":map[string]any{"code":-32600,"message":"thread is not attached to Jarvis"}})};continue}
   approval:="";if len(m.ID)>0{
    switch m.Method{case "item/commandExecution/requestApproval","item/fileChange/requestApproval","item/tool/requestUserInput":approval=newID();c.pending[approval]=codexPending{m.ID,m.Method,scope.ThreadID,append(json.RawMessage{},m.Params...)};default:c.mu.Unlock();_ = c.send(map[string]any{"id":m.ID,"error":map[string]any{"code":-32601,"message":"unsupported host request"}});continue}
   }
+  if m.Method=="serverRequest/resolved"{for id,v:=range c.pending{if v.ThreadID==scope.ThreadID&&string(v.ID)==string(scope.RequestID){delete(c.pending,id)}}}
   if m.Method=="turn/started"{c.active[scope.ThreadID]=scope.Turn.ID};if m.Method=="turn/completed"{c.finished[scope.ThreadID]=scope.Turn.ID;delete(c.active,scope.ThreadID);for id,p:=range c.pending{if p.ThreadID==scope.ThreadID{delete(c.pending,id)}}}
   e:=c.appendEventLocked(scope.ThreadID,m.Method,m.Params,approval);c.mu.Unlock();if e!=nil{c.cancel();break}
  }

@@ -119,5 +119,6 @@ func(r *Runtime)restoreFile(p runtimeRequest,x *Receipt)(any,error){
   if old.Before=="missing"{if e=r.saveReceipt(x);e!=nil{return nil,e};if old.Operation=="directory_create"{for i:=len(old.CreatedPaths)-1;i>=0;i--{if e=safePath(root,old.CreatedPaths[i],false);e!=nil{return nil,e};if e=root.Remove(old.CreatedPaths[i]);e!=nil{return nil,e}}}else if e=root.Remove(old.Path);e!=nil{return nil,e}
   }else{if old.Backup!=old.ID+".bin"{return nil,errors.New("backup unavailable")};b,e:=os.ReadFile(filepath.Join(r.dir,"backups",old.Backup));if e!=nil||digest(b)!=old.Before{return nil,errors.New("backup checksum mismatch")};if e=r.saveReceipt(x);e!=nil{return nil,e};if e=writeRootFile(root,old.Path,b,old.After);e!=nil{return nil,e}}
  }else{return nil,errors.New("receipt is not a reversible file operation")}
+ want:=old.Before;if old.Operation=="path_move"{want=old.After};actual,e:=pathDigest(root,old.Path);if e!=nil||actual!=want{return nil,errors.New("restore verification failed; inspect receipt before further changes")}
  return map[string]any{"restored":old.ID,"request_id":x.ID,"verified":true},nil
 }

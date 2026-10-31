@@ -55,7 +55,7 @@ func(r *Runtime)startCommand(p runtimeRequest)(any,error){
 }
 type jobWriter struct{r *Runtime;j *Job;stream string}
 func(w jobWriter)Write(b []byte)(int,error){
- n:=len(b);w.r.mu.Lock();defer w.r.mu.Unlock();s:=w.j.Output+string(b);if len(s)>maxJobOutput{drop:=len(s)-maxJobOutput;for drop<len(s)&&!utf8.RuneStart(s[drop]){drop++};w.j.DroppedBytes+=int64(drop);s=s[drop:]};w.j.Output=strings.ToValidUTF8(s,"�");return n,nil
+ n:=len(b);w.r.mu.Lock();defer w.r.mu.Unlock();s:=w.j.Output+string(b);if len(s)>maxJobOutput{drop:=len(s)-maxJobOutput;for drop<len(s)&&!utf8.RuneStart(s[drop]){drop++};w.j.DroppedBytes+=int64(drop);s=s[drop:]};w.j.Output=strings.ToValidUTF8(s,"�");target:=&w.j.Stdout;if w.stream=="stderr"{target=&w.j.Stderr};s=*target+string(b);if len(s)>maxJobOutput/2{s=s[len(s)-maxJobOutput/2:]};*target=strings.ToValidUTF8(s,"�");return n,nil
 }
 func(r *Runtime)runCommand(ctx context.Context,cancel context.CancelFunc,j *Job,dir,exe string,args []string){
  defer cancel();c:=exec.CommandContext(ctx,exe,args...);c.Dir=dir;c.Env=childEnvironment();c.Stdout=jobWriter{r,j,"stdout"};c.Stderr=jobWriter{r,j,"stderr"};configureTreeCancellation(c);configureDesktopCommand(c)
@@ -70,5 +70,5 @@ func(r *Runtime)jobCall(p runtimeRequest)(any,error){
  if p.Operation=="job_cancel"{return r.mutation(p,func(x *Receipt)(any,error){j:=r.Jobs[p.JobID];if j==nil{return nil,errors.New("job not found")};if j.Status!="running"||j.cancel==nil{return nil,errors.New("job is not running")};j.cancel();return map[string]any{"job_id":j.ID,"cancellation_requested":true},nil})}
  r.mu.Lock();defer r.mu.Unlock()
  if p.Operation=="job_status"{j:=r.Jobs[p.JobID];if j==nil{return nil,errors.New("job not found")};v:=*j;v.cancel=nil;return v,nil}
- out:=[]Job{};for _,j:=range r.Jobs{v:=*j;v.cancel=nil;v.Output="";out=append(out,v)};sort.Slice(out,func(i,j int)bool{return out[i].CreatedAt>out[j].CreatedAt});limit:=p.Limit;if limit==0{limit=50};start:=p.Offset;if start>len(out){start=len(out)};end:=start+limit;if end>len(out){end=len(out)};return map[string]any{"jobs":out[start:end],"next_offset":end,"total":len(out)},nil
+ out:=[]Job{};for _,j:=range r.Jobs{v:=*j;v.cancel=nil;v.Output="";v.Stdout="";v.Stderr="";out=append(out,v)};sort.Slice(out,func(i,j int)bool{return out[i].CreatedAt>out[j].CreatedAt});limit:=p.Limit;if limit==0{limit=50};start:=p.Offset;if start>len(out){start=len(out)};end:=start+limit;if end>len(out){end=len(out)};return map[string]any{"jobs":out[start:end],"next_offset":end,"total":len(out)},nil
 }

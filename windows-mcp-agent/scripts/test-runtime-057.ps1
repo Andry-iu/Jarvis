@@ -33,6 +33,7 @@ try {
  New-Item -ItemType Directory -Force (Join-Path $testHome 'Config')|Out-Null
  if(-not (Test-Path (Join-Path $testHome 'Config\secrets.env'))){'# isolated test configuration'|Set-Content (Join-Path $testHome 'Config\secrets.env') -Encoding UTF8}
  $env:JARVIS_HOME=$testHome;$env:JARVIS_MCP_TOKEN=(New-RequestId);$env:JARVIS_PROJECTS_ROOT='D:\Jarvis\MCP-Source';$env:JARVIS_DESKTOP_ENABLED='1';$env:JARVIS_CODEX_ENABLED='1';$env:JARVIS_TEST_PEERS='1'
+ $pkg=Get-AppxPackage -Name OpenAI.Codex|Select-Object -First 1;if(-not $pkg){throw 'installed_codex_package_missing'};$env:JARVIS_CODEX_EXE=Join-Path $pkg.InstallLocation 'app\resources\codex.exe'
  $processA=Start-TestAgent $stateA 8766
  $info=Call 'machine_info';$script:machine=$info.machine_id;Report ('MACHINE '+$script:machine)
  $catalog=Call 'project_catalog';if(-not ($catalog.projects|Where-Object project -eq 'windows-mcp-agent')){throw 'missing_source_project'};Report 'PASS catalog'
