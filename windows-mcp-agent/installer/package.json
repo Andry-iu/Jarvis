@@ -1,23 +1,23 @@
 {
-  "installer_version": "1.0.0",
+  "installer_version": "1.0.1",
   "agent_version": "0.6.1",
   "source_commit": "164cb980bd1a936749d41b8692979e98b929cb04",
   "agent_sha256": "9ff4a136951f464925cc55b96e1a968174204199fa9c7ff681b998b3542742c1",
   "files": [
     {
       "path": "Check.ps1",
-      "sha256": "dd918a02fdfe8c47ac69440dd94fe1b03c47c453ef90dd047472ee302619220e",
-      "bytes": 658
+      "sha256": "c181fdea7830c9fe204f8953b261ccc045b3ddad21ffd17e3c15ea6968752a2c",
+      "bytes": 720
     },
     {
       "path": "Common.ps1",
-      "sha256": "44905b443489e71374da7c3395766a3f88c5028b63c8ce6d83d7ec866946d6a3",
-      "bytes": 8157
+      "sha256": "87e2e3463f0028cebf547b0636c876af4df89245d1580a9ed0d912e7f254c0c3",
+      "bytes": 8525
     },
     {
       "path": "Configure-Cloudflare.ps1",
-      "sha256": "0df6d4ba12e5f94d914762101fbcb5832c83ad58e4a81acffd2dfc1f9fcbb2bb",
-      "bytes": 4523
+      "sha256": "b5636958c621fc69ea64a434672e20b61f260f92d53e31776a6c28b98f79025b",
+      "bytes": 4549
     },
     {
       "path": "Disable-Startup.ps1",
@@ -36,13 +36,13 @@
     },
     {
       "path": "Install.ps1",
-      "sha256": "7ed4efdcf69a241f3d958181f661d1049b1eff8c08eb33121e00c5dc9331e0a0",
-      "bytes": 8081
+      "sha256": "18f91a3fd66eea0e70fb03ad566c3ccc931f3eca062751b1362ad677d553b515",
+      "bytes": 8425
     },
     {
       "path": "LEGGIMI.txt",
-      "sha256": "1dc51759c87374b7b9e804f92b957fba5d08e225b04d7c41dca85bb5361e584b",
-      "bytes": 5584
+      "sha256": "a8b66711c24b23b3f3d34020ad74ace193372733f16161781d4b49367e0e7e28",
+      "bytes": 6182
     },
     {
       "path": "LICENSE.txt",
@@ -56,8 +56,8 @@
     },
     {
       "path": "Start.ps1",
-      "sha256": "b9abd64d600db41c738a2f71e34109a4a367b7f5475d57e598f170c461f07844",
-      "bytes": 3727
+      "sha256": "55dc9b518be0f2658697ea4062285bd9bd7e56b9402bb1d31e7e4fac9a0191fa",
+      "bytes": 3773
     },
     {
       "path": "Stop.ps1",
@@ -66,8 +66,8 @@
     },
     {
       "path": "Test-Installer.ps1",
-      "sha256": "f602f5ac4f97a372fcf1dda987ce90f81dafd351dc6a3f32a95037123b823c91",
-      "bytes": 6287
+      "sha256": "dae114d897d99125e28d5311ecd5a7af8d55781ed40562561732d0f764064e69",
+      "bytes": 7075
     },
     {
       "path": "jarvis-mcp.exe",
