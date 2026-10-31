@@ -42,3 +42,11 @@ Nuovi strumenti queue_* verificati in questa nuova conversazione tramite task_st
 ## Ripresa
 
 Leggere windows-mcp-agent/AGENTS.md, CONTINUITY.md, STATUS.md e QUEUE-0.6.0.md. Prima machine_info, project_catalog, queue_list/job_list e codex_threads del progetto esatto. Con catalogo precedente usare task_start operation=runtime; non ripetere operazioni incerte. Mantenere configurazioni e stato fuori da Git, preservare backup e ricevute. Il checkout puo essere sparse: includere docs/mcp-agent oltre a windows-mcp-agent per avere la documentazione locale.
+
+## Controllo finale aggiuntivo
+
+diagnostics/v60-final-check.log (31 ottobre 18:01:31 UTC): hash operativo invariato, listener PID 504848 con TokenElevation verificato true tramite token del processo, 43 strumenti server inclusi cinque queue_*, 67 file JSON nel backup, backup eseguibile 0.5.9 corretto, configurazioni/prova costi presenti, nessun listener sulle porte 8766/8767 e update.go.bak conservato. Documentazione docs/mcp-agent aggiunta al checkout sparse.
+
+HEAD e origin coincidevano con 6ffed432782f1dda152dccbd6c859fe115f84df6, tracciati puliti; le successive modifiche riguardano soltanto questo verbale e lo script riproducibile scripts/verify-release-060.ps1. Dopo il checkout della documentazione un riepilogo project_status ha temporaneamente riportato 20 modifiche; verifiche complete nelle due modalita Git e successivo project_status alle 18:03:34 UTC hanno confermato zero modifiche tracciate, senza ripristinare o riscrivere sorgenti. Non e necessario cambiare configurazione Git sulla base di quella lettura transitoria.
+
+Il vecchio job .NET 8bbda9f9e74a9864c141b979aec7840a e ancora leggibile dopo installazione, completed/exit 0 (nessun nuovo build .NET eseguito). Le ricevute e il collaudo coda corrente sono persistiti nello stato privato. La successiva sincronizzazione finale deve ancora verificare HEAD/origin dopo gli aggiornamenti documentali.
