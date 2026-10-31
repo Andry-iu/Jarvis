@@ -18,6 +18,9 @@ foreach ($f in $manifest.files) {
     if ((Get-FileHash -LiteralPath $dest).Hash -ine $f.sha256) { throw ('Hash payload inatteso: '+$f.path) }
 }
 [IO.File]::WriteAllText((Join-Path $payload 'package.json'),([IO.File]::ReadAllText((Join-Path $source 'package.json')).Replace([string][char]13,'')),(New-Object Text.UTF8Encoding($false)))
+if (Test-Path -LiteralPath (Join-Path $source 'COLLAUDO.txt')) {
+    [IO.File]::WriteAllText((Join-Path $payload 'COLLAUDO.txt'),([IO.File]::ReadAllText((Join-Path $source 'COLLAUDO.txt')).Replace([string][char]13,'')),(New-Object Text.UTF8Encoding($false)))
+}
 if ($RunTests) { & (Join-Path $payload 'Test-Installer.ps1') -PackageDir $payload }
 $zip=Join-Path $OutputDirectory 'Jarvis-Desktop2-Setup-1.0.0.zip'
 Compress-Archive -Path $payload -DestinationPath $zip -CompressionLevel Optimal
