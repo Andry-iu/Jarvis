@@ -22,7 +22,7 @@ import (
 	"time"
 )
 
-const version = "0.5.3"
+const version = "0.5.4"
 
 type RPCRequest struct {
 	JSONRPC string          `json:"jsonrpc"`
@@ -196,6 +196,22 @@ func (a *Agent) invoke(name string, args json.RawMessage) any {
 			return toolResult(map[string]string{"error": err.Error()}, true)
 		}
 		return toolResult(v, false)
+	case "log_list":
+		value, err := logList()
+		if err != nil {
+			return toolResult(map[string]string{"error": err.Error()}, true)
+		}
+		return toolResult(value, false)
+	case "log_read":
+		var p logReadRequest
+		if err := json.Unmarshal(args, &p); err != nil {
+			return toolResult(map[string]string{"error": "invalid log parameters"}, true)
+		}
+		value, err := logRead(p)
+		if err != nil {
+			return toolResult(map[string]string{"error": err.Error()}, true)
+		}
+		return toolResult(value, false)
 	case "task_stop":
 		v, err := a.stop()
 		if err != nil {
@@ -214,6 +230,8 @@ func toolsList() any {
 		map[string]any{"name": "task_start", "description": "Start a cancellable diagnostic task. This prototype does not execute shell commands or Codex.", "inputSchema": map[string]any{"type": "object", "properties": map[string]any{"name": map[string]any{"type": "string"}, "duration_seconds": map[string]any{"type": "integer", "minimum": 1, "maximum": 300}}}},
 		map[string]any{"name": "update_prepare", "description": "Stage a single-use Windows update batch; requires Cloudflare Access authentication. Submit exact UTF-8 CRLF content, 32-hex update ID in first REM line, SHA-256 of bytes. Does not execute.", "inputSchema": map[string]any{"type": "object", "properties": map[string]any{"update_id": map[string]any{"type": "string"}, "sha256": map[string]any{"type": "string"}, "content": map[string]any{"type": "string"}}, "required": []string{"update_id", "sha256", "content"}}},
 		map[string]any{"name": "update_execute", "description": "Rehash and start a previously staged batch as separate Windows process; requires Cloudflare Access authentication. Does not report completed deployment.", "inputSchema": map[string]any{"type": "object", "properties": map[string]any{"update_id": map[string]any{"type": "string"}, "sha256": map[string]any{"type": "string"}}, "required": []string{"update_id", "sha256"}}},
+		map[string]any{"name": "log_list", "description": "List files under the restricted Jarvis Logs directory (maximum 300 records); Cloudflare Access required.", "inputSchema": map[string]any{"type": "object", "properties": map[string]any{}}},
+		map[string]any{"name": "log_read", "description": "Read the last N bytes of one .log within Jarvis Logs; no arbitrary path access. Cloudflare Access required.", "inputSchema": map[string]any{"type": "object", "properties": map[string]any{"path": map[string]any{"type": "string"}, "tail_bytes": map[string]any{"type": "integer", "minimum": 1, "maximum": 32768}}, "required": []string{"path"}}},
 		map[string]any{"name": "task_stop", "description": "Request cancellation of the current diagnostic task", "inputSchema": map[string]any{"type": "object", "properties": map[string]any{}}},
 	}}
 }
@@ -231,7 +249,7 @@ func handler(a *Agent, token string, access *AccessVerifier) http.Handler {
 			return
 		}
 		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprint(w, `{"ok":true,"version":"0.5.3"}`)
+		fmt.Fprint(w, `{"ok":true,"version":"0.5.4"}`)
 	})
 	mux.HandleFunc("/mcp", func(w http.ResponseWriter, r *http.Request) {
 		log.Printf("MCP request received method=%s access_assertion=%t", r.Method, r.Header.Get("Cf-Access-Jwt-Assertion") != "")
@@ -332,7 +350,7 @@ func handler(a *Agent, token string, access *AccessVerifier) http.Handler {
 			if err := json.Unmarshal(q.Params, &p); err != nil || p.Name == "" {
 				res = response(q.ID, nil, &RPCError{Code: -32602, Message: "invalid parameters"})
 			} else {
-				if (p.Name == "update_prepare" || p.Name == "update_execute") && !validAccess {
+				if (p.Name == "update_prepare" || p.Name == "update_execute" || p.Name == "log_list" || p.Name == "log_read") && !validAccess {
 					res = response(q.ID, toolResult(map[string]string{"error": "Cloudflare Access authentication required for update tools"}, true), nil)
 				} else {
 					res = response(q.ID, a.invoke(p.Name, p.Arguments), nil)
@@ -370,6 +388,7 @@ func main() {
 		fmt.Fprintln(os.Stderr, "ERROR: prototype only permits localhost binding. Use a trusted HTTPS reverse proxy / tunnel.")
 		os.Exit(2)
 	}
+	startLogMaintenance()
 	a := &Agent{}
 	var access *AccessVerifier
 	if teamDomain != "" {
