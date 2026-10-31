@@ -1,3 +1,7 @@
+# Installer Desktop2 1.0.0 — disponibile per la 0.6.1
+
+Pacchetto di prima installazione per un secondo PC indipendente: copia binario verificato, credenziali/identita nuove, root progetti, avvio al login, configurazione Cloudflare locale e comandi di verifica/arresto. Suite Windows isolata superata; Cloudflare remoto, plugin ChatGPT, secondo PC fisico e reboot ancora da collaudare. Nessuna installazione o modifica del servizio Desktop1. [Procedura e verbale](../docs/mcp-agent/INSTALLER-DESKTOP2-1.0.0.md). Agente operativo resta 0.6.1; versione installer separata 1.0.0.
+
 # Windows MCP 0.6.1 — installata e collaudata, 31 ottobre 2026
 
 RPC Codex reattive e scheduler indipendente; nessun limite temporale dei turni e nessun avviso programmato. Coda solo operativa, terminali nell'archivio privato locale via activity_history; risorse condivise read/write e repository Git comuni riconosciuti. Registro significativo su Git distinto dai log tecnici. [Specifica](../docs/mcp-agent/IMPROVEMENTS-0.6.1.md), [verbale](../docs/mcp-agent/VALIDATION-0.6.1-20261031.md), [registro](../docs/mcp-agent/ACTIVITY.md), [regola di progetto](../docs/mcp-agent/PROJECT-RECORD.md).
