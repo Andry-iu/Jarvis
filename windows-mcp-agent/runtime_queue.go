@@ -90,7 +90,7 @@ func (r *Runtime) initQueue() error {
 			return err
 		}
 		e.Claims = claims
-		if e.Status == "running" || e.Status == "starting" {
+		if e.Status == "running" || e.Status == "starting" || e.Status == "persistence_failed" {
 			e.Status = "uncertain"
 			e.Error = "agent restarted; inspect outcome before resuming; never replay this entry"
 			r.queue.Paused[e.Resource] = e.Error
@@ -131,7 +131,7 @@ func (r *Runtime) queuePausedLocked(resource string) string {
 }
 func (r *Runtime) queueBusyLocked(resource string) bool {
 	for _, e := range r.queue.Entries {
-		if (e.Status == "starting" || e.Status == "running" || e.Status == "uncertain") && queuePathsOverlap(e.Resource, resource) {
+		if (e.Status == "starting" || e.Status == "running" || e.Status == "uncertain" || e.Status == "persistence_failed") && queuePathsOverlap(e.Resource, resource) {
 			return true
 		}
 	}
@@ -300,7 +300,7 @@ func (r *Runtime) queueControl(p runtimeRequest) (any, error) {
 				return nil, err
 			}
 			for _, e := range r.queue.Entries {
-				if !samePath(resource, e.Resource) || e.Status != "uncertain" {
+				if !samePath(resource, e.Resource) || e.Status != "uncertain" && e.Status != "persistence_failed" {
 					continue
 				}
 				if e.Request.Operation == "command_start" {
@@ -324,7 +324,7 @@ func (r *Runtime) queueControl(p runtimeRequest) (any, error) {
 					if r.closing {
 						return nil, errors.New("runtime closing")
 					}
-					if e.Status != "uncertain" {
+					if e.Status != "uncertain" && e.Status != "persistence_failed" {
 						continue
 					}
 					if err != nil || !sameCodexDirectory(thread, e.Resource) || !codexThreadIdle(thread) {
