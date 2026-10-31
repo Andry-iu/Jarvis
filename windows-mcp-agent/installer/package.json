@@ -1,0 +1,68 @@
+{
+  "installer_version": "1.0.0",
+  "agent_version": "0.6.1",
+  "source_commit": "164cb980bd1a936749d41b8692979e98b929cb04",
+  "agent_sha256": "9ff4a136951f464925cc55b96e1a968174204199fa9c7ff681b998b3542742c1",
+  "files": [
+    {
+      "path": "Check.ps1",
+      "sha256": "dd918a02fdfe8c47ac69440dd94fe1b03c47c453ef90dd047472ee302619220e",
+      "bytes": 658
+    },
+    {
+      "path": "Common.ps1",
+      "sha256": "44905b443489e71374da7c3395766a3f88c5028b63c8ce6d83d7ec866946d6a3",
+      "bytes": 8157
+    },
+    {
+      "path": "Configure-Cloudflare.ps1",
+      "sha256": "0df6d4ba12e5f94d914762101fbcb5832c83ad58e4a81acffd2dfc1f9fcbb2bb",
+      "bytes": 4523
+    },
+    {
+      "path": "Disable-Startup.ps1",
+      "sha256": "22b30cf006b1cc5c81a21c9a17567b6967d988e7d27af72ff3182dfdaacabe33",
+      "bytes": 747
+    },
+    {
+      "path": "Enable-Codex.ps1",
+      "sha256": "110de17621713b68ddbe20be4c57635324d0c4b363bcf6f6ef8caafbdb0dd349",
+      "bytes": 650
+    },
+    {
+      "path": "INSTALLA.cmd",
+      "sha256": "5b77cc624a32b34c5d56f01ab9bace5b933be7818be8881e077f766e39991956",
+      "bytes": 387
+    },
+    {
+      "path": "Install.ps1",
+      "sha256": "f02622dffa046494ac30059da7ca5327332cc99f6c1e62c7ac65947807c1a773",
+      "bytes": 7883
+    },
+    {
+      "path": "LEGGIMI.txt",
+      "sha256": "1dc51759c87374b7b9e804f92b957fba5d08e225b04d7c41dca85bb5361e584b",
+      "bytes": 5584
+    },
+    {
+      "path": "Start.ps1",
+      "sha256": "b9abd64d600db41c738a2f71e34109a4a367b7f5475d57e598f170c461f07844",
+      "bytes": 3727
+    },
+    {
+      "path": "Stop.ps1",
+      "sha256": "a4101ac310a2b997cd3f08beb0ff7fd08d269f5d4b3df8af2b7c3f2246a113cf",
+      "bytes": 747
+    },
+    {
+      "path": "Test-Installer.ps1",
+      "sha256": "af0d49bd63ed6d0310370be37afe96a6b8fd71c89d68774a76920e274e2b9e7f",
+      "bytes": 6261
+    },
+    {
+      "path": "jarvis-mcp.exe",
+      "sha256": "9ff4a136951f464925cc55b96e1a968174204199fa9c7ff681b998b3542742c1",
+      "bytes": 12092416
+    }
+  ]
+}
