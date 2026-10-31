@@ -80,7 +80,7 @@ func readRegular(root *os.Root, n string) ([]byte, error) {
 	if e := safePath(root, n, false); e != nil {
 		return nil, e
 	}
-	f, e := root.Open(n)
+	f, e := openStableRead(root, n)
 	if e != nil {
 		return nil, e
 	}
@@ -156,8 +156,6 @@ func pathDigest(root *os.Root, n string) (string, error) {
 	return hex.EncodeToString(h.Sum(nil)), nil
 }
 func (r *Runtime) filesRead(p runtimeRequest) (any, error) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
 	root, e := r.projectRoot(p.Project)
 	if e != nil {
 		return nil, e
@@ -336,6 +334,7 @@ func writeRootFile(root *os.Root, n string, b []byte, expected string) error {
 	return nil
 }
 func (r *Runtime) filesMutate(p runtimeRequest, x *Receipt) (any, error) {
+    if p.Operation!="file_restore" {resource,err:=r.projectResource(p.Project);if err!=nil{return nil,err};if r.queueBusyLocked(resource){return nil,errors.New("project processing active; direct file mutation refused")}}
 	if p.Operation == "file_restore" {
 		return r.restoreFile(p, x)
 	}
@@ -473,7 +472,8 @@ func (r *Runtime) restoreFile(p runtimeRequest, x *Receipt) (any, error) {
 	if json.Unmarshal(b, &old) != nil || old.Status != "completed" {
 		return nil, errors.New("only completed file receipts can be restored")
 	}
-	root, e := r.projectRoot(old.Project)
+	resource,err:=r.projectResource(old.Project);if err!=nil{return nil,err};if r.queueBusyLocked(resource){return nil,errors.New("project processing active; file restore refused")}
+    root, e := r.projectRoot(old.Project)
 	if e != nil {
 		return nil, e
 	}
@@ -545,3 +545,4 @@ func (r *Runtime) restoreFile(p runtimeRequest, x *Receipt) (any, error) {
 	}
 	return map[string]any{"restored": old.ID, "request_id": x.ID, "verified": true}, nil
 }
+

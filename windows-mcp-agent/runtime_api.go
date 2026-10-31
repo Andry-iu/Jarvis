@@ -15,6 +15,10 @@ import (
 )
 
 type runtimeRequest struct {
+    QueueID string `json:"queue_id,omitempty"`
+    BeforeID string `json:"before_id,omitempty"`
+    Label string `json:"label,omitempty"`
+    DependsOn []string `json:"depends_on,omitempty"`
 	Operation   string `json:"operation,omitempty"`
 	MachineID   string `json:"machine_id,omitempty"`
 	Project     string `json:"project,omitempty"`
@@ -56,6 +60,11 @@ type runtimeTool struct {
 }
 
 var runtimeCatalog = []runtimeTool{
+    {"queue_add", "Queue one fixed command_start or attached codex_turn for a project; call contains the named operation and its arguments. Outer project/request_id are inherited. One active operation per overlapping project path; fresh quota checks at dispatch. Returns queue_id; inspect queue_list.", []string{"project","call","label","depends_on","request_id"}, []string{"project","call","request_id"}, false},
+    {"queue_list", "Show persistent operations with IDs, project, state, waiting order, dependencies, pause reason and active job/turn IDs. Read-only; does not wait for processing completion.", []string{"project","offset","limit"}, nil, true},
+    {"queue_cancel", "Cancel one waiting queue_id. Does not interrupt running work; interrupt its exact job/turn and verify final state.", []string{"queue_id","request_id"}, []string{"queue_id","request_id"}, false},
+    {"queue_move", "Move a waiting queue_id before before_id in the same project. Omit before_id to make it next. Rejects explicit dependency inversion; never preempts active work. Returns updated order.", []string{"queue_id","before_id","request_id"}, []string{"queue_id","request_id"}, false},
+    {"queue_resume", "Resume one paused project after review. Verify uncertain old Codex sessions are idle; never replay started entries. Waiting Codex sessions must remain attached or be resumed explicitly.", []string{"project","request_id"}, []string{"project","request_id"}, false},
 	{"machine_info", "Read stable computer identity, available tool paths and runtime limits. Call first; all other local operations require its machine_id.", nil, nil, true},
 	{"project_catalog", "List usable project paths and stable project IDs under the authorized root.", nil, nil, true},
 	{"file_list", "List project files/directories with pagination; protected paths and links are excluded.", []string{"project", "path", "offset", "limit", "recursive"}, []string{"project"}, true},
@@ -66,7 +75,7 @@ var runtimeCatalog = []runtimeTool{
 	{"path_move", "Rename or move a file OR directory inside one project, same filesystem, destination must not exist; expected_sha256 required from file_list/file_read.", []string{"project", "path", "destination", "expected_sha256", "request_id"}, []string{"project", "path", "destination", "expected_sha256", "request_id"}, false},
 	{"file_restore", "Restore a recorded write or undo a move/create, only if the current fingerprint matches the receipt. No silent overwrites.", []string{"restore_id", "request_id"}, []string{"restore_id", "request_id"}, false},
 	{"request_status", "Read a durable receipt, including uncertain outcomes; do not retry an uncertain operation automatically.", []string{"request_id"}, []string{"request_id"}, true},
-	{"command_start", "Start an asynchronous fixed development profile in a project. No shell strings; output bounded, process-tree timeout/cancellation. Trusted project code executes with the agent's OS rights.", []string{"project", "profile", "timeout_seconds", "request_id"}, []string{"project", "profile", "request_id"}, false},
+	{"command_start", "Queue a fixed development profile; returns queue_id. Use queue_list for job_id after dispatch, then job_status. No arbitrary shell; bounded output and process-tree cancellation. Trusted project code has agent OS rights.", []string{"project", "profile", "timeout_seconds", "request_id"}, []string{"project", "profile", "request_id"}, false},
 	{"job_status", "Read durable job status and current bounded output.", []string{"job_id"}, []string{"job_id"}, true},
 	{"job_list", "List persistent jobs, including interrupted jobs from older processes.", []string{"offset", "limit"}, nil, true},
 	{"job_cancel", "Cancel the selected running job and its process tree.", []string{"job_id", "request_id"}, []string{"job_id", "request_id"}, false},
@@ -76,7 +85,7 @@ var runtimeCatalog = []runtimeTool{
 	{"codex_read", "Read a local session only when its canonical working directory equals this project.", []string{"project", "thread_id"}, []string{"project", "thread_id"}, true},
 	{"codex_start", "Create and save a Jarvis-owned Codex session in this project. ChatGPT-only, normal tier, sandbox and approval policies fixed; no inference until codex_turn.", []string{"project", "request_id"}, []string{"project", "request_id"}, false},
 	{"codex_resume", "Attach an existing idle local session to this project; verifies cwd and active state, never steals an active turn.", []string{"project", "thread_id", "request_id"}, []string{"project", "thread_id", "request_id"}, false},
-	{"codex_turn", "Start one turn in an attached session after ChatGPT/plan/zero-credit quota checks. No paid fallback, arbitrary provider/model or auto-replay.", []string{"project", "thread_id", "text", "request_id"}, []string{"project", "thread_id", "text", "request_id"}, false},
+	{"codex_turn", "Queue a turn in an attached session; returns queue_id. Use queue_list for turn_id after dispatch, then codex_events. Fresh quota/cost checks at actual start; no paid fallback or automatic replay.", []string{"project", "thread_id", "text", "request_id"}, []string{"project", "thread_id", "text", "request_id"}, false},
 	{"codex_steer", "Append instructions to the exact active turn, guarded by turn_id.", []string{"project", "thread_id", "turn_id", "text", "request_id"}, []string{"project", "thread_id", "turn_id", "text", "request_id"}, false},
 	{"codex_interrupt", "Interrupt the specified Codex turn; verify final event before claiming stopped.", []string{"project", "thread_id", "turn_id", "request_id"}, []string{"project", "thread_id", "turn_id", "request_id"}, false},
 	{"codex_events", "Read durable bounded Codex events and pending approvals using the sequence cursor. After turn/completed, wait for jarvis/usage for that turn: final account-wide quota/credits snapshot or explicit unavailability.", []string{"project", "thread_id", "after", "limit"}, []string{"project", "thread_id"}, true},
@@ -110,7 +119,7 @@ func toolsList() any {
 				typ = "integer"
 			case "recursive":
 				typ = "boolean"
-			case "region":
+			case "region", "depends_on":
 				typ = "array"
 			case "call", "answers":
 				typ = "object"
@@ -121,7 +130,8 @@ func toolsList() any {
 				s["minItems"] = 4
 				s["maxItems"] = 4
 			}
-			if f == "profile" {
+			if f == "depends_on" { s["items"]=map[string]string{"type":"string"};s["maxItems"]=100 }
+            if f == "profile" {
 				s["enum"] = commandProfiles
 			}
 			props[f] = s
@@ -254,8 +264,10 @@ func (r *Runtime) call(p runtimeRequest) (any, error) {
 		var v Receipt
 		e = json.Unmarshal(b, &v)
 		return v, e
-	case "command_start":
-		return r.mutation(p, func(x *Receipt) (any, error) { return r.startCommand(p) })
+	case "command_start", "codex_turn":
+        return r.enqueueOperation(p, "", nil)
+    case "queue_add", "queue_list", "queue_cancel", "queue_move", "queue_resume":
+        return r.queueControl(p)
 	case "job_list", "job_status", "job_cancel":
 		return r.jobCall(p)
 	case "device_list", "device_call":
@@ -354,3 +366,4 @@ func requireProject(p runtimeRequest) error {
 	}
 	return nil
 }
+

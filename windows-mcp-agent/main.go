@@ -22,7 +22,7 @@ import (
 	"time"
 )
 
-const version = "0.5.9"
+const version = "0.6.0"
 
 type RPCRequest struct {
 	JSONRPC string          `json:"jsonrpc"`
@@ -192,7 +192,8 @@ func (a *Agent) invoke(name string, args json.RawMessage) any {
 		if p.Operation == "desktop_inspect" || p.Operation == "desktop_action" {
 			v, err = a.startDesktopTask(p.Operation, p.Desktop)
 		} else if p.Operation != "" {
-			v, err = a.startGoTask(p.Operation, p.Project)
+			r, runtimeErr := a.getRuntime()
+            if runtimeErr != nil { err=runtimeErr } else { v,err=r.enqueueOperation(runtimeRequest{Operation:"command_start",MachineID:r.MachineID,Project:p.Project,RequestID:newID(),Profile:p.Operation}, "", nil) }
 		} else {
 			v, err = a.start(p.Name, p.Duration)
 		}
@@ -460,3 +461,4 @@ func main() {
 		log.Fatal(err)
 	}
 }
+

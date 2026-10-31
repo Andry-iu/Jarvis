@@ -103,11 +103,6 @@ func (r *Runtime) startCommand(p runtimeRequest) (any, error) {
 	}
 	dir := root.Name()
 	root.Close()
-	for _, j := range r.Jobs {
-		if j.Status == "running" {
-			return nil, errors.New("a persistent command is already running on this computer")
-		}
-	}
 	id := newID()
 	exe, args, e := commandSpec(p.Profile, dir, id)
 	if e != nil {
@@ -268,3 +263,4 @@ func (r *Runtime) jobCall(p runtimeRequest) (any, error) {
 	}
 	return map[string]any{"jobs": out[start:end], "next_offset": end, "total": len(out)}, nil
 }
+
