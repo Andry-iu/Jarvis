@@ -43,3 +43,6 @@ Monitorare con `agent_status` e verificare con `project_status` o `project_list`
 
 ## Sicurezza
 Il token MCP precedentemente esposto in una chat e stato sostituito; non replicarlo. La cartella autorizzata limita i repository; il prototipo non esegue shell arbitraria. Il notebook deve mantenere una sessione desktop attiva; la sospensione interrompe il tunnel.
+
+## Allineamento GitHub (2026-10-31)
+I sorgenti integrali della versione **0.4.1** (13 file: Go, test, `go.mod`, README e guide di upgrade) sono stati pubblicati come **file singoli in chiaro** sotto `windows-mcp-agent/`, senza ZIP. Al momento del commit, tutti i 13 contenuti hanno superato il controllo di lunghezza byte rispetto ai file originali. Il test `go test ./...` e passato su Linux/amd64 con Go 1.23.2. Il collaudo completo su Windows della copia Git e la compilazione da checkout remoto restano da eseguire. Nessuna credenziale reale e stata inserita nei sorgenti.
