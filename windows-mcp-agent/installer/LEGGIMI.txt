@@ -1,140 +1,65 @@
-JARVIS MCP SETUP 1.0.3 — collegamento Codex richiesto
+JARVIS MCP SETUP 1.1.0 — INSTALLAZIONE E RIPRESA AUTOMATICA
 
-Se la 1.0.1 si e interrotta con Accesso negato e ora codex --version
-risponde codex-cli 0.165.0-alpha.1.2:
-1. Estrarre tutto lo ZIP in una NUOVA cartella.
-2. Eseguire COLLEGA-CODEX.cmd, consentire UAC con lo stesso utente Windows.
-3. Indicare la cartella precedente (Invio accetta D:\Jarvis).
-Il comando conserva la copia incompleta in una cartella di backup,
-riprende SOLO la prima installazione 1.0.1 riconosciuta e collega la CLI.
-Su una 1.0.2 completata, configura la CLI senza ricopiare stato o credenziali.
-Se Jarvis e gia attivo con una configurazione diversa, non viene arrestato:
-terminare i lavori e usare Arresta.cmd, poi rieseguire COLLEGA-CODEX.cmd.
+1. Estrarre TUTTO lo ZIP in una nuova cartella.
+2. Eseguire INSTALLA.cmd e consentire UAC con lo stesso utente di Codex.
+3. Indicare la cartella Jarvis: Invio accetta D:\Jarvis se esiste il disco D.
+   Se non c'e D, propone C:\Jarvis-Desktop2. Nome predefinito Desktop2,
+   personalizzabile; il plugin suggerito sara Jarvis-Desktop2.
 
-COLLEGA-CODEX interroga App Server, account e quota senza inferenza.
-codex_connected=true verifica il collegamento con account ChatGPT.
-inference_allowed e blocked_reason sono la decisione separata sui turni:
-un collegamento riuscito non aggira eventuali guardie su quota o costi.
-usage contiene i valori osservati, sconosciuti come null, con checked_at.
-L'esito locale e Config\codex-connection.json; non contiene token/email.
-Se serve accesso, usare codex login scegliendo il proprio account ChatGPT
-Business, poi rieseguire il comando. Mai usare API key o acquistare crediti.
+Lo stesso INSTALLA.cmd serve per la prima installazione e per riprendere.
+Non occorre eseguire comandi PowerShell a mano, ne installare winget/npm.
+L'installer rileva Git, Go e Codex; riusa le copie compatibili, altrimenti
+scarica i componenti ufficiali e verifica SHA-256 prima di eseguirli.
+Git e Go mancanti vengono predisposti come runtime completi privati,
+senza sovrascrivere altri toolchain. Jarvis li riceve nel proprio PATH.
+Codex: installer ufficiale con versione fissata a 0.165.0-alpha.1.2,
+runtime integro e prompt automatici disattivati; nessun turno avviato.
+Se serve l'accesso ChatGPT, l'installer avvia il login nel browser:
+completalo con il tuo account Business, senza API key o acquisti.
 
-Per una prima installazione nuova usare INSTALLA.cmd. Codex compatibile
-e obbligatorio: se manca, rifiuta prima di creare cartelle. Cerca prima la
-CLI nativa nel PATH e in %LOCALAPPDATA%\Programs\OpenAI\Codex\bin,
-poi il pacchetto App. Non modifica ACL WindowsApps, non copia codex.exe
-fuori dal suo runtime e non scarica o aggiorna Codex automaticamente.
-Versione CLI richiesta: 0.165.0-alpha.1.2, senza aggiornamenti impliciti.
+Un registro privato per PC/utente/cartella conserva avanzamento,
+versioni selezionate, hash, download verificati e ricevute dei processi.
+Al successivo avvio controlla i risultati REALI, non solo le spunte salvate.
+Download falliti si possono riprendere; cache buona riusata, file alterati
+non eseguiti. Un worker ancora in corso non viene duplicato; un esito
+incerto non viene ripetuto automaticamente. Il messaggio indica il registro.
+Non chiudere deliberatamente il PC durante un'installazione.
 
-Le istruzioni storiche seguenti riguardano il confezionamento precedente.
-La descrizione di Codex opzionale nella 1.0.2 e SUPERATA dalla 1.0.3.
+Riconosce la prima copia 1.0.1 fallita su Accesso negato e i tentativi
+incompleti della 1.1.0 mai diventati operativi. Conserva integralmente la
+copia precedente e ripristina cartella/task su errore della ripresa.
+Su copie complete 1.0.x aggiorna gli script riconosciuti con backup,
+conservando binario agente 0.6.1, credenziali, identita e stato corrente.
+Script modificati manualmente o dati aggiunti a una copia incompleta
+richiedono verifica: non vengono sovrascritti. Se l'agente e attivo e serve
+una modifica, completare i lavori e usare Arresta.cmd, poi INSTALLA.cmd.
+L'installer non interrompe automaticamente le elaborazioni.
 
-ERRORE CODEX ACCESSO NEGATO DURANTE LA 1.0.1
-Estrarre il nuovo ZIP e aprire RIPRENDI.cmd, indicando la cartella incompleta
-(es. D:\Jarvis). La procedura verifica che non sia mai stata avviata e salva
-la cartella precedente integralmente in un backup affiancato prima di ripartire.
-Se trova stato operativo o file aggiunti, si ferma. Non cancellare cartelle.
-Codex non accessibile resta disabilitato; Jarvis puo proseguire localmente.
-Nessun permesso Windows/Codex viene aggirato o cambiato.
-Per una prima installazione nuova, aprire INSTALLA.cmd.
+CLOUDFLARE E CHATGPT
+Cloudflared viene scaricato e verificato dall'installer quando si configura
+il collegamento remoto. I dati gia inseriti vengono riusati alla ripresa.
+Servono comunque un tunnel DEDICATO al secondo PC, il suo hostname,
+Access con Managed OAuth e i valori del tuo account Cloudflare.
+L'installer li chiede localmente; il token e nascosto e resta sul PC.
+Non crea automaticamente DNS, applicazioni Access, Managed OAuth o il
+plugin ChatGPT e non acquista domini/piani. Questi passaggi dipendono
+dall'accesso al tuo account. Se scegli di rinviarli, il risultato dichiara
+che manca la configurazione remota: nessuna falsa installazione completa.
+Quando l'account e predisposto, rilancia lo stesso INSTALLA.cmd.
+Nessuna copia di tunnel, stato o segreti di Desktop1.
 
-JARVIS - INSTALLAZIONE GUIDATA 1.0.2
-Agente Windows x64 0.6.1. Nessuna dipendenza da Desktop1.
+RISULTATO
+Verifica App Server, account ChatGPT e quota con codex_status, senza
+inferenza. Codex collegato e permesso di avviare turni sono due esiti diversi:
+inference_allowed/blocked_reason restano soggetti alle guardie economiche.
+Saldo sconosciuto resta null. Nessuna prova costi viene copiata o prorogata.
+La disponibilita da ChatGPT viene dichiarata da verificare finche non e
+collaudato il nuovo plugin sul secondo PC. Nessun costo aggiuntivo previsto
+per i componenti distribuiti; nessuna API a consumo, ricarica o upgrade.
 
-1. Copiare questo ZIP sul SECONDO PC ed estrarlo completamente.
-2. Aprire INSTALLA.cmd e consentire la richiesta amministratore.
-3. Scegliere il nome del dispositivo: Desktop2 e proposto, ma modificabile.
-   Usare lettere, numeri, spazi, trattino o underscore (massimo 40 caratteri).
-   Il nome scelto determina la cartella proposta, il task/collegamento e il
-   nome suggerito del plugin (es. Officina -> Jarvis-Officina).
-   Poi scegliere cartella di installazione e cartella dei progetti autorizzati.
-   Valori proposti: C:\Jarvis-Desktop2 e C:\Jarvis-Desktop2\Projects.
-4. Se Cloudflare non e ancora pronto, rispondere N: l'installazione locale
-   e completa, ma ChatGPT non e ancora collegato. Eseguire successivamente
-   Configura-Cloudflare.cmd, con l'agente fermo.
-5. Collegare il nuovo endpoint al plugin Jarvis-NOME-SCELTO ed effettuare OAuth.
-   Il file Collegamento-ChatGPT.txt verra creato dopo la configurazione.
-
-Il nome e un identificativo di installazione Jarvis; non rinomina Windows
-e non modifica l ID tecnico generato dall agente. Nel comando Verifica sono
-mostrati nome scelto, nome Windows e ID. Il nome si sceglie durante la prima
-installazione; questo pacchetto non rinomina installazioni gia esistenti.
-
-COSA FA AUTOMATICAMENTE
-- Verifica SHA-256, copia il binario e gli script, crea cartelle private.
-- Genera una credenziale locale casuale e una nuova identita al primo avvio.
-- Mantiene stato, archivio, backup e segreti FUORI dai progetti autorizzati.
-- Prepara un'attivita Windows per avviare Jarvis al login dell'utente,
-  in sessione interattiva e con privilegi elevati. Non serve lasciare acceso
-  Desktop1. Il PC deve essere acceso e l'utente deve avere eseguito l'accesso.
-- Rileva Codex gia installato solo se la CLI e la versione supportata.
-- Non installa Go, Git, .NET o altre toolchain: aggiungerle secondo progetto.
-- Non copia progetti, chat, cronologia, configurazioni o attestazioni costi
-  di Desktop1. Copiare o clonare i sorgenti desiderati nella root scelta.
-
-COLLEGAMENTO CLOUDFLARE - ACCOUNT E DOMINIO ESISTENTI
-La creazione delle risorse nell'account Cloudflare NON e automatizzata.
-Non attivare acquisti, ricariche, nuovi domini o piani a pagamento.
-Usare soltanto servizi gia inclusi; se compare una richiesta di spesa, fermarsi.
-
-A. Creare un NUOVO tunnel dedicato al secondo PC, non una replica di Desktop1.
-B. Associare un nuovo hostname, ad esempio desktop2.PROPRIO-DOMINIO,
-   al servizio HTTP http://127.0.0.1:8765 (oppure alla porta scelta).
-C. Proteggere l'intero hostname con un'applicazione Cloudflare Access;
-   consentire soltanto il proprio account, attivare Managed OAuth e la
-   registrazione client richiesta dal client ChatGPT. Non creare bypass.
-D. Annotare hostname HTTPS, team domain https://NOME.cloudflareaccess.com,
-   AUD dell'applicazione e UUID del NUOVO tunnel. Copiare il SOLO token
-   del nuovo tunnel, non l'intero comando mostrato da Cloudflare.
-E. Eseguire Configura-Cloudflare.cmd. Il token viene chiesto con input nascosto
-   e salvato solo nella cartella Config protetta del nuovo PC; non in chat.
-   Lo script scarica cloudflared dalla release ufficiale e verifica il digest
-   SHA-256 pubblicato da GitHub. Se il digest manca, si ferma.
-F. Avviare Jarvis e creare/collegare il plugin con il nome scelto con URL
-   https://desktop2.PROPRIO-DOMINIO/mcp e autenticazione OAuth.
-   La creazione del plugin e il login restano azioni dell'utente in ChatGPT.
-   Verifica.cmd controlla il funzionamento LOCALE; il collaudo remoto va
-   eseguito dalla chat chiedendo identita, versione e catalogo del nuovo PC.
-
-CODEX E COSTI
-Accedere a Codex sul secondo PC con l'account ChatGPT Business esistente.
-CLI attualmente supportata: codex-cli 0.165.0-alpha.1.2, pacchetto OpenAI.Codex.
-Se assente o differente, i file e gli altri strumenti restano disponibili;
-il ponte Codex resta disabilitato. Abilita-Codex.cmd puo abilitarlo in seguito.
-Nessuna API key, acquisto, ricarica, upgrade, inferenza o modifica di fatturazione
-viene effettuata dall'installer. Non viene generata alcuna prova di credito zero.
-Se il servizio restituisce saldo sconosciuto, il turno puo restare bloccato:
-la verifica economica deve essere valida per il NUOVO computer e account.
-
-GESTIONE E RIPRISTINO
-- Avvia.cmd: avvio locale. Il collegamento sul Desktop usa il task elevato.
-- Arresta.cmd: arresto esplicito dell'agente e delle sue elaborazioni;
-  non cancellera stato, archivio o ricevute. Verificare prima i lavori attivi.
-- Disabilita-avvio.cmd: disabilita soltanto il proprio task di avvio.
-- Le modifiche alla configurazione agente conservano copie in Backups.
-- Per una prima installazione fallita, conservare la cartella per la diagnosi;
-  l'installer rifiuta di sovrascriverla. Non cancellare uno stato gia utilizzato.
-- L'installer non sostituisce un'installazione esistente, non ferma processi
-  estranei, non modifica Desktop1 e non cambia configurazioni Cloudflare remote.
-- Non e un servizio prima del login; a PC spento/offline non si possono eseguire
-  azioni. L'avvio dopo reboot del secondo PC richiede collaudo reale.
-
-VERSIONE E PROVENIENZA
-Binario agente: 0.6.1, Windows amd64, 12.092.416 byte.
-SHA-256: 9FF4A136951F464925CC55B96E1A968174204199FA9C7FF681B998B3542742C1
-Codice binario: 164cb980bd1a936749d41b8692979e98b929cb04
-Base documentata: 18f7d2fe83defa762e9aca6c12dfb8c083194fc8
-Repository https://github.com/Andry-iu/Jarvis
-Branch reconcile-windows-mcp-agent-20261031
-I checksum rilevano file corrotti; il pacchetto non e firmato con Authenticode.
-
-Documentazione tecnica Cloudflare verificata il 31 ottobre 2026:
-https://developers.cloudflare.com/tunnel/reference/run-parameters/
-https://developers.cloudflare.com/tunnel/reference/tunnel-tokens/
-https://developers.cloudflare.com/cloudflare-one/access-controls/applications/http-apps/managed-oauth/
-
-COLLAUDO: vedere COLLAUDO.txt allegato per gli esiti effettivamente eseguiti.
-L'installazione su un SECONDO PC FISICO e OAuth/Cloudflare devono ancora
-essere verificati sul computer di destinazione; non sono certificati dai test
-isolati su Desktop1.
+Il riepilogo mostra il percorso del registro (LOCALAPPDATA\Jarvis-MCP\Setup),
+che contiene progress.json e summary.json. Log, download e backup privati
+restano sul computer: non inviare credenziali, auth.json o token in chat.
+RIPRENDI.cmd e COLLEGA-CODEX.cmd sono alias dello stesso nuovo avvio.
+Non includiamo automaticamente ogni compilatore possibile: SDK specifici
+dei futuri progetti (.NET, Visual Studio/C++, Android) restano distinti.

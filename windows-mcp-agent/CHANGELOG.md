@@ -1,3 +1,9 @@
+# Installer 1.1.0 — un solo avvio, prerequisiti e ripresa automatici
+
+Richiesta utente: evitare comandi PowerShell manuali per preparare Codex e recuperare le installazioni. INSTALLA.cmd ora rileva/installa Git, Go e CLI Codex compatibile da fonti ufficiali con hash, gestisce login browser e verifica account/quota senza inferenza. Registro persistente per PC/utente/cartella, cache verificata, ricevute dei worker e nessun replay di esiti incerti. Ripresa della 1.0.1 fallita e dei tentativi 1.1.0 mai operativi; backup/rollback anche dei task, aggiornamento protetto degli script delle copie complete. Nome Desktop2 configurabile; binario agente 0.6.1 e servizio operativo Desktop1 invariati.
+
+[Specifica, procedura e limiti](../docs/mcp-agent/INSTALLER-1.1.0.md). Cloudflare remoto (DNS/tunnel/Access/Managed OAuth), plugin e accessi account restano passaggi distinti: nessuna falsa dichiarazione di collegamento completo, nessun costo extra o modifica alle guardie. Collaudo secondo PC fisico e installazione reale dei runtime da assenti restano da eseguire; i test Windows isolati distinguono fixture da letture reali.
+
 # Installer 1.0.3 — 31 ottobre 2026
 
 Richiede CLI Codex compatibile prima di creare l'installazione. Priorita alla CLI nativa, percorso esplicito supportato; COLLEGA-CODEX per ripresa 1.0.1 o abilitazione su copia completa e controllo account/quota senza inferenza. Nessun arresto automatico, nessuna riabilitazione implicita del task disabilitato, nessuna modifica alle guardie dei costi. Binario agente 0.6.1 invariato. Verbale docs/mcp-agent/INSTALLER-DESKTOP2-1.0.3.md.
@@ -49,5 +55,6 @@ Attese Codex senza mutex globale; nessun watchdog temporale dei turni e nessun a
 ## 0.5.6
 
 Controllo desktop semantico senza coordinate, snapshot monouso e revalidazione; vedere ../docs/mcp-agent/DESKTOP-0.5.6.md.
+
 
 

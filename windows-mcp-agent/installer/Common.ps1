@@ -119,6 +119,13 @@ function Start-Child([string]$Exe,[string]$Arguments,[string]$HomeDir,[string]$L
     foreach ($key in @($psi.EnvironmentVariables.Keys)) {
         if ($key -match '^(JARVIS_|OPENAI_|CODEX_|CF_|TUNNEL_)') { $psi.EnvironmentVariables.Remove($key) }
     }
+    $toolFile=Join-Path $HomeDir 'Config\toolchain.json'
+    if(Test-Path -LiteralPath $toolFile){
+        $tools=Get-Content -LiteralPath $toolFile -Raw|ConvertFrom-Json
+        if($tools.format -ne 1 -or @($tools.paths).Count -gt 8){throw 'Configurazione strumenti non valida.'}
+        $bins=@($tools.paths|ForEach-Object {Get-FullPath $_})
+        $psi.EnvironmentVariables['PATH']=($bins -join ';')+';'+$psi.EnvironmentVariables['PATH']
+    }
     $psi.EnvironmentVariables['JARVIS_HOME']=$HomeDir
     $p=[Diagnostics.Process]::Start($psi)
     $stamp=[DateTime]::UtcNow.ToString('yyyyMMdd-HHmmss')+'-'+$p.Id

@@ -1,3 +1,9 @@
+# Installer 1.1.0 — un solo avvio, prerequisiti e ripresa automatici
+
+Richiesta utente: evitare comandi PowerShell manuali per preparare Codex e recuperare le installazioni. INSTALLA.cmd ora rileva/installa Git, Go e CLI Codex compatibile da fonti ufficiali con hash, gestisce login browser e verifica account/quota senza inferenza. Registro persistente per PC/utente/cartella, cache verificata, ricevute dei worker e nessun replay di esiti incerti. Ripresa della 1.0.1 fallita e dei tentativi 1.1.0 mai operativi; backup/rollback anche dei task, aggiornamento protetto degli script delle copie complete. Nome Desktop2 configurabile; binario agente 0.6.1 e servizio operativo Desktop1 invariati.
+
+[Specifica, procedura e limiti](INSTALLER-1.1.0.md). Cloudflare remoto (DNS/tunnel/Access/Managed OAuth), plugin e accessi account restano passaggi distinti: nessuna falsa dichiarazione di collegamento completo, nessun costo extra o modifica alle guardie. Collaudo secondo PC fisico e installazione reale dei runtime da assenti restano da eseguire; i test Windows isolati distinguono fixture da letture reali.
+
 # Installer 1.0.3 — collegamento obbligatorio alla CLI Codex
 
 Sostituisce la scelta opzionale della 1.0.2: l'obiettivo e usare Codex. Rilevamento CLI nativa prima di Windows App, versione esatta 0.165.0-alpha.1.2; nessuna modifica dei permessi WindowsApps. COLLEGA-CODEX.cmd recupera la prima copia 1.0.1 fallita oppure configura una copia completa, verifica account ChatGPT e quota senza inferenza. Se la configurazione di un agente attivo e diversa, rifiuta senza fermarlo. Dati osservati separati da inference_allowed; guardie economiche immutate e nessuna prova costi copiata.
@@ -201,6 +207,7 @@ I sorgenti integrali della versione **0.4.1** (13 file: Go, test, `go.mod`, READ
 ## MCP 0.5.0 source release (2026-10-31)
 
 Published update_prepare/update_execute, Cloudflare Access JWT required for both, start-agent PowerShell/CMD examples and local environment templates. No actual 0.5.0 install performed on Windows; desktop still runs 0.4.1. Windows integration of detached restart/rollback is pending. Existing failed NestingOpt clone remains paused.
+
 
 
 

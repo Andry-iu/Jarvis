@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param([string]$DeviceName,[string]$InstallDir,[string]$ProjectsRoot,[ValidateRange(1024,65535)][int]$Port=8765,[string]$CodexExecutable='',[switch]$NonInteractive,[switch]$NoTask,[switch]$NoShortcuts,[switch]$NoStart)
-. "$PSScriptRoot\Common.ps1"
+. "$PSScriptRoot\Prerequisites.ps1"
 if (-not [Environment]::Is64BitOperatingSystem -or $env:PROCESSOR_ARCHITECTURE -ne 'AMD64') { throw 'Pacchetto per Windows x64; usare PowerShell a 64 bit.' }
 $principal = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
 if (-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) { throw 'Avviare INSTALLA.cmd e consentire la richiesta amministratore.' }
@@ -28,7 +28,7 @@ if ($ProjectsRoot -ieq $InstallDir) { throw 'Non autorizzare come progetto l int
 if ((Test-Path -LiteralPath $InstallDir) -and @(Get-ChildItem -LiteralPath $InstallDir -Force).Count -gt 0) { throw 'Cartella non vuota: nessuna installazione precedente viene sovrascritta.' }
 if (Get-NetTCPConnection -LocalPort $Port -State Listen -ErrorAction SilentlyContinue) { throw 'Porta gia occupata: scegliere un altra porta; nessun processo viene fermato.' }
 $manifest = Get-Content -LiteralPath "$PSScriptRoot\package.json" -Raw | ConvertFrom-Json
-if ($manifest.agent_version -ne '0.6.1' -or $manifest.installer_version -ne '1.0.3') { throw 'Versione pacchetto non valida.' }
+if ($manifest.agent_version -ne '0.6.1' -or $manifest.installer_version -ne '1.1.0') { throw 'Versione pacchetto non valida.' }
 foreach ($f in $manifest.files) {
     if ($f.path -notmatch '^[A-Za-z0-9_.-]+$') { throw 'Percorso payload non valido.' }
     if ((Get-FileHash -LiteralPath (Join-Path $PSScriptRoot $f.path)).Hash -ine $f.sha256) { throw ('Pacchetto alterato o incompleto: '+$f.path) }
@@ -40,18 +40,19 @@ $taskCreated=$false;$newRoot=$false
 try {
     if (-not (Test-Path -LiteralPath $InstallDir)) { New-Item -ItemType Directory -Path $InstallDir | Out-Null; $newRoot=$true }
     Protect-Folder $InstallDir
+    $sid=[Security.Principal.WindowsIdentity]::GetCurrent().User.Value
+    $settings=@{format=1;installer_version='1.1.0';device_name=$DeviceName;plugin_name=$names.plugin_name;agent_version='0.6.1';agent_sha256=$manifest.agent_sha256;home=$InstallDir;projects_root=$ProjectsRoot;port=$Port;computer=$env:COMPUTERNAME;user_sid=$sid;task_name=$taskName;task_registered=$false;remote_configured=$false;public_endpoint='';installed_at=[DateTime]::UtcNow.ToString('o');source_commit=$manifest.source_commit}
+    Write-SetupJson (Join-Path $InstallDir 'Jarvis-Install-Intent.json') $settings
     foreach ($n in @('Agent','Scripts','Config','State','Logs','Backups')) { New-Item -ItemType Directory -Path (Join-Path $InstallDir $n) | Out-Null }
+    Write-SetupJson (Join-Path $InstallDir 'Config\installation.json') $settings
     New-Item -ItemType Directory -Force -Path $ProjectsRoot | Out-Null
     foreach ($f in $manifest.files) {
         if ($f.path -eq 'jarvis-mcp.exe') { $to=Join-Path $InstallDir 'Agent\jarvis-mcp.exe' }
-        elseif ($f.path -like '*.ps1' -and $f.path -notin @('Install.ps1','Test-Installer.ps1','Repair.ps1')) { $to=Join-Path $InstallDir ('Scripts\'+$f.path) }
+        elseif ($f.path -like '*.ps1' -and $f.path -notin @('Install.ps1','Test-Installer.ps1','Test-Bootstrap.ps1','Repair.ps1','Setup.ps1','Setup-Worker.ps1')) { $to=Join-Path $InstallDir ('Scripts\'+$f.path) }
         else { continue }
         Copy-Item -LiteralPath (Join-Path $PSScriptRoot $f.path) -Destination $to
         if ((Get-FileHash -LiteralPath $to).Hash -ine $f.sha256) { throw 'Verifica copia non riuscita.' }
     }
-    $sid=[Security.Principal.WindowsIdentity]::GetCurrent().User.Value
-    $settings=@{format=1;installer_version='1.0.3';device_name=$DeviceName;plugin_name=$names.plugin_name;agent_version='0.6.1';agent_sha256=$manifest.agent_sha256;home=$InstallDir;projects_root=$ProjectsRoot;port=$Port;computer=$env:COMPUTERNAME;user_sid=$sid;task_name=$taskName;task_registered=$false;remote_configured=$false;public_endpoint='';installed_at=[DateTime]::UtcNow.ToString('o');source_commit=$manifest.source_commit}
-    Write-Utf8 (Join-Path $InstallDir 'Config\installation.json') ($settings|ConvertTo-Json)
     $bytes=New-Object byte[] 32; $rng=[Security.Cryptography.RandomNumberGenerator]::Create(); try { $rng.GetBytes($bytes) } finally { $rng.Dispose() }
     Write-Utf8 (Join-Path $InstallDir 'Config\secrets.env') ('JARVIS_MCP_TOKEN='+[Convert]::ToBase64String($bytes)+"`r`n")
     $values=@{JARVIS_HOME=$InstallDir;JARVIS_PROJECTS_ROOT=$ProjectsRoot;JARVIS_STATE_DIR=(Join-Path $InstallDir 'State\runtime-v1');JARVIS_DESKTOP_ENABLED='1';JARVIS_CODEX_ENABLED='0'}
@@ -68,7 +69,7 @@ try {
         $options=New-ScheduledTaskSettingsSet -ExecutionTimeLimit ([TimeSpan]::Zero) -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -MultipleInstances IgnoreNew
         Register-ScheduledTask -TaskName $taskName -Action $action -Trigger $trigger -Principal $taskPrincipal -Settings $options | Out-Null
         $taskCreated=$true;$settings.task_registered=$true
-        Write-Utf8 (Join-Path $InstallDir 'Config\installation.json') ($settings|ConvertTo-Json)
+        Write-SetupJson (Join-Path $InstallDir 'Config\installation.json') $settings
     }
     if (-not $NoShortcuts) {
         $shell=New-Object -ComObject WScript.Shell
@@ -86,6 +87,7 @@ try {
             catch { Write-Warning 'Configurazione Cloudflare non completata. Installazione locale conservata; riprendere da Configura-Cloudflare.cmd con agente fermo.' }
         }
     }
+    Write-SetupJson (Join-Path $InstallDir 'Config\install-complete.json') @{installer_version='1.1.0';at=[DateTime]::UtcNow.ToString('o')}
     if (-not $NoStart) {
         if ($taskCreated) { Start-ScheduledTask -TaskName $taskName }
         else { Start-Process powershell.exe -ArgumentList ('-NoProfile -ExecutionPolicy Bypass -File "'+(Join-Path $InstallDir 'Scripts\Start.ps1')+'" -HomeDir "'+$InstallDir+'"') | Out-Null }

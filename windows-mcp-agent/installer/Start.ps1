@@ -1,6 +1,7 @@
 param([string]$HomeDir=(Split-Path $PSScriptRoot -Parent))
 . "$PSScriptRoot\Common.ps1"
 $s=Read-Install $HomeDir;$HomeDir=$s.home
+if(Test-Path (Join-Path $HomeDir 'Config\installer-scripts-pending.json')){throw 'Aggiornamento installer interrotto: riprendere INSTALLA.cmd prima dell avvio.'}
 $guard=$null;$agent=$null;$tunnel=$null;$record=$null
 try {
     $guard=[IO.File]::Open((Join-Path $HomeDir 'Config\runner.lock'),[IO.FileMode]::OpenOrCreate,[IO.FileAccess]::ReadWrite,[IO.FileShare]::None)

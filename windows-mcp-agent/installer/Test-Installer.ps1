@@ -60,7 +60,7 @@ try {
             & "$PackageDir\Connect-Codex.ps1" -HomeDir $incomplete -CodexExecutable $realCodex -NonInteractive
             if(-not (Get-Content (Join-Path $incomplete 'Config\codex-connection.json') -Raw|ConvertFrom-Json).codex_connected){throw 'Avvio e connessione dopo ripresa falliti.'};Pass 'cold_start_and_codex_connection_after_recovery'
             $repaired=Read-Install $incomplete;$recovery=Get-Content (Join-Path $incomplete 'Config\recovery.json') -Raw|ConvertFrom-Json
-            if($repaired.installer_version -ne '1.0.3' -or (Read-AgentEnv $incomplete).JARVIS_CODEX_ENABLED -ne '1'){throw 'Ripresa non completata.'}
+            if($repaired.installer_version -ne '1.1.0' -or (Read-AgentEnv $incomplete).JARVIS_CODEX_ENABLED -ne '1'){throw 'Ripresa non completata.'}
             if((Get-FileHash (Join-Path $recovery.backup 'Config\secrets.env')).Hash -ne $originalSecret){throw 'Backup precedente alterato.'};Pass 'resume_real_101_failure_with_intact_backup'
             $rollbackHome=Join-Path $TestRoot 'Rollback ripresa'
             Expect-Refusal { & $legacyInstall.FullName -InstallDir $rollbackHome -Port 8772 -NonInteractive -NoTask -NoShortcuts -NoStart } 'second_old_101_failure_fixture'

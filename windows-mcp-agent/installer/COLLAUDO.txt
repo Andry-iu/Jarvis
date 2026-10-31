@@ -1,26 +1,59 @@
-COLLAUDO INSTALLER JARVIS 1.0.3 — 31 ottobre 2026
+COLLAUDO JARVIS MCP SETUP 1.1.0 — 31 ottobre 2026
 
-Suite Windows in copie e porte isolate su Desktop1, agente 0.6.1 invariato.
-PASS parser Windows PowerShell.
-PASS fixture Win32 Accesso negato reale; CLI negata non selezionata.
-PASS nuova installazione rifiutata prima di creare cartelle se manca Codex.
-PASS CLI nativa preferita al pacchetto App non accessibile.
-PASS fallimento originale 1.0.1 riprodotto, ripresa con backup intatto.
-PASS rollback ripresa su errore senza alterare l'originale.
-PASS account ChatGPT e quota reali via codex_status senza inferenza.
-PASS agente attivo compatibile consultato senza riavvio.
-PASS configurazione diversa su agente attivo rifiutata senza arresto.
-PASS avvio a freddo e connessione Codex dopo recupero.
-PASS avvio manuale senza riabilitare il task disabilitato.
-PASS nomi configurabili, identita/credenziali nuove, nessuna prova costi copiata.
-PASS task interattivo elevato senza timeout; MCP autenticato.
-PASS protezione percorsi, porte occupate e payload corrotto.
-PASS identita persistente e disabilitazione avvio senza fermare lavori.
+Eseguito su Desktop1 in copie, task e porte isolate. Servizio operativo
+0.6.1 non reinstallato, arrestato o sostituito. Nessuna inferenza.
 
-Il riconoscimento CLI nativa usa una fixture di discovery verso la CLI
-compatibile reale disponibile su Desktop1. Non e stato installato il runtime
-standalone su Desktop1. L'utente riporta CLI standalone 0.165.0-alpha.1.2
-funzionante sul secondo PC; il collegamento Jarvis li resta da verificare.
-Nessuna inferenza, acquisto, API key, upgrade o modifica alle guardie costi.
-Non collaudati: secondo PC fisico, UAC a doppio clic, reboot, tunnel/DNS/
-Access/OAuth remoti, nuovo plugin ChatGPT, turni Codex sul secondo PC.
+Suite Test-Installer: COMPLETE.
+Parser PowerShell, Win32 Accesso negato reale, rilevamento CLI,
+recupero del fallimento originale 1.0.1, backup/rollback, identita e
+credenziali distinte/persistenti, task senza timeout, MCP autenticato,
+account/quota reali, protezione percorsi/porte/payload, nessuno stop
+implicito e avvio senza riabilitare il task disabilitato: superati.
+
+Suite Test-Bootstrap finale: COMPLETE.
+PASS manifest verificato prima dei prerequisiti.
+PASS lock contro due setup sulla stessa radice.
+PASS checkpoint conservato dopo riapertura.
+PASS cache con hash riusata senza nuovo download.
+PASS download alterato rifiutato, errore rete e successiva ripresa.
+PASS origine nel registro alterata rifiutata.
+PASS worker Git e Go reali con archivi/eseguibili DI FIXTURE isolati.
+PASS recupero output gia concluso senza reinstallazione.
+PASS errore worker con ricevuta failed, ripresa dopo correzione.
+PASS worker attivo non duplicato; dispatch incerto non ripetuto.
+PASS vincolo del registro a utente/PC/percorso.
+PASS ripresa copia 1.1.0 dopo agent.env, backup intatto.
+PASS ripresa interruzione prima di Config e credenziali.
+PASS errore ripresa con task: cartella e task originali ripristinati.
+PASS ripresa con task registrato senza duplicati.
+PASS Cloudflare pendente: binario/token sintetici riusati senza richieste duplicate.
+PASS UAC con altro utente rifiutato.
+PASS unico ingresso eseguito due volte con CLI/account/quota REALI,
+     nessuna inferenza, identita e credenziali conservate.
+PASS script locali modificati non sovrascritti.
+PASS aggiornamento script parziale impedisce avvio fino alla ripresa.
+PASS copia completa 1.0.1 aggiornata con backup, token conservato.
+PASS download REALE installer Codex fissato e SHA-256 ufficiale,
+     SENZA esecuzione dell'installer Codex su Desktop1.
+PASS metadati e digest ufficiali REALI di Git, Go e cloudflared.
+
+Correzioni emerse e risolte nei collaudi: accesso a chiavi mancanti
+con StrictMode, conversione di liste generiche PowerShell, confronto
+SID/nome account nei task e percorso backup valido per File.Replace.
+Le suite finali superano questi casi.
+
+Evidenze locali: Logs/diagnostics/installer-061-test.log e
+bootstrap-110-test.log; Staging/installer110-test-result.txt = COMPLETE.
+Test, sorgenti, manifest, storico hash e istruzioni nel repository Jarvis.
+Binario agente invariato: 0.6.1, SHA-256
+9FF4A136951F464925CC55B96E1A968174204199FA9C7FF681B998B3542742C1.
+
+LIMITI: i worker dei prerequisiti mancanti sono provati con fixture,
+non con una nuova installazione dei runtime ufficiali su PC vuoto.
+Non verificati secondo PC fisico, installazione effettiva Codex da
+assente, OAuth browser/UAC da doppio clic, reboot, risorse Cloudflare,
+Managed OAuth, nuovo plugin e inferenza sul secondo PC.
+L'installer automatizza il software locale e chiede i dati Cloudflare;
+non crea DNS, Access, Managed OAuth o plugin senza accesso all'account.
+Nessuna API key, acquisto, ricarica, upgrade di piano o modifica delle
+guardie/prove economiche. Saldo null resta sconosciuto.
