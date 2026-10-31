@@ -1,8 +1,9 @@
 param([Parameter(Mandatory=$true)][string]$ExpectedHash,[Parameter(Mandatory=$true)][string]$CandidateFile)
 $ErrorActionPreference='Stop'
-$module='D:\Jarvis\MCP-Source\windows-mcp-agent';$homeDir='D:\Jarvis\StagingHome060';$state=Join-Path $homeDir 'State'
+$runId=[guid]::NewGuid().ToString('N')
+$module='D:\Jarvis\MCP-Source\windows-mcp-agent';$homeDir=('D:\Jarvis\StagingHome060-'+$runId);$state=Join-Path $homeDir 'State'
 $exe=Join-Path (Join-Path $module 'Staging') $CandidateFile;$log='D:\Jarvis\Logs\diagnostics\v60-queue-test.log';$owned=$null;$script:machine=''
-$project='windows-mcp-agent/Staging/queue-fixture060'
+$project='windows-mcp-agent/Staging/queue-fixture060-'+$runId
 function Report([string]$s){$s|Add-Content $log -Encoding UTF8}
 function Rid{return [guid]::NewGuid().ToString('N')}
 function Call([string]$name,[hashtable]$arguments=@{}){
@@ -17,7 +18,18 @@ function Start-Owned{
  $p=Start-Process $exe -ArgumentList @('-listen','127.0.0.1:8766') -WindowStyle Hidden -PassThru -RedirectStandardOutput (Join-Path $homeDir 'stdout.log') -RedirectStandardError (Join-Path $homeDir 'stderr.log')
  for($i=0;$i -lt 80;$i++){try{if((Invoke-RestMethod http://127.0.0.1:8766/health -TimeoutSec 1).version -eq '0.6.0'){return $p}}catch{};if($p.HasExited){throw 'candidate_exited'};Start-Sleep -Milliseconds 200};throw 'health_timeout'
 }
-function Stop-Owned($p){if($p -and -not $p.HasExited){& "$env:SystemRoot\System32\taskkill.exe" /PID $p.Id /T /F 2>&1|Out-Null;$p.WaitForExit();Start-Sleep -Milliseconds 200}}
+function Stop-Owned($p){if($p -and -not $p.HasExited){
+ $info=New-Object Diagnostics.ProcessStartInfo
+ $info.FileName=Join-Path $env:SystemRoot 'System32\taskkill.exe'
+ $info.Arguments='/PID '+$p.Id+' /T /F';$info.UseShellExecute=$false;$info.CreateNoWindow=$true
+ $info.RedirectStandardOutput=$true;$info.RedirectStandardError=$true
+ $killer=[Diagnostics.Process]::Start($info)
+ $outTask=$killer.StandardOutput.ReadToEndAsync();$errTask=$killer.StandardError.ReadToEndAsync()
+ if(-not $killer.WaitForExit(10000)){throw 'test_process_tree_stop_timeout'}
+ $null=$outTask.Result;$null=$errTask.Result
+ if(-not $p.WaitForExit(5000)){throw 'test_process_still_running'}
+ $killer.Dispose();Start-Sleep -Milliseconds 200
+}}
 function Entry([string]$id){$q=Call 'queue_list' @{project=$project;limit=200};return $q.operations|Where-Object {$_.queue_id -eq $id}|Select-Object -First 1}
 function Wait-State([string]$id,[string]$status){for($i=0;$i -lt 160;$i++){$e=Entry $id;if($e.status -eq $status){return $e};if($e.status -in @('failed','uncertain','cancelled','timed_out')){throw ('unexpected_queue_state_'+$e.status+'_'+$e.error)};Start-Sleep -Milliseconds 100};throw ('queue_wait_timeout_'+$status)}
 try{
@@ -25,7 +37,7 @@ try{
  if((Get-FileHash $exe -Algorithm SHA256).Hash -ne $ExpectedHash){throw 'candidate_hash_mismatch'}
  New-Item -ItemType Directory -Force (Join-Path $homeDir 'Config')|Out-Null
  if(-not (Test-Path (Join-Path $homeDir 'Config\secrets.env'))){'# isolated test'|Set-Content (Join-Path $homeDir 'Config\secrets.env') -Encoding UTF8}
- $fixture=Join-Path $module 'Staging\queue-fixture060';New-Item -ItemType Directory -Force $fixture|Out-Null
+ $fixture=Join-Path 'D:\Jarvis\MCP-Source' $project;New-Item -ItemType Directory -Force $fixture|Out-Null
  [IO.File]::WriteAllText((Join-Path $fixture 'go.mod'),"module queue-fixture`n`ngo 1.27.0`n",(New-Object Text.UTF8Encoding($false)))
  $test='package queuefixture; import("testing";"time";"os"); func TestWork(t *testing.T){os.WriteFile("running.txt",[]byte("RUNNING"),0600);time.Sleep(4*time.Second)}'
  [IO.File]::WriteAllText((Join-Path $fixture 'work_test.go'),$test,(New-Object Text.UTF8Encoding($false)))
