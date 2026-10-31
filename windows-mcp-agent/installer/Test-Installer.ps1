@@ -22,8 +22,13 @@ try {
     $a=Join-Path $TestRoot 'Desktop 2';$b=Join-Path $TestRoot 'Desktop B'
     & "$PackageDir\Install.ps1" -InstallDir $a -Port 8768 -NonInteractive -NoShortcuts -NoStart
     $installs.Add($a)
-    & "$PackageDir\Install.ps1" -InstallDir $b -Port 8769 -NonInteractive -NoTask -NoShortcuts -NoStart
+    & "$PackageDir\Install.ps1" -DeviceName 'Officina CNC' -InstallDir $b -Port 8769 -NonInteractive -NoTask -NoShortcuts -NoStart
     $installs.Add($b);Pass 'fresh_install_two_distinct_roots_with_spaces'
+    $default=Read-Install $a;$custom=Read-Install $b
+    if ($default.device_name -ne 'Desktop2' -or $default.plugin_name -ne 'Jarvis-Desktop2' -or $default.task_name -notlike 'Jarvis-Desktop2-*') { throw 'Nome predefinito non corretto.' };Pass 'default_name_Desktop2'
+    if ($custom.device_name -ne 'Officina CNC' -or $custom.plugin_name -ne 'Jarvis-Officina CNC' -or $custom.task_name -notlike 'Jarvis-Officina-CNC-*') { throw 'Nome personalizzato non propagato.' };Pass 'custom_name_metadata_plugin_and_task'
+    if ((Get-DeviceNames 'Officina CNC').default_home -ne 'C:\Jarvis-Officina CNC') { throw 'Cartella proposta non segue il nome.' };Pass 'custom_name_default_folder'
+    Expect-Refusal { Get-DeviceNames '../Desktop1' } 'refuse_unsafe_device_name'
     if ((Get-LocalToken $a) -ceq (Get-LocalToken $b)) { throw 'Credenziali duplicate.' };Pass 'random_separate_credentials'
     if ((Test-Path (Join-Path $a 'Config\codex-cost-proof.json')) -or (Test-Path (Join-Path $b 'Config\codex-cost-proof.json'))) { throw 'Prova costi copiata.' };Pass 'no_cost_proof_copied'
     $hash=(Get-FileHash (Join-Path $a 'Agent\jarvis-mcp.exe')).Hash
