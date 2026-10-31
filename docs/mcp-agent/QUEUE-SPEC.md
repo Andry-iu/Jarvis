@@ -14,4 +14,4 @@ Direzione approvata in Voice: le elaborazioni vengono accodate per progetto; con
 - Per le letture non promettere coerenza con processi esterni che modificano risorse fuori dal controllo dell'agente.
 
 Nessun limite di un solo lavoro in attesa e stato approvato: era una proposta non adottata. Nessuna approvazione ad acquisti/API o a sviluppi di altri progetti.
-Stato: specifica approvata; implementazione successiva alla 0.5.9 in corso, non ancora operativa.
+Stato: implementata nella 0.6.0, installata e collaudata su Desktop1 dalla nuova chat il 31 ottobre 2026. Vedere QUEUE-0.6.0.md e VALIDATION-0.6.0-20261031.md per evidenze, limiti e ripresa.
