@@ -22,7 +22,7 @@ import (
 	"time"
 )
 
-const version = "0.5.6"
+const version = "0.5.7"
 
 type RPCRequest struct {
 	JSONRPC string          `json:"jsonrpc"`
@@ -51,6 +51,8 @@ type Task struct {
 	cancel     context.CancelFunc
 }
 type Agent struct {
+	runtimeMu sync.Mutex
+	runtime *Runtime
 	mu   sync.Mutex
 	task *Task
 	next int
@@ -121,6 +123,11 @@ func toolResult(value any, isError bool) any {
 	return map[string]any{"content": []any{map[string]any{"type": "text", "text": string(b)}}, "isError": isError}
 }
 func (a *Agent) invoke(name string, args json.RawMessage) any {
+	if name == "task_start" {
+		var bridge struct { Operation string `json:"operation"`; Request json.RawMessage `json:"request"` }
+		if json.Unmarshal(args, &bridge) == nil && bridge.Operation == "runtime" { return a.invokeRuntime("", bridge.Request) }
+	}
+	if isRuntimeTool(name) { return a.invokeRuntime(name, args) }
 	switch name {
 	case "agent_status":
 		return toolResult(a.snapshot(), false)
@@ -246,7 +253,7 @@ func (a *Agent) invoke(name string, args json.RawMessage) any {
 	}
 	return toolResult(map[string]string{"error": "unknown tool"}, true)
 }
-func toolsList() any {
+func legacyToolsList() any {
 	return map[string]any{"tools": []any{
 		map[string]any{"name": "project_list", "description": "List immediate Git repositories within the explicitly authorized JARVIS_PROJECTS_ROOT (read-only)", "inputSchema": map[string]any{"type": "object", "properties": map[string]any{}}},
 		map[string]any{"name": "project_clone", "description": "Clone a GitHub HTTPS repository from approved owner Andry-iu into JARVIS_PROJECTS_ROOT without overwriting an existing directory. Runs as a cancellable task; use agent_status to monitor. Requires Git credentials preconfigured on the notebook.", "inputSchema": map[string]any{"type": "object", "properties": map[string]any{"repository_url": map[string]any{"type": "string"}, "project": map[string]any{"type": "string"}}, "required": []string{"repository_url"}}},
@@ -275,7 +282,7 @@ func handler(a *Agent, token string, access *AccessVerifier) http.Handler {
 			return
 		}
 		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprint(w, `{"ok":true,"version":"0.5.6"}`)
+		_ = json.NewEncoder(w).Encode(map[string]any{"ok":true,"version":version})
 	})
 	mux.HandleFunc("/mcp", func(w http.ResponseWriter, r *http.Request) {
 		log.Printf("MCP request received method=%s access_assertion=%t", r.Method, r.Header.Get("Cf-Access-Jwt-Assertion") != "")
@@ -416,6 +423,8 @@ func main() {
 	}
 	startLogMaintenance()
 	a := &Agent{}
+	if _, err := a.getRuntime(); err != nil { log.Fatalf("Runtime initialization failed: %v", err) }
+	defer a.closeRuntime()
 	var access *AccessVerifier
 	if teamDomain != "" {
 		u, err := url.Parse(teamDomain)

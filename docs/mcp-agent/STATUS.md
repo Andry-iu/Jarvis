@@ -1,3 +1,7 @@
+# 0.5.7 — sviluppo autorizzato, candidato non installato
+
+File/cartelle, esecutore persistente, catture dirette, ponte Codex locale, routing fra computer e strumenti MCP in collaudo. La 0.5.6 resta la release operativa verificata. Dettagli e limiti: [RUNTIME-0.5.7](RUNTIME-0.5.7.md). Non confondere sorgente candidato, test, installazione e verifica nel client.
+
 # Jarvis Windows MCP Agent — stato corrente 0.5.6
 
 **31 ottobre 2026: 0.5.6 installata sul PC Jarvis-Desktop1, elevata e collaudata.**
@@ -147,3 +151,4 @@ I sorgenti integrali della versione **0.4.1** (13 file: Go, test, `go.mod`, READ
 ## MCP 0.5.0 source release (2026-10-31)
 
 Published update_prepare/update_execute, Cloudflare Access JWT required for both, start-agent PowerShell/CMD examples and local environment templates. No actual 0.5.0 install performed on Windows; desktop still runs 0.4.1. Windows integration of detached restart/rollback is pending. Existing failed NestingOpt clone remains paused.
+

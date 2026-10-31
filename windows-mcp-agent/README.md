@@ -1,3 +1,7 @@
+# 0.5.7 — candidato in collaudo
+
+Sviluppo autorizzato: file/cartelle, comandi, cattura diretta, sessioni Codex locali, identita e storico. La release operativa resta 0.5.6 finche non e verificato l'aggiornamento. [Contratto e limiti 0.5.7](../docs/mcp-agent/RUNTIME-0.5.7.md).
+
 # Jarvis Windows MCP Agent 0.5.6
 
 Agente Windows distinto dall'app Android Jarvis. Installato e verificato sul PC Jarvis-Desktop1, con privilegi amministrativi. [Stato corrente](../docs/mcp-agent/STATUS.md), [controllo desktop e collaudi](../docs/mcp-agent/DESKTOP-0.5.6.md).
@@ -46,3 +50,4 @@ L'output dei task Go conserva gli ultimi 12000 byte, dopo acquisizione in memori
 Gli script bootstrap in Agent\ sono esempi: il percorso operativo verificato è quello sopra.
 La cattura schermo diagnostica è stata acquisita e mostrata; il comando MCP dedicato e l'avvio automatico dopo reboot restano da verificare/implementare.
 Seguire [RELEASE_POLICY](../docs/mcp-agent/RELEASE_POLICY.md).
+
