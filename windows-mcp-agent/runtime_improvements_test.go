@@ -279,3 +279,9 @@ func TestSlowCodexRPCDoesNotBlockQueueJobsOrInterruption(t *testing.T) {
 func (c *codexClient) nextIDString(raw json.RawMessage) string { return strings.Trim(string(raw), `"`) }
 
 var _ io.WriteCloser = (*rpcTestInput)(nil)
+
+func TestCodexTurnResourcesRemainOptionalForExistingClients(t *testing.T) {
+	b, err := json.Marshal(map[string]any{"operation": "codex_turn", "machine_id": newID(), "project": "sample", "thread_id": newID(), "text": "fixture", "request_id": newID()})
+	if err != nil { t.Fatal(err) }
+	if _, err = decodeRuntime("", b); err != nil { t.Fatal("existing client turn rejected", err) }
+}
