@@ -58,12 +58,17 @@ try{
  Start-Sleep -Seconds 2
  $fixtureScript=Join-Path $PSScriptRoot 'desktop-fixture.ps1'
  $arguments=@('-NoProfile','-ExecutionPolicy','Bypass','-STA','-File',('"{0}"' -f $fixtureScript),'-Report',('"{0}"' -f $report))
- $fixtureProcess=Start-Process powershell.exe -ArgumentList $arguments -PassThru -WindowStyle Hidden
+ $fixtureProcess=Start-Process powershell.exe -ArgumentList $arguments -PassThru -WindowStyle Normal
  $until=(Get-Date).AddSeconds(10)
  while(!(Test-Path $report) -and (Get-Date) -lt $until){Start-Sleep -Milliseconds 200}
  if(!(Test-Path $report)){throw 'Fixture did not start'}
  Start-Sleep -Milliseconds 500
- $s=Inspect
+ $s=$null
+ for($i=0;$i -lt 5;$i++){
+  try{$candidate=Inspect;if($candidate.window.hwnd -eq (Report).hwnd){$s=$candidate;break}}catch{}
+  Start-Sleep -Milliseconds 500
+ }
+ if(!$s){throw 'Fixture did not become foreground; no UI actions attempted'}
  Check ($s.window.hwnd -eq (Report).hwnd) 'foreground fixture identity'
  $same=@($s.elements|Where-Object {$_.name -eq 'Conferma'})
  Check ($same.Count -eq 2) 'duplicate button names observed'
