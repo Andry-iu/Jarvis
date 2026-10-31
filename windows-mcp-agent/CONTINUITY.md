@@ -1,6 +1,16 @@
-# Continuita Windows MCP — candidata 0.6.0, 31 ottobre 2026
+# Continuita Windows MCP — 0.6.0 installata e collaudata, 31 ottobre 2026
 
-Coda/riordino/consultazione/annullamento e letture concorrenti implementati e testati su Windows; vet superato. Ultima operativa 0.5.9 finche il verbale 0.6.0 non conferma l'installazione. Seguire docs/mcp-agent/QUEUE-0.6.0.md. Dopo comando accodato leggere queue_list per job_id/turn_id, poi stato/eventi esatti. Non ripetere automaticamente operazioni incerte. Coda privata persistente, ripresa esplicita dopo riavvio; dipendenze note vanno dichiarate. Compilazione e collaudo MCP ancora da completare. Nessun acquisto/API o modifica delle prove sui costi autorizzato.
+Leggere AGENTS.md di questa cartella e docs/mcp-agent/{STATUS,QUEUE-0.6.0,VALIDATION-0.6.0-20261031,RELEASE_POLICY}.md. Agente Windows distinto da Android. Branch reconcile-windows-mcp-agent-20261031. Ripresa verificata in una nuova chat con Jarvis-Desktop1.
+
+Coda persistente per progetto, riordino/cancellazione in attesa e letture concorrenti operativi. Percorsi sovrapposti esclusi, progetti indipendenti paralleli (massimo quattro). command_start/codex_turn accodano: leggere queue_list per job_id/turn_id. Cancellazione in attesa distinta da interruzione attiva; nessun replay automatico. Dipendenze esplicite e pausa dopo errore/riavvio. Per catalogo precedente usare task_start operation=runtime e request completa.
+
+Verificati test Windows/vet/build, collaudo isolato con riavvio senza replay, backup/rollback e installazione. Poi dalla chat: riordino C prima di B, B cancellata senza avvio, letture durante A, progetto indipendente concluso durante A, turno Codex accodato completato e final_usage presente. Sorgente binario a63fb7b36dce3e543c28194ae80f8519524949fc; installazione da c01400edcd185b7d6b6bde114b8064931f742195 dopo correzione del solo script di collaudo. SHA-256 68D7D4DB1B63576B81EC67E7DCAB137763F7BE38A6B841BA5A8B46F4B5A1DEFE. Backup D:\Jarvis\Backups\mcp-0.6.0-20261031.
+
+Quota finale storica 17:56:53 UTC: 87%, saldo servizio "0" noto, reset 4 novembre 13:39:22 UTC. Le letture precedenti con saldo null restano sconosciute; non sostituirle con zero. Sempre codex_status per il dato attuale, senza inferenza. Guardia iniziale e lettura finale conservate; nessun acquisto/ricarica/API. Prova costi associata account/PC per saldo null non prorogata, scadenza 7 novembre 15:55 UTC. Automazione quota giornaliera esistente verificata abilitata, ID 6ae61868fe2081919636cd881282ad27; nessun duplicato, esecuzione futura non verificata.
+
+Restano da verificare Voice, altri PC fisici e reboot del PC; device_list mostra solo locale. Il percorso di compatibilita funziona in questa chat, ma non dimostra il refresh dei cinque strumenti diretti queue_* nel client. MSBuild/CMake/cl non nel PATH. NestingOpt sospeso. Checkout sparse: includere docs/mcp-agent oltre a windows-mcp-agent. Conservare Staging, update.go.bak, stash e backup precedenti.
+
+## Storico dei rilasci precedenti
 
 # Continuita Windows MCP — 0.5.9 installata e collaudata, 31 ottobre 2026
 
