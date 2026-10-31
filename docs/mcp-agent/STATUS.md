@@ -1,3 +1,11 @@
+# Windows MCP 0.6.1 — installata e collaudata, 31 ottobre 2026
+
+RPC Codex reattive e scheduler indipendente; nessun limite temporale dei turni e nessun avviso programmato. Coda solo operativa, terminali nell'archivio privato locale via activity_history; risorse condivise read/write e repository Git comuni riconosciuti. Registro significativo su Git distinto dai log tecnici. [Specifica](IMPROVEMENTS-0.6.1.md), [verbale](VALIDATION-0.6.1-20261031.md), [registro](ACTIVITY.md), [regola di progetto](PROJECT-RECORD.md).
+
+Test Windows/vet/build, prova simulata di 310 secondi, MCP isolato, backup/rollback, installazione e turno Codex reale da questa conversazione superati. Codice binario 164cb980bd1a936749d41b8692979e98b929cb04, SHA-256 9FF4A136951F464925CC55B96E1A968174204199FA9C7FF681B998B3542742C1. Backup D:\Jarvis\Backups\mcp-0.6.1-20261031. Prova costi invariata; letture storiche non sono valori correnti. Altri PC, reboot fisico e refresh catalogo diretto client restano da verificare.
+
+## Storico precedente
+
 # 0.6.0 — installata e collaudata da questa nuova chat
 
 31 ottobre 2026: candidata esistente recuperata senza sovrascritture; completati test Windows/vet/build, collaudo MCP isolato, backup/rollback, installazione e prove reali da ChatGPT. Coda persistente, elenco/cancellazione/riordino, letture concorrenti e progetti indipendenti verificati. Turno Codex accodato completato con lettura finale quota/crediti. [Verbale 0.6.0](VALIDATION-0.6.0-20261031.md), [contratto](QUEUE-0.6.0.md), [istruzioni Windows](../../windows-mcp-agent/AGENTS.md).
@@ -175,4 +183,5 @@ I sorgenti integrali della versione **0.4.1** (13 file: Go, test, `go.mod`, READ
 ## MCP 0.5.0 source release (2026-10-31)
 
 Published update_prepare/update_execute, Cloudflare Access JWT required for both, start-agent PowerShell/CMD examples and local environment templates. No actual 0.5.0 install performed on Windows; desktop still runs 0.4.1. Windows integration of detached restart/rollback is pending. Existing failed NestingOpt clone remains paused.
+
 

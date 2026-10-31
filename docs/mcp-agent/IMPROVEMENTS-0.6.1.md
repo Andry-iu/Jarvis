@@ -1,4 +1,4 @@
-# Windows MCP 0.6.1 — specifica approvata e candidata in collaudo
+# Windows MCP 0.6.1 — specifica approvata e implementata
 
 31 ottobre 2026. Autorizzato in Voice: sviluppare tutti i miglioramenti discussi; niente modifiche Android, NestingOpt o altri PC.
 
@@ -20,4 +20,4 @@ Risorse dichiarate coordinano soltanto questo agente. Nessuna scoperta universal
 
 ## Stato
 
-Candidata, non ancora installata. Test Windows/vet/build, stress RPC, backup, migrazione e rollback da completare prima della promozione. Nessuna promessa su Voice, altri PC o reboot fisico.
+Installata su Desktop1 e collaudata: test Windows/vet/build, stress RPC, turno simulato oltre cinque minuti, collaudo MCP isolato, backup/migrazione/rollback e turno Codex reale superati. Vedere VALIDATION-0.6.1-20261031.md. Nessuna promessa di disponibilita universale in altri client, su altri PC o dopo reboot fisico.

@@ -2,7 +2,7 @@
 
 Questo sottoprogetto e l'agente Windows Jarvis MCP / Jarvis-Desktop1, distinto dall'app Android nello stesso repository. Le regole Android su APK, firma, cover, Gradle e cloud Android non definiscono l'ambiente di questo agente: l'utente ha autorizzato sviluppo, test e installazione su Desktop1.
 
-Prima di intervenire leggere README.md, CONTINUITY.md, CHANGELOG.md e ../docs/mcp-agent/{STATUS,RELEASE_POLICY,QUEUE-0.6.0,VALIDATION-0.6.0-20261031}.md. Verificare identita e versione correnti con machine_info; non assumere che gli ID dei verbali siano ancora il bersaglio corretto. Consultare coda, job, ricevute e sessioni del progetto esatto prima di nuove mutazioni.
+Prima di intervenire leggere README.md, CONTINUITY.md, CHANGELOG.md e ../docs/mcp-agent/{STATUS,RELEASE_POLICY,IMPROVEMENTS-0.6.1,VALIDATION-0.6.1-20261031}.md. Verificare identita e versione correnti con machine_info; non assumere che gli ID dei verbali siano ancora il bersaglio corretto. Consultare coda, job, ricevute e sessioni del progetto esatto prima di nuove mutazioni.
 
 - Branch di lavoro autorizzato: reconcile-windows-mcp-agent-20261031. Verificare il remoto attuale e le modifiche locali; nessun merge implicito su main, force push o modifica Android.
 - Sorgenti operativi D:\Jarvis\MCP-Source\windows-mcp-agent; root Git D:\Jarvis\MCP-Source. Checkout sparse: includere windows-mcp-agent e docs/mcp-agent. I documenti remoti sono la fonte se non presenti localmente.
@@ -17,5 +17,5 @@ Prima di intervenire leggere README.md, CONTINUITY.md, CHANGELOG.md e ../docs/mc
 - Non riprendere NestingOpt, Android o configurare altri computer senza la relativa richiesta.
 
 
-## Ambito approvato 0.6.1
+## Ambito approvato e consegnato 0.6.1
 Leggere docs/mcp-agent/IMPROVEMENTS-0.6.1.md e PROJECT-RECORD.md (percorsi relativi alla root Git). Nessuno stop temporale o avviso programmato per i turni Codex. queue_list e operativo; activity_history recupera terminali. Ogni progetto mantiene su Git un registro curato delle attivita significative aggiornato insieme a commit/rilasci, mai esportazione automatica dello stato privato. Dichiarare risorse condivise note, preservando parallelismo dei lavori indipendenti.

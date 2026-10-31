@@ -1,3 +1,11 @@
+# Windows MCP 0.6.1 — installata e collaudata, 31 ottobre 2026
+
+RPC Codex reattive e scheduler indipendente; nessun limite temporale dei turni e nessun avviso programmato. Coda solo operativa, terminali nell'archivio privato locale via activity_history; risorse condivise read/write e repository Git comuni riconosciuti. Registro significativo su Git distinto dai log tecnici. [Specifica](../docs/mcp-agent/IMPROVEMENTS-0.6.1.md), [verbale](../docs/mcp-agent/VALIDATION-0.6.1-20261031.md), [registro](../docs/mcp-agent/ACTIVITY.md), [regola di progetto](../docs/mcp-agent/PROJECT-RECORD.md).
+
+Test Windows/vet/build, prova simulata di 310 secondi, MCP isolato, backup/rollback, installazione e turno Codex reale da questa conversazione superati. Codice binario 164cb980bd1a936749d41b8692979e98b929cb04, SHA-256 9FF4A136951F464925CC55B96E1A968174204199FA9C7FF681B998B3542742C1. Backup D:\Jarvis\Backups\mcp-0.6.1-20261031. Prova costi invariata; letture storiche non sono valori correnti. Altri PC, reboot fisico e refresh catalogo diretto client restano da verificare.
+
+## Storico precedente
+
 # Jarvis Windows MCP Agent 0.6.0
 
 Installata su Desktop1 e collaudata da una nuova chat ChatGPT il 31 ottobre 2026. Coda persistente, elenco/cancellazione/riordino e letture concorrenti; progetti indipendenti in parallelo, percorsi sovrapposti protetti. Test Windows/vet/build, backup/rollback, installazione e turno reale Codex accodato con quota finale verificati.
@@ -56,4 +64,5 @@ L'output dei task Go conserva gli ultimi 12000 byte, dopo acquisizione in memori
 Gli script bootstrap in Agent\ sono esempi: il percorso operativo verificato è quello sopra.
 La cattura MCP diretta e stata acquisita e mostrata in chat; l'avvio automatico dopo reboot resta da verificare/implementare.
 Seguire [RELEASE_POLICY](../docs/mcp-agent/RELEASE_POLICY.md).
+
 

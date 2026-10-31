@@ -1,8 +1,8 @@
 # Windows MCP changelog
 
-## 0.6.1 — candidata in collaudo
+## 0.6.1 — installata e collaudata, 31 ottobre 2026
 
-Attese Codex senza mutex globale; nessun watchdog temporale dei turni e nessun avviso temporizzato. Coda operativa compatta con archivio immutabile locale, dipendenze storiche e activity_history; job storici caricati su richiesta. Coordinamento read/write di risorse dichiarate e identita Git comune. Registro significativo di progetto su Git distinto dallo stato privato. Vedere docs/mcp-agent/IMPROVEMENTS-0.6.1.md; installazione non ancora effettuata.
+Attese Codex senza mutex globale; nessun watchdog temporale dei turni e nessun avviso temporizzato. Coda operativa compatta con archivio immutabile locale, dipendenze storiche e activity_history; job storici caricati su richiesta. Coordinamento read/write di risorse dichiarate e identita Git comune. Registro significativo di progetto su Git distinto dallo stato privato. Vedere docs/mcp-agent/IMPROVEMENTS-0.6.1.md; test Windows/vet/build, prova oltre cinque minuti, MCP isolato, backup/rollback, installazione e turno Codex reale superati. Verbale VALIDATION-0.6.1-20261031.md in docs/mcp-agent.
 
 ## 0.6.0 — installata e collaudata, 31 ottobre 2026
 
