@@ -1,13 +1,19 @@
 [CmdletBinding()]
-param([string]$InstallDir,[string]$ProjectsRoot,[ValidateRange(1024,65535)][int]$Port=8765,[switch]$NonInteractive,[switch]$NoTask,[switch]$NoShortcuts,[switch]$NoStart)
+param([string]$DeviceName,[string]$InstallDir,[string]$ProjectsRoot,[ValidateRange(1024,65535)][int]$Port=8765,[switch]$NonInteractive,[switch]$NoTask,[switch]$NoShortcuts,[switch]$NoStart)
 . "$PSScriptRoot\Common.ps1"
 if (-not [Environment]::Is64BitOperatingSystem -or $env:PROCESSOR_ARCHITECTURE -ne 'AMD64') { throw 'Pacchetto per Windows x64; usare PowerShell a 64 bit.' }
 $principal = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
 if (-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) { throw 'Avviare INSTALLA.cmd e consentire la richiesta amministratore.' }
+if (-not $DeviceName) {
+    if (-not $NonInteractive) { $DeviceName=Read-Host 'Nome del dispositivo Jarvis [Desktop2]' }
+    if (-not $DeviceName) { $DeviceName='Desktop2' }
+}
+$names=Get-DeviceNames $DeviceName
+$DeviceName=$names.device_name
 if (-not $InstallDir) {
     if ($NonInteractive) { throw 'InstallDir obbligatoria.' }
-    $InstallDir = Read-Host 'Cartella di installazione [C:\Jarvis-Desktop2]'
-    if (-not $InstallDir) { $InstallDir='C:\Jarvis-Desktop2' }
+    $InstallDir = Read-Host ('Cartella di installazione ['+$names.default_home+']')
+    if (-not $InstallDir) { $InstallDir=$names.default_home }
 }
 $InstallDir = Get-FullPath $InstallDir
 if (-not $ProjectsRoot) {
@@ -22,12 +28,12 @@ if ($ProjectsRoot -ieq $InstallDir) { throw 'Non autorizzare come progetto l int
 if ((Test-Path -LiteralPath $InstallDir) -and @(Get-ChildItem -LiteralPath $InstallDir -Force).Count -gt 0) { throw 'Cartella non vuota: nessuna installazione precedente viene sovrascritta.' }
 if (Get-NetTCPConnection -LocalPort $Port -State Listen -ErrorAction SilentlyContinue) { throw 'Porta gia occupata: scegliere un altra porta; nessun processo viene fermato.' }
 $manifest = Get-Content -LiteralPath "$PSScriptRoot\package.json" -Raw | ConvertFrom-Json
-if ($manifest.agent_version -ne '0.6.1' -or $manifest.installer_version -ne '1.0.0') { throw 'Versione pacchetto non valida.' }
+if ($manifest.agent_version -ne '0.6.1' -or $manifest.installer_version -ne '1.0.1') { throw 'Versione pacchetto non valida.' }
 foreach ($f in $manifest.files) {
     if ($f.path -notmatch '^[A-Za-z0-9_.-]+$') { throw 'Percorso payload non valido.' }
     if ((Get-FileHash -LiteralPath (Join-Path $PSScriptRoot $f.path)).Hash -ine $f.sha256) { throw ('Pacchetto alterato o incompleto: '+$f.path) }
 }
-$taskName = 'Jarvis-Desktop2-'+[guid]::NewGuid().ToString('N').Substring(0,12)
+$taskName = $names.task_prefix+[guid]::NewGuid().ToString('N').Substring(0,12)
 $taskCreated=$false;$newRoot=$false
 try {
     if (-not (Test-Path -LiteralPath $InstallDir)) { New-Item -ItemType Directory -Path $InstallDir | Out-Null; $newRoot=$true }
@@ -42,7 +48,7 @@ try {
         if ((Get-FileHash -LiteralPath $to).Hash -ine $f.sha256) { throw 'Verifica copia non riuscita.' }
     }
     $sid=[Security.Principal.WindowsIdentity]::GetCurrent().User.Value
-    $settings=@{format=1;installer_version='1.0.0';agent_version='0.6.1';agent_sha256=$manifest.agent_sha256;home=$InstallDir;projects_root=$ProjectsRoot;port=$Port;computer=$env:COMPUTERNAME;user_sid=$sid;task_name=$taskName;task_registered=$false;remote_configured=$false;public_endpoint='';installed_at=[DateTime]::UtcNow.ToString('o');source_commit=$manifest.source_commit}
+    $settings=@{format=1;installer_version='1.0.1';device_name=$DeviceName;plugin_name=$names.plugin_name;agent_version='0.6.1';agent_sha256=$manifest.agent_sha256;home=$InstallDir;projects_root=$ProjectsRoot;port=$Port;computer=$env:COMPUTERNAME;user_sid=$sid;task_name=$taskName;task_registered=$false;remote_configured=$false;public_endpoint='';installed_at=[DateTime]::UtcNow.ToString('o');source_commit=$manifest.source_commit}
     Write-Utf8 (Join-Path $InstallDir 'Config\installation.json') ($settings|ConvertTo-Json)
     $bytes=New-Object byte[] 32; $rng=[Security.Cryptography.RandomNumberGenerator]::Create(); try { $rng.GetBytes($bytes) } finally { $rng.Dispose() }
     Write-Utf8 (Join-Path $InstallDir 'Config\secrets.env') ('JARVIS_MCP_TOKEN='+[Convert]::ToBase64String($bytes)+"`r`n")
@@ -68,10 +74,10 @@ try {
         $link=$shell.CreateShortcut((Join-Path ([Environment]::GetFolderPath('Desktop')) ($taskName+'.lnk')))
         if ($taskCreated) { $link.TargetPath="$env:SystemRoot\System32\schtasks.exe"; $link.Arguments='/Run /TN '+$taskName }
         else { $link.TargetPath=Join-Path $InstallDir 'Avvia.cmd' }
-        $link.WorkingDirectory=$InstallDir;$link.Description='Jarvis Desktop2 - avvio agente locale';$link.Save()
+        $link.WorkingDirectory=$InstallDir;$link.Description=$names.plugin_name+' - avvio agente locale';$link.Save()
     }
     Copy-Item -LiteralPath "$PSScriptRoot\LEGGIMI.txt" -Destination (Join-Path $InstallDir 'LEGGIMI.txt')
-    Write-Host ('Installazione locale pronta: '+$InstallDir)
+    Write-Host ('Installazione locale pronta: '+$DeviceName+'; '+$InstallDir)
     Write-Host 'Identita nuova al primo avvio; nessuno stato, segreto o attestazione economica copiato da Desktop1.'
     if (-not $NonInteractive) {
         if ((Read-Host 'Configurare ora il tunnel Cloudflare dedicato? [s/N]') -match '^[sS]$') {
