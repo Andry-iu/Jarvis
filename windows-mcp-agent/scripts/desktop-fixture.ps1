@@ -1,6 +1,14 @@
 param([Parameter(Mandatory=$true)][string]$Report)
 $ErrorActionPreference='Stop'
 Add-Type -AssemblyName System.Windows.Forms,System.Drawing
+Add-Type -TypeDefinition @'
+using System;using System.Runtime.InteropServices;
+public static class FixtureForeground {
+ [DllImport("user32.dll")]public static extern bool SetForegroundWindow(IntPtr h);
+ [DllImport("user32.dll")]public static extern bool ShowWindow(IntPtr h,int cmd);
+ [DllImport("user32.dll")]public static extern IntPtr GetForegroundWindow();
+}
+'@
 $f=New-Object Windows.Forms.Form
 $f.Text='Jarvis isolated desktop validation'
 $f.Size=New-Object Drawing.Size(580,360)
@@ -26,7 +34,7 @@ $other.Text=$f.Text;$other.Size=New-Object Drawing.Size(300,200)
 $otherInput=New-Object Windows.Forms.TextBox
 $otherInput.Name='fixtureInput';$other.Controls.Add($otherInput)
 function Save-Report{
- $data=@{good=$script:Good;decoy=$script:Decoy;text=$inputBox.Text;last=$script:Last;hwnd=$f.Handle.ToInt64();other_hwnd=$other.Handle.ToInt64();toggle=$check.Checked}
+ $data=@{good=$script:Good;decoy=$script:Decoy;text=$inputBox.Text;last=$script:Last;hwnd=$f.Handle.ToInt64();other_hwnd=$other.Handle.ToInt64();toggle=$check.Checked;foreground=[FixtureForeground]::GetForegroundWindow().ToInt64();activated=$script:Activated}
  $tmp=$Report+'.tmp'
  [IO.File]::WriteAllText($tmp,($data|ConvertTo-Json -Compress),(New-Object Text.UTF8Encoding $false))
  Move-Item $tmp $Report -Force
@@ -57,6 +65,6 @@ $timer.add_Tick({
  }catch{}
  }
 })
-$f.add_Shown({$f.Activate();Save-Report})
+$f.add_Shown({[void][FixtureForeground]::ShowWindow($f.Handle,9);$script:Activated=[FixtureForeground]::SetForegroundWindow($f.Handle);$f.Activate();Save-Report})
 $timer.Start()
 try{[void]$f.ShowDialog()}finally{$timer.Stop();$other.Dispose();$f.Dispose()}
