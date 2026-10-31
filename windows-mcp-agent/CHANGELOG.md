@@ -1,13 +1,15 @@
 # Windows MCP changelog
 
-## 0.6.0 — candidata, 31 ottobre 2026
+## 0.6.0 — installata e collaudata, 31 ottobre 2026
 
 - Coda persistente per progetto, percorsi sovrapposti protetti, massimo quattro progetti indipendenti attivi.
 - queue_add/list/cancel/move/resume, etichette, ID e dipendenze esplicite; riordino senza preemption.
 - command_start/codex_turn e Go legacy accodano; usare queue_list per ricavare job/turn dopo dispatch.
 - Letture senza lock globale, esclusione nativa Windows del file aperto in scrittura; mutazioni dirette di progetti attivi rifiutate.
 - Pausa su errore/riavvio, nessun replay automatico degli esiti incerti; verifica quota all'avvio effettivo e fotografia finale 0.5.9 preservata.
-- Test Windows e vet superati. Build, rollback, installazione e collaudo MCP ancora da completare.
+- Test Windows/vet/build, collaudo MCP isolato con riavvio, backup/rollback, installazione e prove reali dalla nuova chat superati.
+- Corretto lo script del collaudo crash per gestire i figli gia terminati e isolare ogni esecuzione; nessuna modifica alle guardie economiche.
+- Turno Codex accodato completato, final_usage presente; automazione quota esistente verificata senza duplicati. Voice/altri PC/reboot e refresh dei cinque strumenti diretti client restano non verificati. Verbale docs/mcp-agent/VALIDATION-0.6.0-20261031.md.
 
 
 ## 0.5.9 — installata e collaudata, 31 ottobre 2026
