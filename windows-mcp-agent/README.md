@@ -1,20 +1,16 @@
-# Jarvis Windows MCP Agent 0.6.0 — candidata coda
+# Jarvis Windows MCP Agent 0.6.0
 
-Implementata e testata su Windows la coda per progetto con elenco, annullamento, riordino, dipendenze e letture concorrenti. Vet superato. Compilazione/installazione/collaudo MCP da completare; versione operativa ancora 0.5.9. [Contratto e verifica](../docs/mcp-agent/QUEUE-0.6.0.md).
+Installata su Desktop1 e collaudata da una nuova chat ChatGPT il 31 ottobre 2026. Coda persistente, elenco/cancellazione/riordino e letture concorrenti; progetti indipendenti in parallelo, percorsi sovrapposti protetti. Test Windows/vet/build, backup/rollback, installazione e turno reale Codex accodato con quota finale verificati.
 
-# Jarvis Windows MCP Agent 0.5.9
-
-Installata e collaudata: [quota e crediti 0.5.9](../docs/mcp-agent/USAGE-0.5.9.md). Consultazione diretta con codex_status e lettura finale automatica senza confronti. Coda per progetto e riordino approvati come modifica successiva, non ancora operativi.
-
-Installato e verificato su Jarvis-Desktop1 il 31 ottobre 2026, con privilegi amministrativi. Agente Windows separato dall'app Android. [Stato](../docs/mcp-agent/STATUS.md), [collaudo Codex 0.5.8](../docs/mcp-agent/CODEX-0.5.8.md), [contratto e limiti](../docs/mcp-agent/RUNTIME-0.5.7.md), [continuita](CONTINUITY.md).
+[Stato](../docs/mcp-agent/STATUS.md), [verbale 0.6.0](../docs/mcp-agent/VALIDATION-0.6.0-20261031.md), [contratto coda](../docs/mcp-agent/QUEUE-0.6.0.md), [istruzioni Windows](AGENTS.md), [continuita](CONTINUITY.md). La versione 0.5.9 ha introdotto il riepilogo diretto codex_status e la lettura finale automatica, qui preservati.
 
 ## Runtime
 
-machine_info e project_catalog identificano computer e progetti. File/cartelle: file_list/read/search/write, directory_create, path_move e file_restore. Comandi: command_start e job_status/list/cancel. Ogni mutazione richiede request_id e, per i file, hash atteso. Nessuna shell arbitraria, sovrascrittura implicita o bypass dei percorsi protetti. Job, ricevute e identita persistono oltre una chat o un riavvio. screen_capture restituisce immagini MCP dirette, con dimensioni, monitor e origine.
+machine_info e project_catalog identificano computer e progetti. File/cartelle: file_list/read/search/write, directory_create, path_move e file_restore. Comandi: command_start restituisce queue_id; queue_list espone poi job_id per job_status/list/cancel. codex_turn segue lo stesso percorso con turn_id. queue_cancel rimuove solo attivita in attesa, queue_move ne cambia l'ordine, queue_resume richiede revisione dopo pausa. Ogni mutazione richiede request_id e, per i file, hash atteso. Nessuna shell arbitraria, sovrascrittura implicita o bypass dei percorsi protetti. Job, ricevute e identita persistono oltre una chat o un riavvio. screen_capture restituisce immagini MCP dirette, con dimensioni, monitor e origine.
 
 Ponte Codex locale verificato per avvio, storico, risposta reale, modifica file, steer, interrupt e ripresa dopo riavvio. Account ChatGPT esistente, quota inclusa, niente chiavi API o acquisti. Riscontro locale dei costi associato ad account/PC, con validita massima sette giorni; dati API e quota ricontrollati a ogni turno. Routing fra due istanze collaudato; altri PC fisici devono essere configurati e autenticati.
 
-Il catalogo server espone 38 strumenti; l'utente ha aggiornato il plugin e gli strumenti diretti sono stati verificati in questa chat. Resta disponibile la compatibilita task_start con operation=runtime e request={operation:...,machine_id:...}. [Istruzioni client](../docs/mcp-agent/CLIENT-INSTRUCTIONS-0.5.7.md). Non promettere disponibilita in qualunque chat o in Voice senza il relativo collaudo.
+Il catalogo server aggiunge cinque queue_* ai precedenti strumenti; in questa nuova chat i comandi coda sono stati verificati tramite compatibilita. Il refresh dei cinque strumenti diretti nel client non e dimostrato. Resta disponibile la compatibilita task_start con operation=runtime e request={operation:...,machine_id:...}. [Istruzioni client](../docs/mcp-agent/CLIENT-INSTRUCTIONS-0.5.7.md). Non promettere disponibilita in qualunque chat o in Voice senza il relativo collaudo.
 
 ## Controllo desktop senza coordinate
 
@@ -54,7 +50,7 @@ L'output dei task Go conserva gli ultimi 12000 byte, dopo acquisizione in memori
 - Sorgenti D:\Jarvis\MCP-Source\windows-mcp-agent; root autorizzata D:\Jarvis\MCP-Source.
 - Configurazione D:\Jarvis\Config; credenziali fuori da Git.
 - Endpoint locale 127.0.0.1:8765/mcp; Cloudflare Tunnel e Access esistenti.
-- Backup 0.5.7 D:\Jarvis\Backups\mcp-0.5.8-20261031, con configurazione e 16 file di stato verificati; aggiornamento e rollback collaudati.
+- Backup precedente 0.5.9 in D:\Jarvis\Backups\mcp-0.6.0-20261031, con configurazione e snapshot dello stato; aggiornamento e rollback isolato collaudati.
 - Go 1.27.0 Windows/amd64. Nessuna compilazione tramite GitHub Actions.
 
 Gli script bootstrap in Agent\ sono esempi: il percorso operativo verificato è quello sopra.
