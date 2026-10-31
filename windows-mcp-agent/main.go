@@ -22,7 +22,7 @@ import (
 	"time"
 )
 
-const version = "0.4.1"
+const version = "0.5.0"
 
 type RPCRequest struct {
 	JSONRPC string          `json:"jsonrpc"`
@@ -173,7 +173,19 @@ func (a *Agent) invoke(name string, args json.RawMessage) any {
 			return toolResult(map[string]string{"error": err.Error()}, true)
 		}
 		return toolResult(v, false)
-	case "task_stop":
+	case "update_prepare":
+        var p updateRequest
+        if err := json.Unmarshal(args, &p); err != nil { return toolResult(map[string]string{"error":"invalid update parameters"},true) }
+        v,err := prepareUpdate(p)
+        if err != nil { return toolResult(map[string]string{"error":err.Error()},true) }
+        return toolResult(v,false)
+    case "update_execute":
+        var p struct { UpdateID string `json:"update_id"`; SHA256 string `json:"sha256"` }
+        if err := json.Unmarshal(args,&p); err != nil { return toolResult(map[string]string{"error":"invalid update parameters"},true) }
+        v,err:=executeUpdate(p.UpdateID,p.SHA256)
+        if err!=nil {return toolResult(map[string]string{"error":err.Error()},true)}
+        return toolResult(v,false)
+    case "task_stop":
 		v, err := a.stop()
 		if err != nil {
 			return toolResult(map[string]string{"error": err.Error()}, true)
@@ -189,7 +201,9 @@ func toolsList() any {
 		map[string]any{"name": "project_status", "description": "Read current Git branch, commit and tracked dirty file count for a repository within the authorized projects root (read-only)", "inputSchema": map[string]any{"type": "object", "properties": map[string]any{"project": map[string]any{"type": "string"}}, "required": []string{"project"}}},
 		map[string]any{"name": "agent_status", "description": "Read Windows agent status and most recent task", "inputSchema": map[string]any{"type": "object", "properties": map[string]any{}}},
 		map[string]any{"name": "task_start", "description": "Start a cancellable diagnostic task. This prototype does not execute shell commands or Codex.", "inputSchema": map[string]any{"type": "object", "properties": map[string]any{"name": map[string]any{"type": "string"}, "duration_seconds": map[string]any{"type": "integer", "minimum": 1, "maximum": 300}}}},
-		map[string]any{"name": "task_stop", "description": "Request cancellation of the current diagnostic task", "inputSchema": map[string]any{"type": "object", "properties": map[string]any{}}},
+		map[string]any{"name":"update_prepare","description":"Stage a single-use Windows update batch; requires Cloudflare Access authentication. Submit exact UTF-8 CRLF content, 32-hex update ID in first REM line, SHA-256 of bytes. Does not execute.","inputSchema":map[string]any{"type":"object","properties":map[string]any{"update_id":map[string]any{"type":"string"},"sha256":map[string]any{"type":"string"},"content":map[string]any{"type":"string"}},"required":[]string{"update_id","sha256","content"}}},
+        map[string]any{"name":"update_execute","description":"Rehash and start a previously staged batch as separate Windows process; requires Cloudflare Access authentication. Does not report completed deployment.","inputSchema":map[string]any{"type":"object","properties":map[string]any{"update_id":map[string]any{"type":"string"},"sha256":map[string]any{"type":"string"}},"required":[]string{"update_id","sha256"}}},
+        map[string]any{"name": "task_stop", "description": "Request cancellation of the current diagnostic task", "inputSchema": map[string]any{"type": "object", "properties": map[string]any{}}},
 	}}
 }
 func response(id json.RawMessage, result any, e *RPCError) RPCResponse {
@@ -206,7 +220,7 @@ func handler(a *Agent, token string, access *AccessVerifier) http.Handler {
 			return
 		}
 		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprint(w, `{"ok":true,"version":"0.4.1"}`)
+		fmt.Fprint(w, `{"ok":true,"version":"0.5.0"}`)
 	})
 	mux.HandleFunc("/mcp", func(w http.ResponseWriter, r *http.Request) {
 		log.Printf("MCP request received method=%s access_assertion=%t", r.Method, r.Header.Get("Cf-Access-Jwt-Assertion") != "")
@@ -307,7 +321,11 @@ func handler(a *Agent, token string, access *AccessVerifier) http.Handler {
 			if err := json.Unmarshal(q.Params, &p); err != nil || p.Name == "" {
 				res = response(q.ID, nil, &RPCError{Code: -32602, Message: "invalid parameters"})
 			} else {
-				res = response(q.ID, a.invoke(p.Name, p.Arguments), nil)
+				if (p.Name=="update_prepare" || p.Name=="update_execute") && !validAccess {
+                    res = response(q.ID, toolResult(map[string]string{"error":"Cloudflare Access authentication required for update tools"},true), nil)
+                } else {
+                    res = response(q.ID, a.invoke(p.Name, p.Arguments), nil)
+                }
 			}
 		default:
 			res = response(q.ID, nil, &RPCError{Code: -32601, Message: "method not found"})
