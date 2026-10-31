@@ -28,12 +28,13 @@ if ($ProjectsRoot -ieq $InstallDir) { throw 'Non autorizzare come progetto l int
 if ((Test-Path -LiteralPath $InstallDir) -and @(Get-ChildItem -LiteralPath $InstallDir -Force).Count -gt 0) { throw 'Cartella non vuota: nessuna installazione precedente viene sovrascritta.' }
 if (Get-NetTCPConnection -LocalPort $Port -State Listen -ErrorAction SilentlyContinue) { throw 'Porta gia occupata: scegliere un altra porta; nessun processo viene fermato.' }
 $manifest = Get-Content -LiteralPath "$PSScriptRoot\package.json" -Raw | ConvertFrom-Json
-if ($manifest.agent_version -ne '0.6.1' -or $manifest.installer_version -ne '1.0.1') { throw 'Versione pacchetto non valida.' }
+if ($manifest.agent_version -ne '0.6.1' -or $manifest.installer_version -ne '1.0.2') { throw 'Versione pacchetto non valida.' }
 foreach ($f in $manifest.files) {
     if ($f.path -notmatch '^[A-Za-z0-9_.-]+$') { throw 'Percorso payload non valido.' }
     if ((Get-FileHash -LiteralPath (Join-Path $PSScriptRoot $f.path)).Hash -ine $f.sha256) { throw ('Pacchetto alterato o incompleto: '+$f.path) }
 }
 $taskName = $names.task_prefix+[guid]::NewGuid().ToString('N').Substring(0,12)
+$codex=Find-Codex
 $taskCreated=$false;$newRoot=$false
 try {
     if (-not (Test-Path -LiteralPath $InstallDir)) { New-Item -ItemType Directory -Path $InstallDir | Out-Null; $newRoot=$true }
@@ -42,17 +43,16 @@ try {
     New-Item -ItemType Directory -Force -Path $ProjectsRoot | Out-Null
     foreach ($f in $manifest.files) {
         if ($f.path -eq 'jarvis-mcp.exe') { $to=Join-Path $InstallDir 'Agent\jarvis-mcp.exe' }
-        elseif ($f.path -like '*.ps1' -and $f.path -ne 'Install.ps1' -and $f.path -ne 'Test-Installer.ps1') { $to=Join-Path $InstallDir ('Scripts\'+$f.path) }
+        elseif ($f.path -like '*.ps1' -and $f.path -notin @('Install.ps1','Test-Installer.ps1','Repair.ps1')) { $to=Join-Path $InstallDir ('Scripts\'+$f.path) }
         else { continue }
         Copy-Item -LiteralPath (Join-Path $PSScriptRoot $f.path) -Destination $to
         if ((Get-FileHash -LiteralPath $to).Hash -ine $f.sha256) { throw 'Verifica copia non riuscita.' }
     }
     $sid=[Security.Principal.WindowsIdentity]::GetCurrent().User.Value
-    $settings=@{format=1;installer_version='1.0.1';device_name=$DeviceName;plugin_name=$names.plugin_name;agent_version='0.6.1';agent_sha256=$manifest.agent_sha256;home=$InstallDir;projects_root=$ProjectsRoot;port=$Port;computer=$env:COMPUTERNAME;user_sid=$sid;task_name=$taskName;task_registered=$false;remote_configured=$false;public_endpoint='';installed_at=[DateTime]::UtcNow.ToString('o');source_commit=$manifest.source_commit}
+    $settings=@{format=1;installer_version='1.0.2';device_name=$DeviceName;plugin_name=$names.plugin_name;agent_version='0.6.1';agent_sha256=$manifest.agent_sha256;home=$InstallDir;projects_root=$ProjectsRoot;port=$Port;computer=$env:COMPUTERNAME;user_sid=$sid;task_name=$taskName;task_registered=$false;remote_configured=$false;public_endpoint='';installed_at=[DateTime]::UtcNow.ToString('o');source_commit=$manifest.source_commit}
     Write-Utf8 (Join-Path $InstallDir 'Config\installation.json') ($settings|ConvertTo-Json)
     $bytes=New-Object byte[] 32; $rng=[Security.Cryptography.RandomNumberGenerator]::Create(); try { $rng.GetBytes($bytes) } finally { $rng.Dispose() }
     Write-Utf8 (Join-Path $InstallDir 'Config\secrets.env') ('JARVIS_MCP_TOKEN='+[Convert]::ToBase64String($bytes)+"`r`n")
-    $codex=Find-Codex
     $values=@{JARVIS_HOME=$InstallDir;JARVIS_PROJECTS_ROOT=$ProjectsRoot;JARVIS_STATE_DIR=(Join-Path $InstallDir 'State\runtime-v1');JARVIS_DESKTOP_ENABLED='1';JARVIS_CODEX_ENABLED='0'}
     if ($codex) { $values.JARVIS_CODEX_ENABLED='1';$values.JARVIS_CODEX_EXE=$codex }
     Write-AgentEnv $InstallDir $values
