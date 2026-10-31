@@ -1,3 +1,21 @@
+# Aggiornamento operativo 0.6.0 — prevale sulle istruzioni storiche sotto
+
+31 ottobre 2026: coda installata e collaudata da una nuova conversazione. Prima machine_info, project_catalog, queue_list/job_list e codex_threads del progetto esatto. Windows MCP e Android sono progetti distinti.
+
+- command_start e codex_turn ora rispondono queue_id/status/position, senza garantire job_id/turn_id immediati. Leggere queue_list e poi lo stato/eventi dell'ID esatto.
+- queue_add per etichetta e depends_on; queue_move sposta una voce in attesa prima di before_id nello stesso progetto (senza before_id: prossima). Non preempie il lavoro attivo e non inverte dipendenze esplicite.
+- queue_cancel rimuove soltanto lavori in attesa; per lavori attivi usare job_cancel/codex_interrupt, poi verificare l'esito finale.
+- Dopo errore/disconnessione/riavvio consultare stato, ricevute e sessioni; nessun replay automatico degli esiti incerti. queue_resume e una decisione esplicita dopo verifica, non un retry.
+- Progetti indipendenti in parallelo (massimo quattro), risorse sovrapposte escluse. Non bloccare letture durante tutta l'elaborazione: i singoli file in scrittura possono risultare indisponibili. Coordinare risorse globali/processi esterni.
+- Quota/crediti: codex_status senza inferenza. Dati osservati distinti da inference_allowed. Prima del turno controlli economici all'avvio effettivo; dopo il turno attendere jarvis/usage/final_usage del turno esatto e riportare valori attuali o errore, senza confronti e senza riciclare letture vecchie. Null e sconosciuto, non zero. Nessun acquisto/API/upgrade o proroga implicita delle prove.
+- Nuovi queue_* accessibili anche con catalogo precedente: task_start({operation:"runtime",request:{operation:"queue_list",machine_id:"ID_VERIFICATO"}}). Per gli altri controlli aggiungere gli argomenti del contratto. Percorso realmente verificato in questa nuova chat; non equivale al refresh dei cinque strumenti diretti del client.
+- La disponibilita in Voice e nelle altre superfici dipende dagli strumenti esposti: non dichiararla collaudata. Solo Desktop1 fisico verificato; non avviare automaticamente attivita su altri progetti/computer.
+- Automazione giornaliera quota verificata esistente/abilitata, non duplicarla. E distinta dalle letture integrate e non prova che una futura esecuzione riuscira.
+
+Riferimenti: QUEUE-0.6.0.md, VALIDATION-0.6.0-20261031.md, STATUS.md e ../../windows-mcp-agent/AGENTS.md.
+
+## Istruzioni storiche 0.5.7 e successivi aggiornamenti
+
 # Aggiornamento client 0.6.0
 
 command_start e codex_turn accodano e restituiscono queue_id. Leggere queue_list per conoscere posizione, pausa e job_id/turn_id quando assegnati; poi usare job_status/codex_events. Disponibili queue_add (call command_start/codex_turn, label e depends_on), queue_cancel per un solo lavoro in attesa, queue_move (prima di before_id o prossimo se omesso) e queue_resume dopo revisione. Mai usare queue_cancel per interrompere un lavoro attivo. Le consultazioni di sola lettura possono procedere durante i lavori; un file aperto in scrittura viene rifiutato senza dati parziali. Comandi/eventi hanno ID distinti: queue_id identifica l'intenzione accodata, job_id/turn_id l'esecuzione. Mostrare sempre il nuovo ordine dopo un riordino. Non invertire dipendenze. Dopo un riavvio non ripetere lavori incerti: ispezionare il job/sessione e riprendere il progetto esplicitamente. Per cataloghi in cache usare task_start operation=runtime con request={operation:queue_list,machine_id:...}; non richiedere acquisti o nuove API. Aggiornare il catalogo client per esporre direttamente i nuovi strumenti.
