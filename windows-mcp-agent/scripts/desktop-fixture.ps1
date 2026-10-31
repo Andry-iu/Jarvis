@@ -14,7 +14,7 @@ $f.Text='Jarvis isolated desktop validation'
 $f.Size=New-Object Drawing.Size(580,360)
 $f.StartPosition='Manual'
 $f.Location=New-Object Drawing.Point(100,100)
-$script:Good=0;$script:Decoy=0;$script:Last=''
+$script:GoodHits=0;$script:DecoyHits=0;$script:Last=''
 $inputBox=New-Object Windows.Forms.TextBox
 $inputBox.Name='fixtureInput';$inputBox.AccessibleName='Fixture input';$inputBox.SetBounds(25,25,400,30)
 $readonly=New-Object Windows.Forms.TextBox
@@ -34,13 +34,13 @@ $other.Text=$f.Text;$other.Size=New-Object Drawing.Size(300,200)
 $otherInput=New-Object Windows.Forms.TextBox
 $otherInput.Name='fixtureInput';$other.Controls.Add($otherInput)
 function Save-Report{
- $data=@{good=$script:Good;decoy=$script:Decoy;text=$inputBox.Text;last=$script:Last;hwnd=$f.Handle.ToInt64();other_hwnd=$other.Handle.ToInt64();toggle=$check.Checked;handles=@{fixtureInput=$inputBox.Handle.ToInt64();fixtureReadOnly=$readonly.Handle.ToInt64();fixturePassword=$password.Handle.ToInt64();fixtureGood=$good.Handle.ToInt64();fixtureDecoy=$decoy.Handle.ToInt64();fixtureDisabled=$disabled.Handle.ToInt64();fixtureToggle=$check.Handle.ToInt64()};foreground=[FixtureForeground]::GetForegroundWindow().ToInt64();activated=$script:Activated}
+ $data=@{good=$script:GoodHits;decoy=$script:DecoyHits;text=$inputBox.Text;last=$script:Last;hwnd=$f.Handle.ToInt64();other_hwnd=$other.Handle.ToInt64();toggle=$check.Checked;handles=@{fixtureInput=$inputBox.Handle.ToInt64();fixtureReadOnly=$readonly.Handle.ToInt64();fixturePassword=$password.Handle.ToInt64();fixtureGood=$good.Handle.ToInt64();fixtureDecoy=$decoy.Handle.ToInt64();fixtureDisabled=$disabled.Handle.ToInt64();fixtureToggle=$check.Handle.ToInt64()};foreground=[FixtureForeground]::GetForegroundWindow().ToInt64();activated=$script:Activated}
  $tmp=$Report+'.tmp'
  [IO.File]::WriteAllText($tmp,($data|ConvertTo-Json -Compress),(New-Object Text.UTF8Encoding $false))
  Move-Item $tmp $Report -Force
 }
-$good.add_Click({$script:Good++;Save-Report})
-$decoy.add_Click({$script:Decoy++;Save-Report})
+$good.add_Click({$script:GoodHits++;Save-Report})
+$decoy.add_Click({$script:DecoyHits++;Save-Report})
 $f.Controls.AddRange(@($inputBox,$readonly,$password,$good,$decoy,$disabled,$check))
 $timer=New-Object Windows.Forms.Timer
 $timer.Interval=100
