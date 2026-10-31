@@ -1,6 +1,6 @@
-# Coda per progetto — candidata 0.6.0
+# Coda per progetto — 0.6.0 installata e collaudata
 
-Implementazione dell'ambito approvato: elaborazioni accodate per progetto, elenco, annullamento e riordino dei lavori in attesa; letture disponibili durante l'elaborazione. La candidata deve superare test Windows, compilazione e collaudo MCP prima di sostituire la 0.5.9 operativa.
+Implementazione dell'ambito approvato: elaborazioni accodate per progetto, elenco, annullamento e riordino dei lavori in attesa; letture disponibili durante l'elaborazione. Test Windows, vet/build, backup/rollback, installazione e collaudo MCP superati il 31 ottobre 2026. [Verbale con evidenze e limiti](VALIDATION-0.6.0-20261031.md).
 
 ## Interfaccia
 
@@ -21,6 +21,6 @@ Letture file senza lock globale del progetto. Su Windows un'apertura nativa dell
 
 Mutazioni MCP dirette e ripristini rifiutati se il relativo progetto e in elaborazione. La protezione copre i lavori inviati al broker: processi esterni, risorse globali come porte o toolchain condivise e altre istanze non configurate richiedono coordinamento dell'assistente. Nessuna deduzione automatica delle dipendenze dal testo libero.
 
-## Verifiche richieste
+## Verifiche eseguite
 
-Test per ordine/riordino, dipendenze, cancellazione, idempotenza, riavvio senza replay, progetti sovrapposti/indipendenti, letture durante lavoro e rifiuto file aperto in scrittura. Poi vet/build, backup/rollback isolato, installazione e collaudo dal plugin. Non dichiarare questa candidata operativa prima di tali verifiche.
+Test per ordine/riordino, dipendenze, cancellazione, idempotenza, riavvio senza replay, progetti sovrapposti/indipendenti, letture durante lavoro e rifiuto file aperto in scrittura. Vet/build, backup/rollback isolato, installazione e collaudo dal plugin superati. Nel client con catalogo precedente i nuovi queue_* sono accessibili con task_start operation=runtime e request contenente operation/machine_id e argomenti. Il refresh dei cinque strumenti diretti e Voice restano da verificare.
