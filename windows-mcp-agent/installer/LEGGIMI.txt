@@ -1,4 +1,13 @@
-JARVIS - INSTALLAZIONE GUIDATA 1.0.1
+ERRORE CODEX ACCESSO NEGATO DURANTE LA 1.0.1
+Estrarre il nuovo ZIP e aprire RIPRENDI.cmd, indicando la cartella incompleta
+(es. D:\Jarvis). La procedura verifica che non sia mai stata avviata e salva
+la cartella precedente integralmente in un backup affiancato prima di ripartire.
+Se trova stato operativo o file aggiunti, si ferma. Non cancellare cartelle.
+Codex non accessibile resta disabilitato; Jarvis puo proseguire localmente.
+Nessun permesso Windows/Codex viene aggirato o cambiato.
+Per una prima installazione nuova, aprire INSTALLA.cmd.
+
+JARVIS - INSTALLAZIONE GUIDATA 1.0.2
 Agente Windows x64 0.6.1. Nessuna dipendenza da Desktop1.
 
 1. Copiare questo ZIP sul SECONDO PC ed estrarlo completamente.
