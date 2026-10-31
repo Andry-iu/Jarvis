@@ -1,6 +1,7 @@
-param([Parameter(Mandatory=$true)][string]$Agent)
+param([string]$Agent='D:\Jarvis\jarvis-mcp.exe',[ValidateSet('winforms','wpf')][string]$Fixture='winforms',[int]$McpPort=8766,[switch]$UseInstalled)
 $ErrorActionPreference='Stop'
-$l='D:\Jarvis\Logs\diagnostics\desktop-integration-056.log'
+$l='D:\Jarvis\Logs\diagnostics\desktop-integration-056-'+$Fixture+'.log'
+$mcpUrl='http://127.0.0.1:'+$McpPort+'/mcp'
 $agentProcess=$null;$fixtureProcess=$null
 $run=Join-Path ([IO.Path]::GetTempPath()) ('jarvis-desktop-test-'+[guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory $run|Out-Null
@@ -17,7 +18,7 @@ function Command($action,$x=0,$y=0){
 }
 function Tool($name,$argumentsObject){
  $body=@{jsonrpc='2.0';id=1;method='tools/call';params=@{name=$name;arguments=$argumentsObject}}|ConvertTo-Json -Depth 12 -Compress
- $rpc=Invoke-RestMethod 'http://127.0.0.1:8766/mcp' -Method Post -ContentType 'application/json' -Headers $headers -Body ([Text.Encoding]::UTF8.GetBytes($body)) -TimeoutSec 20
+ $rpc=Invoke-RestMethod $mcpUrl -Method Post -ContentType 'application/json' -Headers $headers -Body ([Text.Encoding]::UTF8.GetBytes($body)) -TimeoutSec 20
  if($rpc.error){throw 'RPC error'}
  return $rpc.result
 }
@@ -35,8 +36,8 @@ function Inspect{
  return $r.data
 }
 function Element($s,$aid){
- $handle=(Report).handles.$aid
- $e=@($s.elements|Where-Object {$_.native_handle -eq $handle})
+ $e=@($s.elements|Where-Object {$_.automation_id -eq $aid})
+ if($e.Count -eq 0){$handle=(Report).handles.$aid;$e=@($s.elements|Where-Object {$handle -and $_.native_handle -eq $handle})}
  if($e.Count -ne 1){throw ('Fixture element not unique '+$aid)}
  return $e[0].id
 }
@@ -51,13 +52,14 @@ function Rejected($r,$label){
 }
 try{
  'START isolated UI integration'|Set-Content -Encoding UTF8 $l
- if(Get-NetTCPConnection -State Listen -LocalPort 8766 -ErrorAction SilentlyContinue){throw 'Probe port occupied'}
+ if(!$UseInstalled -and (Get-NetTCPConnection -State Listen -LocalPort $McpPort -ErrorAction SilentlyContinue)){throw 'Probe port occupied'}
  $env:JARVIS_HOME='D:\Jarvis';$env:JARVIS_DESKTOP_ENABLED='1'
- $env:JARVIS_MCP_TOKEN=([guid]::NewGuid().ToString('N')+[guid]::NewGuid().ToString('N'))
+ if(!$UseInstalled){$env:JARVIS_MCP_TOKEN=([guid]::NewGuid().ToString('N')+[guid]::NewGuid().ToString('N'))}
  $headers=@{Authorization=('Bearer '+$env:JARVIS_MCP_TOKEN);Accept='application/json, text/event-stream'}
- $agentProcess=Start-Process $Agent -ArgumentList '--listen','127.0.0.1:8766' -PassThru -WindowStyle Hidden
+ if(!$UseInstalled){$agentProcess=Start-Process $Agent -ArgumentList '--listen',('127.0.0.1:'+$McpPort) -PassThru -WindowStyle Hidden}
  Start-Sleep -Seconds 2
  $fixtureScript=Join-Path $PSScriptRoot 'desktop-fixture.ps1'
+ if($Fixture -eq 'wpf'){$fixtureScript=Join-Path $PSScriptRoot 'desktop-fixture-wpf.ps1'}
  $arguments=@('-NoProfile','-ExecutionPolicy','Bypass','-STA','-File',('"{0}"' -f $fixtureScript),'-Report',('"{0}"' -f $report))
  $fixtureProcess=Start-Process powershell.exe -ArgumentList $arguments -PassThru -WindowStyle Normal
  $until=(Get-Date).AddSeconds(10)
@@ -74,7 +76,7 @@ try{
  Log ('FIXTURE_ELEMENTS='+($s.elements|ConvertTo-Json -Depth 8 -Compress))
  $same=@($s.elements|Where-Object {$_.name -eq 'Conferma'})
  Check ($same.Count -eq 2) 'duplicate button names observed'
- Check (@($s.elements|Where-Object {$_.native_handle -eq (Report).handles.fixturePassword}).Count -eq 0) 'password field excluded'
+ Check (@($s.elements|Where-Object {$_.automation_id -eq 'fixturePassword' -or ((Report).handles.fixturePassword -and $_.native_handle -eq (Report).handles.fixturePassword)}).Count -eq 0) 'password field excluded'
  $value='Jarvis '+[char]0x00e8+' '+[char]0x03a9+' "quote" $()'
  $r=Action $s 'fixtureInput' 'set_text' $value
  Check ($r.state -eq 'completed' -and $r.data.verified) 'text verified by readback'
@@ -86,15 +88,20 @@ try{
  Check ((Report).good -eq 1 -and (Report).decoy -eq 0 -and (Report).text -ceq $value) 'application result and decoy untouched'
  $r=Action $s 'fixtureGood' 'invoke';Rejected $r 'snapshot replay'
  $s=Inspect;Command 'movecontrol';$r=Action $s 'fixtureGood' 'invoke';Rejected $r 'moved control'
+ $s=Inspect;Command 'move' 150 150;$r=Action $s 'fixtureGood' 'invoke';Rejected $r 'moved window'
  $s=Inspect;Command 'edit';$r=Action $s 'fixtureInput' 'set_text' 'OVERWRITE';Rejected $r 'user edited field'
  Check ((Report).text -eq 'USER_CHANGED') 'changed text preserved'
  $s=Inspect;Command 'other';$r=Action $s 'fixtureGood' 'invoke';Rejected $r 'same title different foreground HWND';Command 'main'
  $s=Inspect;Command 'disable';$r=Action $s 'fixtureGood' 'invoke';Rejected $r 'disabled after inspection';Command 'enable'
  $s=Inspect;$r=Action $s 'fixtureReadOnly' 'set_text' 'OVERWRITE';Rejected $r 'read only field'
  $s=Inspect
- $r=Action $s 'fixtureToggle' 'invoke'
+ $toggleID=Element $s 'fixtureToggle'
+ $toggleElement=@($s.elements|Where-Object {$_.id -eq $toggleID})[0]
+ $toggleAction=if($toggleElement.patterns -contains 'toggle'){'toggle'}else{'invoke'}
+ $r=Action $s 'fixtureToggle' $toggleAction
  Check ($r.state -eq 'completed') 'checkbox invoke dispatched'
  Start-Sleep -Milliseconds 200
+ Command 'report'
  Check ((Report).toggle) 'checkbox application state verified'
  $s=Inspect
  $r=Operation 'desktop_action' @{snapshot_id=$s.snapshot_id;element_id=(Element $s 'fixtureGood');action='invoke';x=10;y=10}
