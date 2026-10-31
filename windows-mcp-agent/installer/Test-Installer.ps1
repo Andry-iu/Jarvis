@@ -49,7 +49,7 @@ try {
     $runner2=Start-Runner $b;$ib2=Wait-Agent $b
     if ($ib.machine_id -ne $ib2.machine_id) { throw 'Identita cambiata al riavvio.' };Pass 'identity_persists_on_restart'
     & (Join-Path $a 'Scripts\Disable-Startup.ps1') -HomeDir $a
-    if ((Get-ScheduledTask -TaskName $s.task_name).State -ne 'Disabled') { throw 'Task non disabilitato.' };Pass 'disable_startup_preserves_state'
+    if ((Get-ScheduledTask -TaskName $s.task_name).Settings.Enabled) { throw 'Task non disabilitato.' };Pass 'disable_startup_preserves_state_without_stopping_current_work'
     $badPackage=Join-Path $TestRoot 'corrupted-package';New-Item -ItemType Directory $badPackage|Out-Null
     Copy-Item "$PackageDir\*" $badPackage
     [IO.File]::AppendAllText((Join-Path $badPackage 'jarvis-mcp.exe'),'corrupt')
