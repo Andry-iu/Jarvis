@@ -70,6 +70,7 @@ try{
  }
  if(!$s){throw 'Fixture did not become foreground; no UI actions attempted'}
  Check ($s.window.hwnd -eq (Report).hwnd) 'foreground fixture identity'
+ Log ('FIXTURE_ELEMENTS='+($s.elements|ConvertTo-Json -Depth 8 -Compress))
  $same=@($s.elements|Where-Object {$_.name -eq 'Conferma'})
  Check ($same.Count -eq 2) 'duplicate button names observed'
  Check (@($s.elements|Where-Object {$_.automation_id -eq 'fixturePassword'}).Count -eq 0) 'password field excluded'
