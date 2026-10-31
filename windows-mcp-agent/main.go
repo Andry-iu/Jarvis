@@ -22,7 +22,7 @@ import (
 	"time"
 )
 
-const version = "0.5.5"
+const version = "0.5.6"
 
 type RPCRequest struct {
 	JSONRPC string          `json:"jsonrpc"`
@@ -54,6 +54,7 @@ type Agent struct {
 	mu   sync.Mutex
 	task *Task
 	next int
+ desktop *desktopSnapshot
 }
 
 func (a *Agent) snapshot() any {
@@ -132,6 +133,7 @@ func (a *Agent) invoke(name string, args json.RawMessage) any {
 	case "project_status":
 		var p struct {
 			Project string `json:"project"`
+ Desktop json.RawMessage `json:"desktop"`
 		}
 		if err := json.Unmarshal(args, &p); err != nil {
 			return toolResult(map[string]string{"error": "invalid arguments"}, true)
@@ -160,6 +162,7 @@ func (a *Agent) invoke(name string, args json.RawMessage) any {
 			Duration int    `json:"duration_seconds"`
 			Operation string `json:"operation"`
 			Project string `json:"project"`
+ Desktop json.RawMessage `json:"desktop"`
 		}
 		if err := json.Unmarshal(args, &p); err != nil {
 			return toolResult(map[string]string{"error": "invalid arguments"}, true)
@@ -172,7 +175,9 @@ func (a *Agent) invoke(name string, args json.RawMessage) any {
 		}
 		var v any
 		var err error
-		if p.Operation != "" {
+		if p.Operation == "desktop_inspect" || p.Operation == "desktop_action" {
+ v, err = a.startDesktopTask(p.Operation, p.Desktop)
+ } else if p.Operation != "" {
 			v, err = a.startGoTask(p.Operation, p.Project)
 		} else {
 			v, err = a.start(p.Name, p.Duration)
@@ -247,7 +252,7 @@ func toolsList() any {
 		map[string]any{"name": "project_clone", "description": "Clone a GitHub HTTPS repository from approved owner Andry-iu into JARVIS_PROJECTS_ROOT without overwriting an existing directory. Runs as a cancellable task; use agent_status to monitor. Requires Git credentials preconfigured on the notebook.", "inputSchema": map[string]any{"type": "object", "properties": map[string]any{"repository_url": map[string]any{"type": "string"}, "project": map[string]any{"type": "string"}}, "required": []string{"repository_url"}}},
 		map[string]any{"name": "project_status", "description": "Read current Git branch, commit and tracked dirty file count for a repository within the authorized projects root (read-only)", "inputSchema": map[string]any{"type": "object", "properties": map[string]any{"project": map[string]any{"type": "string"}}, "required": []string{"project"}}},
 		map[string]any{"name": "agent_status", "description": "Read Windows agent status and most recent task", "inputSchema": map[string]any{"type": "object", "properties": map[string]any{}}},
-		map[string]any{"name": "task_start", "description": "Start a cancellable diagnostic or restricted Go test/build task in an authorized module directory. No arbitrary commands.", "inputSchema": map[string]any{"type": "object", "properties": map[string]any{"name": map[string]any{"type": "string"}, "duration_seconds": map[string]any{"type": "integer", "minimum": 1, "maximum": 300}, "operation": map[string]any{"type": "string", "enum": []string{"go_test", "go_build"}}, "project": map[string]any{"type": "string"}}}},
+		map[string]any{"name": "task_start", "description": "Start a cancellable diagnostic or restricted Go test/build task in an authorized module directory. No arbitrary commands.", "inputSchema": map[string]any{"type": "object", "properties": map[string]any{"name": map[string]any{"type": "string"}, "duration_seconds": map[string]any{"type": "integer", "minimum": 1, "maximum": 300}, "operation": map[string]any{"type": "string", "enum": []string{"go_test", "go_build", "desktop_inspect", "desktop_action"}}, "project": map[string]any{"type": "string"}, "desktop": map[string]any{"type":"object","additionalProperties":false,"properties":map[string]any{"snapshot_id":map[string]any{"type":"string"},"element_id":map[string]any{"type":"string"},"action":map[string]any{"type":"string","enum":[]string{"invoke","set_text","select","toggle"}},"text":map[string]any{"type":"string","maxLength":4096}}}}}},
 		map[string]any{"name": "update_prepare", "description": "Stage a single-use Windows update batch; requires Cloudflare Access authentication. Submit exact UTF-8 CRLF content, 32-hex update ID in first REM line, SHA-256 of bytes. Does not execute.", "inputSchema": map[string]any{"type": "object", "properties": map[string]any{"update_id": map[string]any{"type": "string"}, "sha256": map[string]any{"type": "string"}, "content": map[string]any{"type": "string"}}, "required": []string{"update_id", "sha256", "content"}}},
 		map[string]any{"name": "update_execute", "description": "Rehash and start a previously staged batch as separate Windows process; requires Cloudflare Access authentication. Does not report completed deployment.", "inputSchema": map[string]any{"type": "object", "properties": map[string]any{"update_id": map[string]any{"type": "string"}, "sha256": map[string]any{"type": "string"}}, "required": []string{"update_id", "sha256"}}},
 		map[string]any{"name": "diagnostic_status", "description": "Read bounded non-secret structured status of a diagnostic batch by 32-hex ID; no arbitrary file or log reading", "inputSchema": map[string]any{"type": "object", "properties": map[string]any{"id": map[string]any{"type": "string"}}, "required": []string{"id"}}},
@@ -270,7 +275,7 @@ func handler(a *Agent, token string, access *AccessVerifier) http.Handler {
 			return
 		}
 		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprint(w, `{"ok":true,"version":"0.5.5"}`)
+		fmt.Fprint(w, `{"ok":true,"version":"0.5.6"}`)
 	})
 	mux.HandleFunc("/mcp", func(w http.ResponseWriter, r *http.Request) {
 		log.Printf("MCP request received method=%s access_assertion=%t", r.Method, r.Header.Get("Cf-Access-Jwt-Assertion") != "")
