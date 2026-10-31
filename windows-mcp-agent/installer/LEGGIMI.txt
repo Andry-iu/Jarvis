@@ -1,15 +1,24 @@
-JARVIS DESKTOP2 - INSTALLAZIONE GUIDATA 1.0.0
+JARVIS - INSTALLAZIONE GUIDATA 1.0.1
 Agente Windows x64 0.6.1. Nessuna dipendenza da Desktop1.
 
 1. Copiare questo ZIP sul SECONDO PC ed estrarlo completamente.
 2. Aprire INSTALLA.cmd e consentire la richiesta amministratore.
-3. Scegliere cartella di installazione e cartella dei progetti autorizzati.
+3. Scegliere il nome del dispositivo: Desktop2 e proposto, ma modificabile.
+   Usare lettere, numeri, spazi, trattino o underscore (massimo 40 caratteri).
+   Il nome scelto determina la cartella proposta, il task/collegamento e il
+   nome suggerito del plugin (es. Officina -> Jarvis-Officina).
+   Poi scegliere cartella di installazione e cartella dei progetti autorizzati.
    Valori proposti: C:\Jarvis-Desktop2 e C:\Jarvis-Desktop2\Projects.
 4. Se Cloudflare non e ancora pronto, rispondere N: l'installazione locale
    e completa, ma ChatGPT non e ancora collegato. Eseguire successivamente
    Configura-Cloudflare.cmd, con l'agente fermo.
-5. Collegare il nuovo endpoint al plugin Jarvis-Desktop2 ed effettuare OAuth.
+5. Collegare il nuovo endpoint al plugin Jarvis-NOME-SCELTO ed effettuare OAuth.
    Il file Collegamento-ChatGPT.txt verra creato dopo la configurazione.
+
+Il nome e un identificativo di installazione Jarvis; non rinomina Windows
+e non modifica l ID tecnico generato dall agente. Nel comando Verifica sono
+mostrati nome scelto, nome Windows e ID. Il nome si sceglie durante la prima
+installazione; questo pacchetto non rinomina installazioni gia esistenti.
 
 COSA FA AUTOMATICAMENTE
 - Verifica SHA-256, copia il binario e gli script, crea cartelle private.
@@ -41,7 +50,7 @@ E. Eseguire Configura-Cloudflare.cmd. Il token viene chiesto con input nascosto
    e salvato solo nella cartella Config protetta del nuovo PC; non in chat.
    Lo script scarica cloudflared dalla release ufficiale e verifica il digest
    SHA-256 pubblicato da GitHub. Se il digest manca, si ferma.
-F. Avviare Jarvis e creare/collegare il plugin Jarvis-Desktop2 con URL
+F. Avviare Jarvis e creare/collegare il plugin con il nome scelto con URL
    https://desktop2.PROPRIO-DOMINIO/mcp e autenticazione OAuth.
    La creazione del plugin e il login restano azioni dell'utente in ChatGPT.
    Verifica.cmd controlla il funzionamento LOCALE; il collaudo remoto va
