@@ -33,6 +33,8 @@ type desktopElement struct {
  Name string `json:"name"`
  Type string `json:"type"`
  AutomationID string `json:"automation_id"`
+ NativeHandle int64 `json:"native_handle"`
+ Bounds []float64 `json:"bounds"`
  Patterns []string `json:"patterns"`
 }
 type desktopSnapshot struct {
@@ -109,7 +111,7 @@ func (a *Agent) startDesktopTask(operation string,raw json.RawMessage)(any,error
    a.mu.Lock();a.desktop=s;a.mu.Unlock()
    // Identity internals are kept only in memory; returned IDs select, never match by position/name.
    elements:=[]map[string]any{}
-   for _,e:=range out.Elements{elements=append(elements,map[string]any{"id":e.ID,"name":e.Name,"type":e.Type,"automation_id":e.AutomationID,"patterns":e.Patterns})}
+   for _,e:=range out.Elements{elements=append(elements,map[string]any{"id":e.ID,"name":e.Name,"type":e.Type,"automation_id":e.AutomationID,"patterns":e.Patterns,"native_handle":e.NativeHandle,"bounds":e.Bounds})}
    result["snapshot_id"]=s.ID;result["expires_seconds"]=90;result["window"]=out.Window;result["elements"]=elements;result["truncated"]=out.Truncated
   }
   b,_:=json.Marshal(result);a.completeGoTask(t,"completed",string(b))

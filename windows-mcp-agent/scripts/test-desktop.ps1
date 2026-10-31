@@ -35,7 +35,8 @@ function Inspect{
  return $r.data
 }
 function Element($s,$aid){
- $e=@($s.elements|Where-Object {$_.automation_id -eq $aid})
+ $handle=(Report).handles.$aid
+ $e=@($s.elements|Where-Object {$_.native_handle -eq $handle})
  if($e.Count -ne 1){throw ('Fixture element not unique '+$aid)}
  return $e[0].id
 }
@@ -73,7 +74,7 @@ try{
  Log ('FIXTURE_ELEMENTS='+($s.elements|ConvertTo-Json -Depth 8 -Compress))
  $same=@($s.elements|Where-Object {$_.name -eq 'Conferma'})
  Check ($same.Count -eq 2) 'duplicate button names observed'
- Check (@($s.elements|Where-Object {$_.automation_id -eq 'fixturePassword'}).Count -eq 0) 'password field excluded'
+ Check (@($s.elements|Where-Object {$_.native_handle -eq (Report).handles.fixturePassword}).Count -eq 0) 'password field excluded'
  $value='Jarvis '+[char]0x00e8+' '+[char]0x03a9+' "quote" $()'
  $r=Action $s 'fixtureInput' 'set_text' $value
  Check ($r.state -eq 'completed' -and $r.data.verified) 'text verified by UIA'
@@ -88,8 +89,11 @@ try{
  $s=Inspect;Command 'other';$r=Action $s 'fixtureGood' 'invoke';Rejected $r 'same title different foreground HWND';Command 'main'
  $s=Inspect;Command 'disable';$r=Action $s 'fixtureGood' 'invoke';Rejected $r 'disabled after inspection';Command 'enable'
  $s=Inspect;$r=Action $s 'fixtureReadOnly' 'set_text' 'OVERWRITE';Rejected $r 'read only field'
- $s=Inspect;$r=Action $s 'fixtureToggle' 'toggle'
- Check ($r.state -eq 'completed' -and $r.data.verified) 'toggle verified'
+ $s=Inspect
+ $r=Action $s 'fixtureToggle' 'invoke'
+ Check ($r.state -eq 'completed') 'checkbox invoke dispatched'
+ Start-Sleep -Milliseconds 200
+ Check ((Report).toggle) 'checkbox application state verified'
  $s=Inspect
  $r=Operation 'desktop_action' @{snapshot_id=$s.snapshot_id;element_id=(Element $s 'fixtureGood');action='invoke';x=10;y=10}
  Rejected $r 'raw coordinates forbidden'

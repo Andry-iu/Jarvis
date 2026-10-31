@@ -34,7 +34,7 @@ $other.Text=$f.Text;$other.Size=New-Object Drawing.Size(300,200)
 $otherInput=New-Object Windows.Forms.TextBox
 $otherInput.Name='fixtureInput';$other.Controls.Add($otherInput)
 function Save-Report{
- $data=@{good=$script:Good;decoy=$script:Decoy;text=$inputBox.Text;last=$script:Last;hwnd=$f.Handle.ToInt64();other_hwnd=$other.Handle.ToInt64();toggle=$check.Checked;foreground=[FixtureForeground]::GetForegroundWindow().ToInt64();activated=$script:Activated}
+ $data=@{good=$script:Good;decoy=$script:Decoy;text=$inputBox.Text;last=$script:Last;hwnd=$f.Handle.ToInt64();other_hwnd=$other.Handle.ToInt64();toggle=$check.Checked;handles=@{fixtureInput=$inputBox.Handle.ToInt64();fixtureReadOnly=$readonly.Handle.ToInt64();fixturePassword=$password.Handle.ToInt64();fixtureGood=$good.Handle.ToInt64();fixtureDecoy=$decoy.Handle.ToInt64();fixtureDisabled=$disabled.Handle.ToInt64();fixtureToggle=$check.Handle.ToInt64()};foreground=[FixtureForeground]::GetForegroundWindow().ToInt64();activated=$script:Activated}
  $tmp=$Report+'.tmp'
  [IO.File]::WriteAllText($tmp,($data|ConvertTo-Json -Compress),(New-Object Text.UTF8Encoding $false))
  Move-Item $tmp $Report -Force
