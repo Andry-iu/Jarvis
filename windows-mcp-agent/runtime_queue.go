@@ -11,20 +11,20 @@ import (
 )
 
 type queueEntry struct {
-	ID         string         `json:"id"`
-	Project    string         `json:"project"`
-	Resource   string         `json:"resource"`
-	Label      string         `json:"label"`
-	Status     string         `json:"status"`
-	CreatedAt  string         `json:"created_at"`
-	FinishedAt string         `json:"finished_at,omitempty"`
-	JobID      string         `json:"job_id,omitempty"`
-	TurnID     string         `json:"turn_id,omitempty"`
-	Error      string         `json:"error,omitempty"`
-	DependsOn  []string       `json:"depends_on,omitempty"`
+	ID         string          `json:"id"`
+	Project    string          `json:"project"`
+	Resource   string          `json:"resource"`
+	Label      string          `json:"label"`
+	Status     string          `json:"status"`
+	CreatedAt  string          `json:"created_at"`
+	FinishedAt string          `json:"finished_at,omitempty"`
+	JobID      string          `json:"job_id,omitempty"`
+	TurnID     string          `json:"turn_id,omitempty"`
+	Error      string          `json:"error,omitempty"`
+	DependsOn  []string        `json:"depends_on,omitempty"`
 	FinalUsage json.RawMessage `json:"final_usage,omitempty"`
-	Claims []resourceClaim `json:"resources,omitempty"`
-	Request    runtimeRequest `json:"request"`
+	Claims     []resourceClaim `json:"resources,omitempty"`
+	Request    runtimeRequest  `json:"request"`
 }
 type projectQueue struct {
 	Version int               `json:"version"`
@@ -38,19 +38,24 @@ func queuePathsOverlap(a, b string) bool {
 }
 func (r *Runtime) queueSaveLocked() error {
 	kept, err := r.archiveTerminalLocked()
-	if err != nil { r.queueBroken = true; return err }
+	if err != nil {
+		r.queueBroken = true
+		return err
+	}
 	next := *r.queue
 	next.Entries = kept
 	if err := atomicJSON(filepath.Join(r.dir, "queue.json"), &next); err != nil {
 		r.queueBroken = true
 		return errors.New("queue persistence failed; processing stopped; inspect state before retry")
 	}
-	for _,e:=range r.queue.Entries {
-        if terminalActivity(e.Status) && e.JobID!="" {
-            if j:=r.Jobs[e.JobID];j!=nil && terminalActivity(j.Status) {delete(r.Jobs,e.JobID)}
-        }
-    }
-    r.queue.Entries = kept
+	for _, e := range r.queue.Entries {
+		if terminalActivity(e.Status) && e.JobID != "" {
+			if j := r.Jobs[e.JobID]; j != nil && terminalActivity(j.Status) {
+				delete(r.Jobs, e.JobID)
+			}
+		}
+	}
+	r.queue.Entries = kept
 	return nil
 }
 func (r *Runtime) initQueue() error {
@@ -81,7 +86,9 @@ func (r *Runtime) initQueue() error {
 		}
 		ids[e.ID] = true
 		claims, err := claimsForRequest(e.Request, e.Resource)
-		if err != nil { return err }
+		if err != nil {
+			return err
+		}
 		e.Claims = claims
 		if e.Status == "running" || e.Status == "starting" {
 			e.Status = "uncertain"
@@ -100,14 +107,18 @@ func (r *Runtime) initQueue() error {
 	return nil
 }
 func (r *Runtime) queueFindLocked(id string) *queueEntry {
-	if !requestIDPattern.MatchString(id) { return nil }
+	if !requestIDPattern.MatchString(id) {
+		return nil
+	}
 	for _, e := range r.queue.Entries {
 		if e.ID == id {
 			return e
 		}
 	}
 	e, err := r.archivedEntry(id)
-	if err != nil && !os.IsNotExist(err) { r.queueBroken = true }
+	if err != nil && !os.IsNotExist(err) {
+		r.queueBroken = true
+	}
 	return e
 }
 func (r *Runtime) queuePausedLocked(resource string) string {
@@ -141,7 +152,9 @@ func (r *Runtime) enqueueLocked(p runtimeRequest, label string, deps []string) (
 	if r.queueBroken || r.closing {
 		return nil, errors.New("queue unavailable")
 	}
-	if err := r.queueSaveLocked(); err != nil { return nil, err }
+	if err := r.queueSaveLocked(); err != nil {
+		return nil, err
+	}
 	if len(r.queue.Entries) >= 5000 {
 		return nil, errors.New("active queue limit reached")
 	}
@@ -167,7 +180,9 @@ func (r *Runtime) enqueueLocked(p runtimeRequest, label string, deps []string) (
 		return nil, errors.New("only fixed commands and attached Codex turns may be queued")
 	}
 	claims, err := claimsForRequest(p, resource)
-	if err != nil { return nil, err }
+	if err != nil {
+		return nil, err
+	}
 	if len(label) > 160 || len(deps) > 100 {
 		return nil, errors.New("label/dependencies too large")
 	}
@@ -271,8 +286,12 @@ func (r *Runtime) queueControl(p runtimeRequest) (any, error) {
 				return nil, errors.New("queued machine mismatch")
 			}
 			req.MachineID = r.MachineID
-			if len(req.Resources) != 0 && len(p.Resources) != 0 { return nil, errors.New("declare resources once, on outer queue_add") }
-			if len(p.Resources) != 0 { req.Resources = p.Resources }
+			if len(req.Resources) != 0 && len(p.Resources) != 0 {
+				return nil, errors.New("declare resources once, on outer queue_add")
+			}
+			if len(p.Resources) != 0 {
+				req.Resources = p.Resources
+			}
 			return r.enqueueLocked(req, p.Label, p.DependsOn)
 		}
 		if p.Operation == "queue_resume" {
@@ -302,8 +321,12 @@ func (r *Runtime) queueControl(p runtimeRequest) (any, error) {
 					thread, err := readCodexThread(c, e.Request.ThreadID, true)
 					r.mu.Lock()
 					r.inflight.Done()
-					if r.closing { return nil, errors.New("runtime closing") }
-					if e.Status != "uncertain" { continue }
+					if r.closing {
+						return nil, errors.New("runtime closing")
+					}
+					if e.Status != "uncertain" {
+						continue
+					}
 					if err != nil || !sameCodexDirectory(thread, e.Resource) || !codexThreadIdle(thread) {
 						return nil, errors.New("previous Codex session not verified idle")
 					}
@@ -480,7 +503,9 @@ func (r *Runtime) queueDispatchLocked() {
 	}
 	before, _ := json.Marshal(r.queue)
 	r.queueRefreshLocked()
-	if r.queueBroken { return }
+	if r.queueBroken {
+		return
+	}
 	running := 0
 	for _, e := range r.queue.Entries {
 		if e.Status == "running" || e.Status == "starting" {
@@ -599,5 +624,3 @@ func (r *Runtime) queueLoop(stop <-chan struct{}) {
 		}
 	}
 }
-
-

@@ -2,9 +2,10 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
- "io"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -240,26 +241,52 @@ func (r *Runtime) jobCall(p runtimeRequest) (any, error) {
 		return v, nil
 	}
 	// Snapshot only active jobs, then release the mutex before reading history.
-    active:=map[string]Job{}
-    for id,j:=range r.Jobs {active[id]=*j}
-    r.mu.Unlock()
-    defer r.mu.Lock()
-    limit:=p.Limit;if limit==0{limit=50}
-    if limit<1 || limit>200 || p.Offset<0 {return nil,errors.New("invalid job pagination")}
-    out:=[]Job{};seen:=0;more:=false
-    err:=visitJSON(filepath.Join(r.dir,"jobs"),func(path string)(bool,error){
-        seen++;if seen<=p.Offset{return false,nil}
-        if len(out)==limit{more=true;return true,nil}
-        var j Job
-        b,err:=os.ReadFile(path);if err!=nil{return false,err}
-        if json.Unmarshal(b,&j)!=nil || j.MachineID!=r.MachineID {return false,errors.New("corrupt job history")}
-        if live,ok:=active[j.ID];ok{j=live}
-        j.cancel=nil;j.Output="";j.Stdout="";j.Stderr=""
-        out=append(out,j);return false,nil
-    })
-    if err!=nil && err!=io.EOF{return nil,err}
-    return map[string]any{"jobs":out,"next_offset":p.Offset+len(out),"has_more":more,"order":"storage; not an atomic snapshot"},nil
+	active := map[string]Job{}
+	for id, j := range r.Jobs {
+		active[id] = *j
+	}
+	r.mu.Unlock()
+	defer r.mu.Lock()
+	limit := p.Limit
+	if limit == 0 {
+		limit = 50
+	}
+	if limit < 1 || limit > 200 || p.Offset < 0 {
+		return nil, errors.New("invalid job pagination")
+	}
+	out := []Job{}
+	seen := 0
+	more := false
+	err := visitJSON(filepath.Join(r.dir, "jobs"), func(path string) (bool, error) {
+		seen++
+		if seen <= p.Offset {
+			return false, nil
+		}
+		if len(out) == limit {
+			more = true
+			return true, nil
+		}
+		var j Job
+		b, err := os.ReadFile(path)
+		if err != nil {
+			return false, err
+		}
+		if json.Unmarshal(b, &j) != nil || j.MachineID != r.MachineID {
+			return false, errors.New("corrupt job history")
+		}
+		if live, ok := active[j.ID]; ok {
+			j = live
+		}
+		j.cancel = nil
+		j.Output = ""
+		j.Stdout = ""
+		j.Stderr = ""
+		out = append(out, j)
+		return false, nil
+	})
+	if err != nil && err != io.EOF {
+		return nil, err
+	}
+	return map[string]any{"jobs": out, "next_offset": p.Offset + len(out), "has_more": more, "order": "storage; not an atomic snapshot"}, nil
 
 }
-
-

@@ -332,8 +332,12 @@ func (r *Runtime) getCodexLocked() (*codexClient, error) {
 		}
 		return r.codex, nil
 	}
-	if r.closing { return nil, errors.New("runtime closing") }
-	if r.codexStarting { return nil, errors.New("Codex broker initializing; read status later") }
+	if r.closing {
+		return nil, errors.New("runtime closing")
+	}
+	if r.codexStarting {
+		return nil, errors.New("Codex broker initializing; read status later")
+	}
 	r.codexStarting = true
 	r.inflight.Add(1)
 	r.mu.Unlock()
@@ -341,7 +345,12 @@ func (r *Runtime) getCodexLocked() (*codexClient, error) {
 	r.mu.Lock()
 	r.inflight.Done()
 	r.codexStarting = false
-	if r.closing { if c != nil { c.Close() }; return nil, errors.New("runtime closed during Codex initialization") }
+	if r.closing {
+		if c != nil {
+			c.Close()
+		}
+		return nil, errors.New("runtime closed during Codex initialization")
+	}
 	if e == nil {
 		c.machineID = r.MachineID
 		r.codex = c
@@ -516,9 +525,12 @@ func (r *Runtime) codexCall(p runtimeRequest) (any, error) {
 	defer r.mu.Unlock()
 	return r.codexCallLocked(p)
 }
+
 // Caller owns r.mu on entry and return. RPC waits never own the runtime mutex.
 func (r *Runtime) codexCallLocked(p runtimeRequest) (any, error) {
-	if r.closing { return nil, errors.New("runtime closing") }
+	if r.closing {
+		return nil, errors.New("runtime closing")
+	}
 	c, e := r.getCodexLocked()
 	if e != nil {
 		return nil, e
@@ -527,15 +539,21 @@ func (r *Runtime) codexCallLocked(p runtimeRequest) (any, error) {
 	// events, steering, responses and interruption remain independently usable.
 	lease := p.Operation == "codex_resume" || p.Operation == "codex_turn"
 	if lease {
-		if r.codexSessionOps == nil { r.codexSessionOps = map[string]bool{} }
-		if r.codexSessionOps[p.ThreadID] { return nil, errors.New("session lifecycle request already in flight") }
+		if r.codexSessionOps == nil {
+			r.codexSessionOps = map[string]bool{}
+		}
+		if r.codexSessionOps[p.ThreadID] {
+			return nil, errors.New("session lifecycle request already in flight")
+		}
 		r.codexSessionOps[p.ThreadID] = true
 	}
 	r.inflight.Add(1)
 	r.mu.Unlock()
-	defer func(){
+	defer func() {
 		r.mu.Lock()
-		if lease { delete(r.codexSessionOps, p.ThreadID) }
+		if lease {
+			delete(r.codexSessionOps, p.ThreadID)
+		}
 		r.inflight.Done()
 	}()
 	if p.Operation == "codex_status" {
@@ -700,6 +718,7 @@ func (r *Runtime) codexCallLocked(p runtimeRequest) (any, error) {
 	}
 	return nil, errors.New("unsupported Codex operation")
 }
+
 // Turn lifetime is user-controlled. RPC timeouts never interrupt a turn.
 func (c *codexClient) events(p runtimeRequest) (any, error) {
 	c.mu.Lock()
@@ -739,7 +758,9 @@ func (c *codexClient) events(p runtimeRequest) (any, error) {
 		if events[i].Method != "jarvis/usage" {
 			continue
 		}
-		var scope struct { TurnID string `json:"turn_id"` }
+		var scope struct {
+			TurnID string `json:"turn_id"`
+		}
 		if json.Unmarshal(events[i].Params, &scope) == nil && scope.TurnID == c.finished[p.ThreadID] {
 			finalUsage = events[i].Params
 			break
@@ -782,4 +803,3 @@ func (c *codexClient) respond(p runtimeRequest) (any, error) {
 	}
 	return map[string]any{"approval_id": p.ApprovalID, "response_dispatched": true}, nil
 }
-

@@ -18,18 +18,18 @@ import (
 // Runtime state is private to one agent instance. An OS lock prevents competing
 // instances from accepting the same request. A process crash releases the lock.
 type Runtime struct {
-	mu             sync.Mutex
-	inflight sync.WaitGroup
-	codexStarting bool
+	mu              sync.Mutex
+	inflight        sync.WaitGroup
+	codexStarting   bool
 	codexSessionOps map[string]bool
-	dir, MachineID string
-	lock           *os.File
-	Jobs           map[string]*Job
-	codex          *codexClient
-	queue          *projectQueue
-	queueStop      chan struct{}
-	queueBroken    bool
-	closing        bool
+	dir, MachineID  string
+	lock            *os.File
+	Jobs            map[string]*Job
+	codex           *codexClient
+	queue           *projectQueue
+	queueStop       chan struct{}
+	queueBroken     bool
+	closing         bool
 }
 type Job struct {
 	ID           string `json:"id"`
@@ -147,18 +147,28 @@ func newRuntime(dir string) (*Runtime, error) {
 		return nil, errors.New("invalid or unavailable machine identity; do not silently replace state")
 	}
 	r.MachineID = identity.ID
-	if e = visitJSON(filepath.Join(dir,"jobs"),func(path string)(bool,error){
-        var j Job
-        b,err:=os.ReadFile(path);if err!=nil{return false,err}
-        if json.Unmarshal(b,&j)!=nil || !requestIDPattern.MatchString(j.ID) || j.MachineID!=r.MachineID {return false,errors.New("corrupt job state")}
-        if j.Status=="running" || j.Status=="queued" {
-            j.Status="interrupted";j.FinishedAt=utcNow()
-            j.Output+="\nAgent restarted; execution outcome requires verification. No automatic replay."
-            if err=r.saveJob(&j);err!=nil{return false,err}
-            r.Jobs[j.ID]=&j
-        }
-        return false,nil
-    });e!=nil{return nil,e}
+	if e = visitJSON(filepath.Join(dir, "jobs"), func(path string) (bool, error) {
+		var j Job
+		b, err := os.ReadFile(path)
+		if err != nil {
+			return false, err
+		}
+		if json.Unmarshal(b, &j) != nil || !requestIDPattern.MatchString(j.ID) || j.MachineID != r.MachineID {
+			return false, errors.New("corrupt job state")
+		}
+		if j.Status == "running" || j.Status == "queued" {
+			j.Status = "interrupted"
+			j.FinishedAt = utcNow()
+			j.Output += "\nAgent restarted; execution outcome requires verification. No automatic replay."
+			if err = r.saveJob(&j); err != nil {
+				return false, err
+			}
+			r.Jobs[j.ID] = &j
+		}
+		return false, nil
+	}); e != nil {
+		return nil, e
+	}
 	if e = r.initQueue(); e != nil {
 		return nil, e
 	}
@@ -236,7 +246,9 @@ func (r *Runtime) mutation(p runtimeRequest, fn func(*Receipt) (any, error)) (an
 	}
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	if r.closing { return nil, errors.New("runtime closing") }
+	if r.closing {
+		return nil, errors.New("runtime closing")
+	}
 	b, _ := json.Marshal(p)
 	h := digest(b)
 	path := filepath.Join(r.dir, "requests", p.RequestID+".json")
@@ -274,5 +286,3 @@ func (r *Runtime) mutation(p runtimeRequest, fn func(*Receipt) (any, error)) (an
 	}
 	return v, e
 }
-
-
