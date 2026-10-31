@@ -1,10 +1,16 @@
-COLLAUDO INSTALLER JARVIS 1.0.1 — 31 ottobre 2026
+COLLAUDO INSTALLER JARVIS 1.0.2 — 31 ottobre 2026
 
 Eseguito su DESKTOP-1ESSB0K in directory e porte isolate, con binario agente
 0.6.1 verificato SHA-256 9FF4A136951F464925CC55B96E1A968174204199FA9C7FF681B998B3542742C1.
 Il servizio operativo Desktop1 non e stato reinstallato o arrestato.
 
 PASS sintassi Windows PowerShell di tutti gli script.
+PASS vero errore nativo Windows Accesso negato (codice 5) in fixture isolata.
+PASS rilevamento Codex non accessibile restituisce ponte disabilitato.
+PASS installazione prosegue con JARVIS_CODEX_ENABLED=0.
+PASS pacchetto originale 1.0.1 riproduce il fallimento segnalato.
+PASS RIPRENDI completa la copia fallita con backup integrale intatto.
+PASS errore nella ripresa ripristina la cartella incompleta originale.
 PASS nome predefinito Desktop2.
 PASS nome personalizzato Officina CNC in metadati, plugin e task.
 PASS cartella proposta coerente col nome scelto.
