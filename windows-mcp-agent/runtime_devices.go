@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -42,6 +43,9 @@ func configuredPeers() ([]peerDevice, error) {
 	if e = d.Decode(&peers); e != nil {
 		return nil, errors.New("invalid devices.json")
 	}
+	if len(peers) > 16 {
+		return nil, errors.New("a maximum of 16 trusted peers is supported")
+	}
 	seen := map[string]bool{}
 	for _, p := range peers {
 		if !requestIDPattern.MatchString(p.MachineID) || p.ID == "" || seen[p.ID] {
@@ -67,7 +71,11 @@ func configuredPeers() ([]peerDevice, error) {
 }
 func peerRPC(p peerDevice, method string, args any) (map[string]any, error) {
 	b, _ := json.Marshal(map[string]any{"jsonrpc": "2.0", "id": 1, "method": "tools/call", "params": map[string]any{"name": method, "arguments": args}})
-	ctx, cancel := context.WithTimeout(context.Background(), 25*time.Second)
+	timeout := 25 * time.Second
+	if method == "machine_info" {
+		timeout = 5 * time.Second
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 	req, e := http.NewRequestWithContext(ctx, "POST", p.Endpoint, bytes.NewReader(b))
 	if e != nil {
@@ -93,10 +101,10 @@ func peerRPC(p peerDevice, method string, args any) (map[string]any, error) {
 	if p.TokenEnv == "" && p.AccessIDEnv == "" {
 		return nil, errors.New("authenticated peer configuration required")
 	}
-	client := &http.Client{Timeout: 25 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return errors.New("peer redirects refused") }}
+	client := &http.Client{Timeout: timeout, CheckRedirect: func(*http.Request, []*http.Request) error { return errors.New("peer redirects refused") }}
 	res, e := client.Do(req)
 	if e != nil {
-		return nil, errors.New("peer unavailable")
+		return nil, errors.New("peer connection failed or timed out; execution may be uncertain; inspect the target request_id before further action")
 	}
 	defer res.Body.Close()
 	if res.StatusCode != 200 {
@@ -147,15 +155,25 @@ func (r *Runtime) deviceCall(p runtimeRequest) (any, error) {
 		return nil, e
 	}
 	if p.Operation == "device_list" {
-		out := []any{map[string]any{"device_id": "local", "machine_id": r.MachineID, "online": true, "local": true}}
-		for _, v := range peers {
-			e := peerIdentity(v)
-			item := map[string]any{"device_id": v.ID, "machine_id": v.MachineID, "online": e == nil}
-			if e != nil {
-				item["error"] = e.Error()
-			}
-			out = append(out, item)
+		out := make([]any, len(peers)+1)
+		out[0] = map[string]any{"device_id": "local", "machine_id": r.MachineID, "online": true, "local": true}
+		var wg sync.WaitGroup
+		parallel := make(chan struct{}, 4)
+		for i, v := range peers {
+			wg.Add(1)
+			go func(index int, peer peerDevice) {
+				defer wg.Done()
+				parallel <- struct{}{}
+				defer func() { <-parallel }()
+				err := peerIdentity(peer)
+				item := map[string]any{"device_id": peer.ID, "machine_id": peer.MachineID, "online": err == nil}
+				if err != nil {
+					item["error"] = err.Error()
+				}
+				out[index+1] = item
+			}(i, v)
 		}
+		wg.Wait()
 		return map[string]any{"devices": out, "checked_at": utcNow()}, nil
 	}
 	var selected *peerDevice

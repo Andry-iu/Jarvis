@@ -345,7 +345,8 @@ func handler(a *Agent, token string, access *AccessVerifier) http.Handler {
 			http.Error(w, "Accept must include application/json and text/event-stream", http.StatusNotAcceptable)
 			return
 		}
-		r.Body = http.MaxBytesReader(w, r.Body, 1024*1024)
+		// A 1 MiB file can need 4/3 base64 or up to 6x JSON escaping.
+		r.Body = http.MaxBytesReader(w, r.Body, 8*1024*1024)
 		data, err := io.ReadAll(r.Body)
 		if err != nil {
 			http.Error(w, "request too large", http.StatusRequestEntityTooLarge)

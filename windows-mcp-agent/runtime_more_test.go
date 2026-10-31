@@ -3,10 +3,39 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"encoding/base64"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"testing"
 )
+
+func TestRuntimeOneMiBBinaryOverMCP(t *testing.T) {
+	r, dir := fixtureRuntime(t)
+	const token = "test-only-bearer-123456789012345"
+	server := httptest.NewServer(handler(&Agent{runtime: r}, token, nil))
+	defer server.Close()
+	data := bytes.Repeat([]byte{0x80}, maxFileBytes)
+	arguments := map[string]any{"machine_id": r.MachineID, "project": "sample", "path": "binary.bin", "content": base64.StdEncoding.EncodeToString(data), "encoding": "base64", "expected_sha256": "missing", "request_id": newID()}
+	body, _ := json.Marshal(map[string]any{"jsonrpc": "2.0", "id": 1, "method": "tools/call", "params": map[string]any{"name": "file_write", "arguments": arguments}})
+	req, _ := http.NewRequest("POST", server.URL+"/mcp", bytes.NewReader(body))
+	req.Header.Set("Authorization", "Bearer "+token)
+	req.Header.Set("Content-Type", "application/json")
+	response, e := http.DefaultClient.Do(req)
+	if e != nil {
+		t.Fatal(e)
+	}
+	defer response.Body.Close()
+	var rpc struct { Result struct { IsError bool `json:"isError"` } `json:"result"`; Error any `json:"error"` }
+	if e = json.NewDecoder(response.Body).Decode(&rpc); e != nil || response.StatusCode != 200 || rpc.Error != nil || rpc.Result.IsError {
+		t.Fatalf("1 MiB MCP upload failed: %d %v %+v", response.StatusCode, e, rpc)
+	}
+	got, e := os.ReadFile(filepath.Join(dir, "binary.bin"))
+	if e != nil || !bytes.Equal(got, data) {
+		t.Fatal("binary upload mismatch", e)
+	}
+}
 
 func TestRestorePreservesNewUserChanges(t *testing.T) {
 	r, dir := fixtureRuntime(t)
