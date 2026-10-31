@@ -22,7 +22,7 @@ try {
     if (Test-Path -LiteralPath $cfPath) { throw 'cloudflared gia presente: nessuna sostituzione automatica.' }
     [Net.ServicePointManager]::SecurityProtocol=[Net.SecurityProtocolType]::Tls12
     Write-Host 'Download cloudflared dalla release ufficiale, con verifica SHA-256...'
-    $release=Invoke-RestMethod 'https://api.github.com/repos/cloudflare/cloudflared/releases/latest' -Headers @{'User-Agent'='Jarvis-Installer-1.0.1'} -TimeoutSec 30
+    $release=Invoke-RestMethod 'https://api.github.com/repos/cloudflare/cloudflared/releases/latest' -Headers @{'User-Agent'='Jarvis-Installer-1.0.2'} -TimeoutSec 30
     $assets=@($release.assets|Where-Object {$_.name -eq 'cloudflared-windows-amd64.exe'})
     if ($assets.Count -ne 1 -or -not $assets[0].PSObject.Properties['digest'] -or $assets[0].digest -notmatch '^sha256:([a-fA-F0-9]{64})$') { throw 'Checksum ufficiale non disponibile: download non autorizzato a proseguire.' }
     $expected=$matches[1]
