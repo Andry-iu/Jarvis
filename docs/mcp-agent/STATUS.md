@@ -1,3 +1,13 @@
+# 0.6.0 — installata e collaudata da questa nuova chat
+
+31 ottobre 2026: candidata esistente recuperata senza sovrascritture; completati test Windows/vet/build, collaudo MCP isolato, backup/rollback, installazione e prove reali da ChatGPT. Coda persistente, elenco/cancellazione/riordino, letture concorrenti e progetti indipendenti verificati. Turno Codex accodato completato con lettura finale quota/crediti. [Verbale 0.6.0](VALIDATION-0.6.0-20261031.md), [contratto](QUEUE-0.6.0.md), [istruzioni Windows](../../windows-mcp-agent/AGENTS.md).
+
+Binario sorgente a63fb7b36dce3e543c28194ae80f8519524949fc; checkout installazione c01400edcd185b7d6b6bde114b8064931f742195 (solo script successivo). SHA-256 68D7D4DB1B63576B81EC67E7DCAB137763F7BE38A6B841BA5A8B46F4B5A1DEFE. Backup D:\Jarvis\Backups\mcp-0.6.0-20261031. Branch reconcile-windows-mcp-agent-20261031, nessun merge su main.
+
+Quota finale del collaudo alle 17:56:53 UTC: 87% residuo, saldo servizio zero noto, reset 4 novembre 2026 13:39:22 UTC. Sono dati storici: ogni richiesta richiede nuova lettura. Riscontro privato per saldo null ancora in scadenza il 7 novembre 15:55 UTC; non prorogato. Automazione giornaliera esistente verificata abilitata, nessun duplicato; esecuzione futura non provata.
+
+Cinque queue_* disponibili sul server e verificati tramite compatibilita task_start; refresh degli strumenti diretti client non verificato. Voice, altri PC e avvio dopo reboot restano aperti. Solo dispositivo locale configurato. Le sezioni seguenti sono storico.
+
 # 0.5.9 — quota/crediti installati e collaudati
 
 Consultazione diretta codex_status migliorata e lettura automatica finale senza confronti, verificata dopo turno reale dal plugin. Test Windows/vet/build, backup/stato, rollback e riconnessione superati. [Verbale](USAGE-0.5.9.md). Sorgente binario 924f23aa6409f77342d964cc225991ecb4296002; SHA-256 CB7B9B3E0C3A9CA9133E738E0412CD518AF6BEA7E79FEE2C65830776635540C5. Coda/riordino sono la modifica successiva approvata, ancora in sviluppo: [specifica](QUEUE-SPEC.md).
