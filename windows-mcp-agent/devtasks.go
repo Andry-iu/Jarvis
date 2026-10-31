@@ -7,6 +7,8 @@ import (
  "os"
  "os/exec"
  "path/filepath"
+ "runtime"
+ "strconv"
  "strings"
  "time"
 )
@@ -40,6 +42,19 @@ func (a *Agent) startGoTask(operation, project string) (any, error) {
    }
    cmd=exec.CommandContext(ctx,"go","build","-o",filepath.Join(staging,"jarvis-mcp.exe"),".")
   }
+  // On Windows killing go.exe alone leaves its test/compiler children alive.
+  // Use the fixed system executable with argument separation, never a shell.
+  if runtime.GOOS == "windows" {
+   cmd.Cancel = func() error {
+    killCtx, killCancel := context.WithTimeout(context.Background(), 5*time.Second)
+    defer killCancel()
+    kill := exec.CommandContext(killCtx, filepath.Join(os.Getenv("SystemRoot"), "System32", "taskkill.exe"), "/PID", strconv.Itoa(cmd.Process.Pid), "/T", "/F")
+    out, err := kill.CombinedOutput()
+    if err != nil { return fmt.Errorf("process tree cancellation failed: %w: %s", err, strings.TrimSpace(string(out))) }
+    return nil
+   }
+   cmd.WaitDelay = 2*time.Second
+  }
   cmd.Dir=dir
   cmd.Env=append(os.Environ(),"GOWORK=off","GOTOOLCHAIN=local")
   out,runErr:=cmd.CombinedOutput()
@@ -48,7 +63,7 @@ func (a *Agent) startGoTask(operation, project string) (any, error) {
   if runErr!=nil {
    status:="failed"
    if ctx.Err()!=nil {status="cancelled"}
-   a.completeGoTask(t,status,fmt.Sprintf("%s: %v\n%s",operation,runErr,result))
+   a.completeGoTask(t,status,fmt.Sprintf("%s: %v (context: %v)\n%s",operation,runErr,ctx.Err(),result))
   } else {a.completeGoTask(t,"completed",operation+" succeeded\n"+result)}
  }()
  return map[string]any{"task_id":t.ID,"operation":operation,"status":"running"},nil

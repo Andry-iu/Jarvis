@@ -51,3 +51,16 @@ I sorgenti integrali della versione **0.4.1** (13 file: Go, test, `go.mod`, READ
 ## MCP 0.5.0 source release (2026-10-31)
 
 Published update_prepare/update_execute, Cloudflare Access JWT required for both, start-agent PowerShell/CMD examples and local environment templates. No actual 0.5.0 install performed on Windows; desktop still runs 0.4.1. Windows integration of detached restart/rollback is pending. Existing failed NestingOpt clone remains paused.
+
+## Collaudo candidato 0.5.5 — 31 ottobre 2026
+
+Ripresa dal commit `2f8e278bd938af0d7dd59906ea0fd8ccb838167e`, branch `reconcile-windows-mcp-agent-20261031`.
+Agente operativo riconfermato 0.5.4 via plugin; 0.5.5 non ancora installata.
+Sul notebook, collaudo isolato 127.0.0.1:8766: `go_build` via task_start completato, SHA-256 A334A1D5B034F62EE4441BA9731175803442D651E5BD00394820D39AEB8D95C8.
+Operazioni sconosciute, percorso assoluto, uscita dalla root e directory senza go.mod respinti.
+Timeout osservato a 120.33 s, stato cancelled. Questo stato non distingue da solo timeout da annullamento manuale.
+Difetto riprodotto: annullando un test già avviato, go.exe termina ma il processo .test.exe resta vivo. Processo di prova arrestato manualmente via batch controllato; agente operativo preservato.
+Correzione candidato: su Windows cancellazione dell'albero con taskkill.exe di sistema, PID separato dagli argomenti, timeout di terminazione 5 s e WaitDelay 2 s; risultato include ctx.Err(). Aggiunto test Windows che attende il vero avvio del figlio e verifica la sua terminazione.
+Test/build e nuovo collaudo della correzione ancora da eseguire al momento di questo commit. Backup, rollback e distribuzione restano pendenti.
+Log non sensibili: go-build-055-20261031.log, safety-055-20261031.log, cancel-child-055.log sotto D:\Jarvis\Logs\diagnostics.
+Conservare stash `backup update.go locale 20261031` e update.go.bak. Non modificare Android o riprendere il clone NestingOpt.
