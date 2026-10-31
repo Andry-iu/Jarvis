@@ -1,0 +1,35 @@
+COLLAUDO INSTALLER DESKTOP2 1.0.0 — 31 ottobre 2026
+
+Eseguito su DESKTOP-1ESSB0K in directory e porte isolate, con binario agente
+0.6.1 verificato SHA-256 9FF4A136951F464925CC55B96E1A968174204199FA9C7FF681B998B3542742C1.
+Il servizio operativo Desktop1 non e stato reinstallato o arrestato.
+
+PASS sintassi Windows PowerShell di tutti gli script.
+PASS installazione nuova in due percorsi distinti, compresi spazi nel nome.
+PASS credenziali casuali separate e nessuna attestazione economica copiata.
+PASS rifiuto di installazione sopra directory non vuota.
+PASS rifiuto root progetti che comprende lo stato privato.
+PASS rifiuto team domain/AUD Cloudflare non validi.
+PASS registrazione task al login, interattivo/elevato, senza limite temporale.
+PASS avvio reale del task e comunicazione MCP locale autenticata.
+PASS identita nuove, distinte tra loro e da Desktop1.
+PASS catalogo progetti e consultazione coda.
+PASS porta occupata rifiutata senza fermare il processo esistente.
+PASS richieste MCP senza autenticazione rifiutate con HTTP 401.
+PASS arresto e riavvio con identita conservata.
+PASS disabilitazione avvio automatico senza interrompere il lavoro corrente.
+PASS payload corrotto rifiutato PRIMA di creare la directory di installazione.
+PASS COMPLETE: pulizia dei processi e dei task delle copie di prova.
+
+Primo confezionamento di prova: controllo hash ha rifiutato le conversioni
+CRLF del checkout prima di modificare il computer; normalizzazione corretta.
+Un'asserzione sullo stato del task e stata corretta: un task disabilitato puo
+essere ancora Running; il controllo verifica ora Settings.Enabled=false.
+Nessuna guardia economica o protezione del servizio e stata modificata.
+
+NON COLLAUDATI: secondo PC fisico; interazione UAC dal doppio clic; reboot
+fisico; download/installazione cloudflared; DNS/Access/Managed OAuth; nuovo
+plugin ChatGPT; inferenza Codex sul secondo PC. Non sono necessari acquisti
+o crediti per eseguire l'installazione locale. I passaggi account restano locali
+e soggetti ai servizi gia inclusi nell'abbonamento/account dell'utente.
+
