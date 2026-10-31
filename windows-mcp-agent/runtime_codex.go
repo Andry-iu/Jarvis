@@ -245,7 +245,9 @@ func (c *codexClient) readLoop(out io.Reader) {
 		if m.Method == "turn/started" {
 			c.active[scope.ThreadID] = scope.Turn.ID
 		}
+		refreshUsage := false
 		if m.Method == "turn/completed" {
+			refreshUsage = scope.Turn.ID != "" && c.finished[scope.ThreadID] != scope.Turn.ID
 			c.finished[scope.ThreadID] = scope.Turn.ID
 			delete(c.active, scope.ThreadID)
 			for id, p := range c.pending {
@@ -259,6 +261,14 @@ func (c *codexClient) readLoop(out io.Reader) {
 		if e != nil {
 			c.cancel()
 			break
+		}
+		if refreshUsage {
+			// RPC replies must keep flowing through this reader; never wait here.
+			go func(thread, turn, status string) {
+				if c.recordTurnUsage(thread, turn, status) != nil {
+					c.cancel()
+				}
+			}(scope.ThreadID, scope.Turn.ID, scope.Turn.Status)
 		}
 	}
 	_ = c.cmd.Wait()
@@ -409,7 +419,7 @@ func codexAccountStatus(c *codexClient) (any, error) {
 		typ = a.Account.Type
 		plan = a.Account.Plan
 	}
-	result := map[string]any{"version": c.version, "account_type": typ, "plan_type": plan, "quota": q, "inference_allowed": err == nil, "blocked_reason": reason, "api_fallback": false, "paid_credits_allowed": false, "checked_at": utcNow()}
+	result := map[string]any{"version": c.version, "account_type": typ, "plan_type": plan, "quota": q, "usage": codexUsageSummary(q), "inference_allowed": err == nil, "blocked_reason": reason, "api_fallback": false, "paid_credits_allowed": false, "checked_at": utcNow()}
 	if err == nil && q.Credits != nil && q.Credits.Balance == nil && proof != nil {
 		result["zero_credit_evidence"] = proof.Source
 		result["evidence_valid_until"] = proof.ValidUntil.UTC().Format(time.RFC3339)
@@ -709,8 +719,20 @@ func (c *codexClient) events(p runtimeRequest) (any, error) {
 	sort.Slice(pending, func(i, j int) bool {
 		return pending[i].(map[string]any)["approval_id"].(string) < pending[j].(map[string]any)["approval_id"].(string)
 	})
+	var finalUsage json.RawMessage
+	for i := len(events) - 1; i >= 0; i-- {
+		if events[i].Method != "jarvis/usage" {
+			continue
+		}
+		var scope struct { TurnID string `json:"turn_id"` }
+		if json.Unmarshal(events[i].Params, &scope) == nil && scope.TurnID == c.finished[p.ThreadID] {
+			finalUsage = events[i].Params
+			break
+		}
+	}
+	usagePending := c.finished[p.ThreadID] != "" && finalUsage == nil && !c.closed
 	gap := len(events) > 0 && p.After < events[0].Sequence-1
-	return map[string]any{"events": out, "next_after": next, "history_gap": gap, "pending": pending, "active_turn_id": c.active[p.ThreadID], "broker_connected": !c.closed}, nil
+	return map[string]any{"events": out, "next_after": next, "history_gap": gap, "pending": pending, "active_turn_id": c.active[p.ThreadID], "broker_connected": !c.closed, "final_usage": finalUsage, "usage_pending": usagePending}, nil
 }
 func (c *codexClient) respond(p runtimeRequest) (any, error) {
 	c.mu.Lock()

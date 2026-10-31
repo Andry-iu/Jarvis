@@ -1,3 +1,13 @@
+# Continuita Windows MCP — candidata 0.5.9, 31 ottobre 2026
+
+Autorizzato dall'utente: lettura iniziale per ammissibilita (gia esistente), lettura finale automatica senza confronti, consultazione diretta su richiesta e breve dato attuale nel riepilogo di ogni elaborazione Codex. Il comando diretto e codex_status; non crearne duplicati. La risposta precedente che lo dichiarava assente era errata.
+
+Codice candidato: riepilogo usage in codex_status; lettura asincrona unica dopo turn/completed, evento persistente jarvis/usage, final_usage e usage_pending in codex_events. Non attendere RPC nel reader. Non nascondere dati disponibili quando inference_allowed=false. Saldo null rimane sconosciuto. Quote riferite all'account, non al singolo progetto. Nessun acquisto, fallback API o modifica delle prove costi. Guardie 0.5.8 conservate.
+
+Stato corrente: codice candidato, test/build/installazione da verificare. Binario operativo ancora 0.5.8 finche il verbale non conferma la promozione. Seguire docs/mcp-agent/USAGE-0.5.9.md e RELEASE_POLICY.md, preservare backup/stato/identita. Branch reconcile-windows-mcp-agent-20261031.
+
+Proposta nuova: coda per progetto, non autorizzata allo sviluppo e non inclusa nella 0.5.9. Rischio attuale: sessioni Codex diverse possono toccare lo stesso progetto; il runner comandi limita un job attivo per PC e ogni sessione Codex limita un turno attivo.
+
 # Continuita Windows MCP — 0.5.8, 31 ottobre 2026
 
 Stato corrente: [STATUS](../docs/mcp-agent/STATUS.md), [collaudo Codex 0.5.8](../docs/mcp-agent/CODEX-0.5.8.md). Branch reconcile-windows-mcp-agent-20261031. Binario operativo D:\Jarvis\jarvis-mcp.exe, versione 0.5.8, elevazione verificata. Source commit 6b5530e8347502f35511aabdf696c58877836cee; SHA-256 04F369F365816BC076CBCE3F89589BAC63FE628385FFF8B96316E2E79115C1BE. Modifiche documentali successive non cambiano il codice compilato.

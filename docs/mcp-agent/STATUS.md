@@ -1,3 +1,7 @@
+# 0.5.9 — candidata quota/crediti, verifica in corso
+
+Codice per consultazione diretta migliorata e lettura finale automatica senza confronti. [Specifica e stato](USAGE-0.5.9.md). Installazione operativa ancora 0.5.8; nessuna coda per progetto implementata. Le verifiche della candidata verranno registrate prima di dichiararla installata.
+
 # 0.5.8 — installata e verificata, Codex operativo
 
 31 ottobre 2026: plugin aggiornato dall'utente, 38 strumenti diretti disponibili. Schermata fornita dall'utente: quota residua 88%, zero crediti, ricarica automatica disattivata. La nuova guardia usa un riscontro privato associato ad account/PC soltanto per il saldo API nullo, con controlli API invariati e scadenza 7 novembre 2026 ore 15:55 UTC. Nessuna chiave API, acquisto o ricarica.
