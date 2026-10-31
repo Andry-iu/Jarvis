@@ -74,7 +74,10 @@ try {
     Write-Host ('Installazione locale pronta: '+$InstallDir)
     Write-Host 'Identita nuova al primo avvio; nessuno stato, segreto o attestazione economica copiato da Desktop1.'
     if (-not $NonInteractive) {
-        if ((Read-Host 'Configurare ora il tunnel Cloudflare dedicato? [s/N]') -match '^[sS]$') { & (Join-Path $InstallDir 'Scripts\Configure-Cloudflare.ps1') -HomeDir $InstallDir }
+        if ((Read-Host 'Configurare ora il tunnel Cloudflare dedicato? [s/N]') -match '^[sS]$') {
+            try { & (Join-Path $InstallDir 'Scripts\Configure-Cloudflare.ps1') -HomeDir $InstallDir }
+            catch { Write-Warning 'Configurazione Cloudflare non completata. Installazione locale conservata; riprendere da Configura-Cloudflare.cmd con agente fermo.' }
+        }
     }
     if (-not $NoStart) {
         if ($taskCreated) { Start-ScheduledTask -TaskName $taskName }
