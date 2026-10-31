@@ -5,9 +5,44 @@ package main
 import (
 	"os"
 	"path/filepath"
+	"syscall"
 	"testing"
 	"time"
 )
+
+func TestRuntimeWriteWaitsForSharingLock(t *testing.T) {
+	r, dir := fixtureRuntime(t)
+	path := filepath.Join(dir, "locked.txt")
+	if e := os.WriteFile(path, []byte("original"), 0600); e != nil {
+		t.Fatal(e)
+	}
+	name, _ := syscall.UTF16PtrFromString(path)
+	h, e := syscall.CreateFile(name, syscall.GENERIC_READ, syscall.FILE_SHARE_READ, nil, syscall.OPEN_EXISTING, syscall.FILE_ATTRIBUTE_NORMAL, 0)
+	if e != nil {
+		t.Fatal(e)
+	}
+	released := make(chan struct{})
+	go func() {
+		time.Sleep(250 * time.Millisecond)
+		syscall.CloseHandle(h)
+		close(released)
+	}()
+	root, e := r.projectRoot("sample")
+	if e != nil {
+		<-released
+		t.Fatal(e)
+	}
+	defer root.Close()
+	e = writeRootFile(root, "locked.txt", []byte("replacement"), digest([]byte("original")))
+	<-released
+	if e != nil {
+		t.Fatal(e)
+	}
+	b, _ := os.ReadFile(path)
+	if string(b) != "replacement" {
+		t.Fatal("replacement failed after releasing sharing lock")
+	}
+}
 
 func TestRuntimeNativeMoveDirectoryAndNoReplace(t *testing.T) {
 	r, dir := fixtureRuntime(t)

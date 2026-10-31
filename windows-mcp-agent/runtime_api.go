@@ -163,6 +163,29 @@ func decodeRuntime(name string, b json.RawMessage) (runtimeRequest, error) {
 	if !isRuntimeTool(p.Operation) {
 		return p, errors.New("unknown runtime operation")
 	}
+	var fields map[string]json.RawMessage
+	if json.Unmarshal(b, &fields) != nil || fields == nil {
+		return p, errors.New("request must be a JSON object")
+	}
+	for _, spec := range runtimeCatalog {
+		if spec.Name != p.Operation {
+			continue
+		}
+		allowed := map[string]bool{"operation": true, "machine_id": true}
+		for _, key := range spec.Fields {
+			allowed[key] = true
+		}
+		for key, value := range fields {
+			if !allowed[key] || string(value) == "null" {
+				return p, fmt.Errorf("unsupported or null field for %s: %s", p.Operation, key)
+			}
+		}
+		for _, key := range spec.Required {
+			if _, ok := fields[key]; !ok {
+				return p, fmt.Errorf("required field missing: %s", key)
+			}
+		}
+	}
 	if p.Limit < 0 || p.Limit > 200 || p.Offset < 0 || p.After < 0 {
 		return p, errors.New("invalid pagination")
 	}

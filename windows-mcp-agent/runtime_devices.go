@@ -180,5 +180,5 @@ func (r *Runtime) deviceCall(p runtimeRequest) (any, error) {
 	if e = peerIdentity(*selected); e != nil {
 		return nil, e
 	}
-	return peerRPC(*selected, q.Operation, q)
+	return peerRPC(*selected, q.Operation, p.Call)
 }

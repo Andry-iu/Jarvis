@@ -39,6 +39,21 @@ func TestUncertainReceiptNeverReplays(t *testing.T) {
 
 type testWriteCloser struct{ bytes.Buffer }
 
+func TestRuntimeRequiredAndOperationSpecificFields(t *testing.T) {
+	for _, raw := range []string{
+		`{"operation":"file_write","project":"sample","path":"x","expected_sha256":"missing","request_id":"1234567890123456"}`,
+		`{"operation":"file_write","project":"sample","path":"x","content":null,"expected_sha256":"missing","request_id":"1234567890123456"}`,
+		`{"operation":"machine_info","project":"ignored-project"}`,
+	} {
+		if _, e := decodeRuntime("", json.RawMessage(raw)); e == nil {
+			t.Fatal("invalid or irrelevant arguments accepted", raw)
+		}
+	}
+	if _, e := decodeRuntime("", json.RawMessage(`{"operation":"file_write","project":"sample","path":"x","content":"","expected_sha256":"missing","request_id":"1234567890123456"}`)); e != nil {
+		t.Fatal("explicit empty content should be accepted", e)
+	}
+}
+
 func (w *testWriteCloser) Close() error { return nil }
 func TestCodexApprovalRejectsSessionGrantAndReplay(t *testing.T) {
 	w := &testWriteCloser{}

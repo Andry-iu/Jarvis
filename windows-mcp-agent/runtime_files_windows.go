@@ -17,6 +17,10 @@ var ntCreateFile = syscall.NewLazyDLL("ntdll.dll").NewProc("NtCreateFile")
 var ntSetFile = syscall.NewLazyDLL("ntdll.dll").NewProc("NtSetInformationFile")
 var finalPathName = syscall.NewLazyDLL("kernel32.dll").NewProc("GetFinalPathNameByHandleW")
 
+func transientFileError(err error) bool {
+	return errors.Is(err, syscall.Errno(5)) || errors.Is(err, syscall.Errno(32))
+}
+
 type ntUnicode struct {
 	Length, MaximumLength uint16
 	Buffer                *uint16

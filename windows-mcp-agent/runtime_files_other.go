@@ -7,6 +7,8 @@ import (
 	"os"
 )
 
+func transientFileError(err error) bool { return false }
+
 func isReparse(st os.FileInfo) bool                      { return false }
 func validateOpenedFile(root *os.Root, f *os.File) error { return nil }
 func moveNoReplace(root *os.Root, src, dst string) error {

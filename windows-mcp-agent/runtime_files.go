@@ -14,6 +14,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"time"
 	"unicode/utf8"
 )
 
@@ -308,8 +309,25 @@ func writeRootFile(root *os.Root, n string, b []byte, expected string) error {
 		if e = root.Remove(tmp); e != nil {
 			return e
 		}
-	} else if e = root.Rename(tmp, n); e != nil {
-		return e
+	} else {
+		for attempt := 0; ; attempt++ {
+			e = root.Rename(tmp, n)
+			if e == nil {
+				break
+			}
+			if attempt >= 10 || !transientFileError(e) {
+				return e
+			}
+			// Retry only a refused filesystem operation with both preconditions
+			// still intact. Never replay an uncertain desktop or model action.
+			if _, se := root.Lstat(tmp); se != nil {
+				return errors.New("replacement outcome uncertain; temporary no longer exists")
+			}
+			if h, se := pathDigest(root, n); se != nil || h != expected {
+				return errors.New("destination changed while waiting for a file lock")
+			}
+			time.Sleep(100 * time.Millisecond)
+		}
 	}
 	got, e := pathDigest(root, n)
 	if e != nil || got != digest(b) {
