@@ -1,3 +1,64 @@
+# Jarvis Windows MCP Agent — stato corrente 31 ottobre 2026
+
+Questa sezione sostituisce le indicazioni operative storiche riportate sotto.
+
+## Esito verificato
+
+**0.5.5 installata sul notebook Jarvis-Desktop1 e collaudata direttamente da ChatGPT tramite MCP.**
+Sottoprogetto Windows distinto dall'app Android; nessun intervento su Android o sul clone NestingOpt.
+
+- Eseguibile operativo: `D:\Jarvis\jarvis-mcp.exe`.
+- Checkout: `D:\Jarvis\MCP-Source\windows-mcp-agent`; root Git `D:\Jarvis\MCP-Source`.
+- Branch: `reconcile-windows-mcp-agent-20261031`.
+- Commit sorgenti del binario: `b982ed77bdbf4921eabf16e04461bfa89b944675`.
+- SHA-256 operativo e staging: `0769E1597B37628B3197A545F10FB42491D85913B8491B3E722C0D398B47E47E`.
+- Go 1.27.0, Windows/amd64. Nessuna GitHub Actions.
+- Root operativa autorizzata: `D:\Jarvis\MCP-Source`; precedente configurazione `D:\Jarvis\Projects` salvata nel backup.
+- Endpoint: 127.0.0.1:8765/mcp, accesso remoto tramite il tunnel e Cloudflare Access esistenti.
+
+## Implementato e verificato
+
+task_start accetta operation=go_test oppure go_build e project relativo alla root.
+go_test esegue go test ./...; go_build compila in Staging/jarvis-mcp.exe.
+Annullamento Windows corretto: termina l'albero dei processi tramite taskkill.exe di sistema.
+Timeout 120 s, terminazione con limite 5 s e WaitDelay 2 s; contesto riportato nel risultato.
+I test Go eseguono codice dei moduli autorizzati con i permessi dell'agente: il controllo dei percorsi non costituisce una sandbox del codice.
+
+- Test locali sul notebook, incluso nuovo test regressione cancellazione: ok jarvis-mcp-prototype 3.009s.
+- Collaudo MCP isolato dopo la correzione: figlio terminato dopo task_stop.
+- Timeout reale: 120.4126 s, cancelled, context deadline exceeded, nessun figlio rimasto attivo.
+- Rifiutati: operazione sconosciuta, percorso assoluto, traversal fuori root e directory senza go.mod.
+- Backup e ripristino provati su porta 8767: 0.5.4 → 0.5.5 → 0.5.4.
+- Dopo installazione, agent_status remoto: versione 0.5.5.
+- go_test remoto reale: task-1 completed, 100%, ok jarvis-mcp-prototype 2.925s, 13:21:45–13:21:49 Europe/Rome.
+- go_build remoto reale: task-2 completed, 100%, go_build succeeded, 13:22:11 Europe/Rome.
+- Hash staging/operativo uguali; nessun listener temporaneo 8766/8767; sorgenti tracciati puliti.
+- vcs.modified=true deriva da file non tracciati; nessuna modifica ai sorgenti tracciati al controllo finale.
+
+## Backup e ripresa
+
+Backup operativo: `D:\Jarvis\Backups\mcp-0.5.5-20261031`.
+Conservare jarvis-mcp-0.5.4.exe, replaced-0.5.4.exe, agent.env, avvio originale e checksum.
+SHA-256 0.5.4: `7A29039C153409C35135D11C9CD891BC7366A3C9713AA77C3CFF947780B0288E`.
+Conservati stash `backup update.go locale 20261031` e update.go.bak.
+La procedura di installazione include ripristino automatico su errore di avvio; non è stato necessario attivarlo in produzione.
+Dettagli, log e ripristino manuale: [validazione 0.5.5](VALIDATION-0.5.5-20261031.md).
+
+## Limiti e attività aperte
+
+- Cattura schermo ancora non verificata; nessuna dichiarazione di funzionamento.
+- Il catalogo plugin non ha restituito Jarvis-Desktop1: nessun aggiornamento del pacchetto plugin eseguito. I parametri operation/project sono comunque stati accettati nelle chiamate dirette verificate in questa sessione.
+- Il timeout usa lo stato cancelled; distinguere timeout/stop dal testo context deadline exceeded/context canceled.
+- go_test può utilizzare la cache Go. La regressione è stata anche eseguita con go test -count=1 ./... nella verifica del candidato.
+- L'output salvato nel risultato è limitato agli ultimi 12000 byte; CombinedOutput acquisisce prima l'output in memoria.
+- Annullamento con taskkill non è isolamento dei processi ostili: usare moduli fidati.
+- La validazione non ha eseguito un riavvio del notebook né provato l'avvio automatico dopo reboot.
+- Modifiche pubblicate sul branch di lavoro, senza merge implicito su main.
+
+---
+
+## Registro storico — non usare come stato corrente
+
 # Jarvis Windows MCP Agent — stato verificato (2026-10-31)
 
 ## Ambito
@@ -51,16 +112,3 @@ I sorgenti integrali della versione **0.4.1** (13 file: Go, test, `go.mod`, READ
 ## MCP 0.5.0 source release (2026-10-31)
 
 Published update_prepare/update_execute, Cloudflare Access JWT required for both, start-agent PowerShell/CMD examples and local environment templates. No actual 0.5.0 install performed on Windows; desktop still runs 0.4.1. Windows integration of detached restart/rollback is pending. Existing failed NestingOpt clone remains paused.
-
-## Collaudo candidato 0.5.5 — 31 ottobre 2026
-
-Ripresa dal commit `2f8e278bd938af0d7dd59906ea0fd8ccb838167e`, branch `reconcile-windows-mcp-agent-20261031`.
-Agente operativo riconfermato 0.5.4 via plugin; 0.5.5 non ancora installata.
-Sul notebook, collaudo isolato 127.0.0.1:8766: `go_build` via task_start completato, SHA-256 A334A1D5B034F62EE4441BA9731175803442D651E5BD00394820D39AEB8D95C8.
-Operazioni sconosciute, percorso assoluto, uscita dalla root e directory senza go.mod respinti.
-Timeout osservato a 120.33 s, stato cancelled. Questo stato non distingue da solo timeout da annullamento manuale.
-Difetto riprodotto: annullando un test già avviato, go.exe termina ma il processo .test.exe resta vivo. Processo di prova arrestato manualmente via batch controllato; agente operativo preservato.
-Correzione candidato: su Windows cancellazione dell'albero con taskkill.exe di sistema, PID separato dagli argomenti, timeout di terminazione 5 s e WaitDelay 2 s; risultato include ctx.Err(). Aggiunto test Windows che attende il vero avvio del figlio e verifica la sua terminazione.
-Test/build e nuovo collaudo della correzione ancora da eseguire al momento di questo commit. Backup, rollback e distribuzione restano pendenti.
-Log non sensibili: go-build-055-20261031.log, safety-055-20261031.log, cancel-child-055.log sotto D:\Jarvis\Logs\diagnostics.
-Conservare stash `backup update.go locale 20261031` e update.go.bak. Non modificare Android o riprendere il clone NestingOpt.
