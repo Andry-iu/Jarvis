@@ -1,10 +1,14 @@
-# 0.5.7 — candidato in collaudo
+# Jarvis Windows MCP Agent 0.5.7
 
-Sviluppo autorizzato: file/cartelle, comandi, cattura diretta, sessioni Codex locali, identita e storico. La release operativa resta 0.5.6 finche non e verificato l'aggiornamento. [Contratto e limiti 0.5.7](../docs/mcp-agent/RUNTIME-0.5.7.md).
+Installato e verificato su Jarvis-Desktop1 il 31 ottobre 2026, con privilegi amministrativi. Agente Windows separato dall'app Android. [Stato](../docs/mcp-agent/STATUS.md), [collaudo 0.5.7](../docs/mcp-agent/VALIDATION-0.5.7-20261031.md), [contratto e limiti](../docs/mcp-agent/RUNTIME-0.5.7.md), [continuita](CONTINUITY.md).
 
-# Jarvis Windows MCP Agent 0.5.6
+## Runtime 0.5.7
 
-Agente Windows distinto dall'app Android Jarvis. Installato e verificato sul PC Jarvis-Desktop1, con privilegi amministrativi. [Stato corrente](../docs/mcp-agent/STATUS.md), [controllo desktop e collaudi](../docs/mcp-agent/DESKTOP-0.5.6.md).
+machine_info e project_catalog identificano computer e progetti. File/cartelle: file_list/read/search/write, directory_create, path_move e file_restore. Comandi: command_start e job_status/list/cancel. Ogni mutazione richiede request_id e, per i file, hash atteso. Nessuna shell arbitraria, sovrascrittura implicita o bypass dei percorsi protetti. Job, ricevute e identita persistono oltre una chat o un riavvio. screen_capture restituisce immagini MCP dirette, con dimensioni, monitor e origine.
+
+Ponte Codex locale verificato per avvio, account/quote e lista sessioni. Avvio/ripresa/turni restano bloccati dal saldo API nullo e dal controllo costi: non sono collaudati con inferenza reale. Nessuna chiave API o acquisto di crediti. Routing fra due istanze collaudato; altri PC fisici devono essere configurati e autenticati.
+
+Il catalogo server espone 38 strumenti, ma quello memorizzato nel client deve essere aggiornato. Compatibilita verificata in questa chat tramite task_start con operation=runtime e request={operation:...,machine_id:...}. [Istruzioni client](../docs/mcp-agent/CLIENT-INSTRUCTIONS-0.5.7.md). Non promettere disponibilita in qualunque chat o in Voice senza il relativo collaudo.
 
 ## Controllo desktop senza coordinate
 
@@ -26,7 +30,7 @@ Il desktop deve essere sbloccato. Password, controlli non supportati, tasti/scor
 UIA dipende dall'applicazione: non è una garanzia di infallibilità.
 Configurazione locale JARVIS_DESKTOP_ENABLED=1; per disabilitare impostare 0 e riavviare in modo controllato.
 
-## Test e compilazione Go
+## Compatibilita con i task Go 0.5.5/0.5.6
 
 ```json
 {"operation":"go_test","project":"windows-mcp-agent"}
@@ -44,10 +48,10 @@ L'output dei task Go conserva gli ultimi 12000 byte, dopo acquisizione in memori
 - Sorgenti D:\Jarvis\MCP-Source\windows-mcp-agent; root autorizzata D:\Jarvis\MCP-Source.
 - Configurazione D:\Jarvis\Config; credenziali fuori da Git.
 - Endpoint locale 127.0.0.1:8765/mcp; Cloudflare Tunnel e Access esistenti.
-- Backup 0.5.5 D:\Jarvis\Backups\mcp-0.5.6-20261031.
+- Backup 0.5.6 D:\Jarvis\Backups\mcp-0.5.7-20261031, verificato con prova di aggiornamento e rollback.
 - Go 1.27.0 Windows/amd64. Nessuna compilazione tramite GitHub Actions.
 
 Gli script bootstrap in Agent\ sono esempi: il percorso operativo verificato è quello sopra.
-La cattura schermo diagnostica è stata acquisita e mostrata; il comando MCP dedicato e l'avvio automatico dopo reboot restano da verificare/implementare.
+La cattura MCP diretta e stata acquisita e mostrata in chat; l'avvio automatico dopo reboot resta da verificare/implementare.
 Seguire [RELEASE_POLICY](../docs/mcp-agent/RELEASE_POLICY.md).
 

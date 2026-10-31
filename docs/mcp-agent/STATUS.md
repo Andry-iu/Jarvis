@@ -1,6 +1,8 @@
-# 0.5.7 — sviluppo autorizzato, candidato non installato
+# 0.5.7 — installata e verificata, Codex in attesa del controllo costi
 
-File/cartelle, esecutore persistente, catture dirette, ponte Codex locale, routing fra computer e strumenti MCP in collaudo. La 0.5.6 resta la release operativa verificata. Dettagli e limiti: [RUNTIME-0.5.7](RUNTIME-0.5.7.md). Non confondere sorgente candidato, test, installazione e verifica nel client.
+31 ottobre 2026: test Go, go vet, compilazione Windows, backup e rollback isolato superati; agente operativo 0.5.7 con token elevato verificato. File/cartelle, immagini MCP dirette, test/build Go e build .NET 9 verificati anche tramite plugin da questa chat. Stato, job e ricevute persistenti; routing autenticato verificato fra due istanze sullo stesso PC. Nessun altro PC fisico configurato o verificato in questo rilascio.
+
+Codex locale: account/quote e lista sessioni verificati; avvio/ripresa/turni reali bloccati per balance=null e revisione automatica. Zero inferenze Jarvis avviate. UI Impostazioni/Utilizzo osservata: 88% quota residua e 0 crediti; ricarica automatica non verificata. Restano necessari verifica/autorizzazione appropriata per questo punto, aggiornamento catalogo client e collaudo in nuova chat/Voice. [Verbale completo](VALIDATION-0.5.7-20261031.md), [contratto](RUNTIME-0.5.7.md), [continuita Windows](../../windows-mcp-agent/CONTINUITY.md).
 
 # Jarvis Windows MCP Agent — stato corrente 0.5.6
 
