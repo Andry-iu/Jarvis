@@ -1,84 +1,145 @@
 package main
 
 import (
- "crypto/sha256"
- "crypto/subtle"
- "encoding/hex"
- "errors"
- "fmt"
- "os"
- "os/exec"
- "path/filepath"
- "regexp"
- "runtime"
- "strings"
- "sync"
+	"crypto/sha256"
+	"crypto/subtle"
+	"encoding/hex"
+	"errors"
+	"fmt"
+	"os"
+	"path/filepath"
+	"regexp"
+	"runtime"
+	"strings"
+	"sync"
 )
 
-var updateIDPattern=regexp.MustCompile("^[a-fA-F0-9]{32}$")
-var updateHashPattern=regexp.MustCompile("^[a-fA-F0-9]{64}$")
+var updateIDPattern = regexp.MustCompile(`^[A-Fa-f0-9]{32}$`)
+var updateHashPattern = regexp.MustCompile(`^[a-fA-F0-9]{64}$`)
 
 type updateRequest struct {
- UpdateID string `json:"update_id"`
- SHA256 string `json:"sha256"`
- Content string `json:"content"`
+	ID      string `json:"update_id"`
+	Content string `json:"content"`
+	SHA256  string `json:"sha256"`
 }
-type preparedUpdate struct { ID, Hash, Path string }
-var updates=struct{
- sync.Mutex
- pending *preparedUpdate
-}{}
 
-func updateRoot()(string,error){
- home:=os.Getenv("JARVIS_HOME")
- if home=="" { home=`D:\Jarvis` }
- if !filepath.IsAbs(home) { return "",errors.New("JARVIS_HOME must be an absolute path") }
- return filepath.Clean(home),nil
+type preparedUpdate struct {
+	ID     string
+	SHA256 string
+	Path   string
 }
-func prepareUpdate(r updateRequest)(any,error){
- if runtime.GOOS!="windows" {return nil,errors.New("updates require Windows")}
- if !updateIDPattern.MatchString(r.UpdateID)||!updateHashPattern.MatchString(r.SHA256){return nil,errors.New("invalid update identifier or SHA-256")}
- raw:=[]byte(r.Content)
- if len(raw)<1||len(raw)>262144{return nil,errors.New("batch size out of range")}
- prefix:="REM JARVIS-UPDATE-ID: "+r.UpdateID+"
-"
- if !strings.HasPrefix(r.Content,prefix) {return nil,errors.New("invalid first REM line or line endings")}
- if strings.ContainsRune(r.Content,0){return nil,errors.New("NUL byte forbidden")}
- hash:=sha256.Sum256(raw)
- want,_:=hex.DecodeString(r.SHA256)
- if subtle.ConstantTimeCompare(hash[:],want)!=1{return nil,errors.New("SHA-256 mismatch")}
- root,err:=updateRoot();if err!=nil{return nil,err}
- dir:=filepath.Join(root,"Scripts","updates")
- if err=os.MkdirAll(dir,0700);err!=nil{return nil,err}
- path:=filepath.Join(dir,r.UpdateID+".cmd")
- updates.Lock();defer updates.Unlock()
- f,err:=os.OpenFile(path,os.O_WRONLY|os.O_CREATE|os.O_EXCL,0600)
- if err!=nil{return nil,fmt.Errorf("cannot stage batch (update ID must be new): %w",err)}
- n,werr:=f.Write(raw);closeErr:=f.Close()
- if werr!=nil||closeErr!=nil||n!=len(raw){_ = os.Remove(path);return nil,errors.New("failed to write entire batch")}
- written,err:=os.ReadFile(path)
- if err!=nil||subtle.ConstantTimeCompare(written,raw)!=1{_ = os.Remove(path);return nil,errors.New("staged bytes differ")}
- updates.pending=&preparedUpdate{r.UpdateID,strings.ToLower(r.SHA256),path}
- return map[string]any{"state":"prepared","update_id":r.UpdateID,"sha256":strings.ToLower(r.SHA256),"path":path},nil
+
+var updateState = struct {
+	sync.Mutex
+	Pending *preparedUpdate
+	Used    map[string]bool
+}{Used: map[string]bool{}}
+
+func updateBase() (string, error) {
+	root := os.Getenv("JARVIS_HOME")
+	if root == "" {
+		root = `D:\Jarvis`
+	}
+	if !filepath.IsAbs(root) {
+		return "", errors.New("JARVIS_HOME must be absolute")
+	}
+	return filepath.Clean(root), nil
 }
-func executeUpdate(id,expected string)(any,error){
- if runtime.GOOS!="windows" {return nil,errors.New("updates require Windows")}
- updates.Lock();defer updates.Unlock()
- p:=updates.pending
- if p==nil||id!=p.ID||!updateHashPattern.MatchString(expected){return nil,errors.New("no matching prepared update")}
- if subtle.ConstantTimeCompare([]byte(strings.ToLower(expected)),[]byte(p.Hash))!=1{return nil,errors.New("wrong expected hash")}
- raw,err:=os.ReadFile(p.Path);if err!=nil{return nil,err}
- hash:=sha256.Sum256(raw)
- if subtle.ConstantTimeCompare([]byte(hex.EncodeToString(hash[:])),[]byte(p.Hash))!=1{return nil,errors.New("staged batch altered")}
- if !strings.HasPrefix(string(raw),"REM JARVIS-UPDATE-ID: "+p.ID+"
-"){return nil,errors.New("REM update ID mismatch")}
- // Use START without /B so the batch gets a separate console and survives agent exit.
- // The script must implement stop, backup, install, restart, health test and rollback.
- cmd:=exec.Command("cmd.exe","/C","start","""","/MIN","cmd.exe","/D","/C",p.Path)
- cmd.Dir=filepath.Dir(p.Path)
- if err=cmd.Start();err!=nil{return nil,err}
- pid:=cmd.Process.Pid
- _=cmd.Process.Release()
- updates.pending=nil
- return map[string]any{"state":"launched","update_id":id,"launcher_pid":pid,"message":"Batch launch requested; verify new agent after reconnect"},nil
+
+func prepareUpdate(req updateRequest) (any, error) {
+	if runtime.GOOS != "windows" {
+		return nil, errors.New("updates supported on Windows only")
+	}
+	if !updateIDPattern.MatchString(req.ID) || !updateHashPattern.MatchString(req.SHA256) {
+		return nil, errors.New("invalid update ID or SHA-256")
+	}
+	if len(req.Content) == 0 || len(req.Content) > 256*1024 {
+		return nil, errors.New("batch must be 1..262144 UTF-8 bytes")
+	}
+	if !strings.HasPrefix(req.Content, "REM JARVIS-UPDATE-ID: "+req.ID+"\r\n") {
+		return nil, errors.New("first line must be exact REM update ID followed by CRLF")
+	}
+	if strings.ContainsRune(req.Content, 0) {
+		return nil, errors.New("NUL forbidden")
+	}
+	raw := []byte(req.Content)
+	h := sha256.Sum256(raw)
+	expected, _ := hex.DecodeString(req.SHA256)
+	if subtle.ConstantTimeCompare(h[:], expected) != 1 {
+		return nil, errors.New("SHA-256 mismatch before writing")
+	}
+	root, err := updateBase()
+	if err != nil {
+		return nil, err
+	}
+	dir := filepath.Join(root, "Scripts", "updates")
+	if err = os.MkdirAll(dir, 0700); err != nil {
+		return nil, err
+	}
+	// One immutable file per update. Never overwrite previously prepared scripts.
+	path := filepath.Join(dir, req.ID+".cmd")
+	updateState.Lock()
+	defer updateState.Unlock()
+	if updateState.Used[req.ID] {
+		return nil, errors.New("update ID already used")
+	}
+	if _, err = os.Lstat(path); err == nil {
+		return nil, errors.New("update ID file already exists")
+	}
+	if !os.IsNotExist(err) {
+		return nil, err
+	}
+	f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0600)
+	if err != nil {
+		return nil, err
+	}
+	n, werr := f.Write(raw)
+	cerr := f.Close()
+	if werr != nil || cerr != nil || n != len(raw) {
+		os.Remove(path)
+		return nil, errors.New("batch write failed")
+	}
+	got, err := os.ReadFile(path)
+	if err != nil || subtle.ConstantTimeCompare(got, raw) != 1 {
+		os.Remove(path)
+		return nil, errors.New("batch differs from submitted bytes")
+	}
+	updateState.Pending = &preparedUpdate{ID: req.ID, SHA256: strings.ToLower(req.SHA256), Path: path}
+	return map[string]any{"update_id": req.ID, "sha256": strings.ToLower(req.SHA256), "path": path, "state": "prepared"}, nil
+}
+
+func executeUpdate(id string, expectedHash string) (any, error) {
+	if runtime.GOOS != "windows" {
+		return nil, errors.New("updates supported on Windows only")
+	}
+	updateState.Lock()
+	defer updateState.Unlock()
+	p := updateState.Pending
+	if p == nil || p.ID != id || !updateIDPattern.MatchString(id) || !updateHashPattern.MatchString(expectedHash) {
+		return nil, errors.New("no matching prepared update")
+	}
+	if subtle.ConstantTimeCompare([]byte(strings.ToLower(expectedHash)), []byte(p.SHA256)) != 1 {
+		return nil, errors.New("hash differs from prepared update")
+	}
+	b, err := os.ReadFile(p.Path)
+	if err != nil {
+		return nil, err
+	}
+	h := sha256.Sum256(b)
+	if subtle.ConstantTimeCompare([]byte(hex.EncodeToString(h[:])), []byte(p.SHA256)) != 1 || !strings.HasPrefix(string(b), "REM JARVIS-UPDATE-ID: "+p.ID+"\r\n") {
+		return nil, errors.New("batch verification failed")
+	}
+	// Start cmd directly, without the CMD internal START command. START's
+	// empty-title quoting is ambiguous when exec.Command quotes its arguments.
+	// Windows process flags detach the batch from the agent's console.
+	cmd := detachedBatchCommand(p.Path)
+	cmd.Dir = filepath.Dir(p.Path)
+	if err = cmd.Start(); err != nil {
+		return nil, fmt.Errorf("start batch: %w", err)
+	}
+	pid := cmd.Process.Pid
+	_ = cmd.Process.Release()
+	updateState.Used[id] = true
+	updateState.Pending = nil
+	return map[string]any{"state": "launched", "update_id": id, "launcher_pid": pid, "message": "Execution delegated; success must be checked after MCP reconnect"}, nil
 }

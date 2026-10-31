@@ -1,0 +1,3 @@
+# Jarvis Windows MCP 0.5.3
+
+Fixes the Windows update batch launcher: execute cmd.exe directly with /D /C, in an independent detached process group rather than using nested CMD START command parsing. Update REM identifier and SHA-256 validation remain unchanged. The agent's 0.5.1 launcher showed an incorrect \\ path prompt; this release addresses command nesting. Go tests pass on Linux and Windows x64 PE build succeeds, but runtime Windows verification is pending. Initial replacement of currently running 0.5.1 needs manual installation because its launcher is defective. SHA-256 exe: 9cbe909652b4866f26bb610813cf060b496a27b3321fd07d968c551e1c7e9aa8. Keep .exe local, not in Git. GitHub contains sources only.

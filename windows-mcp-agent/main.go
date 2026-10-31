@@ -22,7 +22,7 @@ import (
 	"time"
 )
 
-const version = "0.5.1"
+const version = "0.5.3"
 
 type RPCRequest struct {
 	JSONRPC string          `json:"jsonrpc"`
@@ -231,7 +231,7 @@ func handler(a *Agent, token string, access *AccessVerifier) http.Handler {
 			return
 		}
 		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprint(w, `{"ok":true,"version":"0.5.1"}`)
+		fmt.Fprint(w, `{"ok":true,"version":"0.5.3"}`)
 	})
 	mux.HandleFunc("/mcp", func(w http.ResponseWriter, r *http.Request) {
 		log.Printf("MCP request received method=%s access_assertion=%t", r.Method, r.Header.Get("Cf-Access-Jwt-Assertion") != "")
