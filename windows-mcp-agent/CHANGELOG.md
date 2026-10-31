@@ -1,3 +1,7 @@
+# Installer 1.0.3 — 31 ottobre 2026
+
+Richiede CLI Codex compatibile prima di creare l'installazione. Priorita alla CLI nativa, percorso esplicito supportato; COLLEGA-CODEX per ripresa 1.0.1 o abilitazione su copia completa e controllo account/quota senza inferenza. Nessun arresto automatico, nessuna riabilitazione implicita del task disabilitato, nessuna modifica alle guardie dei costi. Binario agente 0.6.1 invariato. Verbale docs/mcp-agent/INSTALLER-DESKTOP2-1.0.3.md.
+
 # Windows MCP changelog
 
 ## 0.6.1 — installata e collaudata, 31 ottobre 2026
@@ -45,4 +49,5 @@ Attese Codex senza mutex globale; nessun watchdog temporale dei turni e nessun a
 ## 0.5.6
 
 Controllo desktop semantico senza coordinate, snapshot monouso e revalidazione; vedere ../docs/mcp-agent/DESKTOP-0.5.6.md.
+
 

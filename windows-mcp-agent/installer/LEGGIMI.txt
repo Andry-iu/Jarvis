@@ -1,3 +1,35 @@
+JARVIS MCP SETUP 1.0.3 — collegamento Codex richiesto
+
+Se la 1.0.1 si e interrotta con Accesso negato e ora codex --version
+risponde codex-cli 0.165.0-alpha.1.2:
+1. Estrarre tutto lo ZIP in una NUOVA cartella.
+2. Eseguire COLLEGA-CODEX.cmd, consentire UAC con lo stesso utente Windows.
+3. Indicare la cartella precedente (Invio accetta D:\Jarvis).
+Il comando conserva la copia incompleta in una cartella di backup,
+riprende SOLO la prima installazione 1.0.1 riconosciuta e collega la CLI.
+Su una 1.0.2 completata, configura la CLI senza ricopiare stato o credenziali.
+Se Jarvis e gia attivo con una configurazione diversa, non viene arrestato:
+terminare i lavori e usare Arresta.cmd, poi rieseguire COLLEGA-CODEX.cmd.
+
+COLLEGA-CODEX interroga App Server, account e quota senza inferenza.
+codex_connected=true verifica il collegamento con account ChatGPT.
+inference_allowed e blocked_reason sono la decisione separata sui turni:
+un collegamento riuscito non aggira eventuali guardie su quota o costi.
+usage contiene i valori osservati, sconosciuti come null, con checked_at.
+L'esito locale e Config\codex-connection.json; non contiene token/email.
+Se serve accesso, usare codex login scegliendo il proprio account ChatGPT
+Business, poi rieseguire il comando. Mai usare API key o acquistare crediti.
+
+Per una prima installazione nuova usare INSTALLA.cmd. Codex compatibile
+e obbligatorio: se manca, rifiuta prima di creare cartelle. Cerca prima la
+CLI nativa nel PATH e in %LOCALAPPDATA%\Programs\OpenAI\Codex\bin,
+poi il pacchetto App. Non modifica ACL WindowsApps, non copia codex.exe
+fuori dal suo runtime e non scarica o aggiorna Codex automaticamente.
+Versione CLI richiesta: 0.165.0-alpha.1.2, senza aggiornamenti impliciti.
+
+Le istruzioni storiche seguenti riguardano il confezionamento precedente.
+La descrizione di Codex opzionale nella 1.0.2 e SUPERATA dalla 1.0.3.
+
 ERRORE CODEX ACCESSO NEGATO DURANTE LA 1.0.1
 Estrarre il nuovo ZIP e aprire RIPRENDI.cmd, indicando la cartella incompleta
 (es. D:\Jarvis). La procedura verifica che non sia mai stata avviata e salva

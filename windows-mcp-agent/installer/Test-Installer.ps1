@@ -19,6 +19,8 @@ try {
         $tokens=$null;$errors=$null;$null=[Management.Automation.Language.Parser]::ParseFile($f.FullName,[ref]$tokens,[ref]$errors)
         if ($errors.Count) { throw ('Errore sintassi: '+$f.Name+' '+$errors[0].Message) }
     };Pass 'powershell_parser'
+    $realCodex=Find-Codex
+    if(-not $realCodex){throw 'CLI compatibile necessaria per il collaudo.'}
     $a=Join-Path $TestRoot 'Desktop 2';$b=Join-Path $TestRoot 'Desktop B'
     & "$PackageDir\Install.ps1" -InstallDir $a -Port 8768 -NonInteractive -NoShortcuts -NoStart
     $installs.Add($a)
@@ -37,11 +39,15 @@ try {
     $global:JarvisTestCodexPackageRoot=$deniedRoot
     function global:Get-AppxPackage { param($Name,$ErrorAction) [pscustomobject]@{InstallLocation=$global:JarvisTestCodexPackageRoot} }
     try {
-        if(Find-Codex){throw 'Codex negato abilitato.'};Pass 'discovery_access_denied_returns_disabled'
+        if(Find-Codex $deniedExe){throw 'Codex negato abilitato.'};Pass 'discovery_access_denied_is_unavailable'
         $d=Join-Path $TestRoot 'Codex non accessibile'
-        & "$PackageDir\Install.ps1" -InstallDir $d -Port 8770 -NonInteractive -NoTask -NoShortcuts -NoStart
-        $installs.Add($d)
-        if((Read-AgentEnv $d).JARVIS_CODEX_ENABLED -ne '0'){throw 'Ponte Codex attivo nonostante rifiuto.'};Pass 'installation_continues_with_codex_disabled'
+        Expect-Refusal { & "$PackageDir\Install.ps1" -InstallDir $d -CodexExecutable $deniedExe -Port 8770 -NonInteractive -NoTask -NoShortcuts -NoStart } 'missing_codex_refuses_installation'
+        if(Test-Path $d){throw 'Directory creata senza Codex.'};Pass 'no_partial_install_without_codex'
+        $priorGetCommand=Get-Item Function:\Get-Command -ErrorAction SilentlyContinue
+        $global:JarvisNativeCodexFixture=$realCodex
+        function global:Get-Command { param($Name,$CommandType,[switch]$All,$ErrorAction) if($Name -eq 'codex.exe'){[pscustomobject]@{Source=$global:JarvisNativeCodexFixture}}else{Microsoft.PowerShell.Core\Get-Command $Name} }
+        try { if((Find-Codex) -ine $realCodex){throw 'CLI nativa non preferita al pacchetto negato.'};Pass 'native_cli_preferred_over_denied_app' }
+        finally { Remove-Item Function:\Get-Command;if($priorGetCommand){Set-Item Function:\Get-Command -Value $priorGetCommand.ScriptBlock};Remove-Variable JarvisNativeCodexFixture -Scope Global }
         if($LegacyZipPath){
             $legacy=Join-Path $TestRoot 'legacy-package';Expand-Archive -LiteralPath $LegacyZipPath -DestinationPath $legacy
             $legacyInstall=Get-ChildItem $legacy -Filter Install.ps1 -Recurse|Select-Object -First 1
@@ -49,17 +55,19 @@ try {
             $incomplete=Join-Path $TestRoot 'Installazione incompleta'
             Expect-Refusal { & $legacyInstall.FullName -InstallDir $incomplete -Port 8771 -NonInteractive -NoTask -NoShortcuts -NoStart } 'old_101_reproduces_install_failure'
             $originalSecret=(Get-FileHash (Join-Path $incomplete 'Config\secrets.env')).Hash
-            & "$PackageDir\Repair.ps1" -HomeDir $incomplete -NonInteractive -NoTask -NoShortcuts -NoStart
+            & "$PackageDir\Repair.ps1" -HomeDir $incomplete -CodexExecutable $realCodex -NonInteractive -NoTask -NoShortcuts -NoStart
             $installs.Add($incomplete)
+            & "$PackageDir\Connect-Codex.ps1" -HomeDir $incomplete -CodexExecutable $realCodex -NonInteractive
+            if(-not (Get-Content (Join-Path $incomplete 'Config\codex-connection.json') -Raw|ConvertFrom-Json).codex_connected){throw 'Avvio e connessione dopo ripresa falliti.'};Pass 'cold_start_and_codex_connection_after_recovery'
             $repaired=Read-Install $incomplete;$recovery=Get-Content (Join-Path $incomplete 'Config\recovery.json') -Raw|ConvertFrom-Json
-            if($repaired.installer_version -ne '1.0.2' -or (Read-AgentEnv $incomplete).JARVIS_CODEX_ENABLED -ne '0'){throw 'Ripresa non completata.'}
+            if($repaired.installer_version -ne '1.0.3' -or (Read-AgentEnv $incomplete).JARVIS_CODEX_ENABLED -ne '1'){throw 'Ripresa non completata.'}
             if((Get-FileHash (Join-Path $recovery.backup 'Config\secrets.env')).Hash -ne $originalSecret){throw 'Backup precedente alterato.'};Pass 'resume_real_101_failure_with_intact_backup'
             $rollbackHome=Join-Path $TestRoot 'Rollback ripresa'
             Expect-Refusal { & $legacyInstall.FullName -InstallDir $rollbackHome -Port 8772 -NonInteractive -NoTask -NoShortcuts -NoStart } 'second_old_101_failure_fixture'
             $beforeRollback=(Get-FileHash (Join-Path $rollbackHome 'Config\secrets.env')).Hash
             $badRecovery=Join-Path $TestRoot 'bad-recovery-package';New-Item -ItemType Directory $badRecovery|Out-Null;Copy-Item "$PackageDir\*" $badRecovery
             [IO.File]::AppendAllText((Join-Path $badRecovery 'jarvis-mcp.exe'),'corrupt')
-            Expect-Refusal { & (Join-Path $badRecovery 'Repair.ps1') -HomeDir $rollbackHome -NonInteractive -NoTask -NoShortcuts -NoStart } 'failed_recovery_rolls_back'
+            Expect-Refusal { & (Join-Path $badRecovery 'Repair.ps1') -HomeDir $rollbackHome -CodexExecutable $realCodex -NonInteractive -NoTask -NoShortcuts -NoStart } 'failed_recovery_rolls_back'
             if((Get-FileHash (Join-Path $rollbackHome 'Config\secrets.env')).Hash -ne $beforeRollback -or -not (Test-Path (Join-Path $rollbackHome 'Config\install-failed.txt'))){throw 'Originale non ripristinato.'};Pass 'rollback_preserves_original_incomplete_install'
         }
     } finally {
@@ -88,6 +96,15 @@ try {
     $runner=Start-Runner $b;$ib=Wait-Agent $b
     if ($ia.machine_id -eq $ib.machine_id -or $ia.machine_id -eq '1b927a030fa3b7dfa15c40cfccb4ff60' -or $ib.machine_id -eq '1b927a030fa3b7dfa15c40cfccb4ff60') { throw 'Identita clonate.' };Pass 'isolated_identity_and_real_mcp'
     & (Join-Path $a 'Scripts\Check.ps1') -HomeDir $a;Pass 'catalog_queue_check'
+    $beforePid=(Get-Content (Join-Path $a 'Config\running.json') -Raw|ConvertFrom-Json).agent.pid
+    & "$PackageDir\Connect-Codex.ps1" -HomeDir $a -CodexExecutable $realCodex -NonInteractive
+    $connection=Get-Content (Join-Path $a 'Config\codex-connection.json') -Raw|ConvertFrom-Json
+    if(-not $connection.codex_connected -or $connection.codex_version -ne 'codex-cli 0.165.0-alpha.1.2' -or $connection.account_type -ne 'chatgpt' -or -not $connection.checked_at){throw 'Connessione/account non verificati.'}
+    if((Get-Content (Join-Path $a 'Config\running.json') -Raw|ConvertFrom-Json).agent.pid -ne $beforePid){throw 'Agente attivo riavviato.'};Pass 'readonly_codex_account_usage_without_restart_or_inference'
+    $savedEnv=Read-AgentEnv $a;$changed=@{};foreach($key in $savedEnv.Keys){$changed[$key]=$savedEnv[$key]};$changed.JARVIS_CODEX_ENABLED='0';Write-AgentEnv $a $changed
+    try { Expect-Refusal { & "$PackageDir\Connect-Codex.ps1" -HomeDir $a -CodexExecutable $realCodex -NonInteractive } 'different_active_configuration_refused_without_stop' }
+    finally { Write-AgentEnv $a $savedEnv }
+    if((Get-Content (Join-Path $a 'Config\running.json') -Raw|ConvertFrom-Json).agent.pid -ne $beforePid -or -not (Get-Process -Id $beforePid -ErrorAction SilentlyContinue)){throw 'Agente interrotto.'}
     Expect-Refusal { & "$PackageDir\Install.ps1" -InstallDir (Join-Path $TestRoot 'occupied') -Port 8768 -NonInteractive -NoTask -NoShortcuts -NoStart } 'refuse_occupied_port_without_stopping_owner'
     $blocked=$false
     try { Invoke-WebRequest 'http://127.0.0.1:8768/mcp' -Method Post -ContentType 'application/json' -Body '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' -UseBasicParsing -TimeoutSec 5|Out-Null } catch { if ($_.Exception.Response -and [int]$_.Exception.Response.StatusCode -eq 401) { $blocked=$true } }
@@ -98,6 +115,9 @@ try {
     if ($ib.machine_id -ne $ib2.machine_id) { throw 'Identita cambiata al riavvio.' };Pass 'identity_persists_on_restart'
     & (Join-Path $a 'Scripts\Disable-Startup.ps1') -HomeDir $a
     if ((Get-ScheduledTask -TaskName $s.task_name).Settings.Enabled) { throw 'Task non disabilitato.' };Pass 'disable_startup_preserves_state_without_stopping_current_work'
+    & (Join-Path $a 'Scripts\Stop.ps1') -HomeDir $a -Force
+    & "$PackageDir\Connect-Codex.ps1" -HomeDir $a -CodexExecutable $realCodex -NonInteractive
+    if((Get-ScheduledTask -TaskName $s.task_name).Settings.Enabled){throw 'Task riabilitato implicitamente.'};Pass 'connector_starts_without_reenabling_disabled_startup'
     $badPackage=Join-Path $TestRoot 'corrupted-package';New-Item -ItemType Directory $badPackage|Out-Null
     Copy-Item "$PackageDir\*" $badPackage
     [IO.File]::AppendAllText((Join-Path $badPackage 'jarvis-mcp.exe'),'corrupt')

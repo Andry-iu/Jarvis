@@ -1,5 +1,5 @@
 [CmdletBinding()]
-param([string]$HomeDir,[switch]$NonInteractive,[switch]$NoTask,[switch]$NoShortcuts,[switch]$NoStart)
+param([string]$HomeDir,[string]$CodexExecutable='',[switch]$NonInteractive,[switch]$NoTask,[switch]$NoShortcuts,[switch]$NoStart)
 . "$PSScriptRoot\Common.ps1"
 $principal=New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
 if (-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) { throw 'Avviare RIPRENDI.cmd e consentire la richiesta amministratore.' }
@@ -39,14 +39,14 @@ $snapshot=Join-Path (Split-Path $HomeDir -Parent) ((Split-Path $HomeDir -Leaf)+'
 [IO.Directory]::Move($HomeDir,$snapshot)
 try {
     Write-Host ('Copia incompleta conservata integralmente in: '+$snapshot)
-    & "$PSScriptRoot\Install.ps1" -DeviceName $s.device_name -InstallDir $HomeDir -ProjectsRoot $projects -Port $s.port -NonInteractive -NoTask:$NoTask -NoShortcuts:$NoShortcuts -NoStart
+    & "$PSScriptRoot\Install.ps1" -DeviceName $s.device_name -InstallDir $HomeDir -ProjectsRoot $projects -Port $s.port -CodexExecutable $CodexExecutable -NonInteractive -NoTask:$NoTask -NoShortcuts:$NoShortcuts -NoStart
     Write-Utf8 (Join-Path $HomeDir 'Config\recovery.json') (@{from_version='1.0.1';backup=$snapshot;at=[DateTime]::UtcNow.ToString('o');note='Nessuno stato operativo precedente; credenziale della copia fallita conservata nel backup.'}|ConvertTo-Json)
     Write-Host 'Installazione ripresa. La copia precedente resta nel backup; configurare Cloudflare dal comando dedicato se necessario.'
 } catch {
     if (Test-Path -LiteralPath $HomeDir) {
         if (Test-Path -LiteralPath (Join-Path $HomeDir 'Config\installation.json')) {
             $newSettings=Read-Install $HomeDir
-            if ($newSettings.installer_version -eq '1.0.2' -and $newSettings.task_registered) { Unregister-ScheduledTask -TaskName $newSettings.task_name -Confirm:$false -ErrorAction SilentlyContinue }
+            if ($newSettings.installer_version -eq '1.0.3' -and $newSettings.task_registered) { Unregister-ScheduledTask -TaskName $newSettings.task_name -Confirm:$false -ErrorAction SilentlyContinue }
         }
         $failed=$HomeDir+'-ripresa-fallita-'+[guid]::NewGuid().ToString('N')
         [IO.Directory]::Move($HomeDir,$failed)

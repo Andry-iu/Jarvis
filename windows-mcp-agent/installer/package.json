@@ -1,9 +1,14 @@
 {
-  "installer_version": "1.0.2",
+  "installer_version": "1.0.3",
   "agent_version": "0.6.1",
   "source_commit": "164cb980bd1a936749d41b8692979e98b929cb04",
   "agent_sha256": "9ff4a136951f464925cc55b96e1a968174204199fa9c7ff681b998b3542742c1",
   "files": [
+    {
+      "path": "COLLEGA-CODEX.cmd",
+      "sha256": "f8b2dc16cf21e21a5afaa1e37168f79f3ae3abda1838ac94e8842a412d572983",
+      "bytes": 393
+    },
     {
       "path": "Check.ps1",
       "sha256": "c181fdea7830c9fe204f8953b261ccc045b3ddad21ffd17e3c15ea6968752a2c",
@@ -11,13 +16,18 @@
     },
     {
       "path": "Common.ps1",
-      "sha256": "2b4b934b693cefc2b8a638aa59a8b627e9ba500e6b705d9b82f8dd23aa9db842",
-      "bytes": 8741
+      "sha256": "9a5167cf191a193dd5cf7c15e15771a3b1ccde5bba36f22a1f8f87f964a5d468",
+      "bytes": 9605
     },
     {
       "path": "Configure-Cloudflare.ps1",
       "sha256": "92b1b1a71c0b2ea85d9b39975d673688dc2a3914da35a07aeb0c3582087f9f50",
       "bytes": 4549
+    },
+    {
+      "path": "Connect-Codex.ps1",
+      "sha256": "ad0a59114d369750485673127aa6c28efe3eb3f3f928f9229b553cdccc214c28",
+      "bytes": 3212
     },
     {
       "path": "Disable-Startup.ps1",
@@ -26,8 +36,8 @@
     },
     {
       "path": "Enable-Codex.ps1",
-      "sha256": "677aee291f4ae91b4ca51afc50cf7bde87992074fbfdbf055ba5157c1a259d10",
-      "bytes": 683
+      "sha256": "4ee552cc1bb69e3a75bea9f31107af832c7ffd1d06420ebf0f91c5749d4a214f",
+      "bytes": 711
     },
     {
       "path": "INSTALLA.cmd",
@@ -36,13 +46,13 @@
     },
     {
       "path": "Install.ps1",
-      "sha256": "b19e5932bdca0dd90ae2dccd628169aa17533dcce23d37eacda6622d869e8beb",
-      "bytes": 8423
+      "sha256": "37bc94031802a7adfd8370a32c92c2d99bccd6c89d9099c9d39b8ca9da365c27",
+      "bytes": 8650
     },
     {
       "path": "LEGGIMI.txt",
-      "sha256": "5e2fa780879be58d08a15bb7dcc84f84a33e9f36950d87271b164aa44b1c4ca6",
-      "bytes": 6730
+      "sha256": "b7141a9712cf3d35396b9b003e77c0f9d0b34b27f781bf9d16710846c2e010ec",
+      "bytes": 8607
     },
     {
       "path": "LICENSE.txt",
@@ -61,8 +71,8 @@
     },
     {
       "path": "Repair.ps1",
-      "sha256": "743e468e2f724d95b16b23e85cfbbfc0d511a47a437b9d4a6680b24575fbe895",
-      "bytes": 4791
+      "sha256": "9a50ce7adbfeede94ec16d76a8ee00b1850aee078753d3148f44b25132681cc5",
+      "bytes": 4853
     },
     {
       "path": "Start.ps1",
@@ -76,8 +86,8 @@
     },
     {
       "path": "Test-Installer.ps1",
-      "sha256": "05a447c2e053a97f98668de2073fd1b07b96085915cf96dac99a336adda324db",
-      "bytes": 11434
+      "sha256": "3b70977b8cf18e61a5835649864a02671ec069729dbf6a9a30237c0dc1964547",
+      "bytes": 14292
     },
     {
       "path": "jarvis-mcp.exe",

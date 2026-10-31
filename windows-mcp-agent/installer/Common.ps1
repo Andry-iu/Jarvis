@@ -88,19 +88,28 @@ function Invoke-LocalTool([string]$HomeDir,[string]$Name,[hashtable]$Arguments=@
 function Get-Record($Process) {
     return @{pid=$Process.Id;started_ticks=$Process.StartTime.ToUniversalTime().Ticks.ToString()}
 }
-function Find-Codex {
+function Find-Codex([string]$PreferredExecutable='') {
+    $candidates=New-Object Collections.Generic.List[string]
+    if ($PreferredExecutable) {
+        if (-not [IO.Path]::IsPathRooted($PreferredExecutable) -or $PreferredExecutable -match '[\r\n"\x00]' -or [IO.Path]::GetExtension($PreferredExecutable) -ine '.exe') { throw 'Percorso CLI Codex non valido.' }
+        $candidates.Add($PreferredExecutable)
+    } else {
+        try { foreach ($cmd in @(Get-Command codex.exe -CommandType Application -All -ErrorAction SilentlyContinue)) { if ($cmd.Source) { $candidates.Add($cmd.Source) } } } catch {}
+        if ($env:LOCALAPPDATA) { $candidates.Add((Join-Path $env:LOCALAPPDATA 'Programs\OpenAI\Codex\bin\codex.exe')) }
+    }
     try {
         $pkg = @(Get-AppxPackage -Name OpenAI.Codex -ErrorAction Stop)
-        if ($pkg.Count -ne 1) { return '' }
-        $exe = Join-Path $pkg[0].InstallLocation 'app\resources\codex.exe'
-        if (-not (Test-Path -LiteralPath $exe)) { return '' }
-        $version = & $exe --version 2>$null
-        if ($LASTEXITCODE -ne 0 -or "$version" -ne 'codex-cli 0.165.0-alpha.1.2') { return '' }
-        return $exe
-    } catch {
-        Write-Warning 'Codex non accessibile: il ponte Codex resta disabilitato. L installazione di Jarvis prosegue; nessun permesso viene modificato.'
-        return ''
+        if (-not $PreferredExecutable -and $pkg.Count -eq 1) { $candidates.Add((Join-Path $pkg[0].InstallLocation 'app\resources\codex.exe')) }
+    } catch {}
+    foreach ($exe in @($candidates | Select-Object -Unique)) {
+        try {
+            if (-not (Test-Path -LiteralPath $exe -PathType Leaf)) { continue }
+            $version = & $exe --version 2>$null
+            if ($LASTEXITCODE -eq 0 -and "$version" -eq 'codex-cli 0.165.0-alpha.1.2') { return [IO.Path]::GetFullPath($exe) }
+        } catch { continue }
     }
+    Write-Warning 'CLI Codex 0.165.0-alpha.1.2 non trovata o non accessibile. Collegamento Codex non completato; nessun permesso viene modificato.'
+    return ''
 }
 function Start-Child([string]$Exe,[string]$Arguments,[string]$HomeDir,[string]$LogName) {
     $psi=New-Object Diagnostics.ProcessStartInfo

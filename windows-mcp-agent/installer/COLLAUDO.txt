@@ -1,45 +1,26 @@
-COLLAUDO INSTALLER JARVIS 1.0.2 — 31 ottobre 2026
+COLLAUDO INSTALLER JARVIS 1.0.3 — 31 ottobre 2026
 
-Eseguito su DESKTOP-1ESSB0K in directory e porte isolate, con binario agente
-0.6.1 verificato SHA-256 9FF4A136951F464925CC55B96E1A968174204199FA9C7FF681B998B3542742C1.
-Il servizio operativo Desktop1 non e stato reinstallato o arrestato.
+Suite Windows in copie e porte isolate su Desktop1, agente 0.6.1 invariato.
+PASS parser Windows PowerShell.
+PASS fixture Win32 Accesso negato reale; CLI negata non selezionata.
+PASS nuova installazione rifiutata prima di creare cartelle se manca Codex.
+PASS CLI nativa preferita al pacchetto App non accessibile.
+PASS fallimento originale 1.0.1 riprodotto, ripresa con backup intatto.
+PASS rollback ripresa su errore senza alterare l'originale.
+PASS account ChatGPT e quota reali via codex_status senza inferenza.
+PASS agente attivo compatibile consultato senza riavvio.
+PASS configurazione diversa su agente attivo rifiutata senza arresto.
+PASS avvio a freddo e connessione Codex dopo recupero.
+PASS avvio manuale senza riabilitare il task disabilitato.
+PASS nomi configurabili, identita/credenziali nuove, nessuna prova costi copiata.
+PASS task interattivo elevato senza timeout; MCP autenticato.
+PASS protezione percorsi, porte occupate e payload corrotto.
+PASS identita persistente e disabilitazione avvio senza fermare lavori.
 
-PASS sintassi Windows PowerShell di tutti gli script.
-PASS vero errore nativo Windows Accesso negato (codice 5) in fixture isolata.
-PASS rilevamento Codex non accessibile restituisce ponte disabilitato.
-PASS installazione prosegue con JARVIS_CODEX_ENABLED=0.
-PASS pacchetto originale 1.0.1 riproduce il fallimento segnalato.
-PASS RIPRENDI completa la copia fallita con backup integrale intatto.
-PASS errore nella ripresa ripristina la cartella incompleta originale.
-PASS nome predefinito Desktop2.
-PASS nome personalizzato Officina CNC in metadati, plugin e task.
-PASS cartella proposta coerente col nome scelto.
-PASS nomi con percorsi o caratteri non ammessi rifiutati.
-PASS installazione nuova in due percorsi distinti, compresi spazi nel nome.
-PASS credenziali casuali separate e nessuna attestazione economica copiata.
-PASS rifiuto di installazione sopra directory non vuota.
-PASS rifiuto root progetti che comprende lo stato privato.
-PASS rifiuto team domain/AUD Cloudflare non validi.
-PASS registrazione task al login, interattivo/elevato, senza limite temporale.
-PASS avvio reale del task e comunicazione MCP locale autenticata.
-PASS identita nuove, distinte tra loro e da Desktop1.
-PASS catalogo progetti e consultazione coda.
-PASS porta occupata rifiutata senza fermare il processo esistente.
-PASS richieste MCP senza autenticazione rifiutate con HTTP 401.
-PASS arresto e riavvio con identita conservata.
-PASS disabilitazione avvio automatico senza interrompere il lavoro corrente.
-PASS payload corrotto rifiutato PRIMA di creare la directory di installazione.
-PASS COMPLETE: pulizia dei processi e dei task delle copie di prova.
-
-Primo confezionamento di prova: controllo hash ha rifiutato le conversioni
-CRLF del checkout prima di modificare il computer; normalizzazione corretta.
-Un'asserzione sullo stato del task e stata corretta: un task disabilitato puo
-essere ancora Running; il controllo verifica ora Settings.Enabled=false.
-Nessuna guardia economica o protezione del servizio e stata modificata.
-
-NON COLLAUDATI: secondo PC fisico; interazione UAC dal doppio clic; reboot
-fisico; download/installazione cloudflared; DNS/Access/Managed OAuth; nuovo
-plugin ChatGPT; inferenza Codex sul secondo PC. Non sono necessari acquisti
-o crediti per eseguire l'installazione locale. I passaggi account restano locali
-e soggetti ai servizi gia inclusi nell'abbonamento/account dell'utente.
-
+Il riconoscimento CLI nativa usa una fixture di discovery verso la CLI
+compatibile reale disponibile su Desktop1. Non e stato installato il runtime
+standalone su Desktop1. L'utente riporta CLI standalone 0.165.0-alpha.1.2
+funzionante sul secondo PC; il collegamento Jarvis li resta da verificare.
+Nessuna inferenza, acquisto, API key, upgrade o modifica alle guardie costi.
+Non collaudati: secondo PC fisico, UAC a doppio clic, reboot, tunnel/DNS/
+Access/OAuth remoti, nuovo plugin ChatGPT, turni Codex sul secondo PC.

@@ -1,5 +1,5 @@
 [CmdletBinding()]
-param([string]$DeviceName,[string]$InstallDir,[string]$ProjectsRoot,[ValidateRange(1024,65535)][int]$Port=8765,[switch]$NonInteractive,[switch]$NoTask,[switch]$NoShortcuts,[switch]$NoStart)
+param([string]$DeviceName,[string]$InstallDir,[string]$ProjectsRoot,[ValidateRange(1024,65535)][int]$Port=8765,[string]$CodexExecutable='',[switch]$NonInteractive,[switch]$NoTask,[switch]$NoShortcuts,[switch]$NoStart)
 . "$PSScriptRoot\Common.ps1"
 if (-not [Environment]::Is64BitOperatingSystem -or $env:PROCESSOR_ARCHITECTURE -ne 'AMD64') { throw 'Pacchetto per Windows x64; usare PowerShell a 64 bit.' }
 $principal = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
@@ -28,13 +28,14 @@ if ($ProjectsRoot -ieq $InstallDir) { throw 'Non autorizzare come progetto l int
 if ((Test-Path -LiteralPath $InstallDir) -and @(Get-ChildItem -LiteralPath $InstallDir -Force).Count -gt 0) { throw 'Cartella non vuota: nessuna installazione precedente viene sovrascritta.' }
 if (Get-NetTCPConnection -LocalPort $Port -State Listen -ErrorAction SilentlyContinue) { throw 'Porta gia occupata: scegliere un altra porta; nessun processo viene fermato.' }
 $manifest = Get-Content -LiteralPath "$PSScriptRoot\package.json" -Raw | ConvertFrom-Json
-if ($manifest.agent_version -ne '0.6.1' -or $manifest.installer_version -ne '1.0.2') { throw 'Versione pacchetto non valida.' }
+if ($manifest.agent_version -ne '0.6.1' -or $manifest.installer_version -ne '1.0.3') { throw 'Versione pacchetto non valida.' }
 foreach ($f in $manifest.files) {
     if ($f.path -notmatch '^[A-Za-z0-9_.-]+$') { throw 'Percorso payload non valido.' }
     if ((Get-FileHash -LiteralPath (Join-Path $PSScriptRoot $f.path)).Hash -ine $f.sha256) { throw ('Pacchetto alterato o incompleto: '+$f.path) }
 }
 $taskName = $names.task_prefix+[guid]::NewGuid().ToString('N').Substring(0,12)
-$codex=Find-Codex
+$codex=Find-Codex $CodexExecutable
+if (-not $codex) { throw 'Codex richiesto per completare questa installazione. Installare la CLI ufficiale 0.165.0-alpha.1.2 per il proprio utente; nessuna cartella viene creata.' }
 $taskCreated=$false;$newRoot=$false
 try {
     if (-not (Test-Path -LiteralPath $InstallDir)) { New-Item -ItemType Directory -Path $InstallDir | Out-Null; $newRoot=$true }
@@ -49,7 +50,7 @@ try {
         if ((Get-FileHash -LiteralPath $to).Hash -ine $f.sha256) { throw 'Verifica copia non riuscita.' }
     }
     $sid=[Security.Principal.WindowsIdentity]::GetCurrent().User.Value
-    $settings=@{format=1;installer_version='1.0.2';device_name=$DeviceName;plugin_name=$names.plugin_name;agent_version='0.6.1';agent_sha256=$manifest.agent_sha256;home=$InstallDir;projects_root=$ProjectsRoot;port=$Port;computer=$env:COMPUTERNAME;user_sid=$sid;task_name=$taskName;task_registered=$false;remote_configured=$false;public_endpoint='';installed_at=[DateTime]::UtcNow.ToString('o');source_commit=$manifest.source_commit}
+    $settings=@{format=1;installer_version='1.0.3';device_name=$DeviceName;plugin_name=$names.plugin_name;agent_version='0.6.1';agent_sha256=$manifest.agent_sha256;home=$InstallDir;projects_root=$ProjectsRoot;port=$Port;computer=$env:COMPUTERNAME;user_sid=$sid;task_name=$taskName;task_registered=$false;remote_configured=$false;public_endpoint='';installed_at=[DateTime]::UtcNow.ToString('o');source_commit=$manifest.source_commit}
     Write-Utf8 (Join-Path $InstallDir 'Config\installation.json') ($settings|ConvertTo-Json)
     $bytes=New-Object byte[] 32; $rng=[Security.Cryptography.RandomNumberGenerator]::Create(); try { $rng.GetBytes($bytes) } finally { $rng.Dispose() }
     Write-Utf8 (Join-Path $InstallDir 'Config\secrets.env') ('JARVIS_MCP_TOKEN='+[Convert]::ToBase64String($bytes)+"`r`n")
