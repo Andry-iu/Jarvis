@@ -80,6 +80,7 @@ try{
  Check ($r.state -eq 'completed' -and $r.data.verified) 'text verified by UIA'
  $s=Inspect;$r=Action $s 'fixtureGood' 'invoke'
  Log ('BUTTON_RESULT='+($r|ConvertTo-Json -Depth 8 -Compress))
+ Log ('BUTTON_APP_COUNTS='+((Report|Select-Object good,decoy)|ConvertTo-Json -Compress))
  Check ($r.state -eq 'completed' -and $r.data.dispatched) 'button invoke dispatched'
  Start-Sleep -Milliseconds 200
  Check ((Report).good -eq 1 -and (Report).decoy -eq 0 -and (Report).text -ceq $value) 'application result and decoy untouched'
