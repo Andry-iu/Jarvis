@@ -188,3 +188,28 @@ func TestQueueIndependentProjectsCanDispatchTogether(t *testing.T) {
 	})
 }
 
+func TestQueuePreservesCodexFinalStatus(t *testing.T) {
+	for _, status := range []string{"completed", "failed", "interrupted"} {
+		t.Run(status, func(t *testing.T) {
+			r, _ := fixtureRuntime(t)
+			resource := holdQueue(t, r, "sample")
+			thread, turn := newID(), newID()
+			params, _ := json.Marshal(map[string]any{"turn": map[string]any{"id": turn, "status": status}})
+			usage, _ := json.Marshal(map[string]any{"turn_id": turn})
+			if err := atomicJSON(filepath.Join(r.dir, "events", thread+".json"), []codexEvent{{Method: "turn/completed", Params: params}, {Method: "jarvis/usage", Params: usage}}); err != nil {
+				t.Fatal(err)
+			}
+			withQueue(r, func() {
+				r.codex = &codexClient{dir: r.dir, finished: map[string]string{thread: turn}}
+				defer func() { r.codex = nil }()
+				e := &queueEntry{ID: newID(), Project: "sample", Resource: resource, Status: "running", TurnID: turn, Request: runtimeRequest{Operation: "codex_turn", ThreadID: thread}}
+				r.queue.Entries = append(r.queue.Entries, e)
+				r.queueRefreshLocked()
+				if e.Status != status {
+					t.Fatalf("final status %s became %s", status, e.Status)
+				}
+			})
+		})
+	}
+}
+

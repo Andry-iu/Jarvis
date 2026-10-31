@@ -430,8 +430,10 @@ func (r *Runtime) queueRefreshLocked() {
 				if status == "completed" {
 					e.Status = "completed"
 					e.FinishedAt = utcNow()
+				} else if status == "failed" || status == "interrupted" {
+					r.queueFailLocked(e, status, "Codex ended as "+status)
 				} else {
-					r.queueFailLocked(e, "interrupted", "Codex ended as "+status)
+					r.queueFailLocked(e, "uncertain", "Codex final status unavailable")
 				}
 			} else {
 				c.mu.Unlock()
