@@ -33,8 +33,8 @@ try {
         $record.tunnel=Get-Record $tunnel.process
     }
     Write-Utf8 (Join-Path $HomeDir 'Config\running.json') ($record|ConvertTo-Json -Depth 5)
-    Write-Host ('Agente attivo. Computer: '+$s.computer+'; ID: '+$record.machine_id)
-    if (-not $s.remote_configured) { Write-Host 'Solo accesso locale: completare Configura-Cloudflare.cmd e collegare Jarvis-Desktop2 in ChatGPT.' }
+    Write-Host ('Agente attivo. Dispositivo: '+$s.device_name+'; computer Windows: '+$s.computer+'; ID: '+$record.machine_id)
+    if (-not $s.remote_configured) { Write-Host ('Solo accesso locale: completare Configura-Cloudflare.cmd e collegare '+$s.plugin_name+' in ChatGPT.') }
     $tunnelExitReported=$false
     while (-not $agent.process.WaitForExit(1000)) {
         if ($tunnel -and $tunnel.process.HasExited -and -not $tunnelExitReported) { Write-Host 'Tunnel terminato: agente locale ancora attivo; verificare Logs. Nessun riavvio automatico.'; $tunnelExitReported=$true }
