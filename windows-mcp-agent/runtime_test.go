@@ -38,7 +38,7 @@ func TestRuntimeMachineMismatchAndCatalog(t *testing.T){
 }
 func TestCodexCostGuardFailClosed(t *testing.T){
  yes,no:=true,false;zero:="0";used:=11.0;reset:=time.Now().Add(time.Hour).Unix();a:=codexAccount{};json.Unmarshal([]byte(`{"account":{"type":"chatgpt","planType":"self_serve_business_prolite"}}`),&a);q:=codexQuota{LimitID:"codex",Primary:&quotaWindow{&used,&reset}};q.Credits=&struct{Has *bool `json:"hasCredits"`;Unlimited *bool `json:"unlimited"`;Balance *string `json:"balance"`}{&no,&no,&zero}
- if e:=codexCostGuard(a,q);e!=nil{t.Fatal(e)};q.Credits.Has=&yes;if e:=codexCostGuard(a,q);e==nil{t.Fatal("paid credit enabled")};q.Credits.Has=&no;used=95;if e:=codexCostGuard(a,q);e==nil{t.Fatal("quota low accepted")};used=11;a.Account.Type="apiKey";if e:=codexCostGuard(a,q);e==nil{t.Fatal("API fallback accepted")};a.Account.Type="chatgpt";q.Credits=nil;if e:=codexCostGuard(a,q);e==nil{t.Fatal("unknown credit state accepted")}
+ if e:=codexCostGuard(a,q);e!=nil{t.Fatal(e)};q.Credits.Balance=nil;if e:=codexCostGuard(a,q);e!=nil{t.Fatal("explicit no-credit boolean with absent balance should be allowed",e)};q.Credits.Has=&yes;if e:=codexCostGuard(a,q);e==nil{t.Fatal("paid credit enabled")};q.Credits.Has=&no;used=95;if e:=codexCostGuard(a,q);e==nil{t.Fatal("quota low accepted")};used=11;a.Account.Type="apiKey";if e:=codexCostGuard(a,q);e==nil{t.Fatal("API fallback accepted")};a.Account.Type="chatgpt";q.Credits=nil;if e:=codexCostGuard(a,q);e==nil{t.Fatal("unknown credit state accepted")}
 }
 func TestCommandProfilesRejectShellAndEnvironment(t *testing.T){
  for _,p:=range []string{"powershell","cmd /c whoami","go_test;echo x"}{if _,_,e:=commandSpec(p,t.TempDir(),newID());e==nil{t.Fatal("arbitrary command accepted")}}
