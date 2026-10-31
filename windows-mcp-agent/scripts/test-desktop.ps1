@@ -57,7 +57,7 @@ try{
  $agentProcess=Start-Process $Agent -ArgumentList '--listen','127.0.0.1:8766' -PassThru -WindowStyle Hidden
  Start-Sleep -Seconds 2
  $fixtureScript=Join-Path $PSScriptRoot 'desktop-fixture.ps1'
- $arguments=@('-NoProfile','-STA','-File',('"{0}"' -f $fixtureScript),'-Report',('"{0}"' -f $report))
+ $arguments=@('-NoProfile','-ExecutionPolicy','Bypass','-STA','-File',('"{0}"' -f $fixtureScript),'-Report',('"{0}"' -f $report))
  $fixtureProcess=Start-Process powershell.exe -ArgumentList $arguments -PassThru -WindowStyle Hidden
  $until=(Get-Date).AddSeconds(10)
  while(!(Test-Path $report) -and (Get-Date) -lt $until){Start-Sleep -Milliseconds 200}
