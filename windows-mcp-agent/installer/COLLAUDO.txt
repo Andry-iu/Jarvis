@@ -1,10 +1,14 @@
-COLLAUDO INSTALLER DESKTOP2 1.0.0 — 31 ottobre 2026
+COLLAUDO INSTALLER JARVIS 1.0.1 — 31 ottobre 2026
 
 Eseguito su DESKTOP-1ESSB0K in directory e porte isolate, con binario agente
 0.6.1 verificato SHA-256 9FF4A136951F464925CC55B96E1A968174204199FA9C7FF681B998B3542742C1.
 Il servizio operativo Desktop1 non e stato reinstallato o arrestato.
 
 PASS sintassi Windows PowerShell di tutti gli script.
+PASS nome predefinito Desktop2.
+PASS nome personalizzato Officina CNC in metadati, plugin e task.
+PASS cartella proposta coerente col nome scelto.
+PASS nomi con percorsi o caratteri non ammessi rifiutati.
 PASS installazione nuova in due percorsi distinti, compresi spazi nel nome.
 PASS credenziali casuali separate e nessuna attestazione economica copiata.
 PASS rifiuto di installazione sopra directory non vuota.
