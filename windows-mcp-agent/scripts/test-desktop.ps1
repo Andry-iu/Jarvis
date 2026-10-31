@@ -65,7 +65,7 @@ try{
  Start-Sleep -Milliseconds 500
  $s=$null
  for($i=0;$i -lt 5;$i++){
-  try{$candidate=Inspect;if($candidate.window.hwnd -eq (Report).hwnd){$s=$candidate;break}}catch{}
+  try{$candidate=Inspect;if($candidate.window.hwnd -eq (Report).hwnd){$s=$candidate;break};Log ('PREFLIGHT foreground='+$candidate.window.hwnd+' fixture='+(Report).hwnd)}catch{Log ('PREFLIGHT '+$_.Exception.Message)}
   Start-Sleep -Milliseconds 500
  }
  if(!$s){throw 'Fixture did not become foreground; no UI actions attempted'}

@@ -9,6 +9,7 @@ import (
  _ "embed"
  "errors"
  "fmt"
+ "io"
  "os"
  "os/exec"
  "path/filepath"
@@ -127,10 +128,11 @@ func runDesktopWorker(ctx context.Context,input any)(desktopOutput,error){
  ps:=filepath.Join(os.Getenv("SystemRoot"),"System32","WindowsPowerShell","v1.0","powershell.exe")
  cmd:=exec.CommandContext(ctx,ps,"-NoLogo","-NoProfile","-NonInteractive","-STA","-ExecutionPolicy","Bypass","-File",path)
  data,err:=json.Marshal(input);if err!=nil{return out,err}
+ configureDesktopCommand(cmd)
  cmd.Stdin=bytes.NewReader(data)
  // Do not pass agent credentials/configuration to the UI worker.
  for _,e:=range os.Environ(){key,_,_:=strings.Cut(e,"=");switch strings.ToUpper(key){case "SYSTEMROOT","WINDIR","USERPROFILE","TEMP","TMP","LOCALAPPDATA","APPDATA","PATH","COMSPEC":cmd.Env=append(cmd.Env,e)}}
- output:=&desktopBoundedOutput{};cmd.Stdout=output;cmd.Stderr=&bytes.Buffer{}
+ output:=&desktopBoundedOutput{};cmd.Stdout=output;cmd.Stderr=io.Discard
  cmd.WaitDelay=time.Second
  if err=cmd.Run();err!=nil||output.overflow{return out,errors.New("desktop worker failed or output exceeded limit")}
  if err=json.Unmarshal(output.b.Bytes(),&out);err!=nil{return out,errors.New("invalid desktop worker response")}
