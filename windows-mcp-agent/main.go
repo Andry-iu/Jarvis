@@ -158,6 +158,8 @@ func (a *Agent) invoke(name string, args json.RawMessage) any {
 		var p struct {
 			Name     string `json:"name"`
 			Duration int    `json:"duration_seconds"`
+			Operation string `json:"operation"`
+			Project string `json:"project"`
 		}
 		if err := json.Unmarshal(args, &p); err != nil {
 			return toolResult(map[string]string{"error": "invalid arguments"}, true)
@@ -168,7 +170,13 @@ func (a *Agent) invoke(name string, args json.RawMessage) any {
 		if p.Duration == 0 {
 			p.Duration = 15
 		}
-		v, err := a.start(p.Name, p.Duration)
+		var v any
+		var err error
+		if p.Operation != "" {
+			v, err = a.startGoTask(p.Operation, p.Project)
+		} else {
+			v, err = a.start(p.Name, p.Duration)
+		}
 		if err != nil {
 			return toolResult(map[string]string{"error": err.Error()}, true)
 		}
@@ -239,7 +247,7 @@ func toolsList() any {
 		map[string]any{"name": "project_clone", "description": "Clone a GitHub HTTPS repository from approved owner Andry-iu into JARVIS_PROJECTS_ROOT without overwriting an existing directory. Runs as a cancellable task; use agent_status to monitor. Requires Git credentials preconfigured on the notebook.", "inputSchema": map[string]any{"type": "object", "properties": map[string]any{"repository_url": map[string]any{"type": "string"}, "project": map[string]any{"type": "string"}}, "required": []string{"repository_url"}}},
 		map[string]any{"name": "project_status", "description": "Read current Git branch, commit and tracked dirty file count for a repository within the authorized projects root (read-only)", "inputSchema": map[string]any{"type": "object", "properties": map[string]any{"project": map[string]any{"type": "string"}}, "required": []string{"project"}}},
 		map[string]any{"name": "agent_status", "description": "Read Windows agent status and most recent task", "inputSchema": map[string]any{"type": "object", "properties": map[string]any{}}},
-		map[string]any{"name": "task_start", "description": "Start a cancellable diagnostic task. This prototype does not execute shell commands or Codex.", "inputSchema": map[string]any{"type": "object", "properties": map[string]any{"name": map[string]any{"type": "string"}, "duration_seconds": map[string]any{"type": "integer", "minimum": 1, "maximum": 300}}}},
+		map[string]any{"name": "task_start", "description": "Start a cancellable diagnostic or restricted Go test/build task in an authorized module directory. No arbitrary commands.", "inputSchema": map[string]any{"type": "object", "properties": map[string]any{"name": map[string]any{"type": "string"}, "duration_seconds": map[string]any{"type": "integer", "minimum": 1, "maximum": 300}, "operation": map[string]any{"type": "string", "enum": []string{"go_test", "go_build"}}, "project": map[string]any{"type": "string"}}}},
 		map[string]any{"name": "update_prepare", "description": "Stage a single-use Windows update batch; requires Cloudflare Access authentication. Submit exact UTF-8 CRLF content, 32-hex update ID in first REM line, SHA-256 of bytes. Does not execute.", "inputSchema": map[string]any{"type": "object", "properties": map[string]any{"update_id": map[string]any{"type": "string"}, "sha256": map[string]any{"type": "string"}, "content": map[string]any{"type": "string"}}, "required": []string{"update_id", "sha256", "content"}}},
 		map[string]any{"name": "update_execute", "description": "Rehash and start a previously staged batch as separate Windows process; requires Cloudflare Access authentication. Does not report completed deployment.", "inputSchema": map[string]any{"type": "object", "properties": map[string]any{"update_id": map[string]any{"type": "string"}, "sha256": map[string]any{"type": "string"}}, "required": []string{"update_id", "sha256"}}},
 		map[string]any{"name": "diagnostic_status", "description": "Read bounded non-secret structured status of a diagnostic batch by 32-hex ID; no arbitrary file or log reading", "inputSchema": map[string]any{"type": "object", "properties": map[string]any{"id": map[string]any{"type": "string"}}, "required": []string{"id"}}},
