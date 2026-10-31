@@ -47,20 +47,20 @@ type codexLink struct {
 }
 type codexClient struct {
 	machineID string
-	mu       sync.Mutex
-	writeMu  sync.Mutex
-	cmd      *exec.Cmd
-	input    io.WriteCloser
-	cancel   context.CancelFunc
-	next     int
-	waiters  map[string]chan codexMessage
-	pending  map[string]codexPending
-	loaded   map[string]bool
-	active   map[string]string
-	finished map[string]string
-	dir      string
-	closed   bool
-	version  string
+	mu        sync.Mutex
+	writeMu   sync.Mutex
+	cmd       *exec.Cmd
+	input     io.WriteCloser
+	cancel    context.CancelFunc
+	next      int
+	waiters   map[string]chan codexMessage
+	pending   map[string]codexPending
+	loaded    map[string]bool
+	active    map[string]string
+	finished  map[string]string
+	dir       string
+	closed    bool
+	version   string
 }
 
 func codexExecutable() (string, error) {
@@ -332,8 +332,8 @@ func (r *Runtime) getCodexLocked() (*codexClient, error) {
 
 type codexAccount struct {
 	Account *struct {
-		Type string `json:"type"`
-		Plan string `json:"planType"`
+		Type  string `json:"type"`
+		Plan  string `json:"planType"`
 		Email string `json:"email"`
 	} `json:"account"`
 }

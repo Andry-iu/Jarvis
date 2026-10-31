@@ -1,4 +1,4 @@
-param([Parameter(Mandatory=$true)][string]$ExpectedHash)
+param([Parameter(Mandatory=$true)][string]$ExpectedHash,[switch]$FileProbeOnly)
 $ErrorActionPreference='Stop'
 $log='D:\Jarvis\Logs\diagnostics\v58-codex-test.log'
 $module='D:\Jarvis\MCP-Source\windows-mcp-agent';$testHome='D:\Jarvis\StagingHome058';$state=Join-Path $testHome 'StateA'
@@ -37,6 +37,15 @@ try{
  if($LASTEXITCODE -ne 0){throw 'independent_billing_proof_failed'}
  $status=Call 'codex_status';Report ('COST_STATUS '+($status|ConvertTo-Json -Compress -Depth 8));if(-not $status.inference_allowed){throw 'cost_guard_blocked'}
  $thread=Call 'codex_start' @{project=$project;request_id=(Rid)};Report ('THREAD '+$thread.thread_id)
+ if($FileProbeOnly){
+  $file='codex-probe-'+(Rid)+'.txt'
+  Call 'file_write' @{project=$project;path=$file;expected_sha256='missing';content='JARVIS_BEFORE';request_id=(Rid)}|Out-Null
+  $prompt='Use apply_patch to replace the contents of the existing file '+$file+' in the current project with exactly JARVIS_CODEX_FILE_OK followed by a newline. Modify only that file. Do not use shell commands, network or any other tools. Then reply JARVIS_FILE_DONE.'
+  $turn=Call 'codex_turn' @{project=$project;thread_id=$thread.thread_id;text=$prompt;request_id=(Rid)}
+  $done=Wait-Turn $thread.thread_id $turn.turn.id
+  $read=Call 'file_read' @{project=$project;path=$file};if($read.content.Trim() -cne 'JARVIS_CODEX_FILE_OK'){throw 'codex_file_write_not_verified'}
+  Report ('PASS codex_real_file_change '+$file+' sha256='+$read.sha256);Report 'PASS';return
+ }
  $turn=Call 'codex_turn' @{project=$project;thread_id=$thread.thread_id;text='Reply with exactly JARVIS_MCP_OK. Do not use tools or access files.';request_id=(Rid)}
  $done=Wait-Turn $thread.thread_id $turn.turn.id;if($done.reply -notmatch 'JARVIS_MCP_OK'){throw 'first_reply_mismatch'};Report 'PASS real_inference'
  $history=Call 'codex_read' @{project=$project;thread_id=$thread.thread_id};if($history.turns.Count -lt 1){throw 'history_missing'};Report 'PASS read_history'
