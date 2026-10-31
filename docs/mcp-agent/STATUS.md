@@ -1,3 +1,38 @@
+# Jarvis Windows MCP Agent — stato corrente 0.5.6
+
+**31 ottobre 2026: 0.5.6 installata sul PC Jarvis-Desktop1, elevata e collaudata.**
+Questa sezione sostituisce tutte le sezioni storiche seguenti.
+
+- Sorgenti compilati: eb5370396736283c1aed111e30001b95bd72c1b4.
+- SHA-256 operativo: C230A1FF4EE852744318931FB1BF620022985B01606DFED5D1B1061182F410A5.
+- Binario D:\Jarvis\jarvis-mcp.exe; sorgenti D:\Jarvis\MCP-Source\windows-mcp-agent.
+- Branch reconcile-windows-mcp-agent-20261031; nessun merge su main.
+- Nuove operazioni del task_start esistente: desktop_inspect e desktop_action.
+- Azioni su controlli identificati: invoke, set_text, select, toggle, secondo il supporto reale.
+- UIA oppure messaggi mirati a controlli Edit/Button nativi verificati; nessun input globale o clic su coordinate.
+- Snapshot monouso 90 s, verifiche finestra/PID/avvio/runtime ID/geometria/primo piano/stato; rifiuto su incertezza.
+- Desktop abilitato nella configurazione locale; password escluse, contenuti Edit non restituiti, controllo hash contro modifiche successive all'ispezione.
+- set_text sostituisce l'intero campo: non usarlo per sovrascrivere bozze senza autorizzazione.
+- WinForms e WPF: clic/testo/checkbox e casi avversi superati, pulsante esca mai invocato, due monitor X=0/-1920.
+- Collaudo WinForms superato anche sul processo installato, porta 8765.
+- go_test diretto dal plugin dopo installazione: completed, 100%, 3.313s.
+- desktop_inspect diretto dal plugin sul desktop reale: completed, 11 controlli, senza troncamento. Una precedente osservazione non disponibile è stata rifiutata senza azioni; causa non identificata.
+- TokenElevation=true verificato sul processo 476784; porte di prova libere; sorgenti tracciati puliti; backup originali preservati.
+- Backup 0.5.5/configurazione in D:\Jarvis\Backups\mcp-0.5.6-20261031; ripristino isolato 0.5.5→0.5.6→0.5.5 verificato.
+- Riferimento completo: [Desktop 0.5.6, collaudi, limiti e ripristino](DESKTOP-0.5.6.md).
+
+## Limiti da mantenere espliciti
+
+Nessuna promessa di controllo universale o assenza assoluta di errori dei provider. Se un controllo non è identificabile/supportato, fermarsi; nessun fallback a pixel o retry di azioni incerte.
+Mouse libero, trascinamenti e tasti/scorciatoie globali non sono implementati. Le pagine web non sono garantite.
+Il desktop deve essere sbloccato e il bersaglio in primo piano. Non aggirare UAC o desktop protetti.
+Cattura diagnostica acquisita e mostrata all'utente; manca un comando MCP dedicato.
+Avvio automatico dopo riavvio ancora da verificare. Android e NestingOpt restano fuori da questo intervento.
+
+---
+
+# Storico fino alla 0.5.5 — non usare come stato corrente
+
 # Jarvis Windows MCP Agent — stato corrente 31 ottobre 2026
 
 Questa sezione sostituisce le indicazioni operative storiche riportate sotto.
