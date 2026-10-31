@@ -90,7 +90,19 @@ func TestRuntimeCommandCompletionTimeoutAndCancellation(t *testing.T) {
 	os.WriteFile(filepath.Join(dir, "main.go"), []byte("package main\nfunc main() {}\n"), 0600)
 	run := func(profile string, timeout int) string {
 		v := mutateFile(t, r, runtimeRequest{Operation: "command_start", Project: "sample", Profile: profile, Timeout: timeout})
-		return v.(map[string]any)["job_id"].(string)
+		queueID := v.(map[string]any)["queue_id"].(string)
+		deadline := time.Now().Add(45 * time.Second)
+		for time.Now().Before(deadline) {
+			r.mu.Lock()
+			entry := r.queueFindLocked(queueID)
+			jobID, status, reason := entry.JobID, entry.Status, entry.Error
+			r.mu.Unlock()
+			if jobID != "" { return jobID }
+			if status != "queued" && status != "starting" { t.Fatalf("queue dispatch %s: %s", status, reason) }
+			time.Sleep(25 * time.Millisecond)
+		}
+		t.Fatal("queued command did not dispatch")
+		return ""
 	}
 	wait := func(id string) Job {
 		t.Helper()
@@ -102,7 +114,11 @@ func TestRuntimeCommandCompletionTimeoutAndCancellation(t *testing.T) {
 			}
 			j := v.(Job)
 			if j.Status != "running" {
-				return j
+				r.mu.Lock()
+				settled := false
+				for _, entry := range r.queue.Entries { if entry.JobID == id && entry.Status != "running" && entry.Status != "starting" { settled = true } }
+				r.mu.Unlock()
+				if settled { return j }
 			}
 			time.Sleep(50 * time.Millisecond)
 		}
@@ -118,6 +134,7 @@ func TestRuntimeCommandCompletionTimeoutAndCancellation(t *testing.T) {
 	if j := wait(id); j.Status != "timed_out" {
 		t.Fatalf("timeout: %+v", j)
 	}
+	if _, e := r.call(runtimeRequest{Operation:"queue_resume", Project:"sample", RequestID:newID()}); e != nil { t.Fatal(e) }
 	id = run("go_test", 30)
 	time.Sleep(250 * time.Millisecond)
 	if _, e := r.jobCall(runtimeRequest{Operation: "job_cancel", JobID: id, RequestID: newID()}); e != nil {
@@ -127,3 +144,4 @@ func TestRuntimeCommandCompletionTimeoutAndCancellation(t *testing.T) {
 		t.Fatalf("cancel: %+v", j)
 	}
 }
+
