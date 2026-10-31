@@ -45,3 +45,11 @@ Non collaudati: destinazione fisica Desktop2, interazione UAC al doppio clic, re
 Installazione solo nuova: nessun upgrade/sovrascrittura di un servizio esistente. Config precedenti salvate in Backups nelle modifiche atomiche. Su errore la cartella viene conservata per diagnosi; disabilitare soltanto il task proprio e arrestare esplicitamente i processi posseduti. Non cancellare automaticamente stato o archivio per riprovare.
 
 Fonti primarie: https://developers.cloudflare.com/tunnel/reference/run-parameters/ ; https://developers.cloudflare.com/tunnel/reference/tunnel-tokens/ ; https://developers.cloudflare.com/cloudflare-one/access-controls/applications/http-apps/managed-oauth/ .
+
+## Consegna e verifica finale
+
+Archivio consegnato Jarvis-Desktop2-Setup-1.0.0.zip, 6.741.728 byte, 16 file:
+SHA-256 67819dad148f5c33eba12994595090199b75d5beef70ecf44391423757325606.
+Integrita ZIP e hash di ciascun payload verificati sul file finale, incluso il binario 0.6.1. Nessun file State/Config/segreto/progetto utente incluso.
+
+Il builder PowerShell e stato eseguito su Desktop1, parser e tutti gli hash payload superati. Verifica finale installer-final-100.json: PASS; servizio operativo 0.6.1 con hash invariato, zero listener di prova 8768/8769 e zero task di prova rimasti. HEAD/origin allora ae57ef3bbef753da0065d20d16ae13bcb1f51fa1, tracciati puliti. Il presente aggiornamento e solo documentale e non richiede nuova installazione. Il contenitore ZIP prodotto da strumenti diversi puo avere hash diverso per metadati/compressione; gli hash dei payload del manifest sono il controllo dei contenuti.
