@@ -1,6 +1,11 @@
 # Shared installer helpers; Windows PowerShell 5.1.
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
+function Get-DeviceNames([string]$Name) {
+    $Name=$Name.Trim()
+    if ($Name -notmatch '^[A-Za-z0-9][A-Za-z0-9 _-]{0,39}$') { throw 'Nome dispositivo: 1-40 caratteri, lettere, numeri, spazi, trattino o underscore.' }
+    return @{device_name=$Name;plugin_name=('Jarvis-'+$Name);default_home=('C:\Jarvis-'+$Name);task_prefix=('Jarvis-'+$Name.Replace(' ','-')+'-')}
+}
 function Write-Utf8([string]$Path,[string]$Text) {
     [IO.File]::WriteAllText($Path,$Text,(New-Object Text.UTF8Encoding($false)))
 }
