@@ -83,7 +83,7 @@ func writeRootFile(root *os.Root,n string,b []byte,expected string)error{
  if h,e:=pathDigest(root,n);e!=nil||h!=expected{return errors.New("file changed during write preparation")}
  if expected=="missing"{
   // Link is no-replace: even a concurrently created destination is preserved.
-  if e=root.Link(tmp,n);e!=nil{return e}
+  if e=root.Link(tmp,n);e!=nil{return e};if e=root.Remove(tmp);e!=nil{return e}
  }else if e=root.Rename(tmp,n);e!=nil{return e}
  got,e:=pathDigest(root,n);if e!=nil||got!=digest(b){return errors.New("write verification failed; inspect backup and receipt")};return nil
 }
@@ -94,7 +94,7 @@ func(r *Runtime)filesMutate(p runtimeRequest,x *Receipt)(any,error){
  before,e:=pathDigest(root,p.Path);if e!=nil{return nil,e};x.Before=before
  if p.Operation=="directory_create"{
   if before!="missing"{return nil,errors.New("destination already exists")}
-  current:=".";for _,part:=range strings.FieldsFunc(p.Path,func(v rune)bool{return v=='/'||v=='\\'}){current=filepath.Join(current,part);_,err:=root.Stat(current);if os.IsNotExist(err){x.CreatedPaths=append(x.CreatedPaths,current)}else if err!=nil{return nil,err}}
+  current:=".";missingParent:=false;for _,part:=range strings.FieldsFunc(p.Path,func(v rune)bool{return v=='/'||v=='\\'}){current=filepath.Join(current,part);if missingParent{x.CreatedPaths=append(x.CreatedPaths,current);continue};_,err:=root.Stat(current);if os.IsNotExist(err){missingParent=true;x.CreatedPaths=append(x.CreatedPaths,current)}else if err!=nil{return nil,err}}
   if e=r.saveReceipt(x);e!=nil{return nil,e};for _,n:=range x.CreatedPaths{if e=root.Mkdir(n,0700);e!=nil{return nil,e}}
   x.After,e=pathDigest(root,p.Path);if e!=nil{return nil,e};return map[string]any{"path":p.Path,"sha256":x.After,"request_id":x.ID},nil
  }

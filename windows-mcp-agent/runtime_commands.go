@@ -60,7 +60,7 @@ func(w jobWriter)Write(b []byte)(int,error){
 func(r *Runtime)runCommand(ctx context.Context,cancel context.CancelFunc,j *Job,dir,exe string,args []string){
  defer cancel();c:=exec.CommandContext(ctx,exe,args...);c.Dir=dir;c.Env=childEnvironment();c.Stdout=jobWriter{r,j,"stdout"};c.Stderr=jobWriter{r,j,"stderr"};configureTreeCancellation(c);configureDesktopCommand(c)
  done:=make(chan struct{});go func(){ticker:=time.NewTicker(time.Second);defer ticker.Stop();for{select{case<-done:return;case<-ticker.C:r.mu.Lock();e:=r.saveJob(j);r.mu.Unlock();if e!=nil{cancel();return}}}}()
- err:=c.Run();close(done)
+ err:=runManagedCommand(c);close(done)
  r.mu.Lock();defer r.mu.Unlock();j.FinishedAt=utcNow();j.cancel=nil;exit:=-1;if c.ProcessState!=nil{exit=c.ProcessState.ExitCode()};j.ExitCode=&exit
  switch{case errors.Is(ctx.Err(),context.DeadlineExceeded):j.Status="timed_out";case ctx.Err()!=nil:j.Status="cancelled";case err!=nil:j.Status="failed";default:j.Status="completed"}
  if err!=nil{j.Output+=fmt.Sprintf("\nprocess: %v",err);if len(j.Output)>maxJobOutput{j.Output=j.Output[len(j.Output)-maxJobOutput:]}}

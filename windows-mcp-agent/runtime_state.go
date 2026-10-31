@@ -67,6 +67,7 @@ func atomicJSON(path string,value any) error {
 func newRuntime(dir string)(*Runtime,error){
  if !filepath.IsAbs(dir){return nil,errors.New("runtime state directory must be absolute")}
  if e:=os.MkdirAll(dir,0700);e!=nil{return nil,e}
+ if e:=protectRuntimeDirectory(dir);e!=nil{return nil,e}
  lock,e:=lockRuntime(filepath.Join(dir,"agent.lock"));if e!=nil{return nil,e}
  r:=&Runtime{dir:dir,lock:lock,Jobs:map[string]*Job{}}
  ok:=false;defer func(){if !ok{lock.Close()}}()
