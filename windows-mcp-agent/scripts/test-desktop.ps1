@@ -7,7 +7,7 @@ New-Item -ItemType Directory $run|Out-Null
 $report=Join-Path $run 'fixture.json'
 function Log($s){$s|Add-Content -Encoding UTF8 $l}
 function Check($yes,$s){if(!$yes){throw $s};Log ('PASS '+$s)}
-function Report{Get-Content $report -Raw|ConvertFrom-Json}
+function Report{Get-Content $report -Raw -Encoding UTF8|ConvertFrom-Json}
 function Command($action,$x=0,$y=0){
  $id=[guid]::NewGuid().ToString('N')
  @{id=$id;action=$action;x=$x;y=$y}|ConvertTo-Json -Compress|Set-Content -Encoding UTF8 ($report+'.command')
@@ -77,7 +77,7 @@ try{
  Check (@($s.elements|Where-Object {$_.native_handle -eq (Report).handles.fixturePassword}).Count -eq 0) 'password field excluded'
  $value='Jarvis '+[char]0x00e8+' '+[char]0x03a9+' "quote" $()'
  $r=Action $s 'fixtureInput' 'set_text' $value
- Check ($r.state -eq 'completed' -and $r.data.verified) 'text verified by UIA'
+ Check ($r.state -eq 'completed' -and $r.data.verified) 'text verified by readback'
  $s=Inspect;$r=Action $s 'fixtureGood' 'invoke'
  Log ('BUTTON_RESULT='+($r|ConvertTo-Json -Depth 8 -Compress))
  Log ('BUTTON_APP_COUNTS='+((Report|Select-Object good,decoy)|ConvertTo-Json -Compress))
