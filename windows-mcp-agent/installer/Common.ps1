@@ -89,13 +89,18 @@ function Get-Record($Process) {
     return @{pid=$Process.Id;started_ticks=$Process.StartTime.ToUniversalTime().Ticks.ToString()}
 }
 function Find-Codex {
-    $pkg = @(Get-AppxPackage -Name OpenAI.Codex -ErrorAction SilentlyContinue)
-    if ($pkg.Count -ne 1) { return '' }
-    $exe = Join-Path $pkg[0].InstallLocation 'app\resources\codex.exe'
-    if (-not (Test-Path -LiteralPath $exe)) { return '' }
-    $version = & $exe --version 2>$null
-    if ($LASTEXITCODE -ne 0 -or "$version" -ne 'codex-cli 0.165.0-alpha.1.2') { return '' }
-    return $exe
+    try {
+        $pkg = @(Get-AppxPackage -Name OpenAI.Codex -ErrorAction Stop)
+        if ($pkg.Count -ne 1) { return '' }
+        $exe = Join-Path $pkg[0].InstallLocation 'app\resources\codex.exe'
+        if (-not (Test-Path -LiteralPath $exe)) { return '' }
+        $version = & $exe --version 2>$null
+        if ($LASTEXITCODE -ne 0 -or "$version" -ne 'codex-cli 0.165.0-alpha.1.2') { return '' }
+        return $exe
+    } catch {
+        Write-Warning 'Codex non accessibile: il ponte Codex resta disabilitato. L installazione di Jarvis prosegue; nessun permesso viene modificato.'
+        return ''
+    }
 }
 function Start-Child([string]$Exe,[string]$Arguments,[string]$HomeDir,[string]$LogName) {
     $psi=New-Object Diagnostics.ProcessStartInfo
