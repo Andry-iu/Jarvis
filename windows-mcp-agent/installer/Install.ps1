@@ -28,7 +28,7 @@ if ($ProjectsRoot -ieq $InstallDir) { throw 'Non autorizzare come progetto l int
 if ((Test-Path -LiteralPath $InstallDir) -and @(Get-ChildItem -LiteralPath $InstallDir -Force).Count -gt 0) { throw 'Cartella non vuota: nessuna installazione precedente viene sovrascritta.' }
 if (Get-NetTCPConnection -LocalPort $Port -State Listen -ErrorAction SilentlyContinue) { throw 'Porta gia occupata: scegliere un altra porta; nessun processo viene fermato.' }
 $manifest = Get-Content -LiteralPath "$PSScriptRoot\package.json" -Raw | ConvertFrom-Json
-if ($manifest.agent_version -ne '0.6.1' -or $manifest.installer_version -ne '1.1.0') { throw 'Versione pacchetto non valida.' }
+if ($manifest.agent_version -ne '0.6.1' -or $manifest.installer_version -ne '1.1.1') { throw 'Versione pacchetto non valida.' }
 foreach ($f in $manifest.files) {
     if ($f.path -notmatch '^[A-Za-z0-9_.-]+$') { throw 'Percorso payload non valido.' }
     if ((Get-FileHash -LiteralPath (Join-Path $PSScriptRoot $f.path)).Hash -ine $f.sha256) { throw ('Pacchetto alterato o incompleto: '+$f.path) }
@@ -41,7 +41,7 @@ try {
     if (-not (Test-Path -LiteralPath $InstallDir)) { New-Item -ItemType Directory -Path $InstallDir | Out-Null; $newRoot=$true }
     Protect-Folder $InstallDir
     $sid=[Security.Principal.WindowsIdentity]::GetCurrent().User.Value
-    $settings=@{format=1;installer_version='1.1.0';device_name=$DeviceName;plugin_name=$names.plugin_name;agent_version='0.6.1';agent_sha256=$manifest.agent_sha256;home=$InstallDir;projects_root=$ProjectsRoot;port=$Port;computer=$env:COMPUTERNAME;user_sid=$sid;task_name=$taskName;task_registered=$false;remote_configured=$false;public_endpoint='';installed_at=[DateTime]::UtcNow.ToString('o');source_commit=$manifest.source_commit}
+    $settings=@{format=1;installer_version='1.1.1';device_name=$DeviceName;plugin_name=$names.plugin_name;agent_version='0.6.1';agent_sha256=$manifest.agent_sha256;home=$InstallDir;projects_root=$ProjectsRoot;port=$Port;computer=$env:COMPUTERNAME;user_sid=$sid;task_name=$taskName;task_registered=$false;remote_configured=$false;public_endpoint='';installed_at=[DateTime]::UtcNow.ToString('o');source_commit=$manifest.source_commit}
     Write-SetupJson (Join-Path $InstallDir 'Jarvis-Install-Intent.json') $settings
     foreach ($n in @('Agent','Scripts','Config','State','Logs','Backups')) { New-Item -ItemType Directory -Path (Join-Path $InstallDir $n) | Out-Null }
     Write-SetupJson (Join-Path $InstallDir 'Config\installation.json') $settings
@@ -87,7 +87,7 @@ try {
             catch { Write-Warning 'Configurazione Cloudflare non completata. Installazione locale conservata; riprendere da Configura-Cloudflare.cmd con agente fermo.' }
         }
     }
-    Write-SetupJson (Join-Path $InstallDir 'Config\install-complete.json') @{installer_version='1.1.0';at=[DateTime]::UtcNow.ToString('o')}
+    Write-SetupJson (Join-Path $InstallDir 'Config\install-complete.json') @{installer_version='1.1.1';at=[DateTime]::UtcNow.ToString('o')}
     if (-not $NoStart) {
         if ($taskCreated) { Start-ScheduledTask -TaskName $taskName }
         else { Start-Process powershell.exe -ArgumentList ('-NoProfile -ExecutionPolicy Bypass -File "'+(Join-Path $InstallDir 'Scripts\Start.ps1')+'" -HomeDir "'+$InstallDir+'"') | Out-Null }

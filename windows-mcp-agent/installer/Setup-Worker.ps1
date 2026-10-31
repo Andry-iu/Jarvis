@@ -5,7 +5,7 @@ $r=Get-Content -LiteralPath $RequestPath -Raw|ConvertFrom-Json
 $dir=Get-FullPath $r.state_dir
 if($r.format -ne 1 -or $r.id -notmatch '^[a-f0-9]{32}$' -or $r.user_sid -ne [Security.Principal.WindowsIdentity]::GetCurrent().User.Value -or $r.computer -ine $env:COMPUTERNAME -or (Split-Path $RequestPath -Parent) -ine $dir){throw 'Contesto worker non valido.'}
 $resultPath=Join-Path $dir ($r.id+'.result.json')
-$result=[pscustomobject]@{id=$r.id;state='running';worker=(Get-Record (Get-Process -Id $PID));exit_code=$null;finished_at='';error_code=''}
+$result=[pscustomobject]@{id=$r.id;installer_version='1.1.1';state='running';worker=(Get-Record (Get-Process -Id $PID));exit_code=$null;finished_at='';error_code=''}
 Write-SetupJson $resultPath $result
 $guard=$null
 try {
@@ -26,9 +26,18 @@ try {
         if(Test-Path $target){[IO.Directory]::Move($target,($target+'.incomplete-'+[guid]::NewGuid().ToString('N')))}
         New-Item -ItemType Directory -Path (Split-Path $target -Parent) -Force|Out-Null
         if($r.kind -eq 'go'){Expand-Archive -LiteralPath $r.asset -DestinationPath $target}
-        else{$escaped=$target.Replace('\','\\');$p=Start-Process $r.asset -ArgumentList ('-y -gm2 -InstallPath="'+$escaped+'"') -PassThru -Wait -WindowStyle Hidden;try{if($p.ExitCode -ne 0){throw 'Estrazione Git fallita.'}}finally{$p.Dispose()}}
+        else{
+            # Current Git for Windows SFX accepts -y and -o; no legacy -gm2/
+            # -InstallPath and no escaped double backslashes or extra arguments.
+            $p=Start-Process $r.asset -ArgumentList ('-y -o"'+$target+'"') -PassThru -Wait -WindowStyle Hidden
+            try{if($p.ExitCode -ne 0){throw 'Estrazione Git fallita.'}}finally{$p.Dispose()}
+        }
+        $exe=if($r.kind -eq 'git'){Join-Path $target 'cmd\git.exe'}else{Join-Path $target 'go\bin\go.exe'}
+        $probe=Get-SetupToolProbe $r.kind $exe
+        Write-SetupJson (Join-Path $dir ($r.id+'.verification.json')) $probe
+        if(-not $probe.available){$result.error_code=('VERIFY_'+$probe.error_code.ToUpperInvariant());throw 'Componente estratto non funzionante.'}
     }else{throw 'Operazione worker non ammessa.'}
     $result.state='completed';$result.exit_code=0
-}catch{$result.state='failed';$result.exit_code=1;$result.error_code='DEPENDENCY_INSTALL_FAILED'}
+}catch{$result.state='failed';$result.exit_code=1;if(-not $result.error_code){$result.error_code='DEPENDENCY_INSTALL_FAILED'}}
 finally{if($guard){$guard.Dispose()};$result.finished_at=[DateTime]::UtcNow.ToString('o');Write-SetupJson $resultPath $result}
 exit $result.exit_code

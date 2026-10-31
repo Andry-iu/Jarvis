@@ -1,5 +1,5 @@
 {
-  "installer_version": "1.1.0",
+  "installer_version": "1.1.1",
   "agent_version": "0.6.1",
   "source_commit": "164cb980bd1a936749d41b8692979e98b929cb04",
   "agent_sha256": "9ff4a136951f464925cc55b96e1a968174204199fa9c7ff681b998b3542742c1",
@@ -46,13 +46,13 @@
     },
     {
       "path": "Install.ps1",
-      "sha256": "8583954c4c4a51259ab3584abd1df4f111238169694450fc764e03c25376e676",
+      "sha256": "6151fc3806e346bf3d1a7e2491bc445ed8bbe8903e49e6ed56dcf268ad2656e0",
       "bytes": 8908
     },
     {
       "path": "LEGGIMI.txt",
-      "sha256": "23164248ea9fc5b74795c9acd4dbc01496cb65e820c52b85f75ae29d9c11336a",
-      "bytes": 3998
+      "sha256": "f68cf355d959579ca55b4b142c5930bc51b315744be673f2c40e175ca2f6d89f",
+      "bytes": 5074
     },
     {
       "path": "LICENSE.txt",
@@ -66,8 +66,8 @@
     },
     {
       "path": "Prerequisites.ps1",
-      "sha256": "0e0df283e5d9655e687916005a045bcbd52d6bd3f45b21f98ed08670608a5994",
-      "bytes": 15497
+      "sha256": "b2eb84e8b26d4090191af1db3df1e0bd049304333284d1fd52bb0c7819970b1e",
+      "bytes": 19626
     },
     {
       "path": "RIPRENDI.cmd",
@@ -76,13 +76,13 @@
     },
     {
       "path": "Repair.ps1",
-      "sha256": "bc8f9e8f556794d0ab600ec1724f1e72174ea5d94a11073cba2229decc81c9c7",
-      "bytes": 7461
+      "sha256": "a8a03e16620f35592e69831bd11c5c3dd12edd1c1504036aa2e973b4ef1b8232",
+      "bytes": 7483
     },
     {
       "path": "Setup-Worker.ps1",
-      "sha256": "2712e7424270bf1728d3c3f4fc514e747e58e90bc5ae4c368bc93783a4647a63",
-      "bytes": 3137
+      "sha256": "8b8915a4f16d44346de4d5733f7e5590c40789f77eacf2c49b2f0085b84c4146",
+      "bytes": 3711
     },
     {
       "path": "Setup.ps1",
@@ -101,13 +101,18 @@
     },
     {
       "path": "Test-Bootstrap.ps1",
-      "sha256": "03fb49b2cb293874db8062201adec81efb766ebfe298a2f7c97b4f938c49bce9",
-      "bytes": 14940
+      "sha256": "845ee6c73f4162efc4fae878ad1b355672059657a0927398faeac01eafc46e2b",
+      "bytes": 18628
     },
     {
       "path": "Test-Installer.ps1",
-      "sha256": "b2dfba9998b22717a7fe3a1f410dc5cc9647c04ef5c5ce12491d3b4c39247384",
+      "sha256": "98f356c11ff8c51ad6cc2972b92a22f5faee5053afc5ee41549f25b0ff7503a3",
       "bytes": 14292
+    },
+    {
+      "path": "Test-SfxRegression.py",
+      "sha256": "e5200f6658688df66eb0c839d5201719b662065203cc4d4a12e63d29091c2d9d",
+      "bytes": 4495
     },
     {
       "path": "jarvis-mcp.exe",
@@ -116,8 +121,8 @@
     },
     {
       "path": "script-history.json",
-      "sha256": "e1795fbe44baa18bd7754b3c974fc27b7b1cd8a5902e0aecb5ff0ce96fc25dc8",
-      "bytes": 2230
+      "sha256": "4ec2762af25e5ef3c7a1cd1c45a229bdc7f890cfdccf21f3e4e5a41a3ab97ff8",
+      "bytes": 3058
     }
   ]
 }

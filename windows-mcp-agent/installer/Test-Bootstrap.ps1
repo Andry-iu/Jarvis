@@ -34,10 +34,15 @@ class Fixture {static int Main(string[] a){
  if(a.Length>0 && a[0]=="version"){Console.WriteLine("go version go1.27.0 windows/amd64");return 0;}
  if(a.Length>0 && a[0]=="--version"){Console.WriteLine("git version 2.50.0.windows.1");return 0;}
  if(a.Length>1 && a[0]=="tunnel"){Console.WriteLine("--token-file");return 0;}
- foreach(string x in a){if(x.StartsWith("-InstallPath=")){string p=x.Substring(13).Trim('"').Replace("\\\\","\\");Directory.CreateDirectory(Path.Combine(p,"cmd"));File.Copy(me,Path.Combine(p,"cmd","git.exe"));return 0;}}
- return 1;}}
+ string target=null;
+ foreach(string x in a){if(x=="-y")continue;if(x.StartsWith("-o")){target=x.Substring(2);continue;}break;}
+ if(target==null)target=Path.Combine(Path.GetDirectoryName(me),"PortableGit");
+ Directory.CreateDirectory(Path.Combine(target,"cmd"));File.Copy(me,Path.Combine(target,"cmd","git.exe"));return 0;}}
 '@
     $fixture=Join-Path $TestRoot 'portable-fixture.exe';& $csc /nologo /target:exe ('/out:'+$fixture) $source|Out-Null;if($LASTEXITCODE -ne 0){throw 'Fixture compilazione fallita.'}
+    $legacyWanted=Join-Path $TestRoot 'wrong legacy target'
+    $legacyProc=Start-Process $fixture -ArgumentList ('-y -gm2 -InstallPath="'+$legacyWanted+'"') -Wait -PassThru
+    if($legacyProc.ExitCode -ne 0 -or (Test-Path (Join-Path $legacyWanted 'cmd\git.exe'))){throw 'Fixture non riproduce falso successo estrazione.'};$legacyProc.Dispose();Pass 'legacy_sfx_flags_exit_zero_without_requested_target'
     $payload=Join-Path $TestRoot 'go-payload';New-Item -ItemType Directory (Join-Path $payload 'go\bin') -Force|Out-Null;Copy-Item $fixture (Join-Path $payload 'go\bin\go.exe')
     $zip=Join-Path $TestRoot 'go-fixture.zip';Compress-Archive -Path (Join-Path $payload 'go') -DestinationPath $zip
     foreach($kind in @('git','go')){
@@ -59,6 +64,31 @@ class Fixture {static int Main(string[] a){
     $ctx.state.assets.git.sha256=(Get-FileHash $fixture).Hash
     Invoke-SetupOperation $ctx 'git' $fixture $failedTarget
     if(-not (Test-Path (Join-Path $failedTarget 'cmd\git.exe'))){throw 'Ripresa errore noto fallita.'};Pass 'known_failed_worker_can_resume_after_correction'
+    $legacyID='b'*32;$cache=Join-Path $ctx.dir 'Downloads';$legacyName='PortableGit-2.56.0.4-64-bit.7z.exe';$legacyAsset=Join-Path $cache $legacyName
+    Copy-Item $fixture $legacyAsset
+    $ctx.state.assets.git=[pscustomobject]@{version='v2.56.0.windows.4';sha256=(Get-FileHash $legacyAsset).Hash;name=$legacyName}
+    $legacyTarget=Join-Path $ctx.dir 'Tools\git-v2.56.0.windows.4'
+    $ctx.state.jobs.git=[pscustomobject]@{id=$legacyID;state='dispatched'}
+    $request=[pscustomobject]@{format=1;kind='git';asset=$legacyAsset;sha256=$ctx.state.assets.git.sha256;target=$legacyTarget;version=$ctx.state.assets.git.version;state_dir=$ctx.dir;id=$legacyID;user_sid=[Security.Principal.WindowsIdentity]::GetCurrent().User.Value;computer=$env:COMPUTERNAME}
+    Write-SetupJson (Join-Path $ctx.dir ($legacyID+'.request.json')) $request
+    $legacyReceipt=[pscustomobject]@{id=$legacyID;state='completed';worker=@{pid=2147483647;started_ticks='1'};exit_code=0;finished_at=[DateTime]::UtcNow.ToString('o');error_code=''}
+    $legacyReceiptPath=Join-Path $ctx.dir ($legacyID+'.result.json');Write-SetupJson $legacyReceiptPath $legacyReceipt
+    $originalReceiptHash=(Get-FileHash $legacyReceiptPath).Hash
+    if(-not (Test-LegacyGitReceiptRepair $ctx 'git' $legacyAsset $legacyTarget $legacyReceipt)){throw 'Ripresa nota 1.1.0 non riconosciuta.'}
+    $request.user_sid='other';Write-SetupJson (Join-Path $ctx.dir ($legacyID+'.request.json')) $request
+    if(Test-LegacyGitReceiptRepair $ctx 'git' $legacyAsset $legacyTarget $legacyReceipt){throw 'Altro utente accettato.'}
+    $request.user_sid=[Security.Principal.WindowsIdentity]::GetCurrent().User.Value;Write-SetupJson (Join-Path $ctx.dir ($legacyID+'.request.json')) $request
+    $legacyReceipt|Add-Member -NotePropertyName installer_version -NotePropertyValue '1.1.1'
+    if(Test-LegacyGitReceiptRepair $ctx 'git' $legacyAsset $legacyTarget $legacyReceipt){throw 'Ricevuta nuova trattata come legacy.'}
+    $legacyReceipt.PSObject.Properties.Remove('installer_version')
+    Invoke-SetupOperation $ctx 'git' $legacyAsset $legacyTarget
+    if(-not (Get-SetupToolProbe 'git' (Join-Path $legacyTarget 'cmd\git.exe')).available -or (Get-FileHash $legacyReceiptPath).Hash -ne $originalReceiptHash){throw 'Ripresa legacy o conservazione ricevuta fallita.'};Pass 'verified_110_git_defect_recovered_without_erasing_original_receipt'
+    $noopSource=Join-Path $TestRoot 'noop.cs';Write-Utf8 $noopSource 'class Noop {static int Main(){return 0;}}'
+    $noop=Join-Path $TestRoot 'noop.exe';& $csc /nologo /target:exe ('/out:'+$noop) $noopSource|Out-Null
+    $ctx.state.jobs.PSObject.Properties.Remove('git');$ctx.state.assets.git=[pscustomobject]@{version='noop';sha256=(Get-FileHash $noop).Hash}
+    Refuse {Invoke-SetupOperation $ctx 'git' $noop (Join-Path $ctx.dir 'Tools\git-noop')} 'extractor_zero_without_git_is_failed_worker'
+    $failedReceipt=Get-Content (Join-Path $ctx.dir ($ctx.state.jobs.git.id+'.result.json')) -Raw|ConvertFrom-Json
+    if($failedReceipt.state -ne 'failed' -or $failedReceipt.error_code -ne 'VERIFY_MISSING_EXECUTABLE'){throw 'Ricevuta falsely completed.'};Pass 'worker_requires_native_version_verification_before_completed'
     $ctx.state.jobs|Add-Member -NotePropertyName codex -NotePropertyValue ([pscustomobject]@{id=('a'*32)}) -Force
     Refuse {Invoke-SetupOperation $ctx 'codex' $fixture ''} 'uncertain_dispatch_not_replayed'
     $receipt=Join-Path $ctx.dir (('a'*32)+'.result.json');Write-SetupJson $receipt @{state='running';worker=(Get-Record (Get-Process -Id $PID))}
@@ -116,7 +146,7 @@ class Fixture {static int Main(string[] a){
         Refuse {Update-SetupScripts $upgrade $PackageDir} 'modified_installed_scripts_not_overwritten'
         Write-Utf8 $check $original
         # Simulate power loss after replacing Start, before replacing the others.
-        Write-SetupJson (Join-Path $upgrade 'Config\installer-scripts-pending.json') @{version='1.1.0';fixture=$true}
+        Write-SetupJson (Join-Path $upgrade 'Config\installer-scripts-pending.json') @{version='1.1.1';fixture=$true}
         Copy-Item (Join-Path $PackageDir 'Start.ps1') (Join-Path $upgrade 'Scripts\Start.ps1') -Force
         Refuse {& (Join-Path $upgrade 'Scripts\Start.ps1') -HomeDir $upgrade} 'partial_script_upgrade_blocks_start'
         & "$PackageDir\Setup.ps1" -InstallDir $upgrade -NonInteractive -SkipRemote -NoTask -NoShortcuts

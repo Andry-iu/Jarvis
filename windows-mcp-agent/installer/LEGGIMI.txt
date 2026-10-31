@@ -1,4 +1,23 @@
-JARVIS MCP SETUP 1.1.0 — INSTALLAZIONE E RIPRESA AUTOMATICA
+CORREZIONE 1.1.1 — ERRORE "Componente installato ma verifica fallita: git"
+
+Estrarre il nuovo ZIP in una NUOVA cartella e usare INSTALLA.cmd.
+Indicare la stessa destinazione precedente (Invio per D:\Jarvis).
+NON cancellare la cartella del registro o la cache scaricata.
+La correzione riconosce lo specifico tentativo Git della 1.1.0, riusa
+l'archivio verificato e corregge la destinazione dell'estrazione.
+Conserva richiesta e ricevuta originali e ogni copia parziale.
+Un worker ancora attivo o dall'esito incerto resta escluso dal retry.
+Il worker dichiara completato Git/Go solo dopo la verifica nativa della
+versione; errori successivi hanno un codice nella diagnostica privata.
+
+Difetto individuato nel comando PortableGit della 1.1.0: i parametri
+storici -gm2/-InstallPath non valgono per l'estrattore attuale.
+La nuova sintassi usa -y -o"percorso", senza raddoppiare le barre.
+Correzione verificata sul parser C++ ufficiale in ambiente cloud;
+la nuova esecuzione completa su Windows resta da collaudare.
+Nessuna installazione o prova aggiuntiva eseguita su Desktop1.
+
+JARVIS MCP SETUP 1.1.1 — INSTALLAZIONE E RIPRESA AUTOMATICA
 
 1. Estrarre TUTTO lo ZIP in una nuova cartella.
 2. Eseguire INSTALLA.cmd e consentire UAC con lo stesso utente di Codex.
@@ -26,7 +45,7 @@ incerto non viene ripetuto automaticamente. Il messaggio indica il registro.
 Non chiudere deliberatamente il PC durante un'installazione.
 
 Riconosce la prima copia 1.0.1 fallita su Accesso negato e i tentativi
-incompleti della 1.1.0 mai diventati operativi. Conserva integralmente la
+incompleti della 1.1.1 mai diventati operativi. Conserva integralmente la
 copia precedente e ripristina cartella/task su errore della ripresa.
 Su copie complete 1.0.x aggiorna gli script riconosciuti con backup,
 conservando binario agente 0.6.1, credenziali, identita e stato corrente.
