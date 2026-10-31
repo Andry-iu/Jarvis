@@ -22,7 +22,7 @@ type peerDevice struct{
 }
 func configuredPeers()([]peerDevice,error){
  path:=filepath.Join(os.Getenv("JARVIS_HOME"),"Config","devices.json");b,e:=os.ReadFile(path);if os.IsNotExist(e){return []peerDevice{},nil};if e!=nil{return nil,e};if len(b)>65536{return nil,errors.New("device configuration too large")}
- var peers []peerDevice;d:=json.NewDecoder(bytes.NewReader(b));d.DisallowUnknownFields();if e=d.Decode(&peers);e!=nil{return nil,errors.New("invalid devices.json")};seen:=map[string]bool{}
+ b=bytes.TrimPrefix(b,[]byte{0xef,0xbb,0xbf});var peers []peerDevice;d:=json.NewDecoder(bytes.NewReader(b));d.DisallowUnknownFields();if e=d.Decode(&peers);e!=nil{return nil,errors.New("invalid devices.json")};seen:=map[string]bool{}
  for _,p:=range peers{if !requestIDPattern.MatchString(p.MachineID)||p.ID==""||seen[p.ID]{return nil,errors.New("invalid/duplicate peer identity")};seen[p.ID]=true;u,e:=url.Parse(p.Endpoint);if e!=nil||u.User!=nil||u.Fragment!=""||u.RawQuery!=""||u.Path!="/mcp"{return nil,errors.New("invalid peer MCP endpoint")};local:=os.Getenv("JARVIS_TEST_PEERS")=="1"&&u.Scheme=="http"&&(u.Hostname()=="127.0.0.1"||u.Hostname()=="::1");if u.Scheme!="https"&&!local{return nil,errors.New("peers require HTTPS")};if p.TokenEnv!=""&&!envName.MatchString(p.TokenEnv){return nil,errors.New("invalid peer token reference")};if p.AccessIDEnv!=""&&(!envName.MatchString(p.AccessIDEnv)||!envName.MatchString(p.AccessSecretEnv)){return nil,errors.New("invalid Access reference")}}
  return peers,nil
 }

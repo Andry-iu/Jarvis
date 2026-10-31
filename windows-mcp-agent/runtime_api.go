@@ -103,7 +103,7 @@ func(a *Agent)invokeRuntime(name string,raw json.RawMessage)any{
  r,e:=a.getRuntime();if e!=nil{return toolResult(map[string]any{"error":e.Error()},true)}
  if p.Operation!="machine_info"&&p.MachineID!=r.MachineID{return toolResult(map[string]any{"error":"machine_id mismatch; read machine_info and select the intended computer"},true)}
  if p.Operation=="screen_capture"{v,e:=screenCapture(p);if e!=nil{return toolResult(map[string]any{"error":e.Error()},true)};return v}
- v,e:=r.call(p);if e!=nil{return toolResult(map[string]any{"error":e.Error(),"request_id":p.RequestID},true)};return toolResult(v,false)
+ v,e:=r.call(p);if e!=nil{return toolResult(map[string]any{"error":e.Error(),"request_id":p.RequestID},true)};if p.Operation=="device_call"{return v};return toolResult(v,false)
 }
 func(r *Runtime)call(p runtimeRequest)(any,error){
  switch p.Operation{
