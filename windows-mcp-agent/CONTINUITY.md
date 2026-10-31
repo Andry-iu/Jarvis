@@ -1,12 +1,12 @@
-# Continuita Windows MCP — candidata 0.5.9, 31 ottobre 2026
+# Continuita Windows MCP — 0.5.9 installata e collaudata, 31 ottobre 2026
 
 Autorizzato dall'utente: lettura iniziale per ammissibilita (gia esistente), lettura finale automatica senza confronti, consultazione diretta su richiesta e breve dato attuale nel riepilogo di ogni elaborazione Codex. Il comando diretto e codex_status; non crearne duplicati. La risposta precedente che lo dichiarava assente era errata.
 
 Codice candidato: riepilogo usage in codex_status; lettura asincrona unica dopo turn/completed, evento persistente jarvis/usage, final_usage e usage_pending in codex_events. Non attendere RPC nel reader. Non nascondere dati disponibili quando inference_allowed=false. Saldo null rimane sconosciuto. Quote riferite all'account, non al singolo progetto. Nessun acquisto, fallback API o modifica delle prove costi. Guardie 0.5.8 conservate.
 
-Stato corrente: codice candidato, test/build/installazione da verificare. Binario operativo ancora 0.5.8 finche il verbale non conferma la promozione. Seguire docs/mcp-agent/USAGE-0.5.9.md e RELEASE_POLICY.md, preservare backup/stato/identita. Branch reconcile-windows-mcp-agent-20261031.
+Stato corrente: test Windows/vet/build, backup/rollback e installazione superati; turno reale con lettura finale jarvis/usage verificato. Sorgente binario 924f23aa6409f77342d964cc225991ecb4296002; SHA-256 CB7B9B3E0C3A9CA9133E738E0412CD518AF6BEA7E79FEE2C65830776635540C5. Ultima lettura 87% disponibile, saldo crediti API sconosciuto, reset 4 novembre 2026 13:39 UTC. Non trattare questi numeri come stato corrente senza nuova lettura. Seguire docs/mcp-agent/USAGE-0.5.9.md e RELEASE_POLICY.md, preservare backup/stato/identita. Branch reconcile-windows-mcp-agent-20261031.
 
-Proposta nuova: coda per progetto, non autorizzata allo sviluppo e non inclusa nella 0.5.9. Rischio attuale: sessioni Codex diverse possono toccare lo stesso progetto; il runner comandi limita un job attivo per PC e ogni sessione Codex limita un turno attivo.
+Modifica successiva approvata in Voice: coda per progetto, consultazione/cancellazione/riordino e letture in parallelo, specifica in docs/mcp-agent/QUEUE-SPEC.md. Non inclusa nella 0.5.9; implementazione successiva in corso. Rischio attuale: sessioni Codex diverse possono toccare lo stesso progetto; il runner comandi limita un job attivo per PC e ogni sessione Codex limita un turno attivo.
 
 # Continuita Windows MCP — 0.5.8, 31 ottobre 2026
 

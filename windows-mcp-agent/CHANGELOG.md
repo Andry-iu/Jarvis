@@ -1,12 +1,12 @@
 # Windows MCP changelog
 
-## 0.5.9 — candidata, 31 ottobre 2026
+## 0.5.9 — installata e collaudata, 31 ottobre 2026
 
 - codex_status resta il comando MCP diretto per richieste su quota residua e crediti; aggiunto riepilogo usage con percentuali residue, reset UTC e saldo noto/sconosciuto.
 - Una lettura automatica dopo turn/completed (completato, interrotto o fallito), salvata come jarvis/usage e disponibile anche in codex_events.final_usage; usage_pending indica la lettura in corso.
 - Nessun confronto storico. Nessuna nuova lettura iniziale: restano le guardie gia presenti. Dati leggibili anche quando un nuovo turno sarebbe bloccato; saldo nullo mai trasformato in zero.
 - A fine elaborazione il client deve riferire brevemente i valori aggiornati o l'indisponibilita, senza riusare valori precedenti.
-- Test tramite processo RPC simulato per notifiche duplicate, assenza di deadlock, esiti finali, saldo nullo e servizio non disponibile. Collaudo Windows/installazione ancora in corso.
+- Test tramite processo RPC simulato per notifiche duplicate, assenza di deadlock, esiti finali, saldo nullo e servizio non disponibile. Test Windows/vet/build superati; backup/rollback e installazione verificati. Turno reale dal plugin con evento finale jarvis/usage e final_usage verificati.
 
 ## 0.5.8 — 31 ottobre 2026
 

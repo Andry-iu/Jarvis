@@ -1,6 +1,6 @@
-# Jarvis Windows MCP Agent 0.5.9 — candidata
+# Jarvis Windows MCP Agent 0.5.9
 
-Aggiornamento quota in corso: [specifica e collaudo](../docs/mcp-agent/USAGE-0.5.9.md). Il binario operativo rimane 0.5.8 fino alla verifica della promozione.
+Installata e collaudata: [quota e crediti 0.5.9](../docs/mcp-agent/USAGE-0.5.9.md). Consultazione diretta con codex_status e lettura finale automatica senza confronti. Coda per progetto e riordino approvati come modifica successiva, non ancora operativi.
 
 Installato e verificato su Jarvis-Desktop1 il 31 ottobre 2026, con privilegi amministrativi. Agente Windows separato dall'app Android. [Stato](../docs/mcp-agent/STATUS.md), [collaudo Codex 0.5.8](../docs/mcp-agent/CODEX-0.5.8.md), [contratto e limiti](../docs/mcp-agent/RUNTIME-0.5.7.md), [continuita](CONTINUITY.md).
 

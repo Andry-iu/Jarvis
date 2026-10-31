@@ -1,6 +1,6 @@
-# 0.5.9 — candidata quota/crediti, verifica in corso
+# 0.5.9 — quota/crediti installati e collaudati
 
-Codice per consultazione diretta migliorata e lettura finale automatica senza confronti. [Specifica e stato](USAGE-0.5.9.md). Installazione operativa ancora 0.5.8; nessuna coda per progetto implementata. Le verifiche della candidata verranno registrate prima di dichiararla installata.
+Consultazione diretta codex_status migliorata e lettura automatica finale senza confronti, verificata dopo turno reale dal plugin. Test Windows/vet/build, backup/stato, rollback e riconnessione superati. [Verbale](USAGE-0.5.9.md). Sorgente binario 924f23aa6409f77342d964cc225991ecb4296002; SHA-256 CB7B9B3E0C3A9CA9133E738E0412CD518AF6BEA7E79FEE2C65830776635540C5. Coda/riordino sono la modifica successiva approvata, ancora in sviluppo: [specifica](QUEUE-SPEC.md).
 
 # 0.5.8 — installata e verificata, Codex operativo
 
