@@ -1,0 +1,16 @@
+Jarvis MCP 0.4.0 - READ-ONLY PROJECT INSPECTION
+
+New tools: project_list, project_status.
+- No arbitrary execution, file editing, Codex integration or persistence yet.
+- Existing diagnostic tools retained.
+- Git is required on the Windows PC and discoverable through PATH.
+- Before launching set JARVIS_PROJECTS_ROOT to an existing parent folder containing your Git repositories, such as D:\Projects. Do not point it at C:\ or other broad/sensitive folders.
+- Subfolders recognized by project_list only at the first level. project_status accepts a path relative to root (no drive letter and no .. outside root).
+- JARVIS_PROJECTS_ROOT missing means project tools refuse access.
+- Existing JARVIS_MCP_TOKEN, JARVIS_CF_TEAM_DOMAIN and JARVIS_CF_APP_AUD are retained in same PowerShell session. Do not disclose their contents.
+- Stop v0.3.1 with Ctrl+C, set JARVIS_PROJECTS_ROOT, start v0.4.0 in same PowerShell.
+- Verify http://127.0.0.1:8765/health returns 0.4.0.
+- You may need to refresh/reconnect Jarvis-Desktop1 plugin before two new tools appear.
+- Do not modify Cloudflare settings.
+
+IMPORTANT: This is a deliberately restricted first development-integration milestone: it can report Git project status, but cannot yet perform a code change or control Codex.

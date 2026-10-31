@@ -1,0 +1,20 @@
+Jarvis MCP 0.4.1 - Windows 64 bit
+
+1. Extract the ZIP to D:\Jarvis without removing previous versions.
+2. Stop the old agent with Ctrl+C in the existing PowerShell.
+3. Keep JARVIS_MCP_TOKEN, JARVIS_CF_TEAM_DOMAIN and JARVIS_CF_APP_AUD configured in that SAME PowerShell session.
+4. Set: $env:JARVIS_PROJECTS_ROOT = 'D:\Jarvis\Projects'
+5. Launch: .\jarvis-mcp-windows-v0.4.1-amd64.exe
+6. Refresh Jarvis-Desktop1 MCP tools in ChatGPT (or open a new chat) to discover project_clone.
+7. Ask to clone https://github.com/Andry-iu/NestingOpt.git and poll agent_status.
+
+The server runs as the current Windows user. Git must be installed on PATH and credentials for the private repository already available in Git Credential Manager. No interactive password dialogs are supported for clone operations. An authentication failure is reported to the agent; credentials should never be sent through ChatGPT.
+
+Security:
+- Only HTTPS github.com/Andry-iu/<repo> is supported by project_clone.
+- Only one task runs at once. The destination directory must not exist.
+- The clone happens in a temporary staging folder and is moved into place on success.
+- No arbitrary shell commands are available.
+- Any failure cleans temporary staging directories.
+- Use task_stop to cancel a running clone.
+- Does not yet implement Codex automation or progress streaming.
