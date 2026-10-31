@@ -36,13 +36,23 @@
     },
     {
       "path": "Install.ps1",
-      "sha256": "f02622dffa046494ac30059da7ca5327332cc99f6c1e62c7ac65947807c1a773",
-      "bytes": 7883
+      "sha256": "7ed4efdcf69a241f3d958181f661d1049b1eff8c08eb33121e00c5dc9331e0a0",
+      "bytes": 8081
     },
     {
       "path": "LEGGIMI.txt",
       "sha256": "1dc51759c87374b7b9e804f92b957fba5d08e225b04d7c41dca85bb5361e584b",
       "bytes": 5584
+    },
+    {
+      "path": "LICENSE.txt",
+      "sha256": "656afc4c102f90eea02ea872ff9b0903ec42e7ec1fbfbf8939777c56865478a8",
+      "bytes": 10174
+    },
+    {
+      "path": "NOTICE.txt",
+      "sha256": "a0f87526326d554584b5d8aa72b6b6246f873081f8c234fa17e4abe141ec1945",
+      "bytes": 634
     },
     {
       "path": "Start.ps1",
@@ -56,8 +66,8 @@
     },
     {
       "path": "Test-Installer.ps1",
-      "sha256": "af0d49bd63ed6d0310370be37afe96a6b8fd71c89d68774a76920e274e2b9e7f",
-      "bytes": 6261
+      "sha256": "f602f5ac4f97a372fcf1dda987ce90f81dafd351dc6a3f32a95037123b823c91",
+      "bytes": 6287
     },
     {
       "path": "jarvis-mcp.exe",
