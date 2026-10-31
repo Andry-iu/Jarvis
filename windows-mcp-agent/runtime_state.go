@@ -23,10 +23,10 @@ type Runtime struct {
 	lock           *os.File
 	Jobs           map[string]*Job
 	codex          *codexClient
-    queue *projectQueue
-    queueStop chan struct{}
-    queueBroken bool
-    closing bool
+	queue          *projectQueue
+	queueStop      chan struct{}
+	queueBroken    bool
+	closing        bool
 }
 type Job struct {
 	ID           string `json:"id"`
@@ -170,7 +170,9 @@ func newRuntime(dir string) (*Runtime, error) {
 		}
 		r.Jobs[j.ID] = &j
 	}
-	if e = r.initQueue(); e != nil { return nil,e }
+	if e = r.initQueue(); e != nil {
+		return nil, e
+	}
 	ok = true
 	return r, nil
 }
@@ -203,10 +205,15 @@ func (a *Agent) closeRuntime() {
 	}
 }
 func (r *Runtime) Close() {
-    r.mu.Lock()
-    if r.closing { r.mu.Unlock(); return }
-    r.closing=true
-    if r.queueStop!=nil {close(r.queueStop)}
+	r.mu.Lock()
+	if r.closing {
+		r.mu.Unlock()
+		return
+	}
+	r.closing = true
+	if r.queueStop != nil {
+		close(r.queueStop)
+	}
 	for _, j := range r.Jobs {
 		if j.cancel != nil {
 			j.cancel()

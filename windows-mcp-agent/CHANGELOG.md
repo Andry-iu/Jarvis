@@ -1,5 +1,15 @@
 # Windows MCP changelog
 
+## 0.6.0 — candidata, 31 ottobre 2026
+
+- Coda persistente per progetto, percorsi sovrapposti protetti, massimo quattro progetti indipendenti attivi.
+- queue_add/list/cancel/move/resume, etichette, ID e dipendenze esplicite; riordino senza preemption.
+- command_start/codex_turn e Go legacy accodano; usare queue_list per ricavare job/turn dopo dispatch.
+- Letture senza lock globale, esclusione nativa Windows del file aperto in scrittura; mutazioni dirette di progetti attivi rifiutate.
+- Pausa su errore/riavvio, nessun replay automatico degli esiti incerti; verifica quota all'avvio effettivo e fotografia finale 0.5.9 preservata.
+- Test Windows e vet superati. Build, rollback, installazione e collaudo MCP ancora da completare.
+
+
 ## 0.5.9 — installata e collaudata, 31 ottobre 2026
 
 - codex_status resta il comando MCP diretto per richieste su quota residua e crediti; aggiunto riepilogo usage con percentuali residue, reset UTC e saldo noto/sconosciuto.

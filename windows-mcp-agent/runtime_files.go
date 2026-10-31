@@ -334,7 +334,15 @@ func writeRootFile(root *os.Root, n string, b []byte, expected string) error {
 	return nil
 }
 func (r *Runtime) filesMutate(p runtimeRequest, x *Receipt) (any, error) {
-    if p.Operation!="file_restore" {resource,err:=r.projectResource(p.Project);if err!=nil{return nil,err};if r.queueBusyLocked(resource){return nil,errors.New("project processing active; direct file mutation refused")}}
+	if p.Operation != "file_restore" {
+		resource, err := r.projectResource(p.Project)
+		if err != nil {
+			return nil, err
+		}
+		if r.queueBusyLocked(resource) {
+			return nil, errors.New("project processing active; direct file mutation refused")
+		}
+	}
 	if p.Operation == "file_restore" {
 		return r.restoreFile(p, x)
 	}
@@ -472,8 +480,14 @@ func (r *Runtime) restoreFile(p runtimeRequest, x *Receipt) (any, error) {
 	if json.Unmarshal(b, &old) != nil || old.Status != "completed" {
 		return nil, errors.New("only completed file receipts can be restored")
 	}
-	resource,err:=r.projectResource(old.Project);if err!=nil{return nil,err};if r.queueBusyLocked(resource){return nil,errors.New("project processing active; file restore refused")}
-    root, e := r.projectRoot(old.Project)
+	resource, err := r.projectResource(old.Project)
+	if err != nil {
+		return nil, err
+	}
+	if r.queueBusyLocked(resource) {
+		return nil, errors.New("project processing active; file restore refused")
+	}
+	root, e := r.projectRoot(old.Project)
 	if e != nil {
 		return nil, e
 	}

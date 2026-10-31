@@ -1,3 +1,7 @@
+# Jarvis Windows MCP Agent 0.6.0 — candidata coda
+
+Implementata e testata su Windows la coda per progetto con elenco, annullamento, riordino, dipendenze e letture concorrenti. Vet superato. Compilazione/installazione/collaudo MCP da completare; versione operativa ancora 0.5.9. [Contratto e verifica](../docs/mcp-agent/QUEUE-0.6.0.md).
+
 # Jarvis Windows MCP Agent 0.5.9
 
 Installata e collaudata: [quota e crediti 0.5.9](../docs/mcp-agent/USAGE-0.5.9.md). Consultazione diretta con codex_status e lettura finale automatica senza confronti. Coda per progetto e riordino approvati come modifica successiva, non ancora operativi.

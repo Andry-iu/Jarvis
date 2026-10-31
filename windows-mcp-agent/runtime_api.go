@@ -15,34 +15,34 @@ import (
 )
 
 type runtimeRequest struct {
-    QueueID string `json:"queue_id,omitempty"`
-    BeforeID string `json:"before_id,omitempty"`
-    Label string `json:"label,omitempty"`
-    DependsOn []string `json:"depends_on,omitempty"`
-	Operation   string `json:"operation,omitempty"`
-	MachineID   string `json:"machine_id,omitempty"`
-	Project     string `json:"project,omitempty"`
-	RequestID   string `json:"request_id,omitempty"`
-	Path        string `json:"path,omitempty"`
-	Destination string `json:"destination,omitempty"`
-	Expected    string `json:"expected_sha256,omitempty"`
-	Content     string `json:"content,omitempty"`
-	Encoding    string `json:"encoding,omitempty"`
-	Query       string `json:"query,omitempty"`
-	Recursive   bool   `json:"recursive,omitempty"`
-	Offset      int    `json:"offset,omitempty"`
-	Limit       int    `json:"limit,omitempty"`
-	RestoreID   string `json:"restore_id,omitempty"`
-	Profile     string `json:"profile,omitempty"`
-	Timeout     int    `json:"timeout_seconds,omitempty"`
-	JobID       string `json:"job_id,omitempty"`
-	ThreadID    string `json:"thread_id,omitempty"`
-	TurnID      string `json:"turn_id,omitempty"`
-	Text        string `json:"text,omitempty"`
-	Cursor      string `json:"cursor,omitempty"`
-	After       int64  `json:"after,omitempty"`
-	ApprovalID  string `json:"approval_id,omitempty"`
-	Decision    string `json:"decision,omitempty"`
+	QueueID     string   `json:"queue_id,omitempty"`
+	BeforeID    string   `json:"before_id,omitempty"`
+	Label       string   `json:"label,omitempty"`
+	DependsOn   []string `json:"depends_on,omitempty"`
+	Operation   string   `json:"operation,omitempty"`
+	MachineID   string   `json:"machine_id,omitempty"`
+	Project     string   `json:"project,omitempty"`
+	RequestID   string   `json:"request_id,omitempty"`
+	Path        string   `json:"path,omitempty"`
+	Destination string   `json:"destination,omitempty"`
+	Expected    string   `json:"expected_sha256,omitempty"`
+	Content     string   `json:"content,omitempty"`
+	Encoding    string   `json:"encoding,omitempty"`
+	Query       string   `json:"query,omitempty"`
+	Recursive   bool     `json:"recursive,omitempty"`
+	Offset      int      `json:"offset,omitempty"`
+	Limit       int      `json:"limit,omitempty"`
+	RestoreID   string   `json:"restore_id,omitempty"`
+	Profile     string   `json:"profile,omitempty"`
+	Timeout     int      `json:"timeout_seconds,omitempty"`
+	JobID       string   `json:"job_id,omitempty"`
+	ThreadID    string   `json:"thread_id,omitempty"`
+	TurnID      string   `json:"turn_id,omitempty"`
+	Text        string   `json:"text,omitempty"`
+	Cursor      string   `json:"cursor,omitempty"`
+	After       int64    `json:"after,omitempty"`
+	ApprovalID  string   `json:"approval_id,omitempty"`
+	Decision    string   `json:"decision,omitempty"`
 	Answers     map[string]struct {
 		Answers []string `json:"answers"`
 	} `json:"answers,omitempty"`
@@ -60,11 +60,11 @@ type runtimeTool struct {
 }
 
 var runtimeCatalog = []runtimeTool{
-    {"queue_add", "Queue one fixed command_start or attached codex_turn for a project; call contains the named operation and its arguments. Outer project/request_id are inherited. One active operation per overlapping project path; fresh quota checks at dispatch. Returns queue_id; inspect queue_list.", []string{"project","call","label","depends_on","request_id"}, []string{"project","call","request_id"}, false},
-    {"queue_list", "Show persistent operations with IDs, project, state, waiting order, dependencies, pause reason and active job/turn IDs. Read-only; does not wait for processing completion.", []string{"project","offset","limit"}, nil, true},
-    {"queue_cancel", "Cancel one waiting queue_id. Does not interrupt running work; interrupt its exact job/turn and verify final state.", []string{"queue_id","request_id"}, []string{"queue_id","request_id"}, false},
-    {"queue_move", "Move a waiting queue_id before before_id in the same project. Omit before_id to make it next. Rejects explicit dependency inversion; never preempts active work. Returns updated order.", []string{"queue_id","before_id","request_id"}, []string{"queue_id","request_id"}, false},
-    {"queue_resume", "Resume one paused project after review. Verify uncertain old Codex sessions are idle; never replay started entries. Waiting Codex sessions must remain attached or be resumed explicitly.", []string{"project","request_id"}, []string{"project","request_id"}, false},
+	{"queue_add", "Queue one fixed command_start or attached codex_turn for a project; call contains the named operation and its arguments. Outer project/request_id are inherited. One active operation per overlapping project path; fresh quota checks at dispatch. Returns queue_id; inspect queue_list.", []string{"project", "call", "label", "depends_on", "request_id"}, []string{"project", "call", "request_id"}, false},
+	{"queue_list", "Show persistent operations with IDs, project, state, waiting order, dependencies, pause reason and active job/turn IDs. Read-only; does not wait for processing completion.", []string{"project", "offset", "limit"}, nil, true},
+	{"queue_cancel", "Cancel one waiting queue_id. Does not interrupt running work; interrupt its exact job/turn and verify final state.", []string{"queue_id", "request_id"}, []string{"queue_id", "request_id"}, false},
+	{"queue_move", "Move a waiting queue_id before before_id in the same project. Omit before_id to make it next. Rejects explicit dependency inversion; never preempts active work. Returns updated order.", []string{"queue_id", "before_id", "request_id"}, []string{"queue_id", "request_id"}, false},
+	{"queue_resume", "Resume one paused project after review. Verify uncertain old Codex sessions are idle; never replay started entries. Waiting Codex sessions must remain attached or be resumed explicitly.", []string{"project", "request_id"}, []string{"project", "request_id"}, false},
 	{"machine_info", "Read stable computer identity, available tool paths and runtime limits. Call first; all other local operations require its machine_id.", nil, nil, true},
 	{"project_catalog", "List usable project paths and stable project IDs under the authorized root.", nil, nil, true},
 	{"file_list", "List project files/directories with pagination; protected paths and links are excluded.", []string{"project", "path", "offset", "limit", "recursive"}, []string{"project"}, true},
@@ -130,8 +130,11 @@ func toolsList() any {
 				s["minItems"] = 4
 				s["maxItems"] = 4
 			}
-			if f == "depends_on" { s["items"]=map[string]string{"type":"string"};s["maxItems"]=100 }
-            if f == "profile" {
+			if f == "depends_on" {
+				s["items"] = map[string]string{"type": "string"}
+				s["maxItems"] = 100
+			}
+			if f == "profile" {
 				s["enum"] = commandProfiles
 			}
 			props[f] = s
@@ -265,9 +268,9 @@ func (r *Runtime) call(p runtimeRequest) (any, error) {
 		e = json.Unmarshal(b, &v)
 		return v, e
 	case "command_start", "codex_turn":
-        return r.enqueueOperation(p, "", nil)
-    case "queue_add", "queue_list", "queue_cancel", "queue_move", "queue_resume":
-        return r.queueControl(p)
+		return r.enqueueOperation(p, "", nil)
+	case "queue_add", "queue_list", "queue_cancel", "queue_move", "queue_resume":
+		return r.queueControl(p)
 	case "job_list", "job_status", "job_cancel":
 		return r.jobCall(p)
 	case "device_list", "device_call":

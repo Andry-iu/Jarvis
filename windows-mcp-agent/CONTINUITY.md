@@ -1,3 +1,7 @@
+# Continuita Windows MCP — candidata 0.6.0, 31 ottobre 2026
+
+Coda/riordino/consultazione/annullamento e letture concorrenti implementati e testati su Windows; vet superato. Ultima operativa 0.5.9 finche il verbale 0.6.0 non conferma l'installazione. Seguire docs/mcp-agent/QUEUE-0.6.0.md. Dopo comando accodato leggere queue_list per job_id/turn_id, poi stato/eventi esatti. Non ripetere automaticamente operazioni incerte. Coda privata persistente, ripresa esplicita dopo riavvio; dipendenze note vanno dichiarate. Compilazione e collaudo MCP ancora da completare. Nessun acquisto/API o modifica delle prove sui costi autorizzato.
+
 # Continuita Windows MCP — 0.5.9 installata e collaudata, 31 ottobre 2026
 
 Autorizzato dall'utente: lettura iniziale per ammissibilita (gia esistente), lettura finale automatica senza confronti, consultazione diretta su richiesta e breve dato attuale nel riepilogo di ogni elaborazione Codex. Il comando diretto e codex_status; non crearne duplicati. La risposta precedente che lo dichiarava assente era errata.

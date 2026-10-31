@@ -193,7 +193,11 @@ func (a *Agent) invoke(name string, args json.RawMessage) any {
 			v, err = a.startDesktopTask(p.Operation, p.Desktop)
 		} else if p.Operation != "" {
 			r, runtimeErr := a.getRuntime()
-            if runtimeErr != nil { err=runtimeErr } else { v,err=r.enqueueOperation(runtimeRequest{Operation:"command_start",MachineID:r.MachineID,Project:p.Project,RequestID:newID(),Profile:p.Operation}, "", nil) }
+			if runtimeErr != nil {
+				err = runtimeErr
+			} else {
+				v, err = r.enqueueOperation(runtimeRequest{Operation: "command_start", MachineID: r.MachineID, Project: p.Project, RequestID: newID(), Profile: p.Operation}, "", nil)
+			}
 		} else {
 			v, err = a.start(p.Name, p.Duration)
 		}
