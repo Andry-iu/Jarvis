@@ -4,11 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+ "io"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
-	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -70,7 +70,7 @@ func commandSpec(profile, dir, id string) (string, []string, error) {
 		}
 		return "go", []string{"build", "-o", filepath.Join(staging, "build-"+id+".exe"), "."}, nil
 	case "git_status":
-		return "git", []string{"status", "--porcelain=v1", "-b"}, nil
+		return "git", []string{"--no-optional-locks", "status", "--porcelain=v1", "-b"}, nil
 	case "git_diff":
 		return "git", []string{"--no-pager", "diff", "--no-ext-diff", "--no-textconv"}, nil
 	case "git_fetch":
@@ -217,7 +217,7 @@ func (r *Runtime) runCommand(ctx context.Context, cancel context.CancelFunc, j *
 func (r *Runtime) jobCall(p runtimeRequest) (any, error) {
 	if p.Operation == "job_cancel" {
 		return r.mutation(p, func(x *Receipt) (any, error) {
-			j := r.Jobs[p.JobID]
+			j := r.lookupJobLocked(p.JobID)
 			if j == nil {
 				return nil, errors.New("job not found")
 			}
@@ -231,7 +231,7 @@ func (r *Runtime) jobCall(p runtimeRequest) (any, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	if p.Operation == "job_status" {
-		j := r.Jobs[p.JobID]
+		j := r.lookupJobLocked(p.JobID)
 		if j == nil {
 			return nil, errors.New("job not found")
 		}
@@ -239,28 +239,27 @@ func (r *Runtime) jobCall(p runtimeRequest) (any, error) {
 		v.cancel = nil
 		return v, nil
 	}
-	out := []Job{}
-	for _, j := range r.Jobs {
-		v := *j
-		v.cancel = nil
-		v.Output = ""
-		v.Stdout = ""
-		v.Stderr = ""
-		out = append(out, v)
-	}
-	sort.Slice(out, func(i, j int) bool { return out[i].CreatedAt > out[j].CreatedAt })
-	limit := p.Limit
-	if limit == 0 {
-		limit = 50
-	}
-	start := p.Offset
-	if start > len(out) {
-		start = len(out)
-	}
-	end := start + limit
-	if end > len(out) {
-		end = len(out)
-	}
-	return map[string]any{"jobs": out[start:end], "next_offset": end, "total": len(out)}, nil
+	// Snapshot only active jobs, then release the mutex before reading history.
+    active:=map[string]Job{}
+    for id,j:=range r.Jobs {active[id]=*j}
+    r.mu.Unlock()
+    defer r.mu.Lock()
+    limit:=p.Limit;if limit==0{limit=50}
+    if limit<1 || limit>200 || p.Offset<0 {return nil,errors.New("invalid job pagination")}
+    out:=[]Job{};seen:=0;more:=false
+    err:=visitJSON(filepath.Join(r.dir,"jobs"),func(path string)(bool,error){
+        seen++;if seen<=p.Offset{return false,nil}
+        if len(out)==limit{more=true;return true,nil}
+        var j Job
+        b,err:=os.ReadFile(path);if err!=nil{return false,err}
+        if json.Unmarshal(b,&j)!=nil || j.MachineID!=r.MachineID {return false,errors.New("corrupt job history")}
+        if live,ok:=active[j.ID];ok{j=live}
+        j.cancel=nil;j.Output="";j.Stdout="";j.Stderr=""
+        out=append(out,j);return false,nil
+    })
+    if err!=nil && err!=io.EOF{return nil,err}
+    return map[string]any{"jobs":out,"next_offset":p.Offset+len(out),"has_more":more,"order":"storage; not an atomic snapshot"},nil
+
 }
+
 

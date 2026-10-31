@@ -22,7 +22,7 @@ import (
 	"time"
 )
 
-const version = "0.6.0"
+const version = "0.6.1"
 
 type RPCRequest struct {
 	JSONRPC string          `json:"jsonrpc"`
@@ -465,4 +465,5 @@ func main() {
 		log.Fatal(err)
 	}
 }
+
 

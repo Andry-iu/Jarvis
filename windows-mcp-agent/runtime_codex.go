@@ -332,7 +332,16 @@ func (r *Runtime) getCodexLocked() (*codexClient, error) {
 		}
 		return r.codex, nil
 	}
+	if r.closing { return nil, errors.New("runtime closing") }
+	if r.codexStarting { return nil, errors.New("Codex broker initializing; read status later") }
+	r.codexStarting = true
+	r.inflight.Add(1)
+	r.mu.Unlock()
 	c, e := startCodex(r.dir)
+	r.mu.Lock()
+	r.inflight.Done()
+	r.codexStarting = false
+	if r.closing { if c != nil { c.Close() }; return nil, errors.New("runtime closed during Codex initialization") }
 	if e == nil {
 		c.machineID = r.MachineID
 		r.codex = c
@@ -507,11 +516,28 @@ func (r *Runtime) codexCall(p runtimeRequest) (any, error) {
 	defer r.mu.Unlock()
 	return r.codexCallLocked(p)
 }
+// Caller owns r.mu on entry and return. RPC waits never own the runtime mutex.
 func (r *Runtime) codexCallLocked(p runtimeRequest) (any, error) {
+	if r.closing { return nil, errors.New("runtime closing") }
 	c, e := r.getCodexLocked()
 	if e != nil {
 		return nil, e
 	}
+	// Only lifecycle changes for the same session exclude one another. Status,
+	// events, steering, responses and interruption remain independently usable.
+	lease := p.Operation == "codex_resume" || p.Operation == "codex_turn"
+	if lease {
+		if r.codexSessionOps == nil { r.codexSessionOps = map[string]bool{} }
+		if r.codexSessionOps[p.ThreadID] { return nil, errors.New("session lifecycle request already in flight") }
+		r.codexSessionOps[p.ThreadID] = true
+	}
+	r.inflight.Add(1)
+	r.mu.Unlock()
+	defer func(){
+		r.mu.Lock()
+		if lease { delete(r.codexSessionOps, p.ThreadID) }
+		r.inflight.Done()
+	}()
 	if p.Operation == "codex_status" {
 		return codexAccountStatus(c)
 	}
@@ -657,7 +683,6 @@ func (r *Runtime) codexCallLocked(p runtimeRequest) (any, error) {
 					c.active[p.ThreadID] = id
 				}
 				c.mu.Unlock()
-				go c.turnWatchdog(p.ThreadID, id)
 			}
 		}
 		return v, nil
@@ -675,17 +700,7 @@ func (r *Runtime) codexCallLocked(p runtimeRequest) (any, error) {
 	}
 	return nil, errors.New("unsupported Codex operation")
 }
-func (c *codexClient) turnWatchdog(thread, turn string) {
-	timer := time.NewTimer(5 * time.Minute)
-	defer timer.Stop()
-	<-timer.C
-	c.mu.Lock()
-	active := c.active[thread] == turn && !c.closed
-	c.mu.Unlock()
-	if active {
-		_, _ = c.rpc("turn/interrupt", map[string]any{"threadId": thread, "turnId": turn})
-	}
-}
+// Turn lifetime is user-controlled. RPC timeouts never interrupt a turn.
 func (c *codexClient) events(p runtimeRequest) (any, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -767,3 +782,4 @@ func (c *codexClient) respond(p runtimeRequest) (any, error) {
 	}
 	return map[string]any{"approval_id": p.ApprovalID, "response_dispatched": true}, nil
 }
+

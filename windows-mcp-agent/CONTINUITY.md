@@ -1,3 +1,7 @@
+# Candidata 0.6.1 in collaudo
+
+Base verificata ea8b3ae, Desktop1 0.6.0 senza attivita attive. Sviluppo di tutti i miglioramenti autorizzato il 31 ottobre 2026. Leggere IMPROVEMENTS-0.6.1.md e PROJECT-RECORD.md in docs/mcp-agent. Sorgenti candidati; test Windows, backup/rollback/installazione ancora da completare. Non considerare candidata installata.
+
 # Continuita Windows MCP — 0.6.0 installata e collaudata, 31 ottobre 2026
 
 Leggere AGENTS.md di questa cartella e docs/mcp-agent/{STATUS,QUEUE-0.6.0,VALIDATION-0.6.0-20261031,RELEASE_POLICY}.md. Agente Windows distinto da Android. Branch reconcile-windows-mcp-agent-20261031. Ripresa verificata in una nuova chat con Jarvis-Desktop1.
@@ -45,3 +49,4 @@ Per riprendere, leggere agent_status e machine_info; non fissare l'identita da q
 Punto aperto: Codex App Server funziona per account/quote e lista sessioni, ma balance=null blocca l'inferenza. UI osservata: 0 crediti e 88% quota inclusa residua; ricarica automatica non verificata. Il tentativo di accettare saldo nullo/testare un turno e stato respinto dalla revisione automatica; codice ripristinato rigorosamente chiuso su saldo sconosciuto. Nessuna inferenza avviata. Attendere verifica/autorizzazione appropriata, senza aggiramenti, acquisti o chiavi API.
 
 Servono inoltre aggiornamento catalogo client (38 strumenti sul server, dieci precedenti esposti in questa chat), verifica nuova chat/Voice, e configurazione esplicita di altri PC reali. Non dichiarare questi punti completati. Avvio dopo reboot non verificato. MSBuild/CMake/cl non nel PATH; .NET SDK 9.0.317 disponibile e compilazione riuscita. Clone NestingOpt ancora sospeso.
+

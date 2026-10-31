@@ -15,3 +15,7 @@ Prima di intervenire leggere README.md, CONTINUITY.md, CHANGELOG.md e ../docs/mc
 - Usare runner fisso e API file quando sufficienti. update_prepare/update_execute servono per distribuzione e script di collaudo/diagnosi non eseguibili con i profili, con byte/hash esatti e verifica successiva. Non usarli per aggirare protezioni o decisioni sulle approvazioni.
 - Catalogo precedente: task_start con operation=runtime e request completa (operation e machine_id). Non dichiarare aggiornato il catalogo client senza verificarlo. Non promettere tutte le chat/Voice, altri PC o reboot sulla sola base delle prove locali.
 - Non riprendere NestingOpt, Android o configurare altri computer senza la relativa richiesta.
+
+
+## Ambito approvato 0.6.1
+Leggere docs/mcp-agent/IMPROVEMENTS-0.6.1.md e PROJECT-RECORD.md (percorsi relativi alla root Git). Nessuno stop temporale o avviso programmato per i turni Codex. queue_list e operativo; activity_history recupera terminali. Ogni progetto mantiene su Git un registro curato delle attivita significative aggiornato insieme a commit/rilasci, mai esportazione automatica dello stato privato. Dichiarare risorse condivise note, preservando parallelismo dei lavori indipendenti.

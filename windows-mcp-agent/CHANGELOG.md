@@ -1,5 +1,9 @@
 # Windows MCP changelog
 
+## 0.6.1 — candidata in collaudo
+
+Attese Codex senza mutex globale; nessun watchdog temporale dei turni e nessun avviso temporizzato. Coda operativa compatta con archivio immutabile locale, dipendenze storiche e activity_history; job storici caricati su richiesta. Coordinamento read/write di risorse dichiarate e identita Git comune. Registro significativo di progetto su Git distinto dallo stato privato. Vedere docs/mcp-agent/IMPROVEMENTS-0.6.1.md; installazione non ancora effettuata.
+
 ## 0.6.0 — installata e collaudata, 31 ottobre 2026
 
 - Coda persistente per progetto, percorsi sovrapposti protetti, massimo quattro progetti indipendenti attivi.
@@ -41,3 +45,4 @@
 ## 0.5.6
 
 Controllo desktop semantico senza coordinate, snapshot monouso e revalidazione; vedere ../docs/mcp-agent/DESKTOP-0.5.6.md.
+

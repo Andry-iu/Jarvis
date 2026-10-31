@@ -22,6 +22,8 @@ type queueEntry struct {
 	TurnID     string         `json:"turn_id,omitempty"`
 	Error      string         `json:"error,omitempty"`
 	DependsOn  []string       `json:"depends_on,omitempty"`
+	FinalUsage json.RawMessage `json:"final_usage,omitempty"`
+	Claims []resourceClaim `json:"resources,omitempty"`
 	Request    runtimeRequest `json:"request"`
 }
 type projectQueue struct {
@@ -35,10 +37,20 @@ func queuePathsOverlap(a, b string) bool {
 	return samePath(a, b) || strings.HasPrefix(strings.ToLower(a), strings.ToLower(b)+string(filepath.Separator)) || strings.HasPrefix(strings.ToLower(b), strings.ToLower(a)+string(filepath.Separator))
 }
 func (r *Runtime) queueSaveLocked() error {
-	if err := atomicJSON(filepath.Join(r.dir, "queue.json"), r.queue); err != nil {
+	kept, err := r.archiveTerminalLocked()
+	if err != nil { r.queueBroken = true; return err }
+	next := *r.queue
+	next.Entries = kept
+	if err := atomicJSON(filepath.Join(r.dir, "queue.json"), &next); err != nil {
 		r.queueBroken = true
 		return errors.New("queue persistence failed; processing stopped; inspect state before retry")
 	}
+	for _,e:=range r.queue.Entries {
+        if terminalActivity(e.Status) && e.JobID!="" {
+            if j:=r.Jobs[e.JobID];j!=nil && terminalActivity(j.Status) {delete(r.Jobs,e.JobID)}
+        }
+    }
+    r.queue.Entries = kept
 	return nil
 }
 func (r *Runtime) initQueue() error {
@@ -68,6 +80,9 @@ func (r *Runtime) initQueue() error {
 			return errors.New("persisted queue project/computer mismatch")
 		}
 		ids[e.ID] = true
+		claims, err := claimsForRequest(e.Request, e.Resource)
+		if err != nil { return err }
+		e.Claims = claims
 		if e.Status == "running" || e.Status == "starting" {
 			e.Status = "uncertain"
 			e.Error = "agent restarted; inspect outcome before resuming; never replay this entry"
@@ -85,12 +100,15 @@ func (r *Runtime) initQueue() error {
 	return nil
 }
 func (r *Runtime) queueFindLocked(id string) *queueEntry {
+	if !requestIDPattern.MatchString(id) { return nil }
 	for _, e := range r.queue.Entries {
 		if e.ID == id {
 			return e
 		}
 	}
-	return nil
+	e, err := r.archivedEntry(id)
+	if err != nil && !os.IsNotExist(err) { r.queueBroken = true }
+	return e
 }
 func (r *Runtime) queuePausedLocked(resource string) string {
 	for path, reason := range r.queue.Paused {
@@ -123,8 +141,9 @@ func (r *Runtime) enqueueLocked(p runtimeRequest, label string, deps []string) (
 	if r.queueBroken || r.closing {
 		return nil, errors.New("queue unavailable")
 	}
+	if err := r.queueSaveLocked(); err != nil { return nil, err }
 	if len(r.queue.Entries) >= 5000 {
-		return nil, errors.New("queue history limit reached; archive required")
+		return nil, errors.New("active queue limit reached")
 	}
 	resource, err := r.projectResource(p.Project)
 	if err != nil {
@@ -147,6 +166,8 @@ func (r *Runtime) enqueueLocked(p runtimeRequest, label string, deps []string) (
 	} else {
 		return nil, errors.New("only fixed commands and attached Codex turns may be queued")
 	}
+	claims, err := claimsForRequest(p, resource)
+	if err != nil { return nil, err }
 	if len(label) > 160 || len(deps) > 100 {
 		return nil, errors.New("label/dependencies too large")
 	}
@@ -164,7 +185,7 @@ func (r *Runtime) enqueueLocked(p runtimeRequest, label string, deps []string) (
 			}
 		}
 	}
-	e := &queueEntry{ID: newID(), Project: p.Project, Resource: resource, Label: label, Status: "queued", CreatedAt: utcNow(), DependsOn: append([]string{}, deps...), Request: p}
+	e := &queueEntry{ID: newID(), Project: p.Project, Resource: resource, Label: label, Status: "queued", CreatedAt: utcNow(), DependsOn: append([]string{}, deps...), Request: p, Claims: claims}
 	r.queue.Entries = append(r.queue.Entries, e)
 	if err = r.queueSaveLocked(); err != nil {
 		return nil, err
@@ -184,7 +205,7 @@ func (r *Runtime) queueViewLocked(e *queueEntry) map[string]any {
 	if e.Status != "queued" {
 		position = 0
 	}
-	return map[string]any{"queue_id": e.ID, "project": e.Project, "label": e.Label, "status": e.Status, "position": position, "job_id": e.JobID, "thread_id": e.Request.ThreadID, "turn_id": e.TurnID, "created_at": e.CreatedAt, "finished_at": e.FinishedAt, "error": e.Error, "depends_on": e.DependsOn, "paused_reason": r.queuePausedLocked(e.Resource)}
+	return map[string]any{"queue_id": e.ID, "project": e.Project, "label": e.Label, "status": e.Status, "position": position, "job_id": e.JobID, "thread_id": e.Request.ThreadID, "turn_id": e.TurnID, "created_at": e.CreatedAt, "finished_at": e.FinishedAt, "error": e.Error, "depends_on": e.DependsOn, "resources": e.Claims, "blocked_by": r.queueBlockersLocked(e), "paused_reason": r.queuePausedLocked(e.Resource)}
 }
 func (r *Runtime) queueListLocked(p runtimeRequest) (any, error) {
 	resource := ""
@@ -250,6 +271,8 @@ func (r *Runtime) queueControl(p runtimeRequest) (any, error) {
 				return nil, errors.New("queued machine mismatch")
 			}
 			req.MachineID = r.MachineID
+			if len(req.Resources) != 0 && len(p.Resources) != 0 { return nil, errors.New("declare resources once, on outer queue_add") }
+			if len(p.Resources) != 0 { req.Resources = p.Resources }
 			return r.enqueueLocked(req, p.Label, p.DependsOn)
 		}
 		if p.Operation == "queue_resume" {
@@ -262,7 +285,7 @@ func (r *Runtime) queueControl(p runtimeRequest) (any, error) {
 					continue
 				}
 				if e.Request.Operation == "command_start" {
-					j := r.Jobs[e.JobID]
+					j := r.lookupJobLocked(e.JobID)
 					if e.JobID != "" && j != nil && j.Status == "running" {
 						return nil, errors.New("previous command still active")
 					}
@@ -274,7 +297,13 @@ func (r *Runtime) queueControl(p runtimeRequest) (any, error) {
 					if err != nil {
 						return nil, err
 					}
+					r.inflight.Add(1)
+					r.mu.Unlock()
 					thread, err := readCodexThread(c, e.Request.ThreadID, true)
+					r.mu.Lock()
+					r.inflight.Done()
+					if r.closing { return nil, errors.New("runtime closing") }
+					if e.Status != "uncertain" { continue }
 					if err != nil || !sameCodexDirectory(thread, e.Resource) || !codexThreadIdle(thread) {
 						return nil, errors.New("previous Codex session not verified idle")
 					}
@@ -366,7 +395,7 @@ func (r *Runtime) queueRefreshLocked() {
 			continue
 		}
 		if e.Request.Operation == "command_start" {
-			j := r.Jobs[e.JobID]
+			j := r.lookupJobLocked(e.JobID)
 			if j == nil {
 				r.queueFailLocked(e, "uncertain", "job result missing")
 				continue
@@ -420,6 +449,7 @@ func (r *Runtime) queueRefreshLocked() {
 						}
 						if json.Unmarshal(event.Params, &p) == nil && p.TurnID == e.TurnID {
 							usageSeen = true
+							e.FinalUsage = append(json.RawMessage{}, event.Params...)
 						}
 					}
 				}
@@ -450,20 +480,21 @@ func (r *Runtime) queueDispatchLocked() {
 	}
 	before, _ := json.Marshal(r.queue)
 	r.queueRefreshLocked()
+	if r.queueBroken { return }
 	running := 0
 	for _, e := range r.queue.Entries {
 		if e.Status == "running" || e.Status == "starting" {
 			running++
 		}
 	}
-	heads := []string{}
+	heads := []*queueEntry{}
 	for _, e := range r.queue.Entries {
 		if e.Status != "queued" {
 			continue
 		}
 		seen := false
-		for _, path := range heads {
-			if queuePathsOverlap(path, e.Resource) {
+		for _, head := range heads {
+			if queueEntriesConflict(head, e) {
 				seen = true
 				break
 			}
@@ -471,11 +502,11 @@ func (r *Runtime) queueDispatchLocked() {
 		if seen {
 			continue
 		}
-		heads = append(heads, e.Resource)
+		heads = append(heads, e)
 		if running >= 4 {
 			break
 		}
-		if r.queuePausedLocked(e.Resource) != "" || r.queueBusyLocked(e.Resource) {
+		if r.queuePausedLocked(e.Resource) != "" || len(r.queueBlockersLocked(e)) != 0 {
 			continue
 		}
 		ready := true
@@ -494,8 +525,9 @@ func (r *Runtime) queueDispatchLocked() {
 			continue
 		}
 		resource, err := r.projectResource(e.Project)
-		if err != nil || !samePath(resource, e.Resource) {
-			r.queueFailLocked(e, "failed", "project path changed")
+		claims, claimErr := claimsForRequest(e.Request, resource)
+		if err != nil || claimErr != nil || !samePath(resource, e.Resource) || !sameClaims(claims, e.Claims) {
+			r.queueFailLocked(e, "failed", "project path or resource identity changed")
 			continue
 		}
 		e.Status = "starting"
@@ -567,4 +599,5 @@ func (r *Runtime) queueLoop(stop <-chan struct{}) {
 		}
 	}
 }
+
 
