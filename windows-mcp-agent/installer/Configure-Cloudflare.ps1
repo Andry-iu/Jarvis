@@ -2,14 +2,14 @@ param([string]$HomeDir=(Split-Path $PSScriptRoot -Parent))
 . "$PSScriptRoot\Common.ps1"
 $s=Read-Install $HomeDir;$HomeDir=$s.home;Assert-Stopped $HomeDir
 if ($s.remote_configured) { throw 'Collegamento gia configurato: conservare Config e verificare prima di sostituirlo. Nessuna sovrascrittura automatica.' }
-Write-Host 'Usare un NUOVO tunnel per Desktop2: non aggiungere una replica al tunnel di Desktop1.'
+Write-Host ('Usare un NUOVO tunnel per '+$s.device_name+': non aggiungere una replica al tunnel di Desktop1.')
 Write-Host ('Nel nuovo tunnel impostare il servizio HTTP http://127.0.0.1:'+$s.port)
 Write-Host 'Proteggere il nuovo hostname con Access e Managed OAuth, consentendo solo il proprio account.'
 Write-Host 'I valori si inseriscono soltanto su questo PC; nessun token deve essere inviato in chat.'
-$hostname=(Read-Host 'Nuovo indirizzo pubblico, es. https://desktop2.dominio.it').Trim().TrimEnd('/')
+$hostname=(Read-Host ('Nuovo indirizzo pubblico HTTPS per '+$s.device_name)).Trim().TrimEnd('/')
 $team=(Read-Host 'Team domain, es. https://nome.cloudflareaccess.com').Trim().TrimEnd('/')
 $aud=(Read-Host 'Application Audience AUD della nuova applicazione Access').Trim()
-$tunnelID=(Read-Host 'UUID del NUOVO tunnel Desktop2').Trim()
+$tunnelID=(Read-Host ('UUID del NUOVO tunnel per '+$s.device_name)).Trim()
 Assert-CloudflareInputs $team $aud $hostname $tunnelID
 $secure=Read-Host 'Token del NUOVO tunnel (solo valore eyJ..., input nascosto)' -AsSecureString
 $token=[Net.NetworkCredential]::new('', $secure).Password
@@ -22,7 +22,7 @@ try {
     if (Test-Path -LiteralPath $cfPath) { throw 'cloudflared gia presente: nessuna sostituzione automatica.' }
     [Net.ServicePointManager]::SecurityProtocol=[Net.SecurityProtocolType]::Tls12
     Write-Host 'Download cloudflared dalla release ufficiale, con verifica SHA-256...'
-    $release=Invoke-RestMethod 'https://api.github.com/repos/cloudflare/cloudflared/releases/latest' -Headers @{'User-Agent'='Jarvis-Installer-1.0.0'} -TimeoutSec 30
+    $release=Invoke-RestMethod 'https://api.github.com/repos/cloudflare/cloudflared/releases/latest' -Headers @{'User-Agent'='Jarvis-Installer-1.0.1'} -TimeoutSec 30
     $assets=@($release.assets|Where-Object {$_.name -eq 'cloudflared-windows-amd64.exe'})
     if ($assets.Count -ne 1 -or -not $assets[0].PSObject.Properties['digest'] -or $assets[0].digest -notmatch '^sha256:([a-fA-F0-9]{64})$') { throw 'Checksum ufficiale non disponibile: download non autorizzato a proseguire.' }
     $expected=$matches[1]
@@ -40,7 +40,7 @@ try {
     Write-AgentEnv $HomeDir $values
     $s.remote_configured=$true;$s.public_endpoint=$hostname+'/mcp'
     Write-Utf8 (Join-Path $HomeDir 'Config\installation.json') ($s|ConvertTo-Json)
-    Write-Utf8 (Join-Path $HomeDir 'Collegamento-ChatGPT.txt') ("Nome plugin: Jarvis-Desktop2`r`nURL MCP: "+$s.public_endpoint+"`r`nAutenticazione: OAuth Cloudflare Access / Managed OAuth.`r`nCollegamento remoto da verificare in ChatGPT; nessuna credenziale da incollare nella chat.`r`n")
-    Write-Host ('Configurazione locale completata. Nuovo plugin Jarvis-Desktop2: '+$s.public_endpoint)
+    Write-Utf8 (Join-Path $HomeDir 'Collegamento-ChatGPT.txt') ('Nome plugin: '+$s.plugin_name+"`r`nURL MCP: "+$s.public_endpoint+"`r`nAutenticazione: OAuth Cloudflare Access / Managed OAuth.`r`nCollegamento remoto da verificare in ChatGPT; nessuna credenziale da incollare nella chat.`r`n")
+    Write-Host ('Configurazione locale completata. Nuovo plugin '+$s.plugin_name+': '+$s.public_endpoint)
     Write-Host 'Avviare l agente e completare il login OAuth dal plugin. DNS, Access e Managed OAuth devono gia essere predisposti nell account Cloudflare.'
 } finally { $token=$null;$secure.Dispose() }
