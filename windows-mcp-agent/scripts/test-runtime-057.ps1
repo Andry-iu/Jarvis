@@ -3,7 +3,7 @@ $ErrorActionPreference='Stop'
 $log='D:\Jarvis\Logs\diagnostics\v57-runtime-test.log'
 $module='D:\Jarvis\MCP-Source\windows-mcp-agent'
 $exe=Join-Path $module 'Staging\jarvis-mcp-057.exe'
-$home='D:\Jarvis\StagingHome057';$stateA=Join-Path $home 'StateA';$stateB=Join-Path $home 'StateB'
+$testHome='D:\Jarvis\StagingHome057';$stateA=Join-Path $testHome 'StateA';$stateB=Join-Path $testHome 'StateB'
 $processA=$null;$processB=$null;$script:machine='';$script:url='http://127.0.0.1:8766/mcp'
 function Report([string]$s){$s|Add-Content $log -Encoding UTF8}
 function New-RequestId{return [guid]::NewGuid().ToString('N')}
@@ -22,7 +22,7 @@ function Call([string]$name,[hashtable]$arguments=@{},[switch]$MustFail){
 function Start-TestAgent([string]$state,[int]$port){
  if(Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction SilentlyContinue){throw ('port_in_use_'+$port)}
  $env:JARVIS_STATE_DIR=$state
- $p=Start-Process -FilePath $exe -ArgumentList @('-listen',('127.0.0.1:'+$port)) -WindowStyle Hidden -PassThru -RedirectStandardOutput (Join-Path $home ('stdout-'+$port+'.log')) -RedirectStandardError (Join-Path $home ('stderr-'+$port+'.log'))
+ $p=Start-Process -FilePath $exe -ArgumentList @('-listen',('127.0.0.1:'+$port)) -WindowStyle Hidden -PassThru -RedirectStandardOutput (Join-Path $testHome ('stdout-'+$port+'.log')) -RedirectStandardError (Join-Path $testHome ('stderr-'+$port+'.log'))
  for($i=0;$i -lt 80;$i++){try{$h=Invoke-RestMethod ('http://127.0.0.1:'+$port+'/health') -TimeoutSec 1;if($h.version -eq '0.5.7'){return $p}}catch{};if($p.HasExited){throw ('candidate_exited_'+$port)};Start-Sleep -Milliseconds 200};throw 'candidate_health_timeout'
 }
 function Stop-Owned($p){if($p -and -not $p.HasExited){Stop-Process -Id $p.Id -Force;$p.WaitForExit();Start-Sleep -Milliseconds 200}}
@@ -30,9 +30,9 @@ function Wait-JobResult([string]$id){for($i=0;$i -lt 180;$i++){$j=Call 'job_stat
 try {
  'START '+[DateTime]::UtcNow.ToString('o')|Set-Content $log -Encoding UTF8
  if((Get-FileHash $exe -Algorithm SHA256).Hash -ne $ExpectedHash){throw 'candidate_hash_mismatch'}
- New-Item -ItemType Directory -Force (Join-Path $home 'Config')|Out-Null
- if(-not (Test-Path (Join-Path $home 'Config\secrets.env'))){'# isolated test configuration'|Set-Content (Join-Path $home 'Config\secrets.env') -Encoding UTF8}
- $env:JARVIS_HOME=$home;$env:JARVIS_MCP_TOKEN=(New-RequestId);$env:JARVIS_PROJECTS_ROOT='D:\Jarvis\MCP-Source';$env:JARVIS_DESKTOP_ENABLED='1';$env:JARVIS_CODEX_ENABLED='1';$env:JARVIS_TEST_PEERS='1'
+ New-Item -ItemType Directory -Force (Join-Path $testHome 'Config')|Out-Null
+ if(-not (Test-Path (Join-Path $testHome 'Config\secrets.env'))){'# isolated test configuration'|Set-Content (Join-Path $testHome 'Config\secrets.env') -Encoding UTF8}
+ $env:JARVIS_HOME=$testHome;$env:JARVIS_MCP_TOKEN=(New-RequestId);$env:JARVIS_PROJECTS_ROOT='D:\Jarvis\MCP-Source';$env:JARVIS_DESKTOP_ENABLED='1';$env:JARVIS_CODEX_ENABLED='1';$env:JARVIS_TEST_PEERS='1'
  $processA=Start-TestAgent $stateA 8766
  $info=Call 'machine_info';$script:machine=$info.machine_id;Report ('MACHINE '+$script:machine)
  $catalog=Call 'project_catalog';if(-not ($catalog.projects|Where-Object project -eq 'windows-mcp-agent')){throw 'missing_source_project'};Report 'PASS catalog'
@@ -63,7 +63,7 @@ try {
  if($capture.isError){Report ('BLOCKED capture '+$capture.content[0].text)}else{$image=$capture.content|Where-Object type -eq 'image';$meta=($capture.content|Where-Object type -eq 'text').text|ConvertFrom-Json;if(-not $image -or $meta.image_width -ne 960){throw 'capture_schema_failed'};$bytes=[Convert]::FromBase64String($image.data);if($bytes.Length -lt 100 -or $bytes[0] -ne 255 -or $bytes[1] -ne 216){throw 'capture_image_failed'};Report ('PASS direct_capture '+($meta|ConvertTo-Json -Compress -Depth 5))}
  $processB=Start-TestAgent $stateB 8767
  $peerRaw=Rpc 'machine_info' @{} 'http://127.0.0.1:8767/mcp';$peer=($peerRaw.content|Where-Object type -eq 'text').text|ConvertFrom-Json
- ConvertTo-Json -InputObject @(@{device_id='test-peer';machine_id=$peer.machine_id;endpoint='http://127.0.0.1:8767/mcp';token_env='JARVIS_MCP_TOKEN'}) -Depth 5|Set-Content (Join-Path $home 'Config\devices.json') -Encoding UTF8
+ ConvertTo-Json -InputObject @(@{device_id='test-peer';machine_id=$peer.machine_id;endpoint='http://127.0.0.1:8767/mcp';token_env='JARVIS_MCP_TOKEN'}) -Depth 5|Set-Content (Join-Path $testHome 'Config\devices.json') -Encoding UTF8
  $devices=Call 'device_list';if(-not ($devices.devices|Where-Object {$_.device_id -eq 'test-peer' -and $_.online})){throw 'peer_not_online'}
  $peerCall=@{operation='project_catalog';machine_id=$peer.machine_id};$remote=Call 'device_call' @{device_id='test-peer';call=$peerCall};if($remote.machine_id -ne $peer.machine_id){throw 'peer_forward_failed'};Report 'PASS authenticated_peer_routing'
  $peerCall.machine_id=$script:machine;Call 'device_call' @{device_id='test-peer';call=$peerCall} -MustFail;Report 'PASS peer_identity_guard'
