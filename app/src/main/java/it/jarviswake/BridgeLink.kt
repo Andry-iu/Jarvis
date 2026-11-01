@@ -22,6 +22,7 @@ internal object BridgeLink {
     @Volatile private var generation=0
     @Volatile private var worker:Thread?=null
     @Volatile private var connection:HttpURLConnection?=null
+    private var fastUntil=0L
     @Volatile var status="Collegamento disattivato."
         private set
     fun owner(context:Context,id:String,active:Boolean) {
@@ -55,8 +56,11 @@ internal object BridgeLink {
                     if(epoch!=generation) break
                     val command=reply.optJSONObject("request")
                     if(command!=null) {
+                        fastUntil=SystemClock.elapsedRealtime()+5000L
                         val id=command.optString("requestId");val op=command.optString("operation")
                         check(BridgeProtocol.validRequest(id,op,command.optLong("createdAt"),command.optLong("expiresAt")))
+                        if(op in setOf("call_contact","call_by_name")) NativeRuntimeSnapshot.save(app,id,"bridge_transport",
+                            "stage=polled roundtrip_ms=${SystemClock.elapsedRealtime()-polledAt} server_queue_ms=${(25000-command.optLong("remainingMs",25000)).coerceAtLeast(0)}")
                         if(op=="status") {
                             val ready=CountDownLatch(1);var snapshot:JSONObject?=null
                             main.post { try { if(epoch==generation) snapshot=capture(app) } finally { ready.countDown() } }
@@ -75,7 +79,7 @@ internal object BridgeLink {
                         }
                         if(epoch==generation) status="Risposta consegnata al servizio; verifica l’esito in ChatGPT."
                     } else if(epoch==generation && (failures>0 || status=="Connessione al servizio…")) status="Collegamento disponibile; attendo una richiesta."
-                    failures=0;Thread.sleep(2000)
+                    failures=0;Thread.sleep(BridgePollPolicy.delay(VoiceCycle.active,SystemClock.elapsedRealtime()<fastUntil))
                 } catch(_:InterruptedException) { break }
                 catch(_:Exception) {
                     if(epoch!=generation) break
@@ -99,7 +103,9 @@ internal object BridgeLink {
         // Persist consumption before a network claim or any phone action. Crashes never re-dispatch.
         BridgeSettings.writePrivate(c,"commands",ledger)
         val outcome=try {
+            val claimAt=SystemClock.elapsedRealtime()
             val claim=post(auth,"/device/claim",JSONObject().put("deviceId",auth.deviceId).put("requestId",id),epoch)
+            if(command.optString("operation") in setOf("call_contact","call_by_name")) NativeRuntimeSnapshot.save(c,id,"bridge_transport","stage=claim roundtrip_ms=${SystemClock.elapsedRealtime()-claimAt}")
             if(claim.optString("state")!="claimed") result("outcome_uncertain")
             else BridgeActions.execute(c,auth.deviceId,command,deadline) { epoch==generation }
         } catch(_:Exception) { result("outcome_uncertain") }

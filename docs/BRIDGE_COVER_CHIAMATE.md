@@ -1,3 +1,7 @@
+# Aggiornamento .88
+
+Per gestione PiP Maps, conferma audio riusata, comando unico/cache e diagnostica tempi seguire [CHIAMATE_RAPIDE.md](CHIAMATE_RAPIDE.md). Il flusso .87 qui sotto è la base storica; il nuovo gruppo preserva uscite/stop unico/wake.
+
 # Cover, Maps e telefonate — .87
 
 Maps legge la connessione dal CarConnection AndroidX: solo CONNECTION_TYPE_PROJECTION confermato mantiene la cover esistente. Stato sconosciuto, non collegato o Automotive nativo non sono proiezione Android Auto del telefono; si mantiene il comportamento precedente mostrando Maps sul telefono. Bluetooth non è prova di collegamento. Nessun HUD viene creato soltanto perché l’auto si collega e nessuna garanzia che il dispatch Maps abbia avviato la rotta sul display auto.

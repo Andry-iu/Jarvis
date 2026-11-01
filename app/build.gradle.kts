@@ -7,8 +7,8 @@ android {
         applicationId = "it.jarviswake"
         minSdk = 31
         targetSdk = 36
-        versionCode = 109
-        versionName = "0.5.87"
+        versionCode = 110
+        versionName = "0.5.88"
         ndk { abiFilters += listOf("arm64-v8a") }
     }
     val ciKeystore = System.getenv("JARVIS_KEYSTORE_PATH")

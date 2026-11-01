@@ -8,8 +8,16 @@ import java.util.concurrent.atomic.AtomicBoolean
 
 /** Fresh explicit call command owns this temporary HUD; polling never creates or reopens it. */
 internal object BridgeCallPreparation {
-    private class Pending(val id:String,val service:VoiceAccessibilityService,val view:HolographicOverlayView,val cancelled:AtomicBoolean=AtomicBoolean(false))
+    private class Pending(val id:String,val service:VoiceAccessibilityService,val view:HolographicOverlayView,val cancelled:AtomicBoolean=AtomicBoolean(false),val token:String?=VoiceCycle.id,val pip:BridgeMapsPip=BridgeMapsPip())
     @Volatile private var pending:Pending?=null
+    fun prepareMapsPip(service:VoiceAccessibilityService,token:String,windows:List<android.view.accessibility.AccessibilityWindowInfo>):Boolean {
+        val p=pending?.takeIf { it.token==token && !it.cancelled.get() } ?: return false
+        return p.pip.prepare(service,token,windows)
+    }
+    fun stopUncovered(service:VoiceAccessibilityService,token:String,node:android.view.accessibility.AccessibilityNodeInfo):Boolean {
+        val p=pending?.takeIf {it.token==token && !it.cancelled.get()} ?: return true
+        return p.pip.stopUncovered(service.windows,node)
+    }
     fun allowed(id:String)=pending?.let { it.id==id && !it.cancelled.get() }==true
     fun begin(c:Context,id:String) {
         check(pending==null)

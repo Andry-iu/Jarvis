@@ -1,3 +1,7 @@
+# Aggiornamento .88 — telefonate e cache
+
+Nuovo jarviswake_call_by_name per nome esplicito: risoluzione locale e chiamata in un comando, nessuna selezione automatica fra omonimi. Cache cifrata20 voci in Configurazione → Collegamento e azioni → Maps, chiamate e WhatsApp → Contatti frequenti e preferiti. Controlli rubrica/audio restano obbligatori. Vedi [CHIAMATE_RAPIDE.md](CHIAMATE_RAPIDE.md) per PiP Maps, polling adattivo200ms e tempi. WhatsApp .87 confermato funzionante dall’utente, sessione conservata.
+
 # Aggiornamento 0.5.87 — WhatsApp QR e gestione cover
 
 Le istruzioni UI WhatsApp .81 più sotto sono storiche: nella .87 sono sostituite dal client collegato sul telefono. Configurazione → Collegamento e azioni → Maps, chiamate e WhatsApp → Collega WhatsApp con QR. Genera il QR reale e scansionalo da WhatsApp → Dispositivi collegati (anche fotografandolo con un secondo telefono mentre valido). Attendi Collegato. Invio diretto, nessun editor/bozza/clic WhatsApp e nessun PC sempre acceso; ack server distinto da consegna. Vedi [WHATSAPP_QR.md](WHATSAPP_QR.md).

@@ -1,3 +1,7 @@
+# .88 / 110 — chiamata unica per nome
+
+Nuovo jarviswake_call_by_name richiede110: nome esplicito, risoluzione sul telefono/cache e rubrica attuale, nessuna scelta in ambiguità. contacts_found significa nessuna chiamata: chiarire e usare call_contact. Stessi UUID/claim/journal/pairing/audience. Poll200ms durante Voice/burst, non garanzia200ms complessivi. Numeri completi/cache restano sul telefono.
+
 # .87 — WhatsApp QR sul telefono
 
 Stesso Site/plugin/abbinamento: WhatsApp richiede APK109 e usa un client collegato sul telefono, senza UI. Risultati whatsapp_not_linked, whatsapp_connection_unavailable e whatsapp_server_accepted; l’ultimo prova soltanto accettazione server. Vecchi client devono aggiornarsi, nessun fallback silenzioso ai tasti. Non transitano QR o chiavi sessione nel Worker. UI di collegamento nell’app Android. Codice/actions Maps e telefonate conservano stessi strumenti; nuova gestione cover e arresto lato telefono. Guida unica aggiornata.

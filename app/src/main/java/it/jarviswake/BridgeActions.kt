@@ -56,6 +56,15 @@ internal object BridgeActions {
                     result("intent_dispatched")
                 }
                 "call_contact" -> call(c,deviceId,command.getString("requestId"),p.getString("contact_ref"),deadline,::allowed)
+                "call_by_name" -> {
+                    unlocked(c)
+                    val timing=BridgeCallTiming(c,command.getString("requestId"))
+                    timing.stage("received")
+                    val contacts=BridgeContacts.directRef(c,deviceId,p.getString("name"),timing)
+                    val rows=contacts.getJSONArray("contacts")
+                    if(rows.length()!=1 || contacts.optBoolean("truncated")) contacts
+                    else call(c,deviceId,command.getString("requestId"),rows.getJSONObject(0).getString("contact_ref"),deadline,::allowed,timing)
+                }
                 "whatsapp" -> {
                     val contact=BridgeContacts.resolve(c,deviceId,p.getString("contact_ref"))
                     val phone=contact.international ?: throw BridgeFailure("international_number_required")
@@ -93,38 +102,56 @@ internal object BridgeActions {
         intent.flags=(intent.flags or Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT) and destructive.inv()
         return intent
     }
-    private fun call(c:Context,deviceId:String,id:String,ref:String,deadline:Long,allowed:()->Boolean):JSONObject {
+    private fun call(c:Context,deviceId:String,id:String,ref:String,deadline:Long,allowed:()->Boolean,timing:BridgeCallTiming=BridgeCallTiming(c,id)):JSONObject {
+        timing.stage("received")
         if(c.checkSelfPermission(Manifest.permission.CALL_PHONE)!=PackageManager.PERMISSION_GRANTED ||
             c.checkSelfPermission(Manifest.permission.READ_PHONE_STATE)!=PackageManager.PERMISSION_GRANTED) throw BridgeFailure("permission_required")
         val contact=BridgeContacts.resolve(c,deviceId,ref)
+        timing.stage("contact_validated")
+        var original:String?=null
         var dispatched=false
         try {
             onMain(allowed) {
                 unlocked(c)
                 if(VoiceCycle.active && !NativeChatSettings.enabled(c)) throw BridgeFailure("unsupported")
+                original=VoiceCycle.id
                 BridgeCallHold.acquire(c,id)
                 BridgeCallPreparation.begin(c,id)
                 if(VoiceCycle.active) {
                     val service=VoiceAccessibilityService.bridgeService() ?: throw BridgeFailure("voice_stop_unconfirmed")
                     service.startActivity(chatGptResumeIntent(c))
+                    timing.stage("foreground_requested")
                 }
                 if(!VoiceAccessibilityService.stopBridgeVoice(c)) throw BridgeFailure("voice_stop_unconfirmed")
+                timing.stage("stop_requested")
             }
             val release=NativeAudioReleaseGate()
             val stopDeadline=minOf(deadline,SystemClock.elapsedRealtime()+12000)
             var ready=false
             while(allowed() && BridgeCallPreparation.allowed(id) && SystemClock.elapsedRealtime()<stopDeadline) {
-                ready=onMain(allowed) { !VoiceCycle.active && release.observe(id,SystemClock.elapsedRealtime(),NativeAudioState.read(c).free) }
+                ready=onMain(allowed) {
+                    if(VoiceCycle.active) false else {
+                        timing.stage("cycle_closed")
+                        val reused=original?.let {NativeAudioRelease.freshProof(c,it)}==true
+                        if(reused) timing.stage("audio_proof_reused")
+                        reused || release.observe(id,SystemClock.elapsedRealtime(),NativeAudioState.read(c).free)
+                    }
+                }
                 if(ready) break
                 Thread.sleep(100)
             }
-            if(!ready) return result(if(!BridgeCallPreparation.allowed(id)) "cancelled" else if(!allowed()) "expired_before_dispatch" else "voice_stop_unconfirmed")
+            if(!ready) { timing.stage("stop_failed");return result(if(!BridgeCallPreparation.allowed(id)) "cancelled" else if(!allowed()) "expired_before_dispatch" else "voice_stop_unconfirmed") }
+            timing.stage("audio_ready")
             onMain({allowed() && BridgeCallPreparation.allowed(id)}) {
                 unlocked(c)
+                val current=BridgeContacts.resolve(c,deviceId,ref)
+                if(current.number!=contact.number) throw BridgeFailure("contact_changed")
                 if(!NativeAudioState.read(c).free) throw BridgeFailure("audio_busy")
                 BridgeCallPreparation.finish(id)
-                launch(c,Intent(Intent.ACTION_CALL,Uri.fromParts("tel",contact.number,null)))
+                launch(c,Intent(Intent.ACTION_CALL,Uri.fromParts("tel",current.number,null)))
                 dispatched=true
+                timing.stage("call_intent_dispatched")
+                runCatching {BridgeContactCache.remember(c,current)}.onFailure {timing.stage("cache_write_failed")}
             }
             return result("call_intent_dispatched")
         } finally {

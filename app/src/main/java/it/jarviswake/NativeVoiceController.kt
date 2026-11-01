@@ -116,9 +116,10 @@ internal class NativeVoiceController(private val service: VoiceAccessibilityServ
                 else -> NativeWindowSelector.Kind.OTHER
             }
             NativeWindowSelector.Window(window.id, kind, window.layer, window.isActive, window.isFocused,
-                root?.packageName?.toString(), root?.isVisibleToUser ?: true)
+                root?.packageName?.toString(), root?.isVisibleToUser ?: true, window.isInPictureInPictureMode)
         }
-        val selected = NativeWindowSelector.select(descriptors, NativeChatSettings.PACKAGE)
+        val clearedPip = ending != null && BridgeCallPreparation.prepareMapsPip(service, token, windows)
+        val selected = NativeWindowSelector.select(descriptors, NativeChatSettings.PACKAGE, allowMapsPip = clearedPip)
         val metadata = "selected=${selected ?: -1}; " + descriptors.joinToString("; ") {
             val owner = when (it.packageName) {
                 NativeChatSettings.PACKAGE -> "chatgpt"
@@ -126,7 +127,7 @@ internal class NativeVoiceController(private val service: VoiceAccessibilityServ
                 null -> "unknown"
                 else -> "other"
             }
-            "id=${it.id},type=${it.kind},layer=${it.layer},active=${it.active},focused=${it.focused},owner=$owner,visible=${it.visible},root=${roots[it.id] != null}"
+            "id=${it.id},type=${it.kind},layer=${it.layer},active=${it.active},focused=${it.focused},pip=${it.pip},owner=$owner,visible=${it.visible},root=${roots[it.id] != null}"
         }
         if (metadata != lastWindowMetadata) {
             lastWindowMetadata = metadata
@@ -181,7 +182,7 @@ internal class NativeVoiceController(private val service: VoiceAccessibilityServ
         val closed = if (startSent) exitConfirmation.observe(SystemClock.elapsedRealtime(), startKey,
             stops.isNotEmpty() || mutes.isNotEmpty() || unmutes.isNotEmpty()) else false
         if (ending != null) {
-            if (stop != null && !stopSent && service.consumeNativeStop(token)) {
+            if (stop != null && !stopSent && BridgeCallPreparation.stopUncovered(service, token, stop) && service.consumeNativeStop(token)) {
                 stopSent = true
                 DiagnosticLog.record(service, DiagnosticLog.Event.NATIVE_STOP_COMMAND, token)
                 val accepted=runCatching { stop.performAction(AccessibilityNodeInfo.ACTION_CLICK) }.getOrDefault(false)

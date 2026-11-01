@@ -28,7 +28,7 @@ const snap={app:{version:'0.5.80',versionCode:102},wake:{serviceRunning:true,cap
 test('Discovery exposes bounded status and action tools without fabricated phone data',async()=>{
   const r=await worker.fetch(request('/mcp',{jsonrpc:'2.0',id:1,method:'tools/list'}),env());
   const names=(await r.json()).result.tools.map(t=>t.name);
-  assert.deepEqual(names,['jarviswake_devices','jarviswake_request_status','jarviswake_status_result','jarviswake_find_contacts','jarviswake_navigate','jarviswake_call_contact','jarviswake_whatsapp','jarviswake_list_notes','jarviswake_read_note','jarviswake_save_note','jarviswake_guide']);
+  assert.deepEqual(names,['jarviswake_devices','jarviswake_request_status','jarviswake_status_result','jarviswake_find_contacts','jarviswake_navigate','jarviswake_call_by_name','jarviswake_call_contact','jarviswake_whatsapp','jarviswake_list_notes','jarviswake_read_note','jarviswake_save_note','jarviswake_guide']);
 });
 test('Pairing requires authenticated same-origin browser action',async()=>{
   for(const h of [{},user,{...user,Origin:'https://attacker.example','X-Jarvis-Link':'pair'}]) {
@@ -234,7 +234,7 @@ test('Status remains compatible with old snapshots and reports only the notes co
 
 test('The complete guide is available without pairing or a running phone',async()=>{
  const e=env();const r=value(await tool(e,'jarviswake_guide',{topic:'indice',query:''}));
- assert.equal(r.guide_version,'0.5.87');assert.equal(r.version_code,109);assert.equal(r.phone_required,false);assert.ok(r.topics.length>=19);
+ assert.equal(r.guide_version,'0.5.88');assert.equal(r.version_code,110);assert.equal(r.phone_required,false);assert.ok(r.topics.length>=19);
  assert.equal(e.BUCKET.data.size,0);
  for(const topic of ['wake','cover','audio','chatgpt','collegamento','appunti','plugin','maps','chiamate','whatsapp','diagnostica']) assert.ok(r.topics.some(t=>t.topic===topic));
 });
@@ -261,4 +261,23 @@ test('QR WhatsApp requires version109 and never offers the legacy UI path',async
  assert.equal((await worker.fetch(request('/device/respond',{deviceId:c.deviceId,requestId:args.request_id,result:{code:'whatsapp_not_linked'}},auth),e)).status,200);
  const result=value(await tool(e,'jarviswake_status_result',{device_id:c.deviceId,request_id:args.request_id}));
  assert.equal(result.result.code,'whatsapp_not_linked');
+});
+
+
+test('Combined call requires110, exact name and preserves ambiguity result and request id',async()=>{
+ const e=env(),c=await pair(e),auth={Authorization:'Bearer '+c.deviceToken};
+ const id=crypto.randomUUID(),args={device_id:c.deviceId,name:'Test Contact',request_id:id};
+ await advertise(e,c,109);
+ assert.equal((await tool(e,'jarviswake_call_by_name',args)).isError,true);
+ await worker.fetch(request('/device/poll',{deviceId:c.deviceId,versionCode:110,operations:['call_by_name','call_contact']},auth),e);
+ assert.equal(value(await tool(e,'jarviswake_call_by_name',args)).state,'pending');
+ const p=await worker.fetch(request('/device/poll',{deviceId:c.deviceId,versionCode:110,operations:['call_by_name']},auth),e);
+ const command=(await p.json()).request;assert.equal(command.operation,'call_by_name');assert.deepEqual(command.params,{name:'Test Contact'});
+ assert.equal((await claim(e,c,id)).status,200);
+ const result={code:'contacts_found',contacts:[{contact_ref:crypto.randomUUID(),name:'Test Contact',label:'mobile',suffix:'0000'}],truncated:false};
+ assert.equal((await worker.fetch(request('/device/respond',{deviceId:c.deviceId,requestId:id,result},auth),e)).status,200);
+ assert.deepEqual(value(await tool(e,'jarviswake_status_result',{device_id:c.deviceId,request_id:id})).result,result);
+ assert.equal(value(await tool(e,'jarviswake_call_by_name',args)).state,'responded');
+ assert.equal((await tool(e,'jarviswake_call_by_name',{...args,number:'+39000000000'})).isError,true);
+ assert.equal((await tool(e,'jarviswake_call_by_name',{...args,name:'Another Contact'})).isError,true);
 });

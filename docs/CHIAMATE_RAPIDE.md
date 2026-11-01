@@ -1,0 +1,25 @@
+# Telefonate e contatti — .88 / 110
+
+Gruppo autorizzato il1 novembre2026: correzione Maps PiP, riduzione attese, cache frequenti/preferiti e comando unico di chiamata per nome. Utente conferma invio WhatsApp .87 funzionante; il motore/sessione WhatsApp rimane invariato.
+
+## Uso
+
+Stesso JarvisWake Link, pairing e consensi. Per «Chiama [nome preciso]» preferire `jarviswake_call_by_name` (richiede110), senza la ricerca remota preliminare. Il telefono risolve cache e rubrica nello stesso comando e avvia la preparazione solo con un risultato unico. Con più numeri/omonimi, restituisce `contacts_found` e NON chiama: chiedere la scelta e usare `jarviswake_call_contact` sul riferimento selezionato. Zero risultati richiede chiarimento; nessuna prova autonoma con nomi diversi. Richieste mutanti/UUID/claim/journal e nessun retry incerto preservati.
+
+Configurazione → Collegamento e azioni → Maps, chiamate e WhatsApp → Contatti frequenti e preferiti.20 voci cifrate AES-GCM/Android Keystore nello stesso archivio privato `bridge_private`, chiave `frequent_contacts`, escluse da backup/diagnostica/Git. Nome/numero/ID locale, max5 query già usate per riga, ultimo utilizzo, preferito e contatore di dispatch (non telefonate risposte). Importa fino a20 numeri già preferiti Android; ogni riquadro permette preferito/rimozione; Svuota confermato non tocca rubrica/appunti. La cancellazione dell’abbinamento elimina anche l’indice contatti, non gli appunti.
+
+La cache ordina e riconosce i contatti già usati; **non elimina il controllo della rubrica corrente**. Anche con un preferito la ricerca locale controlla ambiguità/cambi, invalida il candidato diverso e genera un riferimento fresco. Prima del dialer ricontrolla di nuovo riga/nome/numero. Un preferito non vince automaticamente un omonimo. Il principale risparmio atteso è evitare lo scambio MCP separato ricerca→risultato→richiesta chiamata; non è dimostrato un risparmio misurabile della query locale sul Galaxy. Numeri completi/cache non sono restituiti al server: restano nome/etichetta/ultime4cifre e riferimenti previsti.
+
+## Maps in riquadro
+
+La .87 scartava ChatGPT se un’altra applicazione era nello strato superiore. Il nuovo dato utente è Maps diventato riquadro sopra il pulsante Termina sotto la cover semitrasparente, telefonata fallita; senza ZIP non provata l’esatta classificazione Android/OneUI. La .88 tratta Maps PiP solo durante preparazione esplicita telefonata: package Maps + `isInPictureInPictureMode`, ChatGPT applicazione principale, nessun dialogo di sistema attivo. Se espone ACTION_MOVE_WINDOW pubblico, un solo comando verso l’angolo alto sinistro, quindi successiva geometria cambiata prima di escludere quella sola PiP dal selettore. Stop deve essere univoco e fuori dal riquadro. Nessun ACTION_DISMISS, API/task privilegiata, ID privato, tap o impostazione Android cambiata.
+
+MOVE accettato non prova movimento: stato `move_dispatched` poi `moved` o `move_unconfirmed`. Mancanza azione/posizione/owner blocca il tentativo. Non promettere che il launcher abbia recuperato la specifica Voice o che Samsung esponga le stesse azioni AOSP. Lo spostamento non richiede di interrompere Maps, ma continuità navigazione/Android Auto da collaudare. Gesti chiudono subito HUD e annullano telefonata; polling mai lo riapre. .70 e stop unico preservati.
+
+## Tempi
+
+Polling dopo ogni risposta200ms con Voice attiva o entro5s dall’ultimo comando, altrimenti2s. Sono pause tra richieste HTTP, cui si sommano rete/server; nessuna promessa di latenza totale200ms. Backoff errori3/10s e lease25s/journal restano. Loop stop100ms, attesa massima12s (non pausa fissa). Richiesto almeno1s stabile audio libero; conferma della stessa sessione riusata solo se appena ottenuta≤250ms e nuova lettura ancora libera, altrimenti nuovo gate1s. Nessun passaggio senza conferma, acquisizione condivisa o ripresa wake prematura.
+
+`native-runtime.log`: `bridge_transport` con roundtrip poll/claim e età server della coda, `bridge_call` con `elapsed_ms` dall’ingresso (cache/contact/foreground/stop/cycle_closed/audio_ready/call_intent_dispatched), `bridge_pip` con esiti fissi. Nessun nome/numero/indirizzo. Misure coprono il codice del telefono/trasporto; non ricostruiscono tutta la latenza del modello e dell’audio pronunciato. Il collaudo Galaxy e un ZIP dopo la prova servono per quantificare il guadagno reale.
+
+Fonti: [PiP Android](https://developer.android.com/develop/ui/views/picture-in-picture), [isInPictureInPictureMode](https://developer.android.com/reference/android/view/accessibility/AccessibilityWindowInfo#isInPictureInPictureMode()), [MOVE_WINDOW](https://developer.android.com/reference/android/view/accessibility/AccessibilityNodeInfo.AccessibilityAction#ACTION_MOVE_WINDOW), [implementazione Android16](https://raw.githubusercontent.com/aosp-mirror/platform_frameworks_base/android16-release/libs/WindowManager/Shell/src/com/android/wm/shell/pip/phone/PipAccessibilityInteractionConnection.java). Controlli AOSP e test simulati non dimostrano azione sul Galaxy.
