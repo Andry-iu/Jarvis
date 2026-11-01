@@ -15,6 +15,20 @@ import (
 )
 
 type runtimeRequest struct {
+ WindowID string `json:"window_id,omitempty"`
+ SnapshotID string `json:"snapshot_id,omitempty"`
+ ElementID string `json:"element_id,omitempty"`
+ Action string `json:"action,omitempty"`
+ Keys []string `json:"keys,omitempty"`
+ Executable string `json:"executable,omitempty"`
+ Args []string `json:"args,omitempty"`
+ WorkingDirectory string `json:"working_directory,omitempty"`
+ Elevated bool `json:"elevated,omitempty"`
+ Folder string `json:"folder,omitempty"`
+ DialogMode string `json:"dialog_mode,omitempty"`
+ Overwrite bool `json:"overwrite,omitempty"`
+ ExpectedText *string `json:"expected_text,omitempty"`
+
 	QueueID     string          `json:"queue_id,omitempty"`
 	BeforeID    string          `json:"before_id,omitempty"`
 	Label       string          `json:"label,omitempty"`
@@ -119,14 +133,18 @@ func toolsList() any {
 			switch f {
 			case "offset", "limit", "timeout_seconds", "after", "monitor", "max_width", "quality":
 				typ = "integer"
-			case "recursive":
+			case "recursive", "elevated", "overwrite":
 				typ = "boolean"
-			case "region", "depends_on", "resources":
+			case "region", "depends_on", "resources", "keys", "args":
 				typ = "array"
 			case "call", "answers":
 				typ = "object"
 			}
 			s := map[string]any{"type": typ}
+			if f == "keys" || f == "args" { s["items"] = map[string]string{"type":"string"}; s["maxItems"]=128 }
+			if f == "elevated" || f == "overwrite" { s["default"] = false }
+			if f == "action" { s["enum"] = []string{"invoke","set_text","type_text","focus","toggle","select"} }
+			if f == "dialog_mode" { s["enum"] = []string{"open","save"} }
 			if f == "region" {
 				s["items"] = map[string]string{"type": "integer"}
 				s["minItems"] = 4
@@ -205,7 +223,8 @@ func decodeRuntime(name string, b json.RawMessage) (runtimeRequest, error) {
 			}
 		}
 	}
-	if p.Limit < 0 || p.Limit > 200 || p.Offset < 0 || p.After < 0 {
+	if p.Operation=="ui_action" && (p.Action=="set_text"||p.Action=="type_text") { if _,ok:=fields["text"];!ok{return p,errors.New("text is required for text actions")}; if len([]rune(p.Text))>4096{return p,errors.New("text exceeds 4096 characters")} }
+ if p.Limit < 0 || p.Limit > 200 || p.Offset < 0 || p.After < 0 {
 		return p, errors.New("invalid pagination")
 	}
 	p.Path = filepath.FromSlash(p.Path)
@@ -231,7 +250,8 @@ func (a *Agent) invokeRuntime(name string, raw json.RawMessage) any {
 		}
 		return v
 	}
-	v, e := r.call(p)
+	var v any
+	if isDirectUI(p.Operation) { v,e = a.directUI(r,p) } else { v,e = r.call(p) }
 	if e != nil {
 		return toolResult(map[string]any{"error": e.Error(), "request_id": p.RequestID, "machine_id": r.MachineID}, true)
 	}
@@ -252,6 +272,9 @@ func (a *Agent) invokeRuntime(name string, raw json.RawMessage) any {
 }
 func (r *Runtime) call(p runtimeRequest) (any, error) {
 	switch p.Operation {
+ case "maintenance_status": return maintenanceStatus(),nil
+ case "known_folder": return knownFolder(p.Folder)
+ case "process_start": return r.externalMutation(p,func()(any,error){ return launchProcess(p) })
 	case "activity_history":
 		return r.activityHistory(p)
 	case "machine_info":
@@ -377,3 +400,4 @@ func requireProject(p runtimeRequest) error {
 	}
 	return nil
 }
+

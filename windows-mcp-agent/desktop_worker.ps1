@@ -54,16 +54,16 @@ public static class JarvisDesktopNative {
 }
 '@
  function Refuse($code){throw $code}
- function Rect($r){return @([double]$r.X,[double]$r.Y,[double]$r.Width,[double]$r.Height)}
+ function Rect($r){$v=@([double]$r.X,[double]$r.Y,[double]$r.Width,[double]$r.Height);foreach($n in $v){if([double]::IsNaN($n) -or [double]::IsInfinity($n)){return @(0.0,0.0,0.0,0.0)}};return $v}
  function Json($v){return ConvertTo-Json -InputObject $v -Depth 12 -Compress}
  function WindowState{
   if(![Environment]::UserInteractive -or ![JarvisDesktopNative]::DefaultInputDesktop()){Refuse 'desktop_unavailable_or_locked'}
-  $h=[JarvisDesktopNative]::GetForegroundWindow()
+  $h=if($script:TargetWindow){ValidateWindow $script:TargetWindow}else{[JarvisDesktopNative]::GetForegroundWindow()}
   if($h -eq [IntPtr]::Zero -or ![JarvisDesktopNative]::IsWindowVisible($h) -or [JarvisDesktopNative]::IsIconic($h)){Refuse 'no_visible_foreground_window'}
   $w=[Windows.Automation.AutomationElement]::FromHandle($h)
   $c=$w.Current
   $proc=Get-Process -Id $c.ProcessId
-  $identity=[ordered]@{hwnd=$h.ToInt64();pid=$c.ProcessId;start_ticks=$proc.StartTime.ToUniversalTime().Ticks;runtime=($w.GetRuntimeId() -join '.');bounds=(Rect $c.BoundingRectangle);title=$c.Name}
+  $identity=[ordered]@{hwnd=$h.ToInt64();pid=$c.ProcessId;start_ticks=$proc.StartTime.ToUniversalTime().Ticks.ToString();runtime=($w.GetRuntimeId() -join '.');bounds=(Rect $c.BoundingRectangle);title=$c.Name}
   return @{element=$w;identity=$identity}
  }
  function ElementState($e){
@@ -104,6 +104,8 @@ public static class JarvisDesktopNative {
    try{$valueHash=[Convert]::ToBase64String($sha.ComputeHash([Text.Encoding]::UTF8.GetBytes($value)))}finally{$sha.Dispose()}
   }
   if($nativeKind -eq 'button' -and $patterns -notcontains 'invoke'){$patterns+='invoke'}
+  if($patterns -contains 'set_text'){$patterns+='type_text'}
+  if($patterns.Count -gt 0 -or $c.IsKeyboardFocusable){$patterns+='focus'}
   $name=if($password -or $type -eq 'ControlType.Edit' -or $c.ControlType -eq [Windows.Automation.ControlType]::Edit -or $c.ControlType -eq [Windows.Automation.ControlType]::Document){''}else{$c.Name}
   if($name.Length -gt 120){$name=$name.Substring(0,120)}
   $identity=[ordered]@{runtime=$rid;pid=$c.ProcessId;hwnd=$c.NativeWindowHandle;class=$c.ClassName;automation_id=$c.AutomationId;type=$type;name=$name;native_kind=$nativeKind;native_class=$nativeClass;native_style=$nativeStyle;read_only=$readOnly;bounds=(Rect $c.BoundingRectangle);enabled=$c.IsEnabled;offscreen=$c.IsOffscreen;password=$password;value_hash=$valueHash;patterns=@($patterns)}
@@ -145,6 +147,8 @@ public static class JarvisDesktopNative {
   return $s
  }
  $req=[Console]::In.ReadToEnd()|ConvertFrom-Json
+ $script:TargetWindow=$req.target_window
+ if(DirectOperation $req){return}
  if($req.operation -eq 'desktop_inspect'){
   $w=WindowState;$walk=Walk $w.element
   $again=WindowState
@@ -156,9 +160,20 @@ public static class JarvisDesktopNative {
   Start-Sleep -Milliseconds 250
   $s=CheckedTarget $req
   $e=$s.element;$verified=$false
+  RequireForeground ([IntPtr][long]$req.window.hwnd)
   switch($req.action){
+   'focus' { $e.SetFocus();$focused=[Windows.Automation.AutomationElement]::FocusedElement;$verified=(($focused.GetRuntimeId() -join '.') -ceq $s.id) }
+   'type_text' {
+    if($s.type -ne 'ControlType.Edit' -and $s.type -ne 'ControlType.Document'){Refuse 'text_requires_edit_control'}
+    if($s.identity.read_only){Refuse 'read_only_target'}
+    $e.SetFocus();$focused=[Windows.Automation.AutomationElement]::FocusedElement
+    if(($focused.GetRuntimeId() -join '.') -cne $s.id){Refuse 'focus_failed'}
+    RequireForeground ([IntPtr][long]$req.window.hwnd)
+    [JarvisWindowNative]::Chord(@('CTRL','A'));[JarvisWindowNative]::TypeText([string]$req.text)
+    if($s.identity.native_kind -eq 'edit'){$verified=([JarvisDesktopNative]::Text([IntPtr]$s.identity.hwnd) -ceq [string]$req.text)}else{$v=$e.GetCurrentPattern([Windows.Automation.ValuePattern]::Pattern);$verified=($v.Current.Value -ceq [string]$req.text)}
+   }
    'set_text' {
-    if($s.type -ne 'ControlType.Edit'){Refuse 'text_requires_edit_control'}
+    if($s.type -ne 'ControlType.Edit' -and $s.type -ne 'ControlType.Document'){Refuse 'text_requires_edit_control'}
     if($s.identity.native_kind -eq 'edit'){
      if($s.identity.read_only){Refuse 'read_only_target'}
      $null=CheckedTarget $req
@@ -195,12 +210,14 @@ public static class JarvisDesktopNative {
    }
    default {Refuse 'unsupported_action'}
   }
-  [Console]::Write((Json @{ok=$true;dispatched=$true;verified=$verified;action=$req.action}))
+  FreshResponse @{ok=$true;dispatched=$true;verified=$verified;action=$req.action}
  }else{Refuse 'unsupported_operation'}
 }catch{
  # Never include provider exceptions (which can contain entered text) in diagnostics.
  $allowed=@('desktop_unavailable_or_locked','no_visible_foreground_window','window_changed','target_missing_or_ambiguous','target_changed','target_not_actionable','empty_target_bounds','pattern_not_supported','window_changed_during_inspect','text_requires_edit_control','read_only_target','unsupported_action','unsupported_operation','editable_content_too_large','native_parent_changed')
+ $allowed+=@('wrong_interactive_session','foreground_changed','focus_failed','modifier_pressed','keyboard_outcome_uncertain','invalid_key_chord','close_dispatch_failed','destination_exists','destination_changed','source_file_missing','standard_file_dialog_not_found','filename_verification_failed','save_dispatch_failed','file_dialog_outcome_uncertain','file_verification_limit')
  $code=$_.Exception.Message
  if($allowed -notcontains $code){$code='provider_error_or_uncertain_outcome'}
  [Console]::Write((ConvertTo-Json -Compress @{ok=$false;error=$code}))
 }
+

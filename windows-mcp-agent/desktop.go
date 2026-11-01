@@ -21,6 +21,9 @@ import (
 //go:embed desktop_worker.ps1
 var desktopWorker string
 
+//go:embed desktop_extensions.ps1
+var desktopExtensions string
+
 type desktopRequest struct {
  SnapshotID string `json:"snapshot_id"`
  ElementID string `json:"element_id"`
@@ -44,6 +47,8 @@ type desktopSnapshot struct {
  Elements []desktopElement
 }
 type desktopOutput struct {
+ Windows []json.RawMessage `json:"windows,omitempty"`
+ Data map[string]any `json:"data,omitempty"`
  OK bool `json:"ok"`
  Error string `json:"error,omitempty"`
  Window json.RawMessage `json:"window,omitempty"`
@@ -64,9 +69,9 @@ func decodeDesktop(raw json.RawMessage) (desktopRequest,error) {
 func stringValue(p *string) string {if p==nil{return ""};return *p}
 func desktopTarget(s *desktopSnapshot,p desktopRequest,now time.Time)(json.RawMessage,error){
  if s==nil||s.ID!=p.SnapshotID||now.Before(s.Created)||now.Sub(s.Created)>90*time.Second{return nil,errors.New("unknown or expired desktop snapshot; inspect again")}
- if p.Action!="invoke"&&p.Action!="set_text"&&p.Action!="select"&&p.Action!="toggle"{return nil,errors.New("unsupported desktop action")}
- if p.Action=="set_text"&&p.Text==nil{return nil,errors.New("set_text requires text")}
- if p.Action!="set_text"&&p.Text!=nil{return nil,errors.New("text only accepted for set_text")}
+ if p.Action!="invoke"&&p.Action!="set_text"&&p.Action!="select"&&p.Action!="toggle"&&p.Action!="type_text"&&p.Action!="focus"{return nil,errors.New("unsupported desktop action")}
+ if (p.Action=="set_text"||p.Action=="type_text")&&p.Text==nil{return nil,errors.New("set_text requires text")}
+ if p.Action!="set_text"&&p.Action!="type_text"&&p.Text!=nil{return nil,errors.New("text only accepted for set_text")}
  var target json.RawMessage
  count:=0
  for _,e:=range s.Elements {if e.ID==p.ElementID{target=e.Identity;count++}}
@@ -96,6 +101,7 @@ func (a *Agent) startDesktopTask(operation string,raw json.RawMessage)(any,error
  a.task=t
  go func(){
   defer cancel()
+  a.uiMu.Lock();defer a.uiMu.Unlock()
   out,err:=runDesktopWorker(ctx,input)
   if err!=nil{
    state:="failed";if ctx.Err()!=nil{state="cancelled"}
@@ -126,7 +132,7 @@ func runDesktopWorker(ctx context.Context,input any)(desktopOutput,error){
  var out desktopOutput
  dir,err:=os.MkdirTemp("","jarvis-uia-");if err!=nil{return out,err};defer os.RemoveAll(dir)
  path:=filepath.Join(dir,"worker.ps1")
- if err=os.WriteFile(path,[]byte(desktopWorker),0600);err!=nil{return out,err}
+ if err=os.WriteFile(path,[]byte(strings.Replace(desktopWorker," $req=[Console]::In.ReadToEnd()",desktopExtensions+"\n $req=[Console]::In.ReadToEnd()",1)),0600);err!=nil{return out,err}
  ps:=filepath.Join(os.Getenv("SystemRoot"),"System32","WindowsPowerShell","v1.0","powershell.exe")
  cmd:=exec.CommandContext(ctx,ps,"-NoLogo","-NoProfile","-NonInteractive","-STA","-ExecutionPolicy","Bypass","-File",path)
  data,err:=json.Marshal(input);if err!=nil{return out,err}
@@ -136,7 +142,8 @@ func runDesktopWorker(ctx context.Context,input any)(desktopOutput,error){
  for _,e:=range os.Environ(){key,_,_:=strings.Cut(e,"=");switch strings.ToUpper(key){case "SYSTEMROOT","WINDIR","USERPROFILE","TEMP","TMP","LOCALAPPDATA","APPDATA","PATH","COMSPEC":cmd.Env=append(cmd.Env,e)}}
  output:=&desktopBoundedOutput{};cmd.Stdout=output;cmd.Stderr=io.Discard
  cmd.WaitDelay=time.Second
- if err=cmd.Run();err!=nil||output.overflow{return out,errors.New("desktop worker failed or output exceeded limit")}
+ if err=cmd.Run();err!=nil{return out,errors.New("desktop worker process failed")};if output.overflow{return out,errors.New("desktop worker output exceeded 65536 bytes")}
  if err=json.Unmarshal(output.b.Bytes(),&out);err!=nil{return out,errors.New("invalid desktop worker response")}
  return out,nil
 }
+

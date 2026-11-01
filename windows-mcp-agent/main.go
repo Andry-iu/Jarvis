@@ -22,7 +22,7 @@ import (
 	"time"
 )
 
-const version = "0.6.1"
+const version = "0.7.0"
 
 type RPCRequest struct {
 	JSONRPC string          `json:"jsonrpc"`
@@ -51,6 +51,8 @@ type Task struct {
 	cancel     context.CancelFunc
 }
 type Agent struct {
+ uiMu sync.Mutex
+ windows map[string]json.RawMessage
 	runtimeMu sync.Mutex
 	runtime   *Runtime
 	mu        sync.Mutex
@@ -465,3 +467,4 @@ func main() {
 		log.Fatal(err)
 	}
 }
+

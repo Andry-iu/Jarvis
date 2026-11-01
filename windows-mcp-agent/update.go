@@ -33,7 +33,8 @@ var updateState = struct {
 	sync.Mutex
 	Pending *preparedUpdate
 	Used    map[string]bool
-}{Used: map[string]bool{}}
+	Running map[string]bool
+}{Used: map[string]bool{}, Running: map[string]bool{}}
 
 func updateBase() (string, error) {
 	root := os.Getenv("JARVIS_HOME")
@@ -138,7 +139,13 @@ func executeUpdate(id string, expectedHash string) (any, error) {
 		return nil, fmt.Errorf("start batch: %w", err)
 	}
 	pid := cmd.Process.Pid
-	_ = cmd.Process.Release()
+	updateState.Running[id] = true
+	go func() {
+		_ = cmd.Wait()
+		updateState.Lock()
+		delete(updateState.Running, id)
+		updateState.Unlock()
+	}()
 	updateState.Used[id] = true
 	updateState.Pending = nil
 	return map[string]any{"state": "launched", "update_id": id, "launcher_pid": pid, "message": "Execution delegated; success must be checked after MCP reconnect"}, nil
