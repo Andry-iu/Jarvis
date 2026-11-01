@@ -1,3 +1,16 @@
+AGGIUNTE 1.2.2 - NOMI CLOUDLFARE
+
+DEVICE_NAME sceglie i default di tunnel, applicazione e policy:
+Desktop2 -> jarvis-desktop2, Notebook -> jarvis-notebook, ecc.
+Per personalizzare separatamente, righe facoltative:
+CLOUDFLARE_TUNNEL_NAME=
+CLOUDFLARE_APPLICATION_NAME=
+CLOUDFLARE_POLICY_NAME=
+Vuoto = derivato dal dispositivo. Mai dati segreti nei nomi visibili.
+Le vecchie configurazioni senza queste righe restano compatibili.
+I nomi non modificano hostname pubblico, email o criteri di accesso.
+RINOMINA-CLOUDFLARE.cmd gestisce nomi esistenti tramite gli ID del journal.
+
 SETUP DA FILE LOCALE - 1.2.1
 
 Copia setup.example.env come setup.local.env NELLA STESSA CARTELLA

@@ -1,5 +1,5 @@
 [CmdletBinding()]
-param([string]$InstallDir,[string]$DeviceName,[string]$ProjectsRoot,[ValidateRange(1024,65535)][int]$Port=8765,[string]$ExpectedUserSid,[string]$SettingsFile,[switch]$NonInteractive,[switch]$SkipRemote,[switch]$NoTask,[switch]$NoShortcuts)
+param([string]$InstallDir,[string]$DeviceName,[string]$ProjectsRoot,[ValidateRange(1024,65535)][int]$Port=8765,[string]$ExpectedUserSid,[string]$SettingsFile,[switch]$RenameResourcesOnly,[switch]$NonInteractive,[switch]$SkipRemote,[switch]$NoTask,[switch]$NoShortcuts)
 . "$PSScriptRoot\Prerequisites.ps1"
 $principal=New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
 if(-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)){throw 'Avviare INSTALLA.cmd e consentire UAC.'}
@@ -51,6 +51,11 @@ try{
         if($ctx.state.device_name -and $ctx.state.device_name -ne $DeviceName){throw 'Nome diverso dal registro di ripresa; non cambiarlo implicitamente.'}
     }
     $null=Get-DeviceNames $DeviceName;$ProjectsRoot=Get-FullPath $ProjectsRoot
+    if($RenameResourcesOnly){
+        if(-not $existing -or -not $existing.remote_configured){throw 'CF_RENAME_REQUIRES_COMPLETED_SETUP'}
+        & "$PSScriptRoot\Configure-Cloudflare-Names.ps1" -HomeDir $InstallDir -SetupContext $ctx -SetupSettings $setupSettings -NoPrompts:$NonInteractive
+        return
+    }
     $ctx.state.device_name=$DeviceName;$ctx.state.projects_root=$ProjectsRoot;$ctx.state.port=$Port;Save-SetupState $ctx 'checking_prerequisites'
     if($NonInteractive -and $remoteMode -ne 'skip' -and (-not $existing -or -not $existing.remote_configured)){
         if($remoteMode -eq 'auto'){

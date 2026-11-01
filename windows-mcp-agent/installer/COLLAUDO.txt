@@ -1,3 +1,23 @@
+JARVIS MCP SETUP 1.2.2 - NOMI CLOUDLFARE
+
+Implementati: nomi derivati da DEVICE_NAME per tunnel/applicazione/policy,
+override facoltativi, ripresa e rinomina tramite ID registrati, controllo
+UUID e AUD locali, no replay dopo esiti incerti. Vecchi journal conservati.
+45/45 test Node nel cloud: PASS. Include nomi per altri dispositivi,
+rinomine manuali, migrazione legacy, collisioni, OAuth/regole preservati,
+risposte perse e richieste incerte non ripetute, lettura senza mutazioni.
+MCP Desktop2 verificato direttamente (AUTECHVPC2, agente 0.6.1).
+Windows Desktop2: runner nativo supera parser PS, Test-SetupSettings e
+exit code dei 45 test Node, quindi scrive il risultato Cloudflare reale.
+Nomi effettivi tutti jarvis-desktop2, matches=true, read_only=true.
+Il log stdout dei figli non viene raccolto: evidenza nei risultati
+strutturati successivi, non in un log per-assertione inventato.
+Nuova installazione completa 1.2.2 e PUT/PATCH reali non collaudati.
+Dettagli e limiti: verbale INSTALLER-1.2.2.md su Git.
+Nessuna installazione o prova aggiuntiva su Desktop1; nessuna inferenza.
+Binario agente/guardie economiche invariati. Non confondere rinomina e
+reinstallazione, collaudo nomi e test completo della nuova installazione.
+
 JARVIS MCP SETUP 1.2.1 - CONFIGURAZIONE LOCALE, 2026-11-01
 
 IMPLEMENTATO: setup.local.env automatico, modello senza segreti,

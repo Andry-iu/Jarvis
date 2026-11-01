@@ -2,7 +2,7 @@
 function ConvertFrom-SetupSettingsText([string]$Text) {
     if($Text.Length -gt 65536 -or $Text.IndexOf([char]0) -ge 0){throw 'SETUP_CONFIG_INVALID_SIZE_OR_NUL'}
     $Text=$Text.TrimStart([char]0xFEFF)
-    $allowed=@('INSTALL_DIR','DEVICE_NAME','PROJECTS_ROOT','MCP_PORT','CODEX_EXECUTABLE','SETUP_NO_PROMPTS','SETUP_ALLOW_BROWSER_LOGIN','SETUP_REMOTE_MODE','SETUP_NO_TASK','SETUP_NO_SHORTCUTS','CLOUDFLARE_API_TOKEN','CLOUDFLARE_ZONE_ID','CLOUDFLARE_ZONE_NAME','CLOUDFLARE_HOST_LABEL','CLOUDFLARE_ACCESS_EMAIL','CLOUDFLARE_HOSTNAME','CLOUDFLARE_TEAM_DOMAIN','CLOUDFLARE_APP_AUD','CLOUDFLARE_TUNNEL_ID','CLOUDFLARE_TUNNEL_TOKEN')
+    $allowed=@('INSTALL_DIR','DEVICE_NAME','PROJECTS_ROOT','MCP_PORT','CODEX_EXECUTABLE','SETUP_NO_PROMPTS','SETUP_ALLOW_BROWSER_LOGIN','SETUP_REMOTE_MODE','SETUP_NO_TASK','SETUP_NO_SHORTCUTS','CLOUDFLARE_TUNNEL_NAME','CLOUDFLARE_POLICY_NAME','CLOUDFLARE_APPLICATION_NAME','CLOUDFLARE_API_TOKEN','CLOUDFLARE_ZONE_ID','CLOUDFLARE_ZONE_NAME','CLOUDFLARE_HOST_LABEL','CLOUDFLARE_ACCESS_EMAIL','CLOUDFLARE_HOSTNAME','CLOUDFLARE_TEAM_DOMAIN','CLOUDFLARE_APP_AUD','CLOUDFLARE_TUNNEL_ID','CLOUDFLARE_TUNNEL_TOKEN')
     $values=@{};$lineNumber=0
     foreach($line in ($Text -split "`r`n|`n|`r")){
         $lineNumber++;$trimmed=$line.Trim()
@@ -33,6 +33,9 @@ function ConvertFrom-SetupSettingsText([string]$Text) {
     if($values.ContainsKey('CLOUDFLARE_ZONE_NAME') -and $values.CLOUDFLARE_ZONE_NAME -and $values.CLOUDFLARE_ZONE_NAME -cnotmatch '^(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,63}$'){throw 'SETUP_CONFIG_INVALID_CLOUDFLARE_ZONE_NAME'}
     if($values.ContainsKey('CLOUDFLARE_HOST_LABEL') -and $values.CLOUDFLARE_HOST_LABEL -and $values.CLOUDFLARE_HOST_LABEL -cnotmatch '^[a-z0-9][a-z0-9-]{0,61}[a-z0-9]$'){throw 'SETUP_CONFIG_INVALID_CLOUDFLARE_HOST_LABEL'}
     if($values.ContainsKey('CLOUDFLARE_ACCESS_EMAIL') -and $values.CLOUDFLARE_ACCESS_EMAIL -and $values.CLOUDFLARE_ACCESS_EMAIL -notmatch '^[-A-Za-z0-9._+]+@(?:[A-Za-z0-9-]+\.)+[A-Za-z]{2,63}$'){throw 'SETUP_CONFIG_INVALID_CLOUDFLARE_ACCESS_EMAIL'}
+    foreach($key in @('CLOUDFLARE_TUNNEL_NAME','CLOUDFLARE_POLICY_NAME','CLOUDFLARE_APPLICATION_NAME')){
+        if($values.ContainsKey($key) -and $values[$key] -and $values[$key] -cnotmatch '^[A-Za-z0-9][A-Za-z0-9 _.-]{0,99}$'){throw ('SETUP_CONFIG_INVALID_'+$key)}
+    }
     return $values
 }
 function Protect-SetupSettingsFile([string]$Path){
@@ -109,4 +112,10 @@ function Resolve-SetupCloudflareInputs($Settings,$Zones,$Previous,[string]$Devic
         $email=(Read-Host 'Email esatta autorizzata in Cloudflare Access').Trim()
     }
     return @{zone_id=$zoneID;label=$label;email=$email}
+}
+
+function Get-CloudflareResourceNames($Settings,[string]$DeviceName){
+    $null=Get-DeviceNames $DeviceName
+    $default='jarvis-'+($DeviceName.ToLowerInvariant() -replace '[ _]+','-').Trim('-')
+    return @{tunnel=(Get-SetupSetting $Settings 'CLOUDFLARE_TUNNEL_NAME' $default);policy=(Get-SetupSetting $Settings 'CLOUDFLARE_POLICY_NAME' $default);application=(Get-SetupSetting $Settings 'CLOUDFLARE_APPLICATION_NAME' $default)}
 }

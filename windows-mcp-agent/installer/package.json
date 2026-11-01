@@ -1,5 +1,5 @@
 {
-  "installer_version": "1.2.1",
+  "installer_version": "1.2.2",
   "agent_version": "0.6.1",
   "source_commit": "164cb980bd1a936749d41b8692979e98b929cb04",
   "agent_sha256": "9ff4a136951f464925cc55b96e1a968174204199fa9c7ff681b998b3542742c1",
@@ -11,8 +11,8 @@
     },
     {
       "path": "COLLAUDO.txt",
-      "sha256": "79877a5d96598d347b00c78b9d6f1c107b86ecbc260c78469a23b7864fe569b2",
-      "bytes": 2359
+      "sha256": "088ae027764349a04bb60cf69b21f3a916186b0a68d697d99e0191489a13c6f0",
+      "bytes": 3593
     },
     {
       "path": "COLLEGA-CODEX.cmd",
@@ -21,8 +21,8 @@
     },
     {
       "path": "CONFIGURAZIONE.txt",
-      "sha256": "1ac631af76ce26595c15eb61e651049d9eec2c11a15a65c22ae209aed1afcd3a",
-      "bytes": 4403
+      "sha256": "e355f7112ab4784aa40981e10cbc5b730cdcf22f6d84cc02f30ba5663217b70f",
+      "bytes": 4976
     },
     {
       "path": "Check.ps1",
@@ -30,9 +30,14 @@
       "bytes": 720
     },
     {
+      "path": "Cloudflare-Client.ps1",
+      "sha256": "e30d9dacf136a46ea642c7bf9f6beda40f3a3ee12dc1220848cc521e6fe05515",
+      "bytes": 2860
+    },
+    {
       "path": "Cloudflare-Provision.cjs",
-      "sha256": "2a716d718cddbf3ecefa8b64ec46f47c803d8cbce67a97beed5cf585be6c29a7",
-      "bytes": 14016
+      "sha256": "5274271872b55c33f68f43d46f1ad807dfb3ccf7fc25f215f33b8307cb58be84",
+      "bytes": 24131
     },
     {
       "path": "Common.ps1",
@@ -41,8 +46,13 @@
     },
     {
       "path": "Configure-Cloudflare-Auto.ps1",
-      "sha256": "6c8619e7f3725296d586a080b840418f94c614df90a760425f1230d9793afc67",
-      "bytes": 5139
+      "sha256": "7b13f904e02f12f1c4aff3e60b8e5da0bb3c038698dedfd837d48e3011ac9528",
+      "bytes": 2892
+    },
+    {
+      "path": "Configure-Cloudflare-Names.ps1",
+      "sha256": "8d1aff7fb1f8dce48c708eb8f1563378e903791dbfb5a19366110c3152cb7c0b",
+      "bytes": 2790
     },
     {
       "path": "Configure-Cloudflare.ps1",
@@ -71,13 +81,13 @@
     },
     {
       "path": "Install.ps1",
-      "sha256": "656f95b096d2b487ff3b7e284b2745fbc17389c9e7583533a611e159aaff962a",
-      "bytes": 9012
+      "sha256": "766e989da16ac57bc868890ae5bad3088439427cfc5ee8267c99304941ecda58",
+      "bytes": 9045
     },
     {
       "path": "LEGGIMI.txt",
-      "sha256": "2a4852a9255d4d3d01d855a30b45aaa5c8decb43fdb8aa4e3e04fed192be3c9b",
-      "bytes": 5414
+      "sha256": "adf255e861361803987487e501d324ef09958bf35d7b429e1d3ac4e87ea80aec",
+      "bytes": 6996
     },
     {
       "path": "LICENSE.txt",
@@ -91,8 +101,13 @@
     },
     {
       "path": "Prerequisites.ps1",
-      "sha256": "402667eb7ec5376e3f7dfeb5a1f5a2b78b0d40c1c66221d979df7be5fa48849a",
-      "bytes": 21625
+      "sha256": "ab199fe66f0aaefc4d2e06e340aac047d5f86e070466e2a8a61548796c560d5c",
+      "bytes": 21658
+    },
+    {
+      "path": "RINOMINA-CLOUDFLARE.cmd",
+      "sha256": "1a8228aba6983a06add114122c829eaae180220f1476f8c37677e89c566616ff",
+      "bytes": 741
     },
     {
       "path": "RIPRENDI.cmd",
@@ -101,23 +116,23 @@
     },
     {
       "path": "Repair.ps1",
-      "sha256": "d96a6c52b81b2d775cecddaaadd406bd903c1adcb9622e677809f0db4077c9f8",
-      "bytes": 7515
+      "sha256": "9a6cc58bd3f2014c68436857cb35482f06ba805edd8308de5772d2c30b49f055",
+      "bytes": 7531
     },
     {
       "path": "Setup-Settings.ps1",
-      "sha256": "2f74919c698338368ab205bd18933ca1bd59c479d17df9985a5f219873bef697",
-      "bytes": 8191
+      "sha256": "a9f4a7f575dbac8c7c70731836a5ae56131ec94854ba2274f87d2c65a29aa19d",
+      "bytes": 8975
     },
     {
       "path": "Setup-Worker.ps1",
-      "sha256": "daa83f5e8e4a9f54b6f1b280ddce68907883a5989105ac8620f96370b632a62f",
+      "sha256": "a6ea89c6e990f5157fb2a5268674472ea1a570c275c7cc703af861398a1a09cd",
       "bytes": 3814
     },
     {
       "path": "Setup.ps1",
-      "sha256": "27c624e707912fdc51d5831394d89650278a089def6a5a800e18ba516c064027",
-      "bytes": 10314
+      "sha256": "9ee6282c1481f164f6dab05b71d9ba320892faea58cbb22040333defc8229784",
+      "bytes": 10656
     },
     {
       "path": "Start.ps1",
@@ -131,23 +146,23 @@
     },
     {
       "path": "Test-Bootstrap.ps1",
-      "sha256": "597a7440f278ba3ae7d6616555a456ec02edc0a913e671da890529e8422b92ce",
+      "sha256": "11abb69f2d5630053e4fe92c281aa9d880202d2a027f4e9270ed023c71570499",
       "bytes": 18628
     },
     {
       "path": "Test-Cloudflare.cjs",
-      "sha256": "de250015df58c899837150668e6f82fba6c5037d46c4e64fca52d775c5a14398",
-      "bytes": 10125
+      "sha256": "5a1f1303b6692eace2a6ec49d530a92f81157fd6456efb5375523a5a1693c0e4",
+      "bytes": 20893
     },
     {
       "path": "Test-Installer.ps1",
-      "sha256": "238291d40219fce01ea515cb63528b2a9791dbb07ac1e1d4d535c8ebef3df3b8",
+      "sha256": "b14763e57862ff296be3d4d0edc32b74d9d116754166121314eb77ab179dd9e6",
       "bytes": 14292
     },
     {
       "path": "Test-SetupSettings.ps1",
-      "sha256": "f59fb4b80437cd175a4d1f5e14766fe9f5b6e05a7094c7bdbaff06887410bb2f",
-      "bytes": 5569
+      "sha256": "b48f352cdd079d1eb4e6e009056a3582e80d8b6f98802b5e8ca7c4c10b385d7e",
+      "bytes": 6259
     },
     {
       "path": "Test-SfxRegression.py",
@@ -161,13 +176,13 @@
     },
     {
       "path": "script-history.json",
-      "sha256": "4538335063ce12689b66af720935b79810eb8e6581db884fb6afee037f553de5",
-      "bytes": 4287
+      "sha256": "b753be50b8c6c71f6915b022c779dd13a60e91b83b5360ca1ea37af1b3647cff",
+      "bytes": 5143
     },
     {
       "path": "setup.example.env",
-      "sha256": "044deb9277c235c3a271f881d344517f340dcdb881394d0cdaba6af8e9d7c50f",
-      "bytes": 1069
+      "sha256": "8f56c6514c2af332d993e5549ead25708ec81a65cd27eeba57cc53537375bb94",
+      "bytes": 1206
     }
   ]
 }

@@ -53,6 +53,12 @@ Check ($selectionResult.zone_id -ceq ('a'*32)) 'matching_resume_uses_recorded_id
 $v.Remove('CLOUDFLARE_ACCESS_EMAIL')
 Refuse {Resolve-SetupCloudflareInputs $s @($zones[0]) $null 'Desktop2' -NoPrompts} '^SETUP_CONFIG_REQUIRED_CLOUDFLARE_ACCESS_EMAIL$'
 Clear-SetupSettings $s;Check ($s.values.Count -eq 0) 'settings_cleared_after_use'
+foreach($pair in @(@('Desktop2','jarvis-desktop2'),@('Desktop3','jarvis-desktop3'),@('Notebook','jarvis-notebook'),@('PC Ufficio','jarvis-pc-ufficio'))){
+    $names=Get-CloudflareResourceNames @{values=@{}} $pair[0]
+    Check ($names.tunnel -ceq $pair[1] -and $names.policy -ceq $pair[1] -and $names.application -ceq $pair[1]) 'all_names_derived_from_device'
+}
+$names=Get-CloudflareResourceNames @{values=@{CLOUDFLARE_TUNNEL_NAME='Custom tunnel';CLOUDFLARE_APPLICATION_NAME='Custom app';CLOUDFLARE_POLICY_NAME='Custom policy'}} 'Notebook'
+Check ($names.tunnel -ceq 'Custom tunnel' -and $names.application -ceq 'Custom app' -and $names.policy -ceq 'Custom policy') 'explicit_name_overrides'
 # Read/ACL tests use an isolated temporary directory, not an existing install.
 $temp=Join-Path ([IO.Path]::GetTempPath()) ('jarvis-settings-test-'+[guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $temp|Out-Null

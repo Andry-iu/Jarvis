@@ -1,3 +1,33 @@
+JARVIS MCP SETUP 1.2.2 - NOMI CLOUDFLARE COERENTI
+
+Tunnel, Application name e Policy name derivano da DEVICE_NAME:
+Desktop2 -> jarvis-desktop2; Desktop3 -> jarvis-desktop3;
+Notebook -> jarvis-notebook; PC Ufficio -> jarvis-pc-ufficio.
+Non esiste un nome Desktop2 fisso nel provisioning.
+
+Tre opzioni FACOLTATIVE nel setup.local.env, vuote per usare il default:
+CLOUDFLARE_TUNNEL_NAME=
+CLOUDFLARE_APPLICATION_NAME=
+CLOUDFLARE_POLICY_NAME=
+Il nome pubblico CLOUDFLARE_HOST_LABEL resta indipendente.
+I vecchi setup.local.env della 1.2.1 restano validi senza aggiungere righe.
+
+Se hai gia rinominato da dashboard, non serve rifare l'installazione.
+La nuova procedura identifica le risorse per ID, non dal nome visibile.
+Per verificare/allineare i nomi esistenti: estrai in una nuova cartella,
+copia PRIVATAMENTE il tuo setup.local.env, avvia RINOMINA-CLOUDFLARE.cmd.
+Serve il token API valido nel file; nessun segreto da inviare in chat.
+Il comando usa gli ID nel registro del PC e controlla UUID/AUD rispetto
+alla configurazione locale. Nessuna creazione/cancellazione di risorse,
+nessuna modifica a DNS/ingress/credenziale tunnel, nessun avvio/stop Codex.
+Se i tre nomi sono gia corretti, le richieste Cloudflare sono sole letture.
+Non tocca gli script/binari dell'agente gia operativo.
+
+Per una nuova installazione: INSTALLA.cmd, configurazione da file come
+nella 1.2.1. Per aggiornare TUTTI gli script su un agente attivo, rispettare
+il precedente arresto esplicito dopo aver completato i lavori: questo e
+separato dalla sola rinomina. Non serve arrestare per RINOMINA-CLOUDFLARE.
+
 JARVIS MCP SETUP 1.2.1 - PARAMETRI E SEGRETI DA FILE
 
 Per evitare domande: copia setup.example.env come setup.local.env,
