@@ -1,3 +1,7 @@
+# Aggiornamento .89
+
+La sezione cache/preferiti unificata .88 qui sotto è storica: ora Preferiti e Cache frequenti hanno schermate/archivi separati, aggiunta da rubrica o nome+numero manuali e rimozione indipendente. Preferiti non cancellati svuotando cache/pairing. Vedi [PREFERITI_CONTATTI.md](PREFERITI_CONTATTI.md). PiP/stop/audio/polling della .88 preservati.
+
 # Telefonate e contatti — .88 / 110
 
 Gruppo autorizzato il1 novembre2026: correzione Maps PiP, riduzione attese, cache frequenti/preferiti e comando unico di chiamata per nome. Utente conferma invio WhatsApp .87 funzionante; il motore/sessione WhatsApp rimane invariato.

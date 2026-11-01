@@ -64,8 +64,8 @@ internal object BridgeSettings {
     }
 
     /** Small private command/contact records; never included in exported diagnostics. */
-    @Synchronized fun readPrivate(context:Context,name:String):JSONObject {
-        val p=context.getSharedPreferences("bridge_private",Context.MODE_PRIVATE)
+    @Synchronized fun readPrivate(context:Context,name:String,namespace:String="bridge_private"):JSONObject {
+        val p=context.getSharedPreferences(namespace,Context.MODE_PRIVATE)
         val value=p.getString(name,null) ?: return JSONObject()
         val envelope=JSONObject(value)
         val cipher=Cipher.getInstance("AES/GCM/NoPadding").apply {
@@ -73,11 +73,11 @@ internal object BridgeSettings {
         }
         return JSONObject(String(cipher.doFinal(Base64.decode(envelope.getString("data"),Base64.NO_WRAP)),Charsets.UTF_8))
     }
-    @Synchronized fun writePrivate(context:Context,name:String,value:JSONObject) {
+    @Synchronized fun writePrivate(context:Context,name:String,value:JSONObject,namespace:String="bridge_private") {
         val cipher=Cipher.getInstance("AES/GCM/NoPadding").apply { init(Cipher.ENCRYPT_MODE,key()) }
         val bytes=cipher.doFinal(value.toString().toByteArray(Charsets.UTF_8))
         val envelope=JSONObject().put("iv",Base64.encodeToString(cipher.iv,Base64.NO_WRAP))
             .put("data",Base64.encodeToString(bytes,Base64.NO_WRAP))
-        check(context.getSharedPreferences("bridge_private",Context.MODE_PRIVATE).edit().putString(name,envelope.toString()).commit())
+        check(context.getSharedPreferences(namespace,Context.MODE_PRIVATE).edit().putString(name,envelope.toString()).commit())
     }
 }

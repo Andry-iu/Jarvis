@@ -1,3 +1,7 @@
+# Aggiornamento .89 — Preferiti separati
+
+Preferiti e cache contatti apre le due sezioni. Nei Preferiti si aggiunge qualsiasi numero dalla rubrica oppure nome/numero manuali, senza creare contatti Android; importazione facoltativa. Cache rimovibile senza perdere Preferiti. Stesso plugin/pairing, risoluzione tramite riferimenti locali/revisioni e nessun numero arbitrario da MCP. Vedi [PREFERITI_CONTATTI.md](PREFERITI_CONTATTI.md).
+
 # Aggiornamento .88 — telefonate e cache
 
 Nuovo jarviswake_call_by_name per nome esplicito: risoluzione locale e chiamata in un comando, nessuna selezione automatica fra omonimi. Cache cifrata20 voci in Configurazione → Collegamento e azioni → Maps, chiamate e WhatsApp → Contatti frequenti e preferiti. Controlli rubrica/audio restano obbligatori. Vedi [CHIAMATE_RAPIDE.md](CHIAMATE_RAPIDE.md) per PiP Maps, polling adattivo200ms e tempi. WhatsApp .87 confermato funzionante dall’utente, sessione conservata.

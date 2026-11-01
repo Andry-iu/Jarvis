@@ -234,7 +234,7 @@ test('Status remains compatible with old snapshots and reports only the notes co
 
 test('The complete guide is available without pairing or a running phone',async()=>{
  const e=env();const r=value(await tool(e,'jarviswake_guide',{topic:'indice',query:''}));
- assert.equal(r.guide_version,'0.5.88');assert.equal(r.version_code,110);assert.equal(r.phone_required,false);assert.ok(r.topics.length>=19);
+ assert.equal(r.guide_version,'0.5.89');assert.equal(r.version_code,111);assert.equal(r.phone_required,false);assert.ok(r.topics.length>=19);
  assert.equal(e.BUCKET.data.size,0);
  for(const topic of ['wake','cover','audio','chatgpt','collegamento','appunti','plugin','maps','chiamate','whatsapp','diagnostica']) assert.ok(r.topics.some(t=>t.topic===topic));
 });
@@ -280,4 +280,17 @@ test('Combined call requires110, exact name and preserves ambiguity result and r
  assert.equal(value(await tool(e,'jarviswake_call_by_name',args)).state,'responded');
  assert.equal((await tool(e,'jarviswake_call_by_name',{...args,number:'+39000000000'})).isError,true);
  assert.equal((await tool(e,'jarviswake_call_by_name',{...args,name:'Another Contact'})).isError,true);
+});
+
+
+test('Manual favorite lookup uses the same opaque contact result and never returns a full number',async()=>{
+ const e=env(),c=await pair(e);await advertise(e,c,111);const auth={Authorization:'Bearer '+c.deviceToken};
+ const id=crypto.randomUUID(),ref=crypto.randomUUID();
+ await tool(e,'jarviswake_find_contacts',{device_id:c.deviceId,name:'Home Test',request_id:id});
+ assert.equal((await claim(e,c,id)).status,200);
+ const result={code:'contacts_found',contacts:[{contact_ref:ref,name:'Home Test',label:'Preferito manuale',suffix:'0001'}],truncated:false};
+ assert.equal((await worker.fetch(request('/device/respond',{deviceId:c.deviceId,requestId:id,result},auth),e)).status,200);
+ const r=value(await tool(e,'jarviswake_status_result',{device_id:c.deviceId,request_id:id}));assert.deepEqual(r.result,result);
+ assert.equal(value(await tool(e,'jarviswake_call_contact',{device_id:c.deviceId,contact_ref:ref,request_id:crypto.randomUUID()})).state,'pending');
+ assert.equal((await tool(e,'jarviswake_call_contact',{device_id:c.deviceId,contact_ref:ref,number:'+39000000001',request_id:crypto.randomUUID()})).isError,true);
 });

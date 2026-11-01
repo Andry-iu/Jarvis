@@ -1,3 +1,7 @@
+# .89 / 111 — Preferiti locali separati
+
+Stesse operazioni/pairing/audience. Ricerca e chiamata risolvono anche Preferiti locali scelti dalla rubrica o creati dall’utente con nome/numero manuali. Il comando remoto continua a contenere soltanto nome/contact_ref: nessun numero arbitrario o elenco completo dei Preferiti. Fonti e revisioni revalidate sul telefono, omonimi richiedono scelta. Cache20 indipendente, Preferiti persistenti fino a100.
+
 # .88 / 110 — chiamata unica per nome
 
 Nuovo jarviswake_call_by_name richiede110: nome esplicito, risoluzione sul telefono/cache e rubrica attuale, nessuna scelta in ambiguità. contacts_found significa nessuna chiamata: chiarire e usare call_contact. Stessi UUID/claim/journal/pairing/audience. Poll200ms durante Voice/burst, non garanzia200ms complessivi. Numeri completi/cache restano sul telefono.

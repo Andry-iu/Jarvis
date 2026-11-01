@@ -15,7 +15,7 @@ import java.util.UUID
 
 internal class BridgeFailure(val code:String):Exception()
 internal fun result(code:String)=JSONObject().put("code",code)
-internal data class BridgeContact(val name:String,val number:String,val international:String?,val uniqueName:Boolean,val row:Long=-1,val query:String="",val label:String="")
+internal data class BridgeContact(val name:String,val number:String,val international:String?,val uniqueName:Boolean,val row:Long=-1,val query:String="",val label:String="",val favoriteId:String?=null,val favoriteRevision:Int=0)
 
 internal object BridgeContacts {
     internal var readStore:(Context)->JSONObject={BridgeSettings.readPrivate(it,"contacts")}
@@ -32,11 +32,13 @@ internal object BridgeContacts {
         c.getSystemService(TelephonyManager::class.java).networkCountryIso.uppercase(Locale.ROOT)
     }.getOrNull()?.takeIf { it.length==2 } ?: Locale.getDefault().country
     fun search(c:Context,deviceId:String,name:String):JSONObject {
-        requirePermission(c)
         if(!BridgeProtocol.validText(name,80)) throw BridgeFailure("unavailable")
         val rows=ArrayList<JSONObject>()
+        val favorites=BridgeContactFavorites.matches(c,name)
+        val canRead=c.checkSelfPermission(Manifest.permission.READ_CONTACTS)==PackageManager.PERMISSION_GRANTED
+        if(!canRead && favorites.none {it.getString("kind")=="manual"}) throw BridgeFailure("permission_required")
         val uri=Uri.withAppendedPath(Phone.CONTENT_FILTER_URI,Uri.encode(name))
-        c.contentResolver.query(uri,projection,null,null,Phone.DISPLAY_NAME+" ASC")?.use { cursor ->
+        if(canRead) c.contentResolver.query(uri,projection,null,null,Phone.DISPLAY_NAME+" ASC")?.use { cursor ->
             while(cursor.moveToNext() && rows.size<40) {
                 val normalized=runCatching { number(cursor.getString(2).orEmpty()) }.getOrNull() ?: continue
                 val display=cursor.getString(1).orEmpty().take(100)
@@ -46,7 +48,15 @@ internal object BridgeContacts {
                 rows.add(JSONObject().put("row",cursor.getLong(0)).put("name",display).put("number",normalized).put("label",label))
             }
         }
-        val ranks=runCatching {BridgeContactCache.entries(c).mapIndexed {i,r->r.optLong("row") to (20-i)}.toMap()}.getOrDefault(emptyMap())
+        for(f in favorites) {
+            if(f.getString("kind")=="book" && !bookMatches(c,f)) continue
+            val item=JSONObject().put("row",f.getLong("row")).put("name",f.getString("name")).put("number",f.getString("number"))
+                .put("label",(if(f.getString("kind")=="manual") "Preferito manuale" else "Preferito · "+f.optString("label")).take(40))
+                .put("favorite_id",f.getString("id")).put("favorite_revision",f.getInt("revision"))
+            val duplicate=rows.indexOfFirst {BridgeContactCache.normalize(it.getString("name"))==BridgeContactCache.normalize(f.getString("name")) && it.getString("number")==f.getString("number")}
+            if(duplicate>=0) rows[duplicate]=item else rows.add(item)
+        }
+        val ranks=runCatching {BridgeContactCache.entries(c).filter {it.optLong("row",-1)>=0}.mapIndexed {i,r->r.optLong("row") to (20-i)}.toMap()}.getOrDefault(emptyMap())
         rows.sortByDescending {ranks[it.optLong("row")] ?: 0}
         val store=JSONObject();val output=JSONArray();val now=SystemClock.elapsedRealtime()
         // Replace the old search, so another contact query cannot silently select an earlier result.
@@ -62,10 +72,20 @@ internal object BridgeContacts {
         return result("contacts_found").put("contacts",output).put("truncated",rows.size>8)
     }
     fun resolve(c:Context,deviceId:String,ref:String):BridgeContact {
-        requirePermission(c)
         val saved=readStore(c).optJSONObject(ref) ?: throw BridgeFailure("contact_expired")
         val age=SystemClock.elapsedRealtime()-saved.optLong("created")
         if(saved.optString("device")!=deviceId || age !in 0..600_000 || System.currentTimeMillis()-saved.optLong("wall") !in 0..600_000) throw BridgeFailure("contact_expired")
+        val favoriteId=saved.optString("favorite_id").takeIf {it.isNotEmpty()}
+        if(favoriteId!=null) {
+            val f=BridgeContactFavorites.find(c,favoriteId) ?: throw BridgeFailure("contact_changed")
+            if(f.getInt("revision")!=saved.optInt("favorite_revision") || f.getString("name")!=saved.getString("name") || f.getString("number")!=saved.getString("number")) throw BridgeFailure("contact_changed")
+            if(f.getString("kind")=="manual") {
+                val n=BridgeContactFavorites.phone(f.getString("number"))
+                val international=PhoneNumberUtils.formatNumberToE164(n,region(c))?.takeIf {it.matches(Regex("\\+[0-9]{5,15}"))}
+                return BridgeContact(f.getString("name"),n,international,saved.optBoolean("unique"),-1,saved.optString("query"),saved.optString("label"),favoriteId,f.getInt("revision"))
+            }
+        }
+        requirePermission(c)
         c.contentResolver.query(Phone.CONTENT_URI,projection,Phone._ID+"=?",arrayOf(saved.getLong("row").toString()),null)?.use { cursor ->
             if(cursor.moveToFirst()) {
                 val current=number(cursor.getString(2).orEmpty())
@@ -73,7 +93,7 @@ internal object BridgeContacts {
                 if(name!=saved.getString("name") || current!=saved.getString("number")) throw BridgeFailure("contact_changed")
                 val international=PhoneNumberUtils.formatNumberToE164(current,region(c))
                     ?.takeIf { it.matches(Regex("\\+[0-9]{5,15}")) }
-                return BridgeContact(name,current,international,saved.optBoolean("unique"),saved.getLong("row"),saved.optString("query"),saved.optString("label"))
+                return BridgeContact(name,current,international,saved.optBoolean("unique"),saved.getLong("row"),saved.optString("query"),saved.optString("label"),favoriteId,saved.optInt("favorite_revision"))
             }
         }
         throw BridgeFailure("contact_changed")
@@ -87,7 +107,7 @@ internal object BridgeContacts {
             val j=readStore(c)
             val matching=(0 until contacts.length()).map {j.getJSONObject(contacts.getJSONObject(it).getString("contact_ref"))}
                 .any {it.optLong("row")==cached.optLong("row") && it.optString("number")==cached.optString("number") && it.optString("name")==cached.optString("name")}
-            if(!matching) BridgeContactCache.remove(c,cached.optLong("row"))
+            if(!matching) BridgeContactCache.remove(c,cached.optString("key",cached.optLong("row").toString()))
             timing.stage(if(matching) "cache_validated" else "cache_invalidated")
         }
         timing.stage("contacts_resolved")
@@ -101,9 +121,27 @@ internal object BridgeContacts {
                 val n=runCatching {number(cursor.getString(2).orEmpty())}.getOrNull() ?: continue
                 val name=cursor.getString(1).orEmpty().take(100)
                 val label=Phone.getTypeLabel(c.resources,cursor.getInt(3),cursor.getString(4)).toString().take(40)
-                BridgeContactCache.remember(c,BridgeContact(name,n,null,false,cursor.getLong(0),name,label),true);count++
+                BridgeContactFavorites.save(c,name,n,cursor.getLong(0),label);count++
             }
         }
+    }
+
+    private fun bookMatches(c:Context,f:JSONObject):Boolean {
+        requirePermission(c)
+        return c.contentResolver.query(Phone.CONTENT_URI,projection,Phone._ID+"=?",arrayOf(f.getLong("row").toString()),null)?.use {cur->
+            cur.moveToFirst() && cur.getString(1)==f.getString("name") && runCatching {number(cur.getString(2).orEmpty())}.getOrNull()==f.getString("number")
+        }==true
+    }
+    fun addFavoriteFromUri(c:Context,uri:Uri):JSONObject {
+        require(uri.scheme=="content" && uri.authority==android.provider.ContactsContract.AUTHORITY) {"Seleziona un numero dalla rubrica del telefono."}
+        requirePermission(c)
+        return c.contentResolver.query(uri,projection,null,null,null)?.use {cur->
+            require(cur.moveToFirst()) {"Numero non disponibile."}
+            val row=cur.getLong(0);val name=cur.getString(1).orEmpty();val n=number(cur.getString(2).orEmpty())
+            val probe=JSONObject().put("row",row).put("name",name).put("number",n)
+            require(bookMatches(c,probe)) {"Contatto cambiato. Selezionalo di nuovo."}
+            BridgeContactFavorites.save(c,name,n,row,Phone.getTypeLabel(c.resources,cur.getInt(3),cur.getString(4)).toString())
+        } ?: throw IllegalStateException("Numero non disponibile.")
     }
 
 }

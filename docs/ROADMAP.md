@@ -1,3 +1,7 @@
+# Aggiornamento .89
+
+Implementato nel gruppo autorizzato: Preferiti e Cache frequenti separati; aggiunta locale dalla rubrica e nome/numero manuali; migrazione preferiti .88 senza perdita, rimozione indipendente e risoluzione per nome con controlli. Restano da collaudare picker Samsung, aggiornamento con dati effettivi e chiamata al preferito manuale; nessuna promessa di risultato già acquisito sul Galaxy.
+
 # Aggiornamento 0.5.88
 
 Implementati nel gruppo autorizzato: gestione Maps PiP durante telefonata, riuso conferma audio recente, polling adattivo, cache locale20 contatti e chiamata per nome in un comando. Riscontri: utente conferma invio WhatsApp .87; telefonata da Maps fallisce con riquadro sopra Termina. La correzione .88 e la latenza effettiva richiedono collaudo Galaxy; non sono ancora risultati acquisiti.

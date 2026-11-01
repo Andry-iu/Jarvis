@@ -28,13 +28,15 @@ class BridgeDirectContactTest {
         val rows=mutableListOf(arrayOf<Any>(1L,"Test Contact","+39000000001",2,"mobile"))
         override fun onCreate()=true
         override fun query(uri:Uri,projection:Array<out String>?,selection:String?,args:Array<out String>?,sort:String?):Cursor = MatrixCursor(projection).apply {
-            rows.filter {args==null || it[0].toString()==args[0]}.forEach(::addRow)
+            rows.filter {(args==null || it[0].toString()==args[0]) && (!uri.path.orEmpty().contains("/filter/") || it[1].toString().contains(uri.lastPathSegment.orEmpty(),ignoreCase=true))}.forEach(::addRow)
         }
         override fun getType(uri:Uri)="vnd.android.cursor.dir/phone"
         override fun insert(uri:Uri,values:ContentValues?):Uri?=null
         override fun delete(uri:Uri,selection:String?,args:Array<out String>?)=0
         override fun update(uri:Uri,values:ContentValues?,selection:String?,args:Array<out String>?)=0
     }
+    private val favoriteRead=BridgeContactFavorites.read;private val favoriteWrite=BridgeContactFavorites.write
+    private var favoritesStore=JSONObject()
     private val oldRead=BridgeContacts.readStore;private val oldWrite=BridgeContacts.writeStore
     private val oldCacheRead=BridgeContactCache.read;private val oldCacheWrite=BridgeContactCache.write
     private var store=JSONObject();private var cache=JSONObject()
@@ -42,6 +44,7 @@ class BridgeDirectContactTest {
     private val app get()=RuntimeEnvironment.getApplication()
     private val device="4ac0e8f0-19b7-413c-aed8-5e49089e5f18"
     @Before fun setup() {
+        BridgeContactFavorites.read={JSONObject(favoritesStore.toString())};BridgeContactFavorites.write={_,j->favoritesStore=JSONObject(j.toString())}
         shadowOf(app).grantPermissions(Manifest.permission.READ_CONTACTS)
         BridgeSettings.enable(app,true);BridgeSettings.enableActions(app,true)
         BridgeContacts.readStore={JSONObject(store.toString())};BridgeContacts.writeStore={_,v->store=JSONObject(v.toString())}
@@ -50,10 +53,10 @@ class BridgeDirectContactTest {
         ShadowContentResolver.registerProviderInternal(ContactsContract.AUTHORITY,provider)
         shadowOf(app).clearNextStartedActivities()
     }
-    @After fun reset() {BridgeContacts.readStore=oldRead;BridgeContacts.writeStore=oldWrite;BridgeContactCache.read=oldCacheRead;BridgeContactCache.write=oldCacheWrite}
+    @After fun reset() {BridgeContactFavorites.read=favoriteRead;BridgeContactFavorites.write=favoriteWrite;BridgeContacts.readStore=oldRead;BridgeContacts.writeStore=oldWrite;BridgeContactCache.read=oldCacheRead;BridgeContactCache.write=oldCacheWrite}
     @Test fun ambiguousCombinedCommandReturnsChoicesWithoutStartingAnyApp() {
         provider.rows.add(arrayOf(2L,"Test Contact","+39000000002",2,"mobile"))
-        BridgeContactCache.remember(app,BridgeContact("Test Contact","+39000000001",null,true,1,"Test Contact","mobile"),true)
+        BridgeContactFavorites.save(app,"Test Contact","+39000000001",1,"mobile")
         val command=JSONObject().put("requestId",device).put("operation","call_by_name").put("params",JSONObject().put("name","Test Contact"))
         val result=BridgeActions.execute(app,device,command,SystemClock.elapsedRealtime()+25000){true}
         assertEquals("contacts_found",result.getString("code"));assertEquals(2,result.getJSONArray("contacts").length())
@@ -76,6 +79,43 @@ class BridgeDirectContactTest {
         val r=BridgeActions.execute(app,device,command,SystemClock.elapsedRealtime()+25000){true}
         assertEquals("permission_required",r.getString("code"))
         assertNull(shadowOf(app).nextStartedActivity)
+    }
+
+    @Test fun manualFavoriteResolvesWithoutCreatingAContactAndRemovalInvalidatesItsReference() {
+        val favorite=BridgeContactFavorites.save(app,"Manual Home","+39000000009")
+        val r=BridgeContacts.search(app,device,"Manual Home")
+        assertEquals(1,r.getJSONArray("contacts").length())
+        assertFalse(r.toString().contains("+39000000009"))
+        val ref=r.getJSONArray("contacts").getJSONObject(0).getString("contact_ref")
+        val resolved=BridgeContacts.resolve(app,device,ref)
+        assertEquals("+39000000009",resolved.number);assertEquals(-1L,resolved.row)
+        BridgeContactFavorites.remove(app,favorite.getString("id"),favorite.getInt("revision"))
+        assertEquals("contact_changed",assertThrows(BridgeFailure::class.java) {BridgeContacts.resolve(app,device,ref)}.code)
+        assertEquals(1,provider.rows.size);assertNull(shadowOf(app).nextStartedActivity)
+    }
+    @Test fun manualAndBookHomonymsReturnChoicesButAnIdenticalNumberIsDeduplicated() {
+        val f=BridgeContactFavorites.save(app,"Test Contact","+39000000009")
+        val command=JSONObject().put("requestId",device).put("operation","call_by_name").put("params",JSONObject().put("name","Test Contact"))
+        val r=BridgeActions.execute(app,device,command,SystemClock.elapsedRealtime()+25000){true}
+        assertEquals("contacts_found",r.getString("code"));assertEquals(2,r.getJSONArray("contacts").length());assertNull(shadowOf(app).nextStartedActivity)
+        BridgeContactFavorites.remove(app,f.getString("id"),f.getInt("revision"))
+        BridgeContactFavorites.save(app,"Test Contact","+39000000001")
+        assertEquals(1,BridgeContacts.search(app,device,"Test Contact").getJSONArray("contacts").length())
+    }
+    @Test fun selectingAnyBookNumberAddsFavoriteWithoutTouchingTheCacheOrAddressBook() {
+        val value=BridgeContacts.addFavoriteFromUri(app,Uri.parse("content://com.android.contacts/data/1"))
+        assertEquals("book",value.getString("kind"));assertEquals(1,BridgeContactFavorites.entries(app).size)
+        assertTrue(BridgeContactCache.entries(app).isEmpty());assertEquals(1,provider.rows.size)
+        assertThrows(IllegalArgumentException::class.java) {BridgeContacts.addFavoriteFromUri(app,Uri.parse("content://other.provider/1"))}
+    }
+
+    @Test fun explicitManualFavoriteCanResolveWithoutReadingThePhoneAddressBook() {
+        BridgeContactFavorites.save(app,"Manual Home","+39000000009")
+        shadowOf(app).denyPermissions(Manifest.permission.READ_CONTACTS)
+        val r=BridgeContacts.search(app,device,"Manual Home")
+        val ref=r.getJSONArray("contacts").getJSONObject(0).getString("contact_ref")
+        assertEquals("+39000000009",BridgeContacts.resolve(app,device,ref).number)
+        assertEquals(1,provider.rows.size);assertNull(shadowOf(app).nextStartedActivity)
     }
 
 }
