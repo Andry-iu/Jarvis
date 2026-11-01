@@ -21,6 +21,7 @@ function Health([int]$port,[string]$version,$p){
 function StopOwned($p){if($p -and !$p.HasExited){Stop-Process -Id $p.Id -Force;if(!$p.WaitForExit(10000)){throw 'process_stop_timeout'}}}
 try{
  'START '+[DateTime]::UtcNow.ToString('o')|Set-Content $log -Encoding UTF8
+ if(Test-Path (Join-Path $root 'Config\installation.json')){throw 'managed_installation_requires_deploy_managed_runtime_070'}
  if($ExpectedHash -notmatch '^[a-fA-F0-9]{64}$' -or (!$RehearsalOnly -and $SourceCommit -notmatch '^[a-f0-9]{40}$')){throw 'invalid_release_identity'}
  if((Hash $Candidate) -ine $ExpectedHash){throw 'candidate_hash_mismatch'}
  $info=Call 8765 'machine_info'
@@ -45,6 +46,7 @@ try{
  New-Item -ItemType Directory -Force $backupConfig|Out-Null
  $configHashes=@{}
  foreach($f in Get-ChildItem $config -File){
+  if($f.Name -like '*.lock'){continue} # Ephemeral runner locks are not configuration backups.
   $configHashes[$f.Name]=Hash $f.FullName
   $destination=Join-Path $backupConfig $f.Name
   if(Test-Path $destination){if((Hash $destination) -ine $configHashes[$f.Name]){throw 'config_backup_changed'}}else{CopyChecked $f.FullName $destination}
