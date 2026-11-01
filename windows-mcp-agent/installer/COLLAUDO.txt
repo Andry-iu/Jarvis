@@ -1,22 +1,26 @@
-JARVIS MCP SETUP 1.1.1 — CORREZIONE GIT
+JARVIS MCP SETUP 1.2.0 - COLLAUDO 2026-11-01
 
-IMPLEMENTATO: argomenti SFX corretti (-y -o"target"), probe nativa
-prima di completed, diagnostica e recupero limitato del difetto 1.1.0.
-Versione agente 0.6.1, Codex e guardie economiche invariati.
+IMPLEMENTATO
+Cloudflare API da installer: rilevazione zone/team/account, app Access
+con policy email esatta e Managed OAuth, tunnel dedicato, ingress e DNS.
+Node locale rilevato o predisposto privatamente con checksum ufficiale.
+Token API solo stdin/memoria, nessuna API a consumo/inferenza/billing.
+Registro persistente, riconciliazione senza retry di esiti incerti,
+conflitti/drift bloccanti, nessuna modifica a risorse estranee.
 
-ESEGUITO NEL CLOUD LINUX, non su Desktop1:
-PASS sorgente ufficiale SFX v26.05 verificato per Git blob.
-PASS compilazione del ciclo parser ORIGINALE con adattatore stringhe.
-PASS vecchi argomenti 1.1.0 riproducono target non impostato.
-PASS nuovi argomenti conservano target, spazi e Unicode senza residui.
-PASS contratto del worker: verifica prima di completed e vincoli legacy.
-PASS hash di tutti i payload, binario invariato e integrita ZIP.
+ESEGUITO NEL CLOUD LINUX, Node v24.22.1
+PASS 20/20 test node --test Test-Cloudflare.cjs con API simulate.
+Access precede DNS; resume senza nuove POST; risposta persa riconciliata;
+POST/PUT incerti non ripetuti; 403 recuperabile; wildcard/DNS estranei
+bloccati; policy ampliata e route modificata bloccate; vincolo identita;
+assenza token API nel registro/output; credenziale locale preservata;
+risposte tunnel remote_config legacy e configurazione iniziale 404;
+token tunnel di account diverso rifiutato.
+PASS sintassi Node --check dei due file .cjs.
+PASS hash manifest, binario agente 0.6.1 invariato, integrita ZIP.
 
-Test Windows aggiornati ma NON ESEGUITI per questa correzione.
-Non dichiarare che COMPLETE della precedente 1.1.0 prova la 1.1.1:
-la vecchia fixture accettava il flag obsoleto e non riproduceva il parser
-PortableGit reale. Prova sul secondo PC ancora necessaria.
-
-Nessuna chiamata Jarvis, installazione o nuova prova su Desktop1
-in questa correzione; nessuna inferenza, API key, acquisto o ricarica.
-Istruzioni e limiti: docs/mcp-agent/INSTALLER-1.1.1.md nel repository.
+NON ESEGUITO PER QUESTA VERSIONE
+PowerShell/Windows, download Node su Windows, API Cloudflare reale,
+login OAuth del nuovo plugin, prova da ChatGPT/Voice sul secondo PC.
+Nessuna nuova prova o installazione su Desktop1.
+Gli esiti Windows delle release precedenti non collaudano questa release.

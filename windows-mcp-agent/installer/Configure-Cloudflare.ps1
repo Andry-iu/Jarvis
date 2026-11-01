@@ -1,4 +1,4 @@
-param([string]$HomeDir=(Split-Path $PSScriptRoot -Parent),[string]$PreparedExecutable,[string]$PreparedSha256,[string]$PreparedRelease)
+param([string]$HomeDir=(Split-Path $PSScriptRoot -Parent),[string]$PreparedExecutable,[string]$PreparedSha256,[string]$PreparedRelease,[switch]$Automatic,$SetupContext)
 . "$PSScriptRoot\Prerequisites.ps1"
 $s=Read-Install $HomeDir;$HomeDir=$s.home
 $cfPath=Join-Path $HomeDir 'Agent\cloudflared.exe';$cfConfig=Join-Path $HomeDir 'Config\cloudflared.json'
@@ -18,8 +18,12 @@ if(-not $PreparedExecutable){
 if($PreparedSha256 -notmatch '^[a-fA-F0-9]{64}$' -or (Get-FileHash -LiteralPath $PreparedExecutable).Hash -ine $PreparedSha256){throw 'Download cloudflared non verificato.'}
 $help=& $PreparedExecutable tunnel run --help 2>$null
 if($LASTEXITCODE -ne 0 -or ($help -join ' ') -notmatch 'token-file'){throw 'cloudflared non supporta token-file.'}
+if($Automatic){
+    if(-not $SetupContext){throw 'Avviare INSTALLA.cmd per la configurazione automatica Cloudflare.'}
+    & "$PSScriptRoot\Configure-Cloudflare-Auto.ps1" -HomeDir $HomeDir -SetupContext $SetupContext
+}
 Write-Host ('Usare un NUOVO tunnel per '+$s.device_name+' e servizio HTTP http://127.0.0.1:'+$s.port)
-Write-Host 'DNS, Access e Managed OAuth devono essere predisposti nel proprio account Cloudflare; nessun acquisto o replica del tunnel Desktop1.'
+if(-not $Automatic){Write-Host 'Modalita manuale: predisporre DNS, Access e Managed OAuth nel proprio account Cloudflare.'}
 if(Test-Path $pending){$p=Get-Content $pending -Raw|ConvertFrom-Json}
 else{
     $hostname=(Read-Host ('Indirizzo pubblico HTTPS per '+$s.device_name)).Trim().TrimEnd('/')

@@ -52,10 +52,10 @@ try{
     if(-not $s.remote_configured -and -not $SkipRemote){
         Save-SetupState $ctx 'preparing_cloudflared';$prepared=Get-SetupDownload $ctx 'cloudflared';$preparedAsset=$ctx.state.assets.cloudflared
         if(-not $NonInteractive){
-            $choice=Read-Host 'Configurare ora il collegamento Cloudflare dedicato? [S/n]'
+            $choice=Read-Host 'Configurare automaticamente Cloudflare? [S/n; M=manuale]'
             if($choice -notmatch '^[nN]$'){
                 Save-SetupState $ctx 'configuring_cloudflare'
-                & "$PSScriptRoot\Configure-Cloudflare.ps1" -HomeDir $InstallDir -PreparedExecutable $prepared -PreparedSha256 $preparedAsset.sha256 -PreparedRelease $preparedAsset.version
+                & "$PSScriptRoot\Configure-Cloudflare.ps1" -HomeDir $InstallDir -PreparedExecutable $prepared -PreparedSha256 $preparedAsset.sha256 -PreparedRelease $preparedAsset.version -Automatic:($choice -notmatch '^[mM]$') -SetupContext $ctx
                 $s=Read-Install $InstallDir
             }
         }

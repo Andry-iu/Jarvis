@@ -78,7 +78,7 @@ class Fixture {static int Main(string[] a){
     $request.user_sid='other';Write-SetupJson (Join-Path $ctx.dir ($legacyID+'.request.json')) $request
     if(Test-LegacyGitReceiptRepair $ctx 'git' $legacyAsset $legacyTarget $legacyReceipt){throw 'Altro utente accettato.'}
     $request.user_sid=[Security.Principal.WindowsIdentity]::GetCurrent().User.Value;Write-SetupJson (Join-Path $ctx.dir ($legacyID+'.request.json')) $request
-    $legacyReceipt|Add-Member -NotePropertyName installer_version -NotePropertyValue '1.1.1'
+    $legacyReceipt|Add-Member -NotePropertyName installer_version -NotePropertyValue '1.2.0'
     if(Test-LegacyGitReceiptRepair $ctx 'git' $legacyAsset $legacyTarget $legacyReceipt){throw 'Ricevuta nuova trattata come legacy.'}
     $legacyReceipt.PSObject.Properties.Remove('installer_version')
     Invoke-SetupOperation $ctx 'git' $legacyAsset $legacyTarget
@@ -146,7 +146,7 @@ class Fixture {static int Main(string[] a){
         Refuse {Update-SetupScripts $upgrade $PackageDir} 'modified_installed_scripts_not_overwritten'
         Write-Utf8 $check $original
         # Simulate power loss after replacing Start, before replacing the others.
-        Write-SetupJson (Join-Path $upgrade 'Config\installer-scripts-pending.json') @{version='1.1.1';fixture=$true}
+        Write-SetupJson (Join-Path $upgrade 'Config\installer-scripts-pending.json') @{version='1.2.0';fixture=$true}
         Copy-Item (Join-Path $PackageDir 'Start.ps1') (Join-Path $upgrade 'Scripts\Start.ps1') -Force
         Refuse {& (Join-Path $upgrade 'Scripts\Start.ps1') -HomeDir $upgrade} 'partial_script_upgrade_blocks_start'
         & "$PackageDir\Setup.ps1" -InstallDir $upgrade -NonInteractive -SkipRemote -NoTask -NoShortcuts

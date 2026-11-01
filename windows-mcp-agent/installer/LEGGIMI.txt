@@ -1,84 +1,83 @@
-CORREZIONE 1.1.1 — ERRORE "Componente installato ma verifica fallita: git"
+JARVIS MCP SETUP 1.2.0 - CLOUDFLARE AUTOMATICO
 
-Estrarre il nuovo ZIP in una NUOVA cartella e usare INSTALLA.cmd.
-Indicare la stessa destinazione precedente (Invio per D:\Jarvis).
-NON cancellare la cartella del registro o la cache scaricata.
-La correzione riconosce lo specifico tentativo Git della 1.1.0, riusa
-l'archivio verificato e corregge la destinazione dell'estrazione.
-Conserva richiesta e ricevuta originali e ogni copia parziale.
-Un worker ancora attivo o dall'esito incerto resta escluso dal retry.
-Il worker dichiara completato Git/Go solo dopo la verifica nativa della
-versione; errori successivi hanno un codice nella diagnostica privata.
+1. Estrarre tutto lo ZIP in una NUOVA cartella e avviare INSTALLA.cmd.
+2. Consentire UAC con lo stesso utente Windows usato per Codex.
+3. Indicare la STESSA cartella Jarvis del tentativo precedente.
+   Invio accetta il valore tra parentesi quadre (D:\Jarvis se D esiste).
+   Nome predefinito Desktop2, personalizzabile; plugin Jarvis-Desktop2.
+4. Al prompt Cloudflare premere Invio per la configurazione automatica.
+   Inserire localmente il token API, scegliere il dominio se ce ne sono
+   diversi, accettare/personalizzare il nome pubblico e indicare l'email
+   esatta da autorizzare in Access. Non incollare token in chat.
 
-Difetto individuato nel comando PortableGit della 1.1.0: i parametri
-storici -gm2/-InstallPath non valgono per l'estrattore attuale.
-La nuova sintassi usa -y -o"percorso", senza raddoppiare le barre.
-Correzione verificata sul parser C++ ufficiale in ambiente cloud;
-la nuova esecuzione completa su Windows resta da collaudare.
-Nessuna installazione o prova aggiuntiva eseguita su Desktop1.
+TOKEN API (diverso dal token del tunnel)
+https://dash.cloudflare.com/profile/api-tokens
+Create Token > Create Custom Token (oppure Start from scratch > Custom).
+Nome suggerito Jarvis-Installer. Cinque permessi:
+Account | Cloudflare Tunnel | Edit
+Account | Access: Apps and Policies | Edit
+Account | Access: Organizations, Identity Providers, and Groups | Read
+Zone    | Zone | Read
+Zone    | DNS | Edit
+Account Resources: Include > Specific account > il proprio account.
+Zone Resources: Include > Specific zone > il proprio dominio.
+Scadenza breve, per esempio 7 days. Filtro IP vuoto se non si usa IP fisso.
+Continue to summary > Create Token. Copiare il segreto mostrato una sola
+volta e conservarlo per l'inserimento nascosto sul PC. Dopo l'installazione
+si puo revocare il token API: il tunnel usa una credenziale separata.
+Nessun permesso billing, nessun piano, acquisto, ricarica o upgrade.
 
-JARVIS MCP SETUP 1.1.1 — INSTALLAZIONE E RIPRESA AUTOMATICA
+COSA FA AUTOMATICAMENTE
+Riusa Git, Go e Codex compatibili; installa quelli mancanti da fonti
+ufficiali, verificando SHA-256. Completa il login ChatGPT nel browser
+quando necessario; nessuna API key OpenAI, nessun turno di inferenza.
+Per il solo configuratore Cloudflare usa Node >=22 presente oppure
+scarica un Node 24 LTS privato, da nodejs.org, verificandone il checksum.
+Non richiede npm e non installa pacchetti npm.
 
-1. Estrarre TUTTO lo ZIP in una nuova cartella.
-2. Eseguire INSTALLA.cmd e consentire UAC con lo stesso utente di Codex.
-3. Indicare la cartella Jarvis: Invio accetta D:\Jarvis se esiste il disco D.
-   Se non c'e D, propone C:\Jarvis-Desktop2. Nome predefinito Desktop2,
-   personalizzabile; il plugin suggerito sara Jarvis-Desktop2.
+Ricava dominio/account/team, crea una app Access dedicata con una policy
+limitata alla singola email, abilita Managed OAuth con redirect ChatGPT,
+crea un tunnel dedicato e lo collega alla porta locale. Pubblica il DNS
+solo dopo aver verificato la protezione Access. Ricava automaticamente
+AUD, UUID e token tunnel. Nessuna copia dei segreti o dell'identita di
+Desktop1; nessuna modifica ai suoi tunnel, DNS o applicazioni Access.
+Un conflitto con un hostname/app esistente blocca il setup.
+Un account Cloudflare/Zero Trust e un dominio attivo devono gia esistere.
+Non acquista domini, non attiva abbonamenti e non crea il plugin ChatGPT.
+La scelta M mantiene disponibile il percorso manuale precedente.
 
-Lo stesso INSTALLA.cmd serve per la prima installazione e per riprendere.
-Non occorre eseguire comandi PowerShell a mano, ne installare winget/npm.
-L'installer rileva Git, Go e Codex; riusa le copie compatibili, altrimenti
-scarica i componenti ufficiali e verifica SHA-256 prima di eseguirli.
-Git e Go mancanti vengono predisposti come runtime completi privati,
-senza sovrascrivere altri toolchain. Jarvis li riceve nel proprio PATH.
-Codex: installer ufficiale con versione fissata a 0.165.0-alpha.1.2,
-runtime integro e prompt automatici disattivati; nessun turno avviato.
-Se serve l'accesso ChatGPT, l'installer avvia il login nel browser:
-completalo con il tuo account Business, senza API key o acquisti.
+RIPRESA
+Rilanciare lo STESSO INSTALLA.cmd aggiornato e indicare la stessa cartella.
+Non cancellare il registro LOCALAPPDATA\Jarvis-MCP\Setup o la cache.
+Il registro e vincolato a PC, utente, cartella e parametri. Non conserva
+il token API; alla ripresa potrebbe essere richiesto di nuovo.
+Una richiesta dall'esito incerto viene prima riconciliata in sola lettura.
+Se non e possibile provare l'esito, il setup si ferma senza ripeterla.
+Un worker attivo non viene duplicato. Il difetto Git della 1.1.0 continua
+ad avere il recupero mirato della 1.1.1. Dati locali non riconosciuti non
+vengono sovrascritti. Completare i lavori e usare Arresta.cmd se l'agente
+risulta attivo; il setup non interrompe automaticamente elaborazioni.
 
-Un registro privato per PC/utente/cartella conserva avanzamento,
-versioni selezionate, hash, download verificati e ricevute dei processi.
-Al successivo avvio controlla i risultati REALI, non solo le spunte salvate.
-Download falliti si possono riprendere; cache buona riusata, file alterati
-non eseguiti. Un worker ancora in corso non viene duplicato; un esito
-incerto non viene ripetuto automaticamente. Il messaggio indica il registro.
-Non chiudere deliberatamente il PC durante un'installazione.
+BACKUP E ROLLBACK
+Gli script riconosciuti vengono aggiornati con backup e ricevuta in
+Backups\installer-scripts-*. La modifica agent.env conserva un backup.
+Il binario agente resta 0.6.1. Riprese di installazioni incomplete
+conservano integralmente la cartella precedente secondo Repair.ps1.
+Le risorse Cloudflare parziali restano protette, identificate nel registro
+cloudflare-auto.json; non vengono cancellate automaticamente su errore,
+per evitare di rimuovere Access mentre un DNS potrebbe essere pubblicato.
+Per annullare da dashboard, verificare gli ID del registro, rimuovere PRIMA
+il record DNS dedicato, poi il tunnel dedicato, infine l'app Access e la
+sua policy. Non cancellare risorse tramite il solo nome o quelle Desktop1.
 
-Riconosce la prima copia 1.0.1 fallita su Accesso negato e i tentativi
-incompleti della 1.1.1 mai diventati operativi. Conserva integralmente la
-copia precedente e ripristina cartella/task su errore della ripresa.
-Su copie complete 1.0.x aggiorna gli script riconosciuti con backup,
-conservando binario agente 0.6.1, credenziali, identita e stato corrente.
-Script modificati manualmente o dati aggiunti a una copia incompleta
-richiedono verifica: non vengono sovrascritti. Se l'agente e attivo e serve
-una modifica, completare i lavori e usare Arresta.cmd, poi INSTALLA.cmd.
-L'installer non interrompe automaticamente le elaborazioni.
-
-CLOUDFLARE E CHATGPT
-Cloudflared viene scaricato e verificato dall'installer quando si configura
-il collegamento remoto. I dati gia inseriti vengono riusati alla ripresa.
-Servono comunque un tunnel DEDICATO al secondo PC, il suo hostname,
-Access con Managed OAuth e i valori del tuo account Cloudflare.
-L'installer li chiede localmente; il token e nascosto e resta sul PC.
-Non crea automaticamente DNS, applicazioni Access, Managed OAuth o il
-plugin ChatGPT e non acquista domini/piani. Questi passaggi dipendono
-dall'accesso al tuo account. Se scegli di rinviarli, il risultato dichiara
-che manca la configurazione remota: nessuna falsa installazione completa.
-Quando l'account e predisposto, rilancia lo stesso INSTALLA.cmd.
-Nessuna copia di tunnel, stato o segreti di Desktop1.
-
-RISULTATO
-Verifica App Server, account ChatGPT e quota con codex_status, senza
-inferenza. Codex collegato e permesso di avviare turni sono due esiti diversi:
-inference_allowed/blocked_reason restano soggetti alle guardie economiche.
-Saldo sconosciuto resta null. Nessuna prova costi viene copiata o prorogata.
-La disponibilita da ChatGPT viene dichiarata da verificare finche non e
-collaudato il nuovo plugin sul secondo PC. Nessun costo aggiuntivo previsto
-per i componenti distribuiti; nessuna API a consumo, ricarica o upgrade.
-
-Il riepilogo mostra il percorso del registro (LOCALAPPDATA\Jarvis-MCP\Setup),
-che contiene progress.json e summary.json. Log, download e backup privati
-restano sul computer: non inviare credenziali, auth.json o token in chat.
-RIPRENDI.cmd e COLLEGA-CODEX.cmd sono alias dello stesso nuovo avvio.
-Non includiamo automaticamente ogni compilatore possibile: SDK specifici
-dei futuri progetti (.NET, Visual Studio/C++, Android) restano distinti.
+RISULTATO E LIMITI DEL COLLAUDO
+Installer implementato con test Node simulati nel cloud (vedere COLLAUDO).
+Questa versione NON e ancora stata eseguita integralmente su Windows ne
+contro l'account Cloudflare reale. Nessuna nuova prova/installazione su
+Desktop1. Il secondo PC resta il collaudo necessario per la parte Windows.
+L'esito locale distingue Codex collegato, configurazione remota e permesso
+economico di avviare turni. Null resta sconosciuto, nessuna prova economica
+viene copiata o prorogata. ChatGPT resta da collaudare, remote_verified=false.
+Usare poi Avvia.cmd e il file Collegamento-ChatGPT.txt per collegare il
+nuovo plugin; completare l'accesso Cloudflare con l'email autorizzata.
+Se il PC e spento il suo endpoint non e disponibile; Desktop1 e indipendente.

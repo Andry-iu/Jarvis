@@ -5,7 +5,7 @@ $r=Get-Content -LiteralPath $RequestPath -Raw|ConvertFrom-Json
 $dir=Get-FullPath $r.state_dir
 if($r.format -ne 1 -or $r.id -notmatch '^[a-f0-9]{32}$' -or $r.user_sid -ne [Security.Principal.WindowsIdentity]::GetCurrent().User.Value -or $r.computer -ine $env:COMPUTERNAME -or (Split-Path $RequestPath -Parent) -ine $dir){throw 'Contesto worker non valido.'}
 $resultPath=Join-Path $dir ($r.id+'.result.json')
-$result=[pscustomobject]@{id=$r.id;installer_version='1.1.1';state='running';worker=(Get-Record (Get-Process -Id $PID));exit_code=$null;finished_at='';error_code=''}
+$result=[pscustomobject]@{id=$r.id;installer_version='1.2.0';state='running';worker=(Get-Record (Get-Process -Id $PID));exit_code=$null;finished_at='';error_code=''}
 Write-SetupJson $resultPath $result
 $guard=$null
 try {
@@ -20,19 +20,19 @@ try {
         $env:CODEX_NON_INTERACTIVE='1';$env:CODEX_INSTALLER_USE_RELEASES_OPENAI_COM='0'
         & "$env:SystemRoot\System32\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $r.asset -Release '0.165.0-alpha.1.2' *> (Join-Path $dir ($r.id+'.install.log'))
         if($LASTEXITCODE -ne 0){throw 'Installazione Codex fallita.'}
-    }elseif($r.kind -in @('git','go')){
+    }elseif($r.kind -in @('git','go','node')){
         $target=Get-FullPath $r.target
         if(-not $target.StartsWith((Join-Path $dir 'Tools')+'\',[StringComparison]::OrdinalIgnoreCase)){throw 'Target worker esterno alla cartella gestita.'}
         if(Test-Path $target){[IO.Directory]::Move($target,($target+'.incomplete-'+[guid]::NewGuid().ToString('N')))}
         New-Item -ItemType Directory -Path (Split-Path $target -Parent) -Force|Out-Null
-        if($r.kind -eq 'go'){Expand-Archive -LiteralPath $r.asset -DestinationPath $target}
+        if($r.kind -in @('go','node')){Expand-Archive -LiteralPath $r.asset -DestinationPath $target}
         else{
             # Current Git for Windows SFX accepts -y and -o; no legacy -gm2/
             # -InstallPath and no escaped double backslashes or extra arguments.
             $p=Start-Process $r.asset -ArgumentList ('-y -o"'+$target+'"') -PassThru -Wait -WindowStyle Hidden
             try{if($p.ExitCode -ne 0){throw 'Estrazione Git fallita.'}}finally{$p.Dispose()}
         }
-        $exe=if($r.kind -eq 'git'){Join-Path $target 'cmd\git.exe'}else{Join-Path $target 'go\bin\go.exe'}
+        $exe=if($r.kind -eq 'git'){Join-Path $target 'cmd\git.exe'}elseif($r.kind -eq 'node'){Join-Path $target ('node-'+$r.version+'-win-x64\node.exe')}else{Join-Path $target 'go\bin\go.exe'}
         $probe=Get-SetupToolProbe $r.kind $exe
         Write-SetupJson (Join-Path $dir ($r.id+'.verification.json')) $probe
         if(-not $probe.available){$result.error_code=('VERIFY_'+$probe.error_code.ToUpperInvariant());throw 'Componente estratto non funzionante.'}

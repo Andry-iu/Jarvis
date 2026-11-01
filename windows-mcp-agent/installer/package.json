@@ -1,9 +1,14 @@
 {
-  "installer_version": "1.1.1",
+  "installer_version": "1.2.0",
   "agent_version": "0.6.1",
   "source_commit": "164cb980bd1a936749d41b8692979e98b929cb04",
   "agent_sha256": "9ff4a136951f464925cc55b96e1a968174204199fa9c7ff681b998b3542742c1",
   "files": [
+    {
+      "path": "COLLAUDO.txt",
+      "sha256": "6283b04b39755398efb01a71a6d3a616cb68e7e7018f8e65a37597b461d91ff5",
+      "bytes": 1391
+    },
     {
       "path": "COLLEGA-CODEX.cmd",
       "sha256": "d4153f865501d7ea3e54a3028f15a8e421e1c86b8f2a416ff30d2d46c0d6734f",
@@ -15,14 +20,24 @@
       "bytes": 720
     },
     {
+      "path": "Cloudflare-Provision.cjs",
+      "sha256": "2a716d718cddbf3ecefa8b64ec46f47c803d8cbce67a97beed5cf585be6c29a7",
+      "bytes": 14016
+    },
+    {
       "path": "Common.ps1",
       "sha256": "188144d8679f2a2962b8d1737deeb6d3e98953f0d404a70815207830663369d2",
       "bytes": 10053
     },
     {
+      "path": "Configure-Cloudflare-Auto.ps1",
+      "sha256": "98835e6eafde04d97bdddde956ac46047ccb6ce2bb26607a116c5ad36239a26c",
+      "bytes": 5826
+    },
+    {
       "path": "Configure-Cloudflare.ps1",
-      "sha256": "5f5491d5a4fd6867f63c6944713d1d3f92a517498914b54ef748e9f0ff4b4d36",
-      "bytes": 4694
+      "sha256": "81b1df34ae1057f7a421238381ff9428e1a29d5cf4ec99cd4706b8b8720b7a48",
+      "bytes": 4923
     },
     {
       "path": "Connect-Codex.ps1",
@@ -46,13 +61,13 @@
     },
     {
       "path": "Install.ps1",
-      "sha256": "6151fc3806e346bf3d1a7e2491bc445ed8bbe8903e49e6ed56dcf268ad2656e0",
-      "bytes": 8908
+      "sha256": "c6c5bbde5efe603229f5be84ce5686fbf2e0bf1b34cdcd7e7b8a187093bcca48",
+      "bytes": 8953
     },
     {
       "path": "LEGGIMI.txt",
-      "sha256": "f68cf355d959579ca55b4b142c5930bc51b315744be673f2c40e175ca2f6d89f",
-      "bytes": 5074
+      "sha256": "a668658346ddd0ba24cb1f4c389a0edd11fdabbd3633611ef4beeee690905985",
+      "bytes": 4942
     },
     {
       "path": "LICENSE.txt",
@@ -66,8 +81,8 @@
     },
     {
       "path": "Prerequisites.ps1",
-      "sha256": "b2eb84e8b26d4090191af1db3df1e0bd049304333284d1fd52bb0c7819970b1e",
-      "bytes": 19626
+      "sha256": "05cc368aae9def95b0fc6eca84ff18053b35129e889de8e3899ebb258616b9f4",
+      "bytes": 21174
     },
     {
       "path": "RIPRENDI.cmd",
@@ -76,18 +91,18 @@
     },
     {
       "path": "Repair.ps1",
-      "sha256": "a8a03e16620f35592e69831bd11c5c3dd12edd1c1504036aa2e973b4ef1b8232",
-      "bytes": 7483
+      "sha256": "d9216bcd21118847377b9580c0ef6bb996bf34b3d47e8e343f6bee5b729726bf",
+      "bytes": 7499
     },
     {
       "path": "Setup-Worker.ps1",
-      "sha256": "8b8915a4f16d44346de4d5733f7e5590c40789f77eacf2c49b2f0085b84c4146",
-      "bytes": 3711
+      "sha256": "4839044135fedbdf2bc09873ecdc7227615c3f8acb3cb9c4c5caaf08c31c960e",
+      "bytes": 3814
     },
     {
       "path": "Setup.ps1",
-      "sha256": "9e2cdfb7d911f44caffc99f7bf864cd3b0872c9e7d5b77a76d59e16cf31359b0",
-      "bytes": 6971
+      "sha256": "4fc914a43c320f1329c700225207da97d7b354e3fe5122a3660fdc2d950f5834",
+      "bytes": 7028
     },
     {
       "path": "Start.ps1",
@@ -101,12 +116,17 @@
     },
     {
       "path": "Test-Bootstrap.ps1",
-      "sha256": "845ee6c73f4162efc4fae878ad1b355672059657a0927398faeac01eafc46e2b",
+      "sha256": "81d7af485335630607c29c4701b74dd4558b80ab8e103e9e60892aff25bdad75",
       "bytes": 18628
     },
     {
+      "path": "Test-Cloudflare.cjs",
+      "sha256": "de250015df58c899837150668e6f82fba6c5037d46c4e64fca52d775c5a14398",
+      "bytes": 10125
+    },
+    {
       "path": "Test-Installer.ps1",
-      "sha256": "98f356c11ff8c51ad6cc2972b92a22f5faee5053afc5ee41549f25b0ff7503a3",
+      "sha256": "f33338779819ab7feb76b5231234083567c58a269cf0725ca7576e8235c18e34",
       "bytes": 14292
     },
     {
@@ -121,8 +141,8 @@
     },
     {
       "path": "script-history.json",
-      "sha256": "4ec2762af25e5ef3c7a1cd1c45a229bdc7f890cfdccf21f3e4e5a41a3ab97ff8",
-      "bytes": 3058
+      "sha256": "16fd2fcd5093ceba587d86db1ab8dd19c2c89d3f849fa7678d5376e6e33e777c",
+      "bytes": 3490
     }
   ]
 }
