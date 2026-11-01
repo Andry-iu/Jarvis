@@ -28,7 +28,7 @@ const snap={app:{version:'0.5.80',versionCode:102},wake:{serviceRunning:true,cap
 test('Discovery exposes bounded status and action tools without fabricated phone data',async()=>{
   const r=await worker.fetch(request('/mcp',{jsonrpc:'2.0',id:1,method:'tools/list'}),env());
   const names=(await r.json()).result.tools.map(t=>t.name);
-  assert.deepEqual(names,['jarviswake_devices','jarviswake_request_status','jarviswake_status_result','jarviswake_find_contacts','jarviswake_navigate','jarviswake_call_contact','jarviswake_whatsapp']);
+  assert.deepEqual(names,['jarviswake_devices','jarviswake_request_status','jarviswake_status_result','jarviswake_find_contacts','jarviswake_navigate','jarviswake_call_contact','jarviswake_whatsapp','jarviswake_list_notes','jarviswake_read_note','jarviswake_save_note']);
 });
 test('Pairing requires authenticated same-origin browser action',async()=>{
   for(const h of [{},user,{...user,Origin:'https://attacker.example','X-Jarvis-Link':'pair'}]) {
@@ -151,4 +151,83 @@ test('Pruning old payloads never permits another execution of an action id',asyn
  const retry=value(await tool(e,'jarviswake_call_contact',args));assert.equal(retry.state,'outcome_uncertain');
  assert.equal((await e.BUCKET.list({prefix:`requests/${c.deviceId}/`,limit:100})).objects.length,0);
  assert.equal((await tool(e,'jarviswake_call_contact',{...args,contact_ref:crypto.randomUUID()})).isError,true);
+});
+
+async function advertiseNotes(e,c) {
+ const r=await worker.fetch(request('/device/poll',{deviceId:c.deviceId,versionCode:104,operations:['status','navigate','find_contacts','call_contact','whatsapp','list_notes','read_note','save_note']},{Authorization:'Bearer '+c.deviceToken}),e);assert.equal(r.status,200);
+}
+const noteMeta=()=>({note_id:crypto.randomUUID(),title:'Synthetic note',revision:1,updated_at:123456});
+async function noteCommand(e,c,name,fields) {
+ const args={device_id:c.deviceId,request_id:crypto.randomUUID(),...fields};
+ assert.equal(value(await tool(e,name,args)).state,'pending');await claim(e,c,args.request_id);return args;
+}
+async function noteRespond(e,c,args,result) {
+ return worker.fetch(request('/device/respond',{deviceId:c.deviceId,requestId:args.request_id,result},{Authorization:'Bearer '+c.deviceToken}),e);
+}
+test('Notes require version104 without disrupting the version103 actions',async()=>{
+ const e=env(),c=await pair(e);await advertise(e,c);
+ const args={device_id:c.deviceId,offset:0,request_id:crypto.randomUUID()};
+ const old=await tool(e,'jarviswake_list_notes',args);assert.equal(old.isError,true);assert.equal(old.content[0].text,'app_update_required');
+ await advertiseNotes(e,c);assert.equal(value(await tool(e,'jarviswake_list_notes',args)).state,'pending');
+ assert.equal(value(await tool(e,'jarviswake_navigate',{device_id:c.deviceId,destination:'Test address',request_id:crypto.randomUUID()})).state,'pending');
+});
+test('Notes schema enforces revisions, limits and exact bounded literal fields',async()=>{
+ const e=env(),c=await pair(e);await advertiseNotes(e,c);
+ const valid={device_id:c.deviceId,note_id:'',title:'Title',text:'Body',expected_revision:0,request_id:crypto.randomUUID()};
+ for(const change of [{expected_revision:1},{expected_revision:-1},{expected_revision:'0'},{note_id:crypto.randomUUID(),expected_revision:0},{title:' x'},{title:'a\nb'},{text:'x'.repeat(4001)},{text:'\u0000'}, {extra:true}])
+  assert.equal((await tool(e,'jarviswake_save_note',{...valid,...change})).isError,true);
+ for(const offset of [-1,101,0.5,'0']) assert.equal((await tool(e,'jarviswake_list_notes',{device_id:c.deviceId,request_id:crypto.randomUUID(),offset})).isError,true);
+ assert.equal(value(await tool(e,'jarviswake_save_note',valid)).state,'pending');
+});
+test('Notes read/write responses distinguish persisted metadata from read content',async()=>{
+ const e=env(),c=await pair(e);await advertiseNotes(e,c);const note=noteMeta();
+ const save=await noteCommand(e,c,'jarviswake_save_note',{note_id:'',title:note.title,text:'Explicit synthetic body',expected_revision:0});
+ assert.equal((await noteRespond(e,c,save,{code:'note_saved',note})).status,200);
+ const stored=value(await tool(e,'jarviswake_status_result',{device_id:c.deviceId,request_id:save.request_id}));assert.equal(stored.result.code,'note_saved');assert.equal(stored.result.note.text,undefined);
+ const read=await noteCommand(e,c,'jarviswake_read_note',{note_id:note.note_id});
+ assert.equal((await noteRespond(e,c,read,{code:'note_read',note:{...note,text:'Explicit synthetic body'}})).status,200);
+ const result=value(await tool(e,'jarviswake_status_result',{device_id:c.deviceId,request_id:read.request_id}));assert.equal(result.result.note.text,'Explicit synthetic body');assert.equal(result.source,'paired_device');
+ assert.equal((await (await e.BUCKET.get(`requests/${c.deviceId}/${save.request_id}.json`)).json()).params,undefined);
+});
+test('Notes cannot smuggle extra private fields, arbitrary success codes or bodies in listings',async()=>{
+ const e=env(),c=await pair(e);await advertiseNotes(e,c);const note=noteMeta();
+ const args=await noteCommand(e,c,'jarviswake_list_notes',{offset:0});
+ for(const result of [{code:'notes_listed',notes:[{...note,text:'Hidden content'}],next_offset:null},{code:'notes_listed',notes:Array(21).fill(note),next_offset:null},{code:'note_saved',note},{code:'notes_disabled',secret:'bad'},{code:'notes_listed',notes:[note],next_offset:'20'}])
+  assert.equal((await noteRespond(e,c,args,result)).status,400);
+ assert.equal((await noteRespond(e,c,args,{code:'notes_listed',notes:[note],next_offset:null})).status,200);
+ const read=await noteCommand(e,c,'jarviswake_read_note',{note_id:note.note_id});
+ assert.equal((await noteRespond(e,c,read,{code:'note_read',note:{...note,text:'界'.repeat(4001)}})).status,400);
+ const bounded={code:'note_read',note:{...note,text:'界'.repeat(4000)}};
+ assert.ok(Buffer.byteLength(JSON.stringify(bounded))<16384);assert.equal((await noteRespond(e,c,read,bounded)).status,200);
+});
+test('Conflicts and disabled notes return no fabricated content and preserve action deduplication',async()=>{
+ const e=env(),c=await pair(e);await advertiseNotes(e,c);
+ const args=await noteCommand(e,c,'jarviswake_save_note',{note_id:crypto.randomUUID(),title:'Title',text:'Requested body',expected_revision:1});
+ assert.equal((await noteRespond(e,c,args,{code:'note_conflict'})).status,200);
+ const retry=value(await tool(e,'jarviswake_save_note',args));assert.equal(retry.result.code,'note_conflict');
+ assert.equal((await tool(e,'jarviswake_save_note',{...args,text:'Another body'})).isError,true);
+ const read=await noteCommand(e,c,'jarviswake_list_notes',{offset:0});assert.equal((await noteRespond(e,c,read,{code:'notes_disabled'})).status,200);
+});
+test('Note exchanges expire after two minutes and are removed on result lookup without permitting replay',async()=>{
+ const e=env(),c=await pair(e);await advertiseNotes(e,c);const note=noteMeta();
+ const args=await noteCommand(e,c,'jarviswake_read_note',{note_id:note.note_id});
+ await noteRespond(e,c,args,{code:'note_read',note:{...note,text:'Transient result'}});
+ const key=`requests/${c.deviceId}/${args.request_id}.json`,cmd=await (await e.BUCKET.get(key)).json();cmd.createdAt=1;await e.BUCKET.put(key,JSON.stringify(cmd));
+ const expired=value(await tool(e,'jarviswake_status_result',{device_id:c.deviceId,request_id:args.request_id}));assert.equal(expired.state,'response_expired');assert.equal(expired.result,undefined);
+ for(const kind of ['requests','results','claims']) assert.equal(await e.BUCKET.get(`${kind}/${c.deviceId}/${args.request_id}.json`),null);
+ assert.equal(value(await tool(e,'jarviswake_read_note',args)).state,'outcome_uncertain');
+ assert.equal(await e.BUCKET.get(key),null);
+});
+test('Device polling cleans expired note payloads even when no result is requested',async()=>{
+ const e=env(),c=await pair(e);await advertiseNotes(e,c);
+ const args={device_id:c.deviceId,request_id:crypto.randomUUID(),note_id:'',title:'Title',text:'Pending body',expected_revision:0};
+ await tool(e,'jarviswake_save_note',args);
+ const key=`requests/${c.deviceId}/${args.request_id}.json`,cmd=await (await e.BUCKET.get(key)).json();cmd.createdAt=1;cmd.expiresAt=2;await e.BUCKET.put(key,JSON.stringify(cmd));
+ await advertiseNotes(e,c);assert.equal(await e.BUCKET.get(key),null);assert.ok(await e.BUCKET.get(`seen/${c.deviceId}/${args.request_id}.json`));
+});
+test('Status remains compatible with old snapshots and reports only the notes consent flag',async()=>{
+ const e=env(),c=await pair(e),cmd=value(await tool(e,'jarviswake_request_status',{device_id:c.deviceId}));
+ const permissions={actionsEnabled:false,contacts:false,callPhone:false,phoneState:false,notesEnabled:true};
+ const r=await worker.fetch(request('/device/respond',{deviceId:c.deviceId,requestId:cmd.request_id,snapshot:{...snap,permissions}},{Authorization:'Bearer '+c.deviceToken}),e);assert.equal(r.status,200);
+ const result=value(await tool(e,'jarviswake_status_result',{device_id:c.deviceId,request_id:cmd.request_id}));assert.equal(result.snapshot.permissions.notesEnabled,true);
 });

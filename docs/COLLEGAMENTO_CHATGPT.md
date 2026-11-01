@@ -1,3 +1,7 @@
+# Aggiornamento0.5.82 — appunti locali
+
+Stesso abbinamento e stesse azioni .81. Nuovo consenso separato **Consenti lettura e aggiornamento appunti da ChatGPT** e pulsante **Apri appunti locali**. Elenco/lettura/salvataggio con revisioni e archivio cifrato distinto dal pairing; nessun nuovo permesso Android. Google Calendar resta al plugin dedicato. Vedi [APPUNTI_LOCALI.md](APPUNTI_LOCALI.md) per comandi, istruzione facoltativa di rilettura, trasmissione dei contenuti richiesti e limiti.
+
 # Stato e azioni — aggiornamento0.5.81
 
 Il primo scambio bidirezionale .80 è riuscito realmente nella conversazione: risposta del dispositivo alla stessa richiesta, app.80/code102, servizio wake e input propri verificati, ciclo IDLE/cover assente. Questo verifica il collegamento e non dimostra ancora le nuove azioni né Live in background sul Galaxy.

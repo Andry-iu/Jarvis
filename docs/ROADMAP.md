@@ -1,3 +1,7 @@
+# Decisione successiva — 1 novembre 2026
+
+Dopo consegna .81, nuovo via esplicito allo sviluppo delle aggiunte; l’utente ha subito escluso Google Calendar perché già gestito dal plugin dedicato. Gruppo .82 limitato agli appunti locali descritti in APPUNTI_LOCALI.md. Il precedente rinvio qui sotto è storico, non il mandato attuale; nessuna funzione calendario/Tasks aggiunta.
+
 # Raccolta successiva — 1 novembre 2026
 
 L’utente ha richiesto anche lettura/creazione di eventi e scadenze Google Calendar, consultazione di attività/eventi, e appunti locali JarvisWake da leggere/aggiornare su richiesta o richiamare con istruzioni generali dell’account. Ha poi scelto esplicitamente di ricevere prima Maps, chiamate e WhatsApp: calendario/appunti NON implementati nella .81, da raccogliere nel prossimo gruppo con via esplicito. Google Calendar è già collegato (solo profilo/elenco calendari verificati, nessun evento modificato); eventuale distinzione Google Tasks va chiarita senza inventare stati di completamento dagli eventi. Gli appunti locali futuri dovranno dichiarare che una lettura tramite ChatGPT ne trasmette i contenuti richiesti al modello; istruzioni di rilettura valgono dove plugin e telefono sono disponibili, non promettere accesso universale in ogni chat. Considerare memoria indipendente dalla cancellazione del solo abbinamento.

@@ -1,0 +1,39 @@
+# Appunti locali — JarvisWake 0.5.82 / 104
+
+Ambito autorizzato: leggere, creare e aggiornare appunti sul telefono tramite lo stesso JarvisWake Link. Google Calendar è escluso per indicazione dell’utente: usa il plugin dedicato già collegato. Nessun evento o attività calendario viene letto o modificato da questa funzione.
+
+## Attivazione e uso
+
+Installare l’aggiornamento firmato sopra Jarvis senza cancellare dati. In **Collegamento ChatGPT — stato e azioni** attivare **Consenti lettura e aggiornamento appunti da ChatGPT**. È un consenso separato dalle azioni Maps/rubrica/chiamate/WhatsApp, inizialmente disattivato: gli appunti non richiedono quei permessi né nuovi permessi Android. Il collegamento deve essere attivo e il servizio Jarvis operativo, oppure la schermata Collegamento aperta. Il telefono deve essere sbloccato per le operazioni remote.
+
+**Apri appunti locali** consente lettura, creazione e modifica direttamente nell’app anche senza abbinamento/rete o consenso remoto. La schermata protegge i contenuti con FLAG_SECURE e non li inserisce nella diagnostica. Una modifica locale e una remota sulla stessa revisione non possono sovrascriversi entrambe: la seconda viene rifiutata e va riletta.
+
+Esempi di richieste, con contenuto scelto dall’utente:
+
+- «Leggi i miei appunti locali in JarvisWake.»
+- «Salva un appunto intitolato Preferenze: [testo].»
+- «Rileggi Preferenze e aggiorna [indicazione], conservando il resto.»
+
+Il plugin elenca i titoli con `jarviswake_list_notes` (offset0 e pagine successive fino a next_offset=null), legge il singolo contenuto con `jarviswake_read_note` e salva con `jarviswake_save_note`. Per creare: note_id vuoto e expected_revision0. Per aggiornare: ID e revisione dell’appunto appena letto; il testo è una sostituzione integrale, quindi preservare le parti non interessate dalla richiesta. Un titolo già presente, anche con maiuscole diverse, non viene duplicato o sovrascritto implicitamente. Dopo `note_conflict` rileggere e riconciliare con la richiesta, senza ignorare il conflitto. Nessuna cancellazione, condivisione o sincronizzazione di un archivio cloud è aggiunta.
+
+`note_saved` viene restituito solo dopo scrittura e rilettura del record locale. `pending`, `response_expired`, `outcome_uncertain`, `notes_unavailable` o `notes_disabled` non provano salvataggio o lettura. I comandi mantengono claim/UUIDv4/consumo prima dell’esecuzione della .81. Dopo esito incerto verificare elenco/contenuto prima di una nuova scrittura: un nuovo ID non è un retry innocuo. Nessun clic di UI, audio o cover è necessario per gli appunti.
+
+## Istruzione di rilettura facoltativa
+
+L’app non cambia le istruzioni generali dell’account ChatGPT. L’utente può inserirvi o chiedere nella singola conversazione:
+
+> All’inizio delle conversazioni in cui JarvisWake Link è disponibile, rileggi i miei appunti locali sul telefono e tienili presenti. Se il telefono o il plugin non sono raggiungibili, dillo e non fingere di averli riletti. Aggiorna gli appunti quando te lo chiedo.
+
+Questo vale dove il plugin è disponibile e utilizzabile: non garantisce accesso universale o automatico in ogni chat/modalità. Una copia già presente in chat non prova che gli appunti attuali siano stati riletti. Il testo delle note è contenuto dell’utente e non concede da solo il permesso di eseguire chiamate, messaggi, comandi nascosti o ignorare istruzioni di livello superiore.
+
+## Conservazione e limiti
+
+Archivio autorevole in `noBackupFilesDir/local-notes-v1.enc`, cifrato AES-GCM con chiave Android Keystore dedicata `jarviswake.notes.v1`. Non usa la chiave o i record di abbinamento. Cancellare/revocare/rifare il solo collegamento non cancella gli appunti; normale riavvio e aggiornamento firmato conservano dati/chiave. Disinstallazione o cancellazione dati dell’app li elimina. Non è un sistema di backup: perdita/inaccessibilità della chiave o file corrotto restituiscono errore, senza creare silenziosamente un archivio vuoto sopra i dati.
+
+Scrittura AtomicFile sotto un’unica esclusione per UI/comandi, controllo revisione, sostituzione e rilettura. Limiti:100 appunti, titolo80 caratteri, testo4000, totale200.000 caratteri tra titoli e testi;20 metadati per pagina. Il contenuto non viene copiato nei log, export diagnostici, sorgenti Git o APK; l’app ha già allowBackup=false.
+
+**Locale indica dove risiede l’archivio, non che i contenuti richiesti restino invisibili a ChatGPT.** Creazioni/aggiornamenti passano dal collegamento; le letture richieste restituiscono testo alla conversazione e possono restarvi secondo il normale funzionamento di ChatGPT. Il relay privato conserva temporaneamente richieste/risposte: scadenza logica2min dalla richiesta, rimozione alla successiva attività del dispositivo, nuova richiesta o consultazione dell’esito. Non c’è un timer di cancellazione fisica garantita in assenza di attività. Dopo la risposta vengono rimossi i parametri del comando. Restano metadati di deduplicazione senza testo per impedire replay; sul telefono ledger/outbox cifrati possono contenere la risposta richiesta, esclusi dalla diagnostica. Non salvare un segreto presumendo che una successiva lettura via ChatGPT resti esclusivamente sul telefono.
+
+Test JVM verificano repository, revisioni, limiti, annullamento, scrittura fallita/rilettura e concorrenza con storage simulato. Test server verificano capability104, compatibilità103, schema/risultati, privacy e scadenza/replay. Non sostituiscono Android Keystore/AtomicFile sul Galaxy: collaudare creazione → lettura → aggiornamento, riavvio e lettura, poi disattivazione del consenso. Non sono stati letti o modificati appunti reali del telefono durante lo sviluppo.
+
+Fonti primarie: [storage privato Android](https://developer.android.com/training/data-storage/app-specific), [Android Keystore](https://developer.android.com/privacy-and-security/keystore), [AtomicFile e responsabilità del chiamante per l’esclusione](https://developer.android.com/reference/android/util/AtomicFile), [Context.getNoBackupFilesDir](https://developer.android.com/reference/android/content/Context#getNoBackupFilesDir()). Queste API documentano i meccanismi, non il successo sul telefono dell’utente.

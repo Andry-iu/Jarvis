@@ -67,6 +67,13 @@ class BridgeSetupActivity:Activity() {
         button("Autorizza rubrica e chiamate") {
             requestPermissions(arrayOf(Manifest.permission.READ_CONTACTS,Manifest.permission.CALL_PHONE,Manifest.permission.READ_PHONE_STATE),81)
         }
+        layout.addView(Switch(this).apply {
+            text="Consenti lettura e aggiornamento appunti da ChatGPT";setTextColor(Color.WHITE)
+            isChecked=PhoneNotes.enabled(this@BridgeSetupActivity)
+            setOnCheckedChangeListener { _,value -> PhoneNotes.enable(this@BridgeSetupActivity,value) }
+        })
+        text("Gli appunti hanno un archivio cifrato sul telefono. Quando ne chiedi la lettura o l’aggiornamento, il contenuto passa tramite il collegamento nella conversazione ChatGPT. Non entrano nella diagnostica. Cancellare il collegamento non cancella gli appunti; disinstallare Jarvis o cancellarne i dati li elimina. Nessuna funzione Google Calendar è aggiunta: usa il plugin dedicato.")
+        button("Apri appunti locali") { startActivity(Intent(this,LocalNotesActivity::class.java)) }
         button("Cancella collegamento dal telefono") {
             BridgeSettings.clear(this);enabled.isChecked=false;BridgeLink.refresh(this)
         }

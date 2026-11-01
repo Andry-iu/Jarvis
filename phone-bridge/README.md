@@ -1,3 +1,7 @@
+# Aggiornamento .82 — appunti locali
+
+Tre tool aggiunti sullo stesso Site/plugin: list_notes, read_note, save_note (capability APK104; azioni103 e status102 compatibili). Consenso appunti separato e archivio autorevole cifrato sul telefono, nessun calendario. Salvataggio con revisione e rilettura, claim/UUID/fingerprint invariati. Il relay trasporta i contenuti richiesti: scadenza logica2min per gli scambi note, pulizia alla successiva attività/poll/lettura/nuova richiesta, non timer fisico garantito. Dopo risposta eliminare i parametri; tombstone senza testo per deduplicazione. Test server24 casi; protocollo/tool descriptions distinguono dati locali da copie nella conversazione e non promettono lettura universale. Vedi docs/APPUNTI_LOCALI.md nel repository Android.
+
 Deduplicazione .81: un tombstone con solo fingerprint rimane anche dopo la pulizia dei vecchi parametri/risultati, così un vecchio request_id non diventa una nuova chiamata/invio.
 
 # Aggiornamento0.5.81 / protocollo0.2

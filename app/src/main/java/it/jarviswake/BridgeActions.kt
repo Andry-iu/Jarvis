@@ -28,6 +28,15 @@ internal object BridgeActions {
         @Suppress("UNCHECKED_CAST") return value as T
     }
     fun execute(c:Context,deviceId:String,command:JSONObject,deadline:Long,permitted:()->Boolean):JSONObject {
+        val operation=command.getString("operation")
+        if(operation in BridgeProtocol.NOTE_OPERATIONS) {
+            fun notesAllowed()=permitted() && BridgeSettings.enabled(c) && PhoneNotes.enabled(c) &&
+                SystemClock.elapsedRealtime()<deadline && !c.getSystemService(KeyguardManager::class.java).isKeyguardLocked
+            if(!PhoneNotes.enabled(c)) return result("notes_disabled")
+            if(c.getSystemService(KeyguardManager::class.java).isKeyguardLocked) return result("locked")
+            if(!notesAllowed()) return result("expired_before_dispatch")
+            return PhoneNotes.execute(c,operation,command.getJSONObject("params"),::notesAllowed)
+        }
         fun allowed()=permitted() && BridgeSettings.enabled(c) && BridgeSettings.actionsEnabled(c) && SystemClock.elapsedRealtime()<deadline
         if(!BridgeSettings.actionsEnabled(c)) return result("actions_disabled")
         if(!allowed()) return result("expired_before_dispatch")
