@@ -7,7 +7,7 @@ New-Item -ItemType Directory -Path $TestRoot|Out-Null
 try{
     Assert-SetupPackage $PackageDir;Pass 'package_manifest_before_dependencies'
     Refuse {Assert-SetupExistingAgentVersion ([pscustomobject]@{agent_version='0.6.1'}) $PackageDir $true} 'completed_older_agent_requires_own_batch_update'
-    Assert-SetupExistingAgentVersion ([pscustomobject]@{agent_version='0.7.0'}) $PackageDir $true;Pass 'completed_current_agent_accepted'
+    Assert-SetupExistingAgentVersion ([pscustomobject]@{agent_version='0.7.1'}) $PackageDir $true;Pass 'completed_current_agent_accepted'
     Assert-SetupExistingAgentVersion ([pscustomobject]@{agent_version='0.6.1'}) $PackageDir $false;Pass 'incomplete_legacy_install_can_recover'
     $homeDir=Join-Path $TestRoot 'Jarvis resumable';$ctx=Open-SetupState $homeDir (Join-Path $TestRoot 'Setup')
     Refuse {Open-SetupState $homeDir (Join-Path $TestRoot 'Setup')} 'concurrent_setup_same_root_refused'
@@ -81,7 +81,7 @@ class Fixture {static int Main(string[] a){
     $request.user_sid='other';Write-SetupJson (Join-Path $ctx.dir ($legacyID+'.request.json')) $request
     if(Test-LegacyGitReceiptRepair $ctx 'git' $legacyAsset $legacyTarget $legacyReceipt){throw 'Altro utente accettato.'}
     $request.user_sid=[Security.Principal.WindowsIdentity]::GetCurrent().User.Value;Write-SetupJson (Join-Path $ctx.dir ($legacyID+'.request.json')) $request
-    $legacyReceipt|Add-Member -NotePropertyName installer_version -NotePropertyValue '1.3.0'
+    $legacyReceipt|Add-Member -NotePropertyName installer_version -NotePropertyValue '1.3.1'
     if(Test-LegacyGitReceiptRepair $ctx 'git' $legacyAsset $legacyTarget $legacyReceipt){throw 'Ricevuta nuova trattata come legacy.'}
     $legacyReceipt.PSObject.Properties.Remove('installer_version')
     Invoke-SetupOperation $ctx 'git' $legacyAsset $legacyTarget
@@ -149,7 +149,7 @@ class Fixture {static int Main(string[] a){
         Refuse {Update-SetupScripts $upgrade $PackageDir} 'modified_installed_scripts_not_overwritten'
         Write-Utf8 $check $original
         # Simulate power loss after replacing Start, before replacing the others.
-        Write-SetupJson (Join-Path $upgrade 'Config\installer-scripts-pending.json') @{version='1.3.0';fixture=$true}
+        Write-SetupJson (Join-Path $upgrade 'Config\installer-scripts-pending.json') @{version='1.3.1';fixture=$true}
         Copy-Item (Join-Path $PackageDir 'Start.ps1') (Join-Path $upgrade 'Scripts\Start.ps1') -Force
         Refuse {& (Join-Path $upgrade 'Scripts\Start.ps1') -HomeDir $upgrade} 'partial_script_upgrade_blocks_start'
         Refuse {& "$PackageDir\Setup.ps1" -InstallDir $upgrade -NonInteractive -SkipRemote -NoTask -NoShortcuts} 'legacy_completed_agent_requires_batch_before_setup'

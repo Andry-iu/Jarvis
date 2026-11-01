@@ -5,7 +5,7 @@ $r=Get-Content -LiteralPath $RequestPath -Raw|ConvertFrom-Json
 $dir=Get-FullPath $r.state_dir
 if($r.format -ne 1 -or $r.id -notmatch '^[a-f0-9]{32}$' -or $r.user_sid -ne [Security.Principal.WindowsIdentity]::GetCurrent().User.Value -or $r.computer -ine $env:COMPUTERNAME -or (Split-Path $RequestPath -Parent) -ine $dir){throw 'Contesto worker non valido.'}
 $resultPath=Join-Path $dir ($r.id+'.result.json')
-$result=[pscustomobject]@{id=$r.id;installer_version='1.3.0';state='running';worker=(Get-Record (Get-Process -Id $PID));exit_code=$null;finished_at='';error_code=''}
+$result=[pscustomobject]@{id=$r.id;installer_version='1.3.1';state='running';worker=(Get-Record (Get-Process -Id $PID));exit_code=$null;finished_at='';error_code=''}
 Write-SetupJson $resultPath $result
 $guard=$null
 try {

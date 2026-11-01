@@ -5,7 +5,7 @@ $manifest=Get-Content -LiteralPath (Join-Path $source 'package.json') -Raw|Conve
 if ((Get-FileHash -LiteralPath $AgentPath).Hash -ine $manifest.agent_sha256) { throw 'Il binario non coincide con la release verificata.' }
 if (Test-Path -LiteralPath $OutputDirectory) { throw 'Usare una nuova directory di output.' }
 New-Item -ItemType Directory -Path $OutputDirectory|Out-Null
-$payload=Join-Path $OutputDirectory 'Jarvis-MCP-Setup-1.3.0'
+$payload=Join-Path $OutputDirectory 'Jarvis-MCP-Setup-1.3.1'
 New-Item -ItemType Directory -Path $payload|Out-Null
 foreach ($f in $manifest.files) {
     if (($f.path -like '*.env' -and $f.path -ne 'setup.example.env') -or $f.path -match '^setup\.local\.env(\.|$)' -or $f.path -like '*.secret.env*') { throw 'SETUP_CONFIG_SECRET_IN_MANIFEST' }
@@ -25,6 +25,6 @@ if (Test-Path -LiteralPath (Join-Path $source 'COLLAUDO.txt')) {
 }
 if ($RunTests) { & (Join-Path $payload 'Test-SetupSettings.ps1') -PackageDir $payload; & (Join-Path $payload 'Test-Installer.ps1') -PackageDir $payload }
 if($NoArchive){[pscustomobject]@{payload=$payload;agent_version=$manifest.agent_version;installer_version=$manifest.installer_version;tests_requested=[bool]$RunTests};return}
-$zip=Join-Path $OutputDirectory 'Jarvis-MCP-Setup-1.3.0.zip'
+$zip=Join-Path $OutputDirectory 'Jarvis-MCP-Setup-1.3.1.zip'
 Compress-Archive -Path $payload -DestinationPath $zip -CompressionLevel Optimal
 [pscustomobject]@{zip=$zip;sha256=(Get-FileHash $zip).Hash;agent_version=$manifest.agent_version;installer_version=$manifest.installer_version;tests_requested=[bool]$RunTests}
