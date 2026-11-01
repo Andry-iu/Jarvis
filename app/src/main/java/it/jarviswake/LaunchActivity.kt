@@ -18,6 +18,9 @@ import java.lang.ref.WeakReference
 class LaunchActivity : Activity() {
     companion object {
         private var active = WeakReference<LaunchActivity>(null)
+        internal fun bridgeCoverVisible(): Boolean = active.get()?.let {
+            !it.isFinishing && it.resumed && it::hud.isInitialized && it.hud.isAttachedToWindow && it.hud.isShown
+        }==true
         fun closeForCycle(token: String) {
             active.get()?.takeIf { it.token == token }?.finish()
         }

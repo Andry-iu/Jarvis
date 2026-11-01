@@ -151,6 +151,9 @@ class MainActivity : Activity() {
             startService(Intent(this, WakeService::class.java).setAction("STOP"))
         }
         button("Imposta Jarvis come assistente del telefono") { requestAssistantRole() }
+        button("Collegamento ChatGPT — prova di stato") {
+            startActivity(Intent(this, BridgeSetupActivity::class.java))
+        }
         val destination = RadioGroup(this).apply { orientation = RadioGroup.VERTICAL }
         val webOption = RadioButton(this).apply { id = View.generateViewId(); text = "ChatGPT nel WebView" }
         val nativeOption = RadioButton(this).apply { id = View.generateViewId(); text = "App ChatGPT del telefono (shortcut)" }
@@ -570,11 +573,13 @@ class MainActivity : Activity() {
 
     override fun onResume() {
         super.onResume()
+        runCatching { BridgeLink.owner(this,"main",true) }
         updateCoverButton()
         if (::contentRoot.isInitialized && !VoiceCycle.active) prepareChatGpt()
         handler.post(update)
     }
     override fun onPause() {
+        runCatching { BridgeLink.owner(this,"main",false) }
         WaitingAudio.stopPreview()
         handler.removeCallbacks(update)
         if (VoiceCycle.active && chatSettingsLayer != null) closeChatSettings()

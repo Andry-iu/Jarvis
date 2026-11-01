@@ -26,6 +26,11 @@ class VoiceAccessibilityService : AccessibilityService() {
         private const val GREETING_DONE = "greeting_done"
         private var instance = WeakReference<VoiceAccessibilityService>(null)
 
+        internal fun bridgeCoverVisible(): Boolean = instance.get()?.let {
+            it.nativeController?.bridgeCoverVisible()==true ||
+                it.overlay?.let { view -> view.isAttachedToWindow && view.isShown }==true
+        }==true
+
         fun restoreNativeAfterExport(token: String?) {
             instance.get()?.nativeController?.takeIf { it.token == token }?.restoreAfterExport()
         }

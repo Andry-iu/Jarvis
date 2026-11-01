@@ -491,6 +491,9 @@ class WebChatActivity : Activity() {
             VOICE_CONTROL_LOCATION_SCRIPT.replace("__JARVIS_LOCKED__", "false")
                 .replace("__JARVIS_MIC_MUTED__", "false")
         @Volatile private var active = WeakReference<WebChatActivity>(null)
+        internal fun bridgeCoverVisible(): Boolean = active.get()?.let {
+            !it.isFinishing && it.resumed && it.localHud?.let { view -> view.isAttachedToWindow && view.isShown }==true
+        }==true
         @Volatile private var automationPageReady = false
         fun isAutomationPageReady(): Boolean = active.get()?.let {
             automationPageReady && it.resumed && it.hasWindowFocus() && it.isValidCycle() && !it.webDestroyed

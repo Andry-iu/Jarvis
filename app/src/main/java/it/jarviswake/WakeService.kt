@@ -23,6 +23,18 @@ class WakeService : Service() {
     companion object {
         @Volatile private var instance: WakeService? = null
 
+        /** Status observation only: a foreground service is not proof of live wake input. */
+        internal fun bridgeStatus(): JSONObject {
+            val s=instance
+            val running=s!=null && !s.stopping && s.foregroundStarted
+            val capture=if(!running || s?.ownCapture()!=true) "not_recording" else runCatching {
+                val config=s.recorder?.activeRecordingConfiguration
+                if(config!=null && !config.isClientSilenced && s.captureOpenedAt>0 && s.lastFrameAt>=s.captureOpenedAt &&
+                    SystemClock.elapsedRealtime()-s.lastFrameAt<=3000L) "active_verified" else "unverified"
+            }.getOrDefault("unverified")
+            return JSONObject().put("serviceRunning",running).put("capture",capture)
+        }
+
         /** Resumes only the foreground service that the user already started. */
         fun resumeExisting(): Boolean {
             val service = instance ?: return false
@@ -190,6 +202,7 @@ class WakeService : Service() {
         try {
             VoiceAccessibilityService.restoreInterruptedNative(this)
             ensureForeground("Preparazione ascolto offline…")
+            runCatching { BridgeLink.owner(this,"wake_service",true) }
             main.removeCallbacks(recovery)
             main.post(recovery)
             resumeListening()
@@ -317,6 +330,7 @@ class WakeService : Service() {
     }
 
     private fun stopCompletely(message: String) {
+        runCatching { BridgeLink.owner(this,"wake_service",false) }
         stopping = true
         main.removeCallbacks(screenOffGraceExpired)
         main.removeCallbacks(recovery)
@@ -532,6 +546,7 @@ class WakeService : Service() {
     }
 
     override fun onDestroy() {
+        runCatching { BridgeLink.owner(this,"wake_service",false) }
         if (instance === this) instance = null
         val stoppedByUserOrWorker = stopping
         stopping = true

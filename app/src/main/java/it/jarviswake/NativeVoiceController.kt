@@ -11,6 +11,7 @@ import android.view.accessibility.AccessibilityNodeInfo
 /** Native session owned by accessibility; greeting uses the user-authorized coordinate tap. */
 internal class NativeVoiceController(private val service: VoiceAccessibilityService, val token: String) {
     private var hud: HolographicOverlayView? = null
+    internal fun bridgeCoverVisible(): Boolean = hud?.let { it.isAttachedToWindow && it.isShown }==true
     private var startSent = service.nativeStartSent(token) || !VoiceCycle.touchGate.canDispatch
     private var stopSent = service.nativeStopSent(token)
     private var ending: String? = null
