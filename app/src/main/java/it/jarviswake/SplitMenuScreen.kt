@@ -15,21 +15,19 @@ import android.widget.*
 internal class SplitMenuScreen(context:Context,title:String,instructions:String,back:(()->Unit)?=null):LinearLayout(context) {
     val controls=LinearLayout(context).apply { orientation=VERTICAL;setPadding(dp(16),dp(8),dp(16),dp(12)) }
     private val upper=LinearLayout(context).apply { orientation=VERTICAL }
-    private val navigation=LinearLayout(context).apply { orientation=HORIZONTAL;setPadding(dp(12),dp(4),dp(12),dp(4)) }
+    private var backControl:Button?=null
     private val guideTitle=TextView(context)
     private val guideBody=TextView(context)
     private val lower=LinearLayout(context).apply { orientation=VERTICAL;setPadding(dp(20),dp(14),dp(20),dp(12)) }
     init {
         orientation=VERTICAL;setBackgroundColor(Color.rgb(9,19,29))
         val toolbar=LinearLayout(context).apply { orientation=HORIZONTAL;gravity=Gravity.CENTER_VERTICAL;setPadding(dp(12),dp(4),dp(16),dp(4)) }
-        if(back!=null) toolbar.addView(makeButton(context.getString(R.string.menu_back)) { back() },LayoutParams(dp(112),-2))
         toolbar.addView(TextView(context).apply {
             text=title;textSize=22f;setTextColor(Color.WHITE);setTypeface(null,Typeface.BOLD)
             setPadding(dp(12),dp(10),0,dp(10));isAccessibilityHeading=true
         },LayoutParams(0,-2,1f))
         upper.addView(toolbar)
         upper.addView(ScrollView(context).apply { isFillViewport=false;addView(controls);isFocusableInTouchMode=true },LayoutParams(-1,0,1f))
-        upper.addView(navigation)
         addView(upper,LayoutParams(-1,0,0.65f))
         addView(View(context).apply { setBackgroundColor(Color.rgb(46,77,96)) },LayoutParams(-1,dp(2)))
         lower.setBackgroundColor(Color.rgb(18,35,49))
@@ -38,6 +36,10 @@ internal class SplitMenuScreen(context:Context,title:String,instructions:String,
         val guide=LinearLayout(context).apply { orientation=VERTICAL;addView(guideTitle);addView(guideBody) }
         lower.addView(ScrollView(context).apply { addView(guide) },LayoutParams(-1,-1))
         addView(lower,LayoutParams(-1,0,0.35f))
+        if(back!=null) {
+            backControl=makeButton(context.getString(R.string.menu_back)) { back() }
+            controls.addView(backControl,LayoutParams(-1,-2).apply { bottomMargin=dp(8) })
+        }
         explain(context.getString(R.string.menu_instructions),instructions)
         setOnApplyWindowInsetsListener { v,insets ->
             val bars=insets.getInsets(WindowInsets.Type.systemBars())
@@ -56,9 +58,12 @@ internal class SplitMenuScreen(context:Context,title:String,instructions:String,
     fun explain(body:String)=explain(context.getString(R.string.menu_instructions),body)
     fun describe(view:View,body:String) { view.setOnFocusChangeListener { _,focused -> if(focused) explain(body) } }
     fun text(value:String,size:Float=16f)=TextView(context).apply {
-        text=value;textSize=size;setTextColor(Color.WHITE);setPadding(0,dp(8),0,dp(10));controls.addView(this)
+        text=value;textSize=size;setTextColor(Color.WHITE);setPadding(0,dp(8),0,dp(10));addControl(this)
     }
-    fun addControl(view:View) { controls.addView(view,LayoutParams(-1,-2).apply { bottomMargin=dp(8) }) }
+    fun addControl(view:View) {
+        val before=backControl?.let { controls.indexOfChild(it) } ?: -1
+        controls.addView(view,before,LayoutParams(-1,-2).apply { bottomMargin=dp(8) })
+    }
     fun makeButton(label:String,action:()->Unit)=Button(context).apply {
         text=label;textSize=18f;isAllCaps=false;isSingleLine=false;ellipsize=null;minHeight=dp(64);minimumHeight=dp(64)
         gravity=Gravity.CENTER;setPadding(dp(14),dp(12),dp(14),dp(12));setTextColor(Color.WHITE)
@@ -86,8 +91,7 @@ internal class SplitMenuScreen(context:Context,title:String,instructions:String,
         describe(this,help);addControl(this)
     }
     fun navigation(previous:String,back:()->Unit,next:String,forward:()->Unit) {
-        navigation.removeAllViews()
-        navigation.addView(makeButton(previous,back),LayoutParams(0,-2,1f).apply { rightMargin=dp(6) })
-        navigation.addView(makeButton(next,forward),LayoutParams(0,-2,1f).apply { leftMargin=dp(6) })
+        backControl?.apply { text=previous;setOnClickListener { back() } }
+        addControl(makeButton(next,forward))
     }
 }

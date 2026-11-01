@@ -1,0 +1,118 @@
+package it.jarviswake
+
+import android.app.Activity
+import android.app.NotificationManager
+import android.Manifest
+import android.provider.Settings
+import android.os.Looper
+import android.view.View
+import android.view.ViewGroup
+import android.widget.Button
+import org.junit.Assert.*
+import org.junit.Test
+import org.junit.After
+import org.junit.runner.RunWith
+import org.robolectric.Robolectric
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.RuntimeEnvironment
+import org.robolectric.Shadows.shadowOf
+import org.robolectric.annotation.Config
+
+/** Real Activity/View construction, which the pure navigation tests do not execute. */
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk=[34,36])
+class MenuActivityStartupTest {
+    @After fun resetServiceHint() { State.running=false }
+    private fun mainActivity():org.robolectric.android.controller.ActivityController<MainActivity> {
+        NativeChatSettings.enable(RuntimeEnvironment.getApplication(),true)
+        return Robolectric.buildActivity(MainActivity::class.java).create()
+    }
+    private fun buttons(view:View):List<Button> = (if(view is Button) listOf(view) else emptyList())+
+        if(view is ViewGroup) (0 until view.childCount).flatMap { buttons(view.getChildAt(it)) } else emptyList()
+
+    @Test fun uncreatedDecorMustBeCheckedBeforeAskingForTheInsetsController() {
+        val a=Robolectric.buildActivity(Activity::class.java).get()
+        assertNull(a.window.peekDecorView())
+        assertThrows(NullPointerException::class.java) { a.window.insetsController }
+        a.window.hideMenuKeyboard()
+        assertNull(a.window.peekDecorView())
+    }
+
+    @Test fun guideColdStartBuildsIndexBeforeTheWindowIsShown() {
+        val controller=Robolectric.buildActivity(GuideActivity::class.java).create()
+        val activity=controller.get()
+        assertTrue(buttons(activity.window.decorView).any { it.text.toString()=="Esporta guida completa" })
+        controller.destroy()
+    }
+    @Test fun notesColdStartBuildsLocalListBeforeTheWindowIsShown() {
+        val controller=Robolectric.buildActivity(LocalNotesActivity::class.java).create()
+        val activity=controller.get()
+        assertTrue(buttons(activity.window.decorView).any { it.text.toString()=="Nuovo appunto" })
+        controller.destroy()
+    }
+    @Test fun guideTopicCanBeOpenedAndReturnedToIndexAfterAttachment() {
+        val controller=Robolectric.buildActivity(GuideActivity::class.java).create().start().resume().visible()
+        val a=controller.get()
+        buttons(a.window.decorView).single { it.text.toString()=="Parola wake: pronuncia e ascolto" }.performClick()
+        buttons(a.window.decorView).single { it.text.toString()=="Indice e ricerca" }.performClick()
+        assertTrue(buttons(a.window.decorView).any { it.text.toString()=="Cerca" })
+        controller.pause().stop().destroy()
+    }
+    @Test fun noteEditorCanOpenFromTheListWithoutLosingItsExit() {
+        val controller=Robolectric.buildActivity(LocalNotesActivity::class.java).create()
+        val a=controller.get()
+        buttons(a.window.decorView).single { it.text.toString()=="Nuovo appunto" }.performClick()
+        assertTrue(buttons(a.window.decorView).any { it.text.toString()=="Salva appunto" })
+        buttons(a.window.decorView).single { it.text.toString()=="Indietro" }.performClick()
+        assertTrue(buttons(a.window.decorView).any { it.text.toString()=="Nuovo appunto" })
+        controller.destroy()
+    }
+    @Test fun everyConfigurationCategoryBuildsAndReturnsThroughTheRealButtons() {
+        val controller=mainActivity();val a=controller.get()
+        buttons(a.window.decorView).single { it.text.toString()=="Configurazione" }.performClick()
+        for(label in listOf("Permessi e assistente","ChatGPT e progetto","Voce e saluto","Audio di avvio","Cover","Collegamento e azioni")) {
+            buttons(a.window.decorView).single { it.text.toString()==label }.performClick()
+            buttons(a.window.decorView).single { it.text.toString()=="Indietro" }.performClick()
+            assertTrue(buttons(a.window.decorView).any { it.text.toString()=="Configurazione guidata" })
+        }
+        controller.destroy()
+    }
+    @Test fun manualVoiceWithMissingAccessibilityExplainsTheBlockBeforeStartingCover() {
+        val app=RuntimeEnvironment.getApplication()
+        Settings.Secure.putString(app.contentResolver,Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES,"")
+        val controller=mainActivity();val a=controller.get()
+        shadowOf(app).clearNextStartedActivities()
+        buttons(a.window.decorView).single { it.text.toString()=="Parla con Jarvis" }.performClick()
+        assertFalse(VoiceCycle.active)
+        assertNull(shadowOf(app).nextStartedActivity)
+        assertTrue(State.getAttempt(a).contains("Automazione Voice non abilitata"))
+        controller.destroy()
+    }
+    @Test fun manualWakeWithStaleRunningHintStillRequestsTheActualService() {
+        val app=RuntimeEnvironment.getApplication()
+        shadowOf(app).grantPermissions(Manifest.permission.RECORD_AUDIO,Manifest.permission.POST_NOTIFICATIONS)
+        shadowOf(app.getSystemService(NotificationManager::class.java)).setNotificationsEnabled(true)
+        State.running=true // A hint alone must not suppress an explicit start with no service instance.
+        val controller=mainActivity();val a=controller.get()
+        shadowOf(app).clearStartedServices()
+        buttons(a.window.decorView).single { it.text.toString()=="Avvia ascolto Hey Jarvis" }.performClick()
+        assertEquals(WakeService::class.java.name,shadowOf(app).nextStartedService?.component?.className)
+        controller.destroy()
+    }
+    @Test fun backIsTheLastNormalControlInSectionsAndWizard() {
+        val controller=mainActivity();val a=controller.get()
+        buttons(a.window.decorView).single { it.text.toString()=="Configurazione" }.performClick()
+        fun verifyLastBack() {
+            val back=buttons(a.window.decorView).single { it.text.toString()=="Indietro" }
+            val parent=back.parent as ViewGroup
+            assertSame(back,parent.getChildAt(parent.childCount-1))
+            assertTrue(parent.parent is android.widget.ScrollView)
+        }
+        verifyLastBack()
+        buttons(a.window.decorView).single { it.text.toString()=="Configurazione guidata" }.performClick()
+        verifyLastBack()
+        buttons(a.window.decorView).single { it.text.toString()=="Avanti" }.performClick()
+        verifyLastBack()
+        controller.destroy()
+    }
+}

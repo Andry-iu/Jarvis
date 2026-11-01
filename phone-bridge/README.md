@@ -1,3 +1,7 @@
+# Aggiornamento guida .84
+
+Stesso jarviswake_guide, stessa origine e stessi abbinamenti: solo contenuto/versione della guida aggiornati con Indietro ultimo nell’elenco e indicazioni su correzione avvio/stato ascolto.19 argomenti/0.5.84/106. Nessuna modifica alle operazioni telefono o ai loro esiti;27 test server passati.
+
 # Guida interrogabile .83
 
 Nuovo jarviswake_guide: tool read-only autenticato sullo stesso plugin, indice/argomento/ricerca domanda, nessun telefono/pairing necessario. Guida canonica docs/guida-jarvis.json nel repo Android, generata in asset app/Markdown e blocco statico Worker con scripts/sync-guide.py.19 argomenti, versione dichiarata0.5.83/105; non rappresenta stati reali né autorizza azioni. Ricerca lessicale normalizzata, due sezioni al massimo, nessun match esplicito.27 test server includono guida senza pairing, query e argomenti reali, input errati e nessuna scrittura storage. Le quattro azioni, appunti e abbinamenti precedenti sono conservati.

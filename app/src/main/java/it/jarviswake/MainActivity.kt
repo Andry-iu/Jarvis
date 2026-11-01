@@ -60,6 +60,7 @@ class MainActivity : Activity() {
     private val layout get()=menu.controls
     private var greetingDraft:String?=null
     private var projectDraft:String?=null
+    private var actionFeedback=false
     private var chatSettingsLayer: FrameLayout? = null
     private var settingsBackCallback: OnBackInvokedCallback? = null
     private val update = object : Runnable {
@@ -67,6 +68,7 @@ class MainActivity : Activity() {
             if (::status.isInitialized) status.text = (if (State.running) "● " else "○ ") + State.get(this@MainActivity)
             if (::attemptStatus.isInitialized) attemptStatus.text = State.getAttempt(this@MainActivity)
             if (::waitingAudioName.isInitialized) updateWaitingAudioName()
+            if (::menu.isInitialized && navigation.current==MenuPage.HOME && actionFeedback) refreshActionFeedback()
             handler.postDelayed(this, 1000)
         }
     }
@@ -86,7 +88,7 @@ class MainActivity : Activity() {
 
     private fun text(value:String,size:Float=16f)=menu.text(value,size)
     private fun button(label:String,action:()->Unit)=menu.button(label,action=action)
-    private fun openPage(page:MenuPage) { captureDrafts();navigation.open(page);renderMenu(false) }
+    private fun openPage(page:MenuPage) { captureDrafts();actionFeedback=false;navigation.open(page);renderMenu(false) }
     private fun captureDrafts() {
         if(navigation.current==MenuPage.GREETING && ::greetingInput.isInitialized) greetingDraft=greetingInput.text.toString()
         if(navigation.current==MenuPage.CHATGPT && ::projectUrlInput.isInitialized && !NativeChatSettings.enabled(this)) projectDraft=projectUrlInput.text.toString()
@@ -115,7 +117,7 @@ class MainActivity : Activity() {
     }
     private fun renderMenu(capture:Boolean=true) {
         if(capture && ::menu.isInitialized) captureDrafts()
-        window.insetsController?.hide(android.view.WindowInsets.Type.ime())
+        window.hideMenuKeyboard()
         WaitingAudio.stopPreview()
         if(::homeScreen.isInitialized) contentRoot.removeView(homeScreen)
         val page=navigation.current
@@ -128,8 +130,12 @@ class MainActivity : Activity() {
                 text("J.A.R.V.I.S. · "+appVersionName(),22f)
                 status=text(State.get(this));attemptStatus=text(State.getAttempt(this),14f)
                 button("Parla con Jarvis") { startVoiceCycle() }
-                button("Avvia ascolto Hey Jarvis") { requestStart() }
-                button("Ferma ascolto") { startService(Intent(this,WakeService::class.java).setAction("STOP")) }
+                button("Avvia ascolto Hey Jarvis") {
+                    actionFeedback=true
+                    DiagnosticLog.record(this,DiagnosticLog.Event.MANUAL_ACTION_REQUESTED,monitorStatus="wake_start")
+                    requestStart();refreshActionFeedback()
+                }
+                button("Ferma ascolto") { actionFeedback=true;startService(Intent(this,WakeService::class.java).setAction("STOP"));refreshActionFeedback() }
                 button("Appunti locali") { startActivity(Intent(this,LocalNotesActivity::class.java)) }
                 text("Impostazioni e supporto",18f)
                 button(getString(R.string.menu_configuration)) { openPage(MenuPage.CONFIGURATION) }
@@ -181,9 +187,10 @@ class MainActivity : Activity() {
             MenuPage.DIAGNOSTICS -> button("Esporta diagnostica") { exportDiagnostics() }
         }
         if(navigation.guided) menu.navigation(
-            getString(if(navigation.step==0) R.string.menu_exit_guide else R.string.menu_back),{menuBack()},
+            getString(R.string.menu_back),{menuBack()},
             getString(if(page==MenuPage.SUMMARY) R.string.menu_finish else R.string.menu_next),{advanceGuide()})
         updateMenuBack()
+        if(page==MenuPage.HOME && actionFeedback) refreshActionFeedback()
         menu.requestFocus()
     }
     private fun openBridge(section:String) { startActivity(Intent(this,BridgeSetupActivity::class.java).putExtra("section",section)) }
@@ -360,9 +367,8 @@ class MainActivity : Activity() {
     }
 
     private fun requestStart() {
-        if (State.running) {
+        if (WakeService.bridgeStatus().optBoolean("serviceRunning") && WakeService.resumeExisting()) {
             prepareChatGpt()
-            WakeService.resumeExisting()
             return
         }
         val missing = mutableListOf<String>()
@@ -485,7 +491,40 @@ class MainActivity : Activity() {
     }
 
     private fun startVoiceCycle() {
+        actionFeedback=true
+        DiagnosticLog.record(this,DiagnosticLog.Event.MANUAL_ACTION_REQUESTED,monitorStatus="voice")
+        val blocked=when {
+            VoiceCycle.active -> "voice_active" to "Un ciclo Voice è già attivo o sta terminando. Attendi il rilascio del microfono prima di avviarne un altro."
+            !VoiceAccessibilityService.isEnabled(this) -> "access_disabled" to "Automazione Voice non abilitata. Apri Configurazione → Permessi e assistente → Abilita automazione Voice."
+            NativeChatSettings.enabled(this) && VoiceAccessibilityService.bridgeService()==null -> "access_pending" to "Il servizio Accessibilità Jarvis non è collegato. Controllalo in Configurazione → Permessi e assistente, poi riprova."
+            NativeChatSettings.enabled(this) && NativeChatSettings.id(this).isNullOrBlank() -> "shortcut_missing" to "Seleziona il collegamento al progetto in Configurazione → ChatGPT e progetto."
+            else -> null
+        }
+        if(blocked!=null) { reportManualBlock(blocked.first,blocked.second);return }
+        if(NativeChatSettings.enabled(this)) {
+            val accessible=runCatching { NativeChatSettings.shortcuts(this).any { it.id==NativeChatSettings.id(this) } }.getOrDefault(false)
+            if(!accessible) { reportManualBlock("shortcut_unavailable","Il collegamento al progetto non è accessibile. Verifica assistente, shortcut e nome progetto in Configurazione, senza cancellare i dati.");return }
+        }
         VoiceCycle.start(this)
+        refreshActionFeedback()
+    }
+
+    private fun reportManualBlock(code:String,message:String) {
+        State.setAttempt(this,message)
+        DiagnosticLog.record(this,DiagnosticLog.Event.MANUAL_ACTION_BLOCKED,monitorStatus=code)
+        menu.explain("Avvio Voice da verificare",message)
+        Toast.makeText(this,message,Toast.LENGTH_LONG).show()
+    }
+
+    private fun refreshActionFeedback() {
+        val snapshot=WakeService.bridgeStatus()
+        val capture=when(snapshot.optString("capture")) {
+            "active_verified" -> "cattura verificata"
+            "unverified" -> "cattura da verificare"
+            else -> "non in cattura"
+        }
+        menu.explain("Stato Jarvis", "Servizio ascolto: "+(if(snapshot.optBoolean("serviceRunning")) "avviato" else "non avviato")+
+            "\nMicrofono wake: "+capture+"\n\n"+State.get(this)+"\n\nUltimo ciclo: "+State.getAttempt(this))
     }
 
     private fun requestAssistantRole() {

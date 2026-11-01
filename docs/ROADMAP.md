@@ -1,3 +1,7 @@
+# Correzioni .84
+
+Crash Guida/Appunti segnalati dopo consegna .83, più lampeggio Voice e scarso riscontro del pulsante ascolto. Correzioni necessarie allo stesso menu autorizzato; utente ha aggiunto lo spostamento di Indietro e precisato ultimo pulsante scorrevole, non barra fissa. Nessun ampliamento a nuove azioni.
+
 # Gruppo menu e guida — via esplicito 1 novembre2026
 
 Riorganizzazione autorizzata e implementata nella .83 con guida completa aggiunta su richiesta durante lo stesso lavoro. Vedi ORGANIZZAZIONE_MENU.md e GUIDA_COMPLETA.md; nessuna nuova funzione calendario/desktop o azione remota.

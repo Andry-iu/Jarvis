@@ -43,7 +43,7 @@ class GuideActivity:Activity() {
     }
     private fun sections():List<JSONObject> { val a=guide.getJSONArray("sections");return (0 until a.length()).map { a.getJSONObject(it) } }
     private fun render() {
-        window.insetsController?.hide(android.view.WindowInsets.Type.ime())
+        window.hideMenuKeyboard()
         val chosen=sections().find { it.getString("id")==topic }
         val instructions=chosen?.getString("text") ?: "Scegli un argomento o cerca parole nella guida. I risultati compaiono sopra; selezionane uno per leggere i passaggi qui sotto. La stessa guida è interrogabile nel plugin JarvisWake Link anche con telefono offline. Usa Esporta guida completa per allegare il file ad altre chat."
         val menu=SplitMenuScreen(this,chosen?.getString("title") ?: "Guida completa · "+guide.getString("version"),instructions) { back() }

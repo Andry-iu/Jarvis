@@ -35,7 +35,7 @@ class LocalNotesActivity:Activity() {
         }
     }
     private fun reload() {
-        window.insetsController?.hide(android.view.WindowInsets.Type.ime())
+        window.hideMenuKeyboard()
         generation++;val request=generation;editing=false
         menu=SplitMenuScreen(this,"Appunti locali","Apri un titolo per leggere o aggiornare l’appunto, oppure Nuovo appunto. I contenuti hanno un archivio cifrato sul telefono. Puoi usarli qui anche senza rete o plugin. Le letture richieste a ChatGPT passano nella conversazione. Modifiche concorrenti richiedono rilettura; non ripetere alla cieca un salvataggio non confermato.") { finish() }
         menu.importantForAutofill=View.IMPORTANT_FOR_AUTOFILL_NO_EXCLUDE_DESCENDANTS

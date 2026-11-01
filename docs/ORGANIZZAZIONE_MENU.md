@@ -1,3 +1,20 @@
+# Correzione .84 — regressione avvio e Indietro
+
+Indietro è ora l’ultimo pulsante della lista superiore, uguale agli altri e dentro lo scorrimento. Non è una barra fissa: la successiva precisazione dell’utente sostituisce l’ipotesi iniziale di footer. Nel wizard anche Avanti/Termina sono normali pulsanti prima di Indietro; sul primo passo Indietro esce al menu chiamante. Due aree e categorie conservate.
+
+Guida/Appunti non interrogano più Window.getInsetsController prima che il decor esista: hideMenuKeyboard usa peekDecorView e salta la sola richiesta IME quando la finestra non è pronta. Il vecchio codice ha fallito entrambi i test di avvio con NPE; ora i test reali di Activity passano sui framework Android14/API34 e Android16/API36. Non è un test del Galaxy fisico.
+
+Parla con Jarvis controlla ciclo già attivo, Accessibilità abilitata e, per la modalità nativa, servizio connesso e shortcut disponibile prima di aprire cover/sospendere wake. Un blocco mostra messaggio, percorso e codice diagnostico fisso senza prompt o dati privati. Avvia ascolto non si affida al solo flag State.running: verifica il servizio effettivo; il pannello inferiore mostra servizio e cattura osservata (active_verified/unverified/not_recording) e l’ultimo tentativo. I log ricevuti mostrano cattura ripresa e cancellazioni precoci, ma non distinguono la ragione specifica delle ultime cancellazioni. Nessuna affermazione che il nuovo controllo abbia concesso permessi o avviato Voice sul telefono.
+
+Test: normale JDK17 usa SDK34; nel cloud esistente eseguire anche Android16 con:
+
+```sh
+source /workspace/.jarvis-cloud/activate.sh
+./gradlew --no-daemon -PjarvisUnsigned=true -PjarvisTestJava=/usr/lib/jvm/java-21-openjdk-amd64/bin/java -PjarvisTestSdks=34,36 testDebugUnitTest lintDebug assembleDebug
+```
+
+Java21 è il runtime di test già presente, non una nuova toolchain di compilazione. Robolectric è dipendenza test-only; cache e home Java del processo test sono directory nella cache Gradle scrivibile, senza cambiare HOME dell’ambiente. La verifica SDK36 iniziale con Java17 è fallita per il requisito del framework, non per codice app; risolta usando Java21 esistente.
+
 # Menu e configurazione guidata — 0.5.83 / 105
 
 Gruppo riepilogato e autorizzato dall’utente, con successive precisazioni nello stesso lavoro: pulsanti grandi, categorie, separazione uso/configurazione/servizio, wizard e schermo con comandi sopra/istruzioni sotto. Aggiunta durante l’implementazione, su richiesta esplicita, la guida completa dell’app e dei plugin, interrogabile dal plugin per rispondere alle domande dell’utente. Nessuna nuova azione del telefono o funzione calendario inclusa.
