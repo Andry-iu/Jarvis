@@ -2,6 +2,7 @@ package it.jarviswake
 
 import android.app.Activity
 import android.app.AlertDialog
+import android.Manifest
 import android.content.Intent
 import android.graphics.Color
 import android.net.Uri
@@ -23,8 +24,8 @@ class BridgeSetupActivity:Activity() {
         val layout=LinearLayout(this).apply { orientation=LinearLayout.VERTICAL;setPadding(32,64,32,32);setBackgroundColor(Color.rgb(13,24,36)) }
         fun text(value:String)=TextView(this).apply { text=value;setTextColor(Color.WHITE);textSize=17f;setPadding(0,16,0,16);layout.addView(this) }
         fun button(label:String,action:()->Unit) { layout.addView(Button(this).apply { text=label;setOnClickListener { action() } }) }
-        text("Collegamento ChatGPT — prova di stato")
-        text("Condivide soltanto versione, stato wake/ciclo e visibilità delle cover. Nessun audio, testo chat o comando per altre app. Funziona mentre il servizio Jarvis è avviato o questa schermata è aperta; Android può limitare la rete a schermo spento.")
+        text("Collegamento ChatGPT")
+        text("Legge lo stato di Jarvis e, se abiliti le azioni, apre Maps, cerca i contatti richiesti, avvia chiamate e invia il testo WhatsApp dettato. Funziona mentre il servizio Jarvis è avviato o questa schermata è aperta. L’abbinamento resta salvato dopo aggiornamenti e riavvii.")
         state=text("")
         button("1. Apri pagina privata di collegamento") {
             runCatching { startActivity(Intent(Intent.ACTION_VIEW,Uri.parse(BridgeProtocol.ORIGIN))) }
@@ -57,10 +58,19 @@ class BridgeSetupActivity:Activity() {
             }
         }
         layout.addView(enabled)
+        layout.addView(Switch(this).apply {
+            setText(R.string.bridge_actions_enabled);setTextColor(Color.WHITE)
+            isChecked=BridgeSettings.actionsEnabled(this@BridgeSetupActivity)
+            setOnCheckedChangeListener { _,value -> BridgeSettings.enableActions(this@BridgeSetupActivity,value) }
+        })
+        text("La ricerca restituisce solo i contatti corrispondenti al nome richiesto. Per telefonare, Jarvis chiude prima Voice e verifica il rilascio del microfono. Lo stato telefonico serve a sospendere la wake durante la chiamata. Gli invii WhatsApp richiedono Accessibilità e chat/campo riconosciuti; una bozza personale non viene sovrascritta.")
+        button("Autorizza rubrica e chiamate") {
+            requestPermissions(arrayOf(Manifest.permission.READ_CONTACTS,Manifest.permission.CALL_PHONE,Manifest.permission.READ_PHONE_STATE),81)
+        }
         button("Cancella collegamento dal telefono") {
             BridgeSettings.clear(this);enabled.isChecked=false;BridgeLink.refresh(this)
         }
-        text("Dopo l’abbinamento, avvia l’ascolto dalla Home Jarvis. In ChatGPT Live chiedi: «Usa JarvisWake Link e leggi lo stato del mio telefono». Una richiesta scaduta o in attesa non certifica una risposta del Galaxy.")
+        text("Dopo l’abbinamento avvia l’ascolto dalla Home Jarvis. In ChatGPT Live puoi richiedere lo stato, una destinazione Maps, una telefonata o un messaggio WhatsApp. Se ci sono più contatti o numeri, indica quello corretto. Per continuare a parlare con Maps aperto, abilita le conversazioni in background di ChatGPT Live. Il comando inviato non certifica che il destinatario abbia risposto o letto il messaggio.")
         button("Torna a JarvisWake") { finish() }
         setContentView(ScrollView(this).apply { addView(layout) })
     }

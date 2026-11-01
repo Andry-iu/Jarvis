@@ -23,6 +23,8 @@ internal object BridgeSettings {
     fun enabled(c:Context)=prefs(c).getBoolean("enabled",false)
     fun enable(c:Context,value:Boolean) { prefs(c).edit().putBoolean("enabled",value).apply() }
     fun configured(c:Context)=prefs(c).contains("encrypted")
+    fun actionsEnabled(c:Context)=prefs(c).getBoolean("actions",false)
+    fun enableActions(c:Context,value:Boolean) { prefs(c).edit().putBoolean("actions",value).apply() }
     private fun key():SecretKey {
         val store=KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
         (store.getKey(ALIAS,null) as? SecretKey)?.let { return it }
@@ -56,5 +58,26 @@ internal object BridgeSettings {
         }
         return parse(JSONObject(String(cipher.doFinal(Base64.decode(bytes,Base64.NO_WRAP)),Charsets.UTF_8)))
     }
-    fun clear(context:Context) { prefs(context).edit().clear().apply() }
+    fun clear(context:Context) {
+        prefs(context).edit().clear().apply()
+        context.getSharedPreferences("bridge_private",Context.MODE_PRIVATE).edit().clear().apply()
+    }
+
+    /** Small private command/contact records; never included in exported diagnostics. */
+    @Synchronized fun readPrivate(context:Context,name:String):JSONObject {
+        val p=context.getSharedPreferences("bridge_private",Context.MODE_PRIVATE)
+        val value=p.getString(name,null) ?: return JSONObject()
+        val envelope=JSONObject(value)
+        val cipher=Cipher.getInstance("AES/GCM/NoPadding").apply {
+            init(Cipher.DECRYPT_MODE,key(),GCMParameterSpec(128,Base64.decode(envelope.getString("iv"),Base64.NO_WRAP)))
+        }
+        return JSONObject(String(cipher.doFinal(Base64.decode(envelope.getString("data"),Base64.NO_WRAP)),Charsets.UTF_8))
+    }
+    @Synchronized fun writePrivate(context:Context,name:String,value:JSONObject) {
+        val cipher=Cipher.getInstance("AES/GCM/NoPadding").apply { init(Cipher.ENCRYPT_MODE,key()) }
+        val bytes=cipher.doFinal(value.toString().toByteArray(Charsets.UTF_8))
+        val envelope=JSONObject().put("iv",Base64.encodeToString(cipher.iv,Base64.NO_WRAP))
+            .put("data",Base64.encodeToString(bytes,Base64.NO_WRAP))
+        check(context.getSharedPreferences("bridge_private",Context.MODE_PRIVATE).edit().putString(name,envelope.toString()).commit())
+    }
 }

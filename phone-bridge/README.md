@@ -1,3 +1,13 @@
+Deduplicazione .81: un tombstone con solo fingerprint rimane anche dopo la pulizia dei vecchi parametri/risultati, così un vecchio request_id non diventa una nuova chiamata/invio.
+
+# Aggiornamento0.5.81 / protocollo0.2
+
+Stessa identità Site/App/plugin e stessi abbinamenti. Nuove operazioni: find_contacts, navigate (anche cambio destinazione), call_contact, whatsapp. Le azioni usano un request_id UUIDv4 fornito dal chiamante e conservato ai retry, fingerprint degli argomenti, creazione e claim condizionali R2, consumo persistito sul telefono, risultato/outbox cifrati. Mai ripetere con nuovo ID dopo esito incerto senza una nuova richiesta esplicita dell’utente.
+
+Le query ai dispositivi .80 ricevono ancora solo status. Le nuove operazioni richiedono capability dichiarata da APK103 e attivazione/permessi sul telefono. Contatti: massimo8 nomi/etichette/suffissi e riferimenti locali temporanei, nessuna rubrica intera o numero completo in risposta. Nessun risultato dichiara consegna WhatsApp, risposta del chiamato o navigazione visibile dal solo dispatch. Parametri del comando eliminati dal record server dopo il risultato; ulteriori record vecchi vengono puliti opportunisticamente. Sedici test server simulati passati; collaudo delle nuove azioni sul Galaxy/Android Auto ancora richiesto.
+
+Il primo giro status .80 è riuscito realmente nella conversazione: risposta paired_device corrispondente alla richiesta, app.80/code102, servizio e cattura wake verificati, ciclo IDLE e cover assente. Non è prova delle nuove azioni o di una sessione Voice in background.
+
 # JarvisWake Link — server della prova di stato
 
 Sorgente canonico del servizio privato usato dalla 0.5.80; istruzioni complete in [COLLEGAMENTO_CHATGPT](../docs/COLLEGAMENTO_CHATGPT.md).

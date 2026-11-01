@@ -25,6 +25,20 @@ class VoiceAccessibilityService : AccessibilityService() {
         private const val GREETING_STARTED = "greeting_started"
         private const val GREETING_DONE = "greeting_done"
         private var instance = WeakReference<VoiceAccessibilityService>(null)
+        internal fun bridgeService():VoiceAccessibilityService?=instance.get()
+        internal fun releaseBridgeCover() {
+            val service=instance.get() ?: return
+            service.nativeController?.let {
+                service.preferences.edit().putBoolean("native_cover_dismissed",true).apply()
+                it.dismissForExit()
+            }
+        }
+        internal fun stopBridgeVoice(context:Context):Boolean {
+            val token=VoiceCycle.id ?: return true
+            val service=instance.get() ?: return false
+            service.requestNativeExit(token,returnHome=false)
+            return true
+        }
 
         internal fun bridgeCoverVisible(): Boolean = instance.get()?.let {
             it.nativeController?.bridgeCoverVisible()==true ||

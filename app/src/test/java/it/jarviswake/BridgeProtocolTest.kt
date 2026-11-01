@@ -13,9 +13,9 @@ class BridgeProtocolTest {
         assertTrue(BridgeProtocol.validId(id))
         for(s in listOf("",id.uppercase(),"../../secret","00000000-0000-0000-0000-000000000000")) assertFalse(BridgeProtocol.validId(s))
     }
-    @Test fun onlyStatusAndBoundedLifetimeAreAccepted() {
+    @Test fun onlyDeclaredOperationsAndBoundedLifetimeAreAccepted() {
         assertTrue(BridgeProtocol.validRequest(id,"status",1000,26000))
-        assertFalse(BridgeProtocol.validRequest(id,"maps",1000,26000))
+        assertFalse(BridgeProtocol.validRequest(id,"arbitrary_intent",1000,26000))
         assertFalse(BridgeProtocol.validRequest(id,"status",1000,1000))
         assertFalse(BridgeProtocol.validRequest(id,"status",1000,32000))
         assertFalse(BridgeProtocol.validRequest("bad","status",1000,26000))

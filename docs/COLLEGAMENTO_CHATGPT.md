@@ -1,3 +1,34 @@
+# Stato e azioni — aggiornamento0.5.81
+
+Il primo scambio bidirezionale .80 è riuscito realmente nella conversazione: risposta del dispositivo alla stessa richiesta, app.80/code102, servizio wake e input propri verificati, ciclo IDLE/cover assente. Questo verifica il collegamento e non dimostra ancora le nuove azioni né Live in background sul Galaxy.
+
+## Aggiornare senza rifare l’abbinamento
+
+Installare il nuovo APK firmato sopra l’app esistente, senza disinstallare/cancellare dati. Il codice, il flag collegamento e la chiave Android Keystore sono conservati anche dopo normale riavvio. La rete riparte quando JarvisWake/servizio torna operativo; questo non certifica avvio automatico dopo ogni reboot o funzionamento sotto force-stop/restrizioni Android. Reinstallazione senza dati, cancellazione, revoca o cambio di servizio richiedono nuovo abbinamento.
+
+1. In Jarvis → **Collegamento ChatGPT — stato e azioni**, lasciare attivo il collegamento e attivare **Consenti Maps, contatti, chiamate e WhatsApp**.
+2. Premere **Autorizza rubrica e chiamate** e concedere i permessi Android richiesti (rubrica, chiamate, stato telefonico). Quest’ultimo serve al passaggio/ripresa wake dopo telefonata. Nessun permesso viene ottenuto dal plugin o da un consenso vocale al posto dei controlli Android.
+3. Lasciare attivo il servizio wake già previsto. Accessibilità Jarvis deve essere connessa per controllo Voice/WhatsApp e avvio delle app da background.
+4. Usare lo stesso plugin **JarvisWake Link**. La pubblicazione ne aggiorna i tool; se la chat vede soltanto stato, riaprire la chat con il plugin per caricare i nuovi comandi. Non creare un nuovo Site/plugin e non rifare l’abbinamento per questo motivo. Eventuali approvazioni richieste da ChatGPT restano gestite dai suoi controlli supportati.
+
+## Cosa provare
+
+- **Maps:** «Usa JarvisWake Link e avvia Maps in auto verso [indirizzo preciso]». Poi «Cambia destinazione: [altro indirizzo]». Un Intent ufficiale google.navigation viene indirizzato a Google Maps; il secondo comando propone una nuova destinazione. Per continuare a parlare con Maps in primo piano abilitare le conversazioni in background di ChatGPT Live. La cover viene rimossa per rendere visibile l’app, senza cambiare conversazione/progetto o spegnere Live; non vengono installati SDK di navigazione o API separate. Provare prima sbloccato, poi con Android Auto collegato ad auto ferma: `intent_dispatched` prova soltanto il dispatch, non rotta visibile o guida partita.
+- **Telefonata:** «Chiama [nome completo del contatto]». Il modello prima cerca il nome richiesto e usa un riferimento temporaneo del risultato; se più persone/numeri restano possibili, deve chiedere quale. Il telefono ricontrolla la riga rubrica/numero; nessun numero può essere inventato nel comando. Stop della propria Voice, audio libero stabile1s, un solo ACTION_CALL. `call_intent_dispatched` non significa destinatario raggiunto/risposta. Se Live resta attiva in background sotto un’altra app e il controllo Termina non è osservabile, può risultare `voice_stop_unconfirmed`: non chiama condividendo il microfono, serve chiudere Voice e richiedere esplicitamente una nuova chiamata. Nessun ritorno a chat generica per aggirare questo limite.
+- **WhatsApp:** «Invia su WhatsApp a [contatto] questo testo: [messaggio]». Risolvere il contatto e dettare il contenuto prima del comando. Solo WhatsApp personale com.whatsapp, telefono con numero internazionale determinabile e sbloccato. Apre la chat indirizzata tramite wa.me senza testo, riconosce intestazione/campo vuoto, inserisce una volta e cerca un unico Invia semantico stabile. Non usa coordinate o ID privati inventati, non sovrascrive una bozza. Intestazione non univoca, permessi mancanti o controlli non riconosciuti fermano l’invio. `composer_cleared_after_send` indica campo svuotato dopo il clic; `send_dispatched_unconfirmed` indica solo clic accettato. Nessuno dei due certifica consegna o lettura: il primo invio reale va verificato nella chat WhatsApp del destinatario scelto dall’utente.
+
+Le chiamate sospendono la wake anche dopo la chiusura di Live; lo stato telefonico viene osservato senza numeri. Alla fine IDLE e audio libero consentono ripresa, rispettando il limite30s a schermo spento e ripresa richiesta a schermo acceso. Un avvio telefonico non osservato entro30s con stato IDLE/audio libero libera l’attesa per non lasciare wake disattivata a seguito di un lancio fallito; SIM/permessi/OS possono richiedere interazione e il dispatch non ne certifica l’esito. Non sono modificati audio routing o microfono di sistema.
+
+## Esiti e tutela dei tentativi
+
+Ogni nuova richiesta autorizzata usa un UUIDv4; per leggere l’esito o ritentare il trasporto si conserva lo stesso ID. Non generare un altro ID automaticamente dopo `outcome_uncertain`, `send_dispatched_unconfirmed` o chiamata incerta. Sul server, claim condizionale e risultato di sola prima risposta; sul telefono, consumo cifrato prima del claim/azione e outbox per ritrasmettere soltanto il risultato. Riavvio/rete assente non diventano nuove chiamate/invii. Un metadato di deduplicazione senza contenuto del comando rimane anche dopo la pulizia dei vecchi risultati; un vecchio ID non torna eseguibile.
+
+La ricerca contatti restituisce massimo8 nomi/etichette/ultime4cifre e riferimenti scadenti dopo10min o ricerca successiva; i numeri completi restano sul telefono. Il testo WhatsApp e l’indirizzo necessari passano nel comando privato, vengono rimossi dal record richiesta dopo la risposta e non entrano in diagnostica o Git. La pulizia di ulteriori record vecchi è opportunistica, non una cancellazione programmata garantita.
+
+Gli stati/risultati `permission_required`, `actions_disabled`, `locked`, `contact_expired`, `contact_changed`, `voice_stop_unconfirmed`, `recipient_unverified`, `draft_exists`, `send_unavailable` e `outcome_uncertain` richiedono interpretazione: non sono successo e non autorizzano fallback a destinatari, numeri, bozze o clic diversi.
+
+Le istruzioni seguenti descrivono l’abbinamento iniziale .80 e rimangono valide; i vincoli storico stato-only sono superati soltanto dal gruppo .81 esplicitamente autorizzato.
+
 # Prova bidirezionale JarvisWake Link — 0.5.80
 
 Obiettivo: durante la conversazione ChatGPT Live richiedere uno stato e ricevere una risposta dalla stessa app JarvisWake sul Galaxy. Questo rilascio legge soltanto stati; Google Maps, comandi UI, audio, trascrizioni ed eventi che risvegliano autonomamente una conversazione inattiva sono fuori ambito.

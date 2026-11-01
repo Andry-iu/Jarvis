@@ -22,6 +22,12 @@ import kotlin.math.sqrt
 class WakeService : Service() {
     companion object {
         @Volatile private var instance: WakeService? = null
+        internal fun pauseForTelephone() {
+            instance?.let { service -> service.main.post {
+                service.setCaptureRequested(false)
+                service.reportRecovery("telephone_call")
+            } }
+        }
 
         /** Status observation only: a foreground service is not proof of live wake input. */
         internal fun bridgeStatus(): JSONObject {
@@ -102,12 +108,14 @@ class WakeService : Service() {
         override fun run() {
             if (stopping) return
             runCatching {
+                BridgeCallHold.tick(this@WakeService)
+                if(BridgeCallHold.holding && captureRequested) setCaptureRequested(false)
                 val pending=VoiceAccessibilityService.pendingNativeExit(this@WakeService)
                 if (VoiceCycle.active) {
                     if (captureRequested) setCaptureRequested(false)
                     if (pending!=null) VoiceAccessibilityService.finishReleasedNative(this@WakeService,pending)
                 }
-                if (!VoiceCycle.active && !wakeDispatchPending) {
+                if (!VoiceCycle.active && !wakeDispatchPending && !BridgeCallHold.holding) {
                     val audio=recorder
                     val own=ownCapture()
                     val state=NativeAudioState.read(this@WakeService)
@@ -129,6 +137,7 @@ class WakeService : Service() {
             "audio_unavailable" -> "Wake pronta alla ripresa; attendo il rilascio del microfono."
             "screen_policy" -> "Wake sospesa secondo il limite a schermo spento."
             "voice_active" -> "Wake sospesa durante ChatGPT Voice."
+            "telephone_call" -> "Wake sospesa durante il passaggio alla telefonata."
             "permission_required" -> "Wake in attesa: manca il permesso microfono."
             else -> "Ripresa wake in corso ($code)."
         })
@@ -168,6 +177,7 @@ class WakeService : Service() {
     override fun onCreate() {
         super.onCreate()
         instance = this
+        runCatching { BridgeCallHold.connect(this) }
         notifications = getSystemService(NotificationManager::class.java)
         screenInteractive = getSystemService(PowerManager::class.java).isInteractive
         val screenFilter = IntentFilter().apply {
@@ -243,6 +253,7 @@ class WakeService : Service() {
 
     private fun resumeListening() {
         if (stopping || instance!==this) return
+        if(BridgeCallHold.holding) { setCaptureRequested(false);reportRecovery("telephone_call");return }
         if (checkSelfPermission(android.Manifest.permission.RECORD_AUDIO)!=android.content.pm.PackageManager.PERMISSION_GRANTED) {
             reportRecovery("permission_required")
             return
@@ -546,6 +557,7 @@ class WakeService : Service() {
     }
 
     override fun onDestroy() {
+        runCatching { BridgeCallHold.disconnect() }
         runCatching { BridgeLink.owner(this,"wake_service",false) }
         if (instance === this) instance = null
         val stoppedByUserOrWorker = stopping

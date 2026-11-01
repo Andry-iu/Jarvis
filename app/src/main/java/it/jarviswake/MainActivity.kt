@@ -151,7 +151,7 @@ class MainActivity : Activity() {
             startService(Intent(this, WakeService::class.java).setAction("STOP"))
         }
         button("Imposta Jarvis come assistente del telefono") { requestAssistantRole() }
-        button("Collegamento ChatGPT — prova di stato") {
+        button("Collegamento ChatGPT — stato e azioni") {
             startActivity(Intent(this, BridgeSetupActivity::class.java))
         }
         val destination = RadioGroup(this).apply { orientation = RadioGroup.VERTICAL }

@@ -25,10 +25,10 @@ async function tool(e,name,args,headers=user) {
 }
 const value=r=>JSON.parse(r.content[0].text);
 const snap={app:{version:'0.5.80',versionCode:102},wake:{serviceRunning:true,capture:'not_recording'},cover:{accessibility:true,web:false,launch:false},voiceCycle:{active:true,phase:'VOICE',hiddenForWake:false},screenInteractive:true};
-test('Discovery exposes only bounded status tools and needs no fabricated phone',async()=>{
+test('Discovery exposes bounded status and action tools without fabricated phone data',async()=>{
   const r=await worker.fetch(request('/mcp',{jsonrpc:'2.0',id:1,method:'tools/list'}),env());
   const names=(await r.json()).result.tools.map(t=>t.name);
-  assert.deepEqual(names,['jarviswake_devices','jarviswake_request_status','jarviswake_status_result']);
+  assert.deepEqual(names,['jarviswake_devices','jarviswake_request_status','jarviswake_status_result','jarviswake_find_contacts','jarviswake_navigate','jarviswake_call_contact','jarviswake_whatsapp']);
 });
 test('Pairing requires authenticated same-origin browser action',async()=>{
   for(const h of [{},user,{...user,Origin:'https://attacker.example','X-Jarvis-Link':'pair'}]) {
@@ -83,4 +83,72 @@ test('Revocation affects only the authenticated owner and invalidates device cre
  const r=await worker.fetch(request('/api/revoke',{}, {...user,Origin:origin,'X-Jarvis-Link':'pair'}),e);assert.equal(r.status,200);
  const p=await worker.fetch(request('/device/poll',{deviceId:c.deviceId},{Authorization:'Bearer '+c.deviceToken}),e);assert.equal(p.status,401);
  assert.equal(value(await tool(e,'jarviswake_devices',{})).devices.length,0);
+});
+
+async function advertise(e,c) {
+ const r=await worker.fetch(request('/device/poll',{deviceId:c.deviceId,versionCode:103,operations:['status','navigate','find_contacts','call_contact','whatsapp']},{Authorization:'Bearer '+c.deviceToken}),e);assert.equal(r.status,200);
+}
+async function claim(e,c,id) {return worker.fetch(request('/device/claim',{deviceId:c.deviceId,requestId:id},{Authorization:'Bearer '+c.deviceToken}),e);}
+test('New actions require an upgraded device; old polling only receives status',async()=>{
+ const e=env(),c=await pair(e),id=crypto.randomUUID();
+ assert.equal((await tool(e,'jarviswake_navigate',{device_id:c.deviceId,destination:'Test address',request_id:id})).isError,true);
+ await advertise(e,c);
+ assert.equal(value(await tool(e,'jarviswake_navigate',{device_id:c.deviceId,destination:'Test address',request_id:id})).state,'pending');
+ const read=value(await tool(e,'jarviswake_request_status',{device_id:c.deviceId}));
+ const poll=await worker.fetch(request('/device/poll',{deviceId:c.deviceId},{Authorization:'Bearer '+c.deviceToken}),e);
+ assert.equal((await poll.json()).request.requestId,read.request_id);
+});
+test('Maps uses a stable idempotency key, claim and correlated honest result',async()=>{
+ const e=env(),c=await pair(e);await advertise(e,c);const id=crypto.randomUUID();
+ const args={device_id:c.deviceId,destination:'Test address & symbols',request_id:id};
+ assert.equal(value(await tool(e,'jarviswake_navigate',args)).state,'pending');
+ assert.equal(value(await tool(e,'jarviswake_navigate',args)).request_id,id);
+ const conflict=await tool(e,'jarviswake_navigate',{...args,destination:'Another address'});assert.equal(conflict.isError,true);
+ assert.equal((await (await claim(e,c,id)).json()).state,'claimed');
+ assert.equal((await (await claim(e,c,id)).json()).state,'already_claimed');
+ const poll=await worker.fetch(request('/device/poll',{deviceId:c.deviceId,operations:['navigate']},{Authorization:'Bearer '+c.deviceToken}),e);assert.equal((await poll.json()).request,null);
+ const ack=await worker.fetch(request('/device/respond',{deviceId:c.deviceId,requestId:id,result:{code:'intent_dispatched'}},{Authorization:'Bearer '+c.deviceToken}),e);assert.equal(ack.status,200);
+ const r=value(await tool(e,'jarviswake_navigate',args));assert.equal(r.result.code,'intent_dispatched');
+ const stored=await e.BUCKET.get(`requests/${c.deviceId}/${id}.json`);assert.equal((await stored.json()).params,undefined);
+});
+test('A send or call result requires a claim and rejects invented delivery success',async()=>{
+ const e=env(),c=await pair(e);await advertise(e,c);const id=crypto.randomUUID(),contact_ref=crypto.randomUUID();
+ await tool(e,'jarviswake_whatsapp',{device_id:c.deviceId,contact_ref,text:'Explicit test text',request_id:id});
+ const auth={Authorization:'Bearer '+c.deviceToken};
+ assert.equal((await worker.fetch(request('/device/respond',{deviceId:c.deviceId,requestId:id,result:{code:'composer_cleared_after_send'}},auth),e)).status,409);
+ await claim(e,c,id);
+ assert.equal((await worker.fetch(request('/device/respond',{deviceId:c.deviceId,requestId:id,result:{code:'delivered'}},auth),e)).status,400);
+ assert.equal((await worker.fetch(request('/device/respond',{deviceId:c.deviceId,requestId:id,result:{code:'composer_cleared_after_send',text:'private'}},auth),e)).status,400);
+ assert.equal((await worker.fetch(request('/device/respond',{deviceId:c.deviceId,requestId:id,result:{code:'send_dispatched_unconfirmed'}},auth),e)).status,200);
+});
+test('Contacts return bounded opaque references, not entire phonebook records',async()=>{
+ const e=env(),c=await pair(e);await advertise(e,c);const id=crypto.randomUUID();
+ await tool(e,'jarviswake_find_contacts',{device_id:c.deviceId,name:'Explicit name',request_id:id});await claim(e,c,id);
+ const auth={Authorization:'Bearer '+c.deviceToken};
+ const contact={contact_ref:crypto.randomUUID(),name:'Test Contact',label:'Mobile',suffix:'1234'};
+ const invalid=await worker.fetch(request('/device/respond',{deviceId:c.deviceId,requestId:id,result:{code:'contacts_found',contacts:[{...contact,phone:'secret'}],truncated:false}},auth),e);assert.equal(invalid.status,400);
+ const valid=await worker.fetch(request('/device/respond',{deviceId:c.deviceId,requestId:id,result:{code:'contacts_found',contacts:[contact],truncated:false}},auth),e);assert.equal(valid.status,200);
+});
+test('A claimed expired command reports uncertainty; an unclaimed one expires',async()=>{
+ const e=env(),c=await pair(e);await advertise(e,c);const id=crypto.randomUUID();
+ await tool(e,'jarviswake_call_contact',{device_id:c.deviceId,contact_ref:crypto.randomUUID(),request_id:id});await claim(e,c,id);
+ const key=`requests/${c.deviceId}/${id}.json`,cmd=await (await e.BUCKET.get(key)).json();cmd.expiresAt=1;await e.BUCKET.put(key,JSON.stringify(cmd));
+ assert.equal(value(await tool(e,'jarviswake_status_result',{device_id:c.deviceId,request_id:id})).state,'outcome_uncertain');
+});
+test('Concurrent requests with the same id create only one command and one claim',async()=>{
+ const e=env(),c=await pair(e);await advertise(e,c);const id=crypto.randomUUID();
+ const args={device_id:c.deviceId,contact_ref:crypto.randomUUID(),request_id:id};
+ const rs=await Promise.all([tool(e,'jarviswake_call_contact',args),tool(e,'jarviswake_call_contact',args)]);assert.ok(rs.every(r=>!r.isError));
+ assert.equal((await e.BUCKET.list({prefix:`requests/${c.deviceId}/`,limit:100})).objects.length,1);
+ const claims=await Promise.all([claim(e,c,id),claim(e,c,id)]);const states=await Promise.all(claims.map(r=>r.json()));assert.equal(states.filter(x=>x.state==='claimed').length,1);
+});
+
+test('Pruning old payloads never permits another execution of an action id',async()=>{
+ const e=env(),c=await pair(e);await advertise(e,c);const id=crypto.randomUUID();
+ const args={device_id:c.deviceId,contact_ref:crypto.randomUUID(),request_id:id};
+ await tool(e,'jarviswake_call_contact',args);await claim(e,c,id);
+ await e.BUCKET.delete(`requests/${c.deviceId}/${id}.json`);await e.BUCKET.delete(`claims/${c.deviceId}/${id}.json`);
+ const retry=value(await tool(e,'jarviswake_call_contact',args));assert.equal(retry.state,'outcome_uncertain');
+ assert.equal((await e.BUCKET.list({prefix:`requests/${c.deviceId}/`,limit:100})).objects.length,0);
+ assert.equal((await tool(e,'jarviswake_call_contact',{...args,contact_ref:crypto.randomUUID()})).isError,true);
 });

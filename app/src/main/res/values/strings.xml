@@ -42,5 +42,6 @@
     <string name="bridge_browser_unavailable">Browser non disponibile.</string>
     <string name="bridge_code_saved">Codice salvato. Attiva il collegamento.</string>
     <string name="bridge_enabled">Collegamento di stato attivo</string>
+    <string name="bridge_actions_enabled">Consenti Maps, contatti, chiamate e WhatsApp</string>
     <string name="bridge_code_required">Incolla prima il codice.</string>
 </resources>
