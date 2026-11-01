@@ -22,6 +22,13 @@ class LocalNotesActivity:Activity() {
     private lateinit var menu:SplitMenuScreen
     private var generation=0
     private var editing=false
+    private var listRequest=0
+    private var observed:LocalNotesRepository?=null
+    private var observing=false
+    private lateinit var notesArea:LinearLayout
+    private lateinit var refresh:Button
+    private var displayed:List<LocalNote>?=null
+    private val changed:()->Unit={ main.post { if(observing && !editing) refreshList() };Unit }
     private var backCallback:OnBackInvokedCallback?=null
     override fun onCreate(savedInstanceState:Bundle?) {
         super.onCreate(savedInstanceState)
@@ -35,27 +42,44 @@ class LocalNotesActivity:Activity() {
     }
     private fun reload() {
         window.hideMenuKeyboard()
-        generation++;val request=generation;editing=false
+        generation++;editing=false;displayed=null
         menu=SplitMenuScreen(this,"Appunti locali","Apri un titolo per leggere o aggiornare l’appunto, oppure Nuovo appunto. I contenuti hanno un archivio cifrato sul telefono. Puoi usarli qui anche senza rete o plugin. Le letture richieste a ChatGPT passano nella conversazione. Modifiche concorrenti richiedono rilettura; non ripetere alla cieca un salvataggio non confermato.") { finish() }
         menu.importantForAutofill=View.IMPORTANT_FOR_AUTOFILL_NO_EXCLUDE_DESCENDANTS
         state=menu.text("Caricamento appunti locali…")
+        refresh=menu.button("Aggiorna appunti") { refreshList() }
         menu.button("Nuovo appunto") { editor(null) }
+        notesArea=menu.buttonsArea()
         setContentView(menu)
+        refreshList()
+    }
+    private fun refreshList() {
+        if(editing) return
+        val page=generation;val request=++listRequest;refresh.isEnabled=false
         Thread({
-            val result=runCatching {
-                val repository=PhoneNotes.book(this)
-                val all=ArrayList<LocalNote>();var offset=0
-                do { val (page,next)=repository.list(offset);all.addAll(page);offset=next ?: -1 } while(offset>=0)
-                all
-            }
+            val result=runCatching { PhoneNotes.book(this).snapshot() }
             main.post {
-                if(isFinishing || isDestroyed || request!=generation) return@post
+                if(isFinishing || isDestroyed || editing || page!=generation || request!=listRequest) return@post
+                refresh.isEnabled=true
                 result.onSuccess { notes ->
                     state.text=if(notes.isEmpty()) "Nessun appunto locale." else "Appunti locali: ${notes.size}"
-                    for(n in notes) menu.button(n.title) { read(n.id) }
+                    if(notes!=displayed) {
+                        notesArea.removeAllViews()
+                        for(n in notes) menu.button(n.title,"Apre questo appunto salvato per leggerlo, aggiornarlo o eliminarlo con conferma.",area=notesArea) { read(n.id) }
+                        displayed=notes
+                    }
                 }.onFailure { state.text="Archivio non disponibile. Nessun appunto è stato cancellato o ricreato." }
             }
         },"Jarvis-notes-list").start()
+    }
+    override fun onResume() {
+        super.onResume();observing=true
+        observed=runCatching { PhoneNotes.book(this) }.getOrNull()
+        observed?.observe(changed)
+        if(!editing) refreshList()
+    }
+    override fun onPause() {
+        observing=false;observed?.removeObserver(changed);observed=null;listRequest++
+        super.onPause()
     }
     private fun read(id:String) {
         val request=generation
@@ -125,5 +149,9 @@ class LocalNotesActivity:Activity() {
     @Deprecated("Local note editor returns to its list before leaving the activity")
     @SuppressLint("GestureBackNavigation") // API31 fallback; API33+ uses OnBackInvokedCallback above.
     override fun onBackPressed() { if(editing) reload() else super.onBackPressed() }
-    override fun onDestroy() { if(Build.VERSION.SDK_INT>=33) backCallback?.let { onBackInvokedDispatcher.unregisterOnBackInvokedCallback(it) };super.onDestroy() }
+    override fun onDestroy() {
+        observing=false;observed?.removeObserver(changed)
+        if(Build.VERSION.SDK_INT>=33) backCallback?.let { onBackInvokedDispatcher.unregisterOnBackInvokedCallback(it) }
+        super.onDestroy()
+    }
 }

@@ -133,4 +133,19 @@ class LocalNotesRepositoryTest {
         assertTrue(outcomes.sorted()==listOf("deleted","note_not_found") || outcomes.sorted()==listOf("note_conflict","saved"))
         assertEquals(2,s.writes)
     }
+    @Test fun observersReadCommittedStateAndCannotTurnASaveIntoFailure() {
+        val r=repository(Memory());var events=0;var seen=listOf<LocalNote>()
+        val observer:()->Unit={ events++;seen=r.snapshot() }
+        r.observe { throw IllegalStateException("Observer failure") };r.observe(observer)
+        val n=r.save("","Titolo","Prima",0)
+        assertEquals(listOf(n),seen);assertEquals(1,events)
+        r.delete(n.id,n.revision);assertTrue(seen.isEmpty());assertEquals(2,events)
+        r.removeObserver(observer);r.save("","Altro","Testo",0);assertEquals(2,events)
+    }
+    @Test fun uncertainCommitRequestsReadbackWithoutClaimingSuccess() {
+        val s=Memory();val r=repository(s);var notifications=0
+        r.observe { notifications++ };s.drop=true
+        code("outcome_uncertain") { r.save("","Titolo","Testo",0) }
+        assertEquals(1,notifications);assertTrue(r.snapshot().isEmpty())
+    }
 }

@@ -11,6 +11,10 @@ internal interface NotesStorage {
 /** One repository owns the lock for local UI and remote commands. No network or Android UI. */
 internal class LocalNotesRepository(private val storage:NotesStorage,private val now:()->Long,
     private val newId:()->String) {
+    private val listeners=java.util.concurrent.CopyOnWriteArraySet<()->Unit>()
+    fun observe(listener:()->Unit) { listeners.add(listener) }
+    fun removeObserver(listener:()->Unit) { listeners.remove(listener) }
+    private fun changed() { listeners.forEach { runCatching { it() } } }
     companion object {
         const val MAX_NOTES=100
         const val PAGE_SIZE=20
@@ -31,6 +35,8 @@ internal class LocalNotesRepository(private val storage:NotesStorage,private val
         val end=minOf(offset+PAGE_SIZE,notes.size)
         return notes.drop(offset).take(PAGE_SIZE) to if(end<notes.size) end else null
     }
+    /** UI reads all records under the same lock, without paging across concurrent writes. */
+    @Synchronized fun snapshot():List<LocalNote> = load().sortedBy { it.id }
     @Synchronized fun read(id:String):LocalNote {
         if(!BridgeProtocol.validId(id)) throw NotesFailure("invalid_note")
         return load().find { it.id==id } ?: throw NotesFailure("note_not_found")
@@ -42,9 +48,11 @@ internal class LocalNotesRepository(private val storage:NotesStorage,private val
         val previous=notes.find { it.id==id } ?: throw NotesFailure("note_not_found")
         if(previous.revision!=expectedRevision) throw NotesFailure("note_conflict")
         val updated=notes.filter { it.id!=id }
-        storage.store(updated)
-        // Absence alone is insufficient: unrelated records must also survive readback.
-        if(load().sortedBy { it.id }!=updated.sortedBy { it.id }) throw NotesFailure("outcome_uncertain")
+        try {
+            storage.store(updated)
+            // Absence alone is insufficient: unrelated records must also survive readback.
+            if(load().sortedBy { it.id }!=updated.sortedBy { it.id }) throw NotesFailure("outcome_uncertain")
+        } finally { changed() }
     }
     @Synchronized fun save(id:String,title:String,text:String,expectedRevision:Int,allowed:()->Boolean={true}):LocalNote {
         if(!validTitle(title) || !validBody(text) || expectedRevision<0 || (id.isEmpty() && expectedRevision!=0) ||
@@ -60,9 +68,11 @@ internal class LocalNotesRepository(private val storage:NotesStorage,private val
         val updated=notes.filter { it.id!=id }+record
         if(updated.sumOf { it.title.length+it.text.length }>MAX_TOTAL) throw NotesFailure("notes_full")
         if(!allowed()) throw NotesFailure("expired_before_dispatch")
-        storage.store(updated)
-        // A save is acknowledged only after readback of the committed record.
-        if(load().find { it.id==record.id }!=record) throw NotesFailure("outcome_uncertain")
+        try {
+            storage.store(updated)
+            // A save is acknowledged only after readback of the committed record.
+            if(load().find { it.id==record.id }!=record) throw NotesFailure("outcome_uncertain")
+        } finally { changed() }
         return record
     }
 }

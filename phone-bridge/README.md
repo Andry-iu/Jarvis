@@ -1,3 +1,7 @@
+# Guida .86 / 108
+
+Guida aggiornata sullo stesso plugin per Appunti primo, refresh automatico/manuale dell’elenco, Aggiorna/Nuovo nella prima riga, aiuto contestuale modale dal ? e saluto multilinea. Operazioni telefono, pairing, consensi e protocolli restano invariati; nessuna nuova azione remota o cancellazione nel plugin.
+
 # Guida .85 / 107
 
 Stesso plugin/origine/abbinamento. La guida descrive pulsanti a coppie con Indietro largo in fondo e cancellazione locale degli appunti con conferma. Tool note invariati: elenco, lettura, salvataggio; nessun delete remoto. Una cancellazione locale non rimuove copie già presenti nelle conversazioni. Fonte canonica docs/guida-jarvis.json, rigenerata con sync-guide.py.

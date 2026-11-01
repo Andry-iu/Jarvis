@@ -1,3 +1,13 @@
+# .86 — aiuto su richiesta e più spazio ai comandi
+
+Il requisito precedente di due aree sopra/sotto è sostituito dal nuovo gruppo autorizzato: il pannello help fisso non viene mostrato. Ogni tasto, compreso Indietro, ha un ? con target48dp nell’angolo alto destro. Solo quel ? apre la spiegazione del tasto corrente. La sua pressione non esegue il comando; toccare il tasto principale lo esegue senza aprire aiuto. Focus/cambi ai selettori non aprono finestre. Stato servizio e messaggi di errore restano visibili come feedback, distinti dall’aiuto.
+
+Finestra Android modale centrata, larghezza massima560dp e margine24dp per lato, bordi24dp, sfondo con alpha235/255 e testo opaco, oscuramento retrostante45%. Testi lunghi scorrono internamente entro60% dell’altezza disponibile. X in alto a destra o Indietro Android chiudono la finestra; tocco esterno non la chiude e non passa ai comandi sottostanti. La finestra viene chiusa staccando la schermata. La X appartiene soltanto all’aiuto, nessuna X aggiunta alla cover vocale. FLAG_SECURE e nessun contenuto personale nei log.
+
+Home: Appunti locali primo in alto a sinistra. Appunti: Aggiorna appunti a sinistra e Nuovo appunto a destra, seguiti da un’area distinta con tutte le note a coppie; Indietro resta largo e ultimo nello scroll. Il campo Frase del saluto ha almeno5 righe, a capo automatico e cresce senza scorrimento orizzontale; per testi lunghi scorre l’intera pagina. La guida completa si legge come contenuto nella pagina scorrevole, non è nascosta insieme all’aiuto contestuale.
+
+Fonti primarie: https://developer.android.com/develop/ui/views/components/dialogs , https://developer.android.com/reference/android/widget/EditText e https://developer.android.com/guide/components/activities/activity-lifecycle . Il codice e i test Robolectric non sostituiscono la prova fisica di tocchi/tastiera sul Galaxy.
+
 # Layout .85 — due pulsanti per riga
 
 Nuovo gruppo autorizzato dopo conferma dell’utente che .84 funziona. Tutti i pulsanti dei menu principali, categorie, wizard, collegamento, guida e appunti usano riquadri su due colonne. Un pulsante dispari occupa metà riga. Controlli consecutivi sono accoppiati; testo/campi/selettori separano i gruppi. Indietro rimane da solo su una riga intera, rettangolare e ultimo nell’elenco scorrevole, mai in un footer fisso. I moduli e le istruzioni inferiori conservano la larghezza disponibile. L’UI Android/ChatGPT esterna e i dialoghi standard mantengono la loro disposizione.

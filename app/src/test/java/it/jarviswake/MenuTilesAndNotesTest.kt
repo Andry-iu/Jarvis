@@ -36,12 +36,12 @@ class MenuTilesAndNotesTest {
         val menu=SplitMenuScreen(RuntimeEnvironment.getApplication(),"Sezione","Istruzioni") {}
         val one=menu.button("Uno") {};val two=menu.button("Due") {};val odd=menu.button("Tre") {}
         measure(menu)
-        assertSame(one.parent,two.parent);assertNotSame(one.parent,odd.parent)
+        assertSame(one.parent.parent,two.parent.parent);assertNotSame(one.parent.parent,odd.parent.parent)
         assertTrue(kotlin.math.abs(one.width-two.width)<=1);assertTrue(kotlin.math.abs(one.width-odd.width)<=1)
         assertTrue(one.width>0);assertTrue(kotlin.math.abs(one.width-one.height)<=1)
-        assertEquals(one.height,two.height);assertTrue(two.left>=one.right)
-        val back=button(menu,"Indietro");val parent=back.parent as ViewGroup
-        assertSame(back,parent.getChildAt(parent.childCount-1));assertTrue(parent.parent is android.widget.ScrollView)
+        assertEquals(one.height,two.height);assertTrue((two.parent as View).left>=(one.parent as View).right)
+        val back=button(menu,"Indietro");val card=back.parent as View;val parent=card.parent as ViewGroup
+        assertSame(card,parent.getChildAt(parent.childCount-1));assertTrue(parent.parent is android.widget.ScrollView)
         assertTrue(back.width>one.width*1.9);assertTrue(back.height<back.width)
         assertTrue(odd.parent.parent is ViewGroup)
     }
@@ -50,19 +50,19 @@ class MenuTilesAndNotesTest {
         val menu=SplitMenuScreen(RuntimeEnvironment.getApplication(),"Sezione","Istruzioni") {}
         val a=menu.button("Consenti cover sopra le altre app e autorizzazioni del telefono") {}
         val b=menu.button("Apri") {};measure(menu,320)
-        assertSame(a.parent,b.parent);assertTrue(kotlin.math.abs(a.width-b.width)<=1);assertEquals(a.height,b.height)
+        assertSame(a.parent.parent,b.parent.parent);assertTrue(kotlin.math.abs(a.width-b.width)<=1);assertEquals(a.height,b.height)
         assertTrue(a.height>=a.width)
         assertTrue(a.height>=a.layout.height+a.compoundPaddingTop+a.compoundPaddingBottom)
-        assertTrue(b.left>=a.right)
+        assertTrue((b.parent as View).left>=(a.parent as View).right)
     }
     @Test fun fieldBreaksTileGroupAndWizardNextRemainsBeforeWideBack() {
         val menu=SplitMenuScreen(RuntimeEnvironment.getApplication(),"Sezione","Istruzioni") {}
         val first=menu.button("Prima") {};val input=menu.field("Testo","","Istruzioni")
         val second=menu.button("Salva") {};menu.navigation("Indietro",{},"Avanti",{})
         measure(menu)
-        assertNotSame(first.parent,second.parent);assertSame(second.parent,button(menu,"Avanti").parent)
+        assertNotSame(first.parent.parent,second.parent.parent);assertSame(second.parent.parent,button(menu,"Avanti").parent.parent)
         assertTrue(input.width>second.width*1.9)
-        val back=button(menu,"Indietro");assertSame(back,menu.controls.getChildAt(menu.controls.childCount-1))
+        val back=button(menu,"Indietro");assertSame(back.parent,menu.controls.getChildAt(menu.controls.childCount-1))
     }
     private class Memory:NotesStorage {
         var notes=listOf<LocalNote>();var writes=0;var drop=false
@@ -83,7 +83,7 @@ class MenuTilesAndNotesTest {
         await { descendants(a.window.decorView).filterIsInstance<Button>().any { it.text.toString()==n.title } }
         button(a.window.decorView,n.title).performClick()
         await { descendants(a.window.decorView).filterIsInstance<Button>().any { it.text.toString()=="Elimina appunto" } }
-        assertSame(button(a.window.decorView,"Salva appunto").parent,button(a.window.decorView,"Elimina appunto").parent)
+        assertSame(button(a.window.decorView,"Salva appunto").parent.parent,button(a.window.decorView,"Elimina appunto").parent.parent)
         button(a.window.decorView,"Elimina appunto").performClick()
         ShadowAlertDialog.getLatestAlertDialog().getButton(AlertDialog.BUTTON_NEGATIVE).performClick()
         assertEquals(2,s.writes);assertEquals(n,r.read(n.id))

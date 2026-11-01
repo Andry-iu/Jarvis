@@ -104,8 +104,8 @@ class MenuActivityStartupTest {
         buttons(a.window.decorView).single { it.text.toString()=="Configurazione" }.performClick()
         fun verifyLastBack() {
             val back=buttons(a.window.decorView).single { it.text.toString()=="Indietro" }
-            val parent=back.parent as ViewGroup
-            assertSame(back,parent.getChildAt(parent.childCount-1))
+            val card=back.parent as View;val parent=card.parent as ViewGroup
+            assertSame(card,parent.getChildAt(parent.childCount-1))
             assertTrue(parent.parent is android.widget.ScrollView)
         }
         verifyLastBack()

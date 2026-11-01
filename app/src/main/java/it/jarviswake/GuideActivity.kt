@@ -45,7 +45,7 @@ class GuideActivity:Activity() {
     private fun render() {
         window.hideMenuKeyboard()
         val chosen=sections().find { it.getString("id")==topic }
-        val instructions=chosen?.getString("text") ?: "Scegli un argomento o cerca parole nella guida. I risultati compaiono sopra; selezionane uno per leggere i passaggi qui sotto. La stessa guida è interrogabile nel plugin JarvisWake Link anche con telefono offline. Usa Esporta guida completa per allegare il file ad altre chat."
+        val instructions=chosen?.getString("text") ?: "Scegli un argomento o cerca parole nella guida. I risultati compaiono sopra; selezionane uno per leggere i passaggi nella pagina. La stessa guida è interrogabile nel plugin JarvisWake Link anche con telefono offline. Usa Esporta guida completa per allegare il file ad altre chat."
         val menu=SplitMenuScreen(this,chosen?.getString("title") ?: "Guida completa · "+guide.getString("version"),instructions) { back() }
         if(chosen==null) {
             val input=menu.field("Cerca nella guida",query,"Scrivi una domanda o parole come wake, saluto, swipe, volume, appunti o plugin, poi Cerca.")
@@ -56,9 +56,10 @@ class GuideActivity:Activity() {
             val found=if(query.isBlank()) all else all.map { it to GuideSearch.score(query,it.getString("title"),it.getString("keywords"),it.getString("text")) }
                 .filter { it.second>0 }.sortedByDescending { it.second }.map { it.first }
             if(found.isEmpty()) menu.text("Nessun argomento trovato. Prova altre parole.")
-            for(s in found) menu.button(s.getString("title")) { topic=s.getString("id");render() }
+            for(s in found) menu.button(s.getString("title"),"Apre questo argomento della guida per leggerne tutti i passaggi.") { topic=s.getString("id");render() }
         } else {
             menu.text("Guida "+guide.getString("version")+" · contenuto statico",14f)
+            menu.text(chosen.getString("text"))
             menu.button("Indice e ricerca") { topic="";render() }
         }
         menu.button("Esporta guida completa") {

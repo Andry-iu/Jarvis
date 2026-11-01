@@ -1,3 +1,11 @@
+# .86 — elenco aggiornato e comandi separati
+
+Aggiorna appunti e Nuovo appunto occupano la prima riga, in quest’ordine; tutte le note sono nella griglia sottostante e Indietro è ultimo largo. La lettura UI usa uno snapshot dell’intero archivio sotto lo stesso lock delle scritture, senza paginazione tra aggiornamenti concorrenti. Nessun nuovo archivio o migrazione.
+
+La schermata rilegge al ritorno in primo piano e si iscrive alle variazioni del repository solo mentre è attiva. Una scrittura locale/remota confermata o incerta richiede una rilettura, non viene interpretata come successo; eccezioni degli osservatori non cambiano l’esito della persistenza. La lista mostra il conteggio e sostituisce i pulsanti senza duplicarli; richieste vecchie non aggiornano una schermata nuova o un editor. Le bozze aperte restano intatte e restano validi i controlli revisione/conflitto. Aggiorna è una lettura manuale senza scritture.
+
+Riscontro prima del rilascio: elenco remoto reale dal telefono conteneva due ID distinti/revisione1, risposta circa13s prima del controllo. Non letti i contenuti; nessun appunto creato/eliminato durante la verifica. Questo prova la presenza in quel momento, non l’intera cronologia di quanto detto da altre chat né la causa esatta del singolo pulsante visibile. Verificato nel codice precedente il mancato refresh al ritorno; nuova griglia e refresh vanno ancora collaudati sul Galaxy.
+
 # Eliminazione locale .85
 
 Uso quotidiano → Appunti locali → apri un appunto salvato → **Elimina appunto** → **Elimina**. Annulla lascia l’archivio invariato. Il pulsante è accanto a Salva appunto; Indietro occupa tutta l’ultima riga. Un nuovo appunto non ancora salvato non ha Elimina: Indietro lo abbandona senza creare record.

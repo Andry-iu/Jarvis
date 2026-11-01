@@ -129,6 +129,7 @@ class MainActivity : Activity() {
             MenuPage.HOME -> {
                 text("J.A.R.V.I.S. · "+appVersionName(),22f)
                 status=text(State.get(this));attemptStatus=text(State.getAttempt(this),14f)
+                button("Appunti locali") { startActivity(Intent(this,LocalNotesActivity::class.java)) }
                 button("Parla con Jarvis") { startVoiceCycle() }
                 button("Avvia ascolto Hey Jarvis") {
                     actionFeedback=true
@@ -136,7 +137,6 @@ class MainActivity : Activity() {
                     requestStart();refreshActionFeedback()
                 }
                 button("Ferma ascolto") { actionFeedback=true;startService(Intent(this,WakeService::class.java).setAction("STOP"));refreshActionFeedback() }
-                button("Appunti locali") { startActivity(Intent(this,LocalNotesActivity::class.java)) }
                 text("Impostazioni e supporto",18f)
                 button(getString(R.string.menu_configuration)) { openPage(MenuPage.CONFIGURATION) }
                 button(getString(R.string.menu_service)) { openPage(MenuPage.SERVICE) }
@@ -161,7 +161,7 @@ class MainActivity : Activity() {
             }
             MenuPage.CHATGPT -> buildChatPage()
             MenuPage.GREETING -> {
-                greetingInput=menu.field("Frase del saluto",greetingDraft ?: VoiceGreetingSettings.get(this),help(page))
+                greetingInput=menu.field("Frase del saluto",greetingDraft ?: VoiceGreetingSettings.get(this),help(page),multiline=true,minRows=5)
                 button("Salva frase") {
                     if(VoiceGreetingSettings.save(this,greetingInput.text.toString())) {
                         greetingInput.setText(VoiceGreetingSettings.get(this));greetingDraft=greetingInput.text.toString()
@@ -172,7 +172,7 @@ class MainActivity : Activity() {
             }
             MenuPage.AUDIO -> buildAudioPage()
             MenuPage.COVER -> {
-                coverButton=menu.button("",help(page)) { CoverSettings.setOpaque(this,!CoverSettings.isOpaque(this));updateCoverButton() }
+                coverButton=menu.button("", "Cambia l’opacità iniziale della cover tra opaca e semitrasparente. Non cambia mute, audio o gesti.") { CoverSettings.setOpaque(this,!CoverSettings.isOpaque(this));updateCoverButton() }
                 updateCoverButton()
                 button("Guida ai gesti") { startActivity(Intent(this,GuideActivity::class.java).putExtra("topic","cover")) }
             }
@@ -207,12 +207,12 @@ class MainActivity : Activity() {
         val missing=mutableListOf<String>()
         if(checkSelfPermission(Manifest.permission.RECORD_AUDIO)!=PackageManager.PERMISSION_GRANTED) missing+=Manifest.permission.RECORD_AUDIO
         if(Build.VERSION.SDK_INT>=33 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)!=PackageManager.PERMISSION_GRANTED) missing+=Manifest.permission.POST_NOTIFICATIONS
-        if(missing.isNotEmpty()) requestPermissions(missing.toTypedArray(),6) else menu.explain("Microfono e notifiche già autorizzati. Puoi passare al prossimo controllo.")
+        if(missing.isNotEmpty()) requestPermissions(missing.toTypedArray(),6) else menu.feedback("Permessi", "Microfono e notifiche già autorizzati.")
     }
     private fun buildChatPage() {
         val native=NativeChatSettings.enabled(this)
         val destination=RadioGroup(this).apply { orientation=RadioGroup.VERTICAL }
-        fun option(label:String)=RadioButton(this).apply { id=View.generateViewId();text=label;textSize=18f;minHeight=dp(64);setTextColor(Color.WHITE);menu.describe(this,help(MenuPage.CHATGPT));destination.addView(this) }
+        fun option(label:String)=RadioButton(this).apply { id=View.generateViewId();text=label;textSize=18f;minHeight=dp(64);setTextColor(Color.WHITE);destination.addView(this) }
         val webOption=option("ChatGPT nel WebView desktop")
         val nativeOption=option("App ChatGPT del telefono")
         destination.check(if(native) nativeOption.id else webOption.id)
@@ -249,9 +249,8 @@ class MainActivity : Activity() {
         fun slider(maximum:Int,value:Int,description:String,change:(Int)->Unit) {
             menu.addControl(SeekBar(this).apply {
                 max=maximum;progress=value;minimumHeight=dp(56);contentDescription=description
-                menu.describe(this,help(MenuPage.AUDIO))
                 setOnSeekBarChangeListener(object:SeekBar.OnSeekBarChangeListener {
-                    override fun onProgressChanged(bar:SeekBar,n:Int,user:Boolean) { if(user) { menu.explain(help(MenuPage.AUDIO));change(n) } }
+                    override fun onProgressChanged(bar:SeekBar,n:Int,user:Boolean) { if(user) { change(n) } }
                     override fun onStartTrackingTouch(bar:SeekBar)=Unit
                     override fun onStopTrackingTouch(bar:SeekBar)=Unit
                 })
@@ -512,7 +511,7 @@ class MainActivity : Activity() {
     private fun reportManualBlock(code:String,message:String) {
         State.setAttempt(this,message)
         DiagnosticLog.record(this,DiagnosticLog.Event.MANUAL_ACTION_BLOCKED,monitorStatus=code)
-        menu.explain("Avvio Voice da verificare",message)
+        menu.feedback("Avvio Voice da verificare",message)
         Toast.makeText(this,message,Toast.LENGTH_LONG).show()
     }
 
@@ -523,7 +522,7 @@ class MainActivity : Activity() {
             "unverified" -> "cattura da verificare"
             else -> "non in cattura"
         }
-        menu.explain("Stato Jarvis", "Servizio ascolto: "+(if(snapshot.optBoolean("serviceRunning")) "avviato" else "non avviato")+
+        menu.feedback("Stato Jarvis", "Servizio ascolto: "+(if(snapshot.optBoolean("serviceRunning")) "avviato" else "non avviato")+
             "\nMicrofono wake: "+capture+"\n\n"+State.get(this)+"\n\nUltimo ciclo: "+State.getAttempt(this))
     }
 
