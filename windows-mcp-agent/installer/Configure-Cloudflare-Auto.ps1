@@ -1,4 +1,4 @@
-param([Parameter(Mandatory=$true)][string]$HomeDir,[Parameter(Mandatory=$true)]$SetupContext)
+param([Parameter(Mandatory=$true)][string]$HomeDir,[Parameter(Mandatory=$true)]$SetupContext,$SetupSettings,[switch]$NoPrompts)
 . "$PSScriptRoot\Prerequisites.ps1"
 $s=Read-Install $HomeDir;Assert-Stopped $HomeDir
 if($s.home -ine $SetupContext.state.home -or $s.computer -ine $SetupContext.state.computer -or $s.user_sid -ne $SetupContext.state.user_sid){throw 'Contesto Cloudflare diverso dal registro di installazione.'}
@@ -45,28 +45,18 @@ Write-Host 'Custom: Account Tunnel Edit; Access Apps and Policies Edit; Access O
 Write-Host 'Limitare al proprio account e dominio. Nessun acquisto, modifica piano o permesso billing.'
 $secure=$null;$apiToken=$null;$request=$null
 try{
-    $secure=Read-Host 'Token API Cloudflare, input nascosto (non il token tunnel)' -AsSecureString
-    $apiToken=[Net.NetworkCredential]::new('', $secure).Password.Trim()
+    $apiToken=Get-SetupSetting $SetupSettings 'CLOUDFLARE_API_TOKEN'
+    if(-not $apiToken){
+        if($NoPrompts){throw 'SETUP_CONFIG_REQUIRED_CLOUDFLARE_API_TOKEN'}
+        $secure=Read-Host 'Token API Cloudflare, input nascosto (non il token tunnel)' -AsSecureString
+        $apiToken=[Net.NetworkCredential]::new('', $secure).Password.Trim()
+    }
     $discovery=Invoke-CloudflareHelper @{command='discover';token=$apiToken}
     $journal=Join-Path $SetupContext.dir 'cloudflare-auto.json'
-    if(Test-Path $journal){
-        $previous=Get-Content $journal -Raw|ConvertFrom-Json
-        $zoneID=$previous.desired.zone_id;$email=$previous.desired.email
-        $label=$previous.desired.hostname.Substring(0,$previous.desired.hostname.Length-$previous.desired.zone.Length-1)
-        Write-Host ('Ripresa Cloudflare per '+$previous.desired.hostname)
-    }else{
-        $zones=@($discovery.zones)
-        if($zones.Count -eq 1){$zoneID=$zones[0].id}
-        else{
-            for($n=0;$n -lt $zones.Count;$n++){Write-Host (($n+1).ToString()+') '+$zones[$n].name+' / '+$zones[$n].account_name)}
-            $selection=Read-Host 'Numero del dominio da usare'
-            if($selection -notmatch '^[0-9]+$' -or [int]$selection -lt 1 -or [int]$selection -gt $zones.Count){throw 'Scelta dominio non valida.'}
-            $zoneID=$zones[[int]$selection-1].id
-        }
-        $defaultLabel='jarvis-'+($s.device_name.ToLowerInvariant() -replace '[ _]+','-').Trim('-')
-        $label=Read-Host ('Nome pubblico prima del dominio ['+$defaultLabel+']');if(-not $label){$label=$defaultLabel}
-        $email=(Read-Host 'Email esatta autorizzata ad accedere al plugin con Cloudflare Access').Trim()
-    }
+    $previous=$null
+    if(Test-Path $journal){$previous=Get-Content $journal -Raw|ConvertFrom-Json}
+    $inputs=Resolve-SetupCloudflareInputs $SetupSettings @($discovery.zones) $previous $s.device_name -NoPrompts:$NoPrompts
+    $zoneID=$inputs.zone_id;$email=$inputs.email;$label=$inputs.label
     $zone=@($discovery.zones|Where-Object {$_.id -eq $zoneID})
     if($zone.Count -ne 1){throw 'Dominio del tentativo precedente non disponibile con questo token.'}
     Write-Host ('Risorse dedicate: '+$label+'.'+$zone[0].name+'; accesso: '+$email+'; origine: http://127.0.0.1:'+$s.port)

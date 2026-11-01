@@ -1,3 +1,21 @@
+JARVIS MCP SETUP 1.2.1 - CONFIGURAZIONE LOCALE, 2026-11-01
+
+IMPLEMENTATO: setup.local.env automatico, modello senza segreti,
+KEY=value letterale, whitelist e duplicati rifiutati, ACL utente/SYSTEM,
+modalita no prompt, auto/manual/skip, scelta zona e protezione ripresa.
+Nessun file compilato nei payload; token mai stampati o salvati nei log.
+Agente 0.6.1, provisioning JS e protezioni economiche invariati.
+
+ESEGUITO nel cloud Linux:
+PASS 20/20 regressioni Node Cloudflare dalla copia 1.2.1.
+PASS hash manifest, whitelist di packaging e ZIP, binario invariato.
+Il test PowerShell Test-SetupSettings.ps1 e predisposto ma NON ESEGUITO:
+PowerShell/Windows non disponibile in questo ambiente.
+Non dichiarare collaudati lettore/ACL/no-prompt reali sul secondo PC.
+Nessuna prova/installazione o altra operazione su Desktop1.
+Resta da collaudare Windows, API Cloudflare reale e nuovo plugin ChatGPT.
+
+--- EVIDENZA PRECEDENTE 1.2.0 (NON SOSTITUISCE I TEST WINDOWS 1.2.1) ---
 JARVIS MCP SETUP 1.2.0 - COLLAUDO 2026-11-01
 
 IMPLEMENTATO

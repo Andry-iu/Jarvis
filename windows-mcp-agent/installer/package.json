@@ -1,18 +1,28 @@
 {
-  "installer_version": "1.2.0",
+  "installer_version": "1.2.1",
   "agent_version": "0.6.1",
   "source_commit": "164cb980bd1a936749d41b8692979e98b929cb04",
   "agent_sha256": "9ff4a136951f464925cc55b96e1a968174204199fa9c7ff681b998b3542742c1",
   "files": [
     {
+      "path": ".gitignore",
+      "sha256": "9d8a2adc81ab7b4a63eb33860997f3e0484ddb8acb63668dd5721fc03073769d",
+      "bytes": 47
+    },
+    {
       "path": "COLLAUDO.txt",
-      "sha256": "6283b04b39755398efb01a71a6d3a616cb68e7e7018f8e65a37597b461d91ff5",
-      "bytes": 1391
+      "sha256": "79877a5d96598d347b00c78b9d6f1c107b86ecbc260c78469a23b7864fe569b2",
+      "bytes": 2359
     },
     {
       "path": "COLLEGA-CODEX.cmd",
       "sha256": "d4153f865501d7ea3e54a3028f15a8e421e1c86b8f2a416ff30d2d46c0d6734f",
       "bytes": 478
+    },
+    {
+      "path": "CONFIGURAZIONE.txt",
+      "sha256": "1ac631af76ce26595c15eb61e651049d9eec2c11a15a65c22ae209aed1afcd3a",
+      "bytes": 4403
     },
     {
       "path": "Check.ps1",
@@ -31,13 +41,13 @@
     },
     {
       "path": "Configure-Cloudflare-Auto.ps1",
-      "sha256": "98835e6eafde04d97bdddde956ac46047ccb6ce2bb26607a116c5ad36239a26c",
-      "bytes": 5826
+      "sha256": "6c8619e7f3725296d586a080b840418f94c614df90a760425f1230d9793afc67",
+      "bytes": 5139
     },
     {
       "path": "Configure-Cloudflare.ps1",
-      "sha256": "81b1df34ae1057f7a421238381ff9428e1a29d5cf4ec99cd4706b8b8720b7a48",
-      "bytes": 4923
+      "sha256": "4dce5cb8a43edd9aad0570f9c3996d37ede7596a3a66fa4c50f18f35c683c710",
+      "bytes": 6056
     },
     {
       "path": "Connect-Codex.ps1",
@@ -61,13 +71,13 @@
     },
     {
       "path": "Install.ps1",
-      "sha256": "c6c5bbde5efe603229f5be84ce5686fbf2e0bf1b34cdcd7e7b8a187093bcca48",
-      "bytes": 8953
+      "sha256": "656f95b096d2b487ff3b7e284b2745fbc17389c9e7583533a611e159aaff962a",
+      "bytes": 9012
     },
     {
       "path": "LEGGIMI.txt",
-      "sha256": "a668658346ddd0ba24cb1f4c389a0edd11fdabbd3633611ef4beeee690905985",
-      "bytes": 4942
+      "sha256": "2a4852a9255d4d3d01d855a30b45aaa5c8decb43fdb8aa4e3e04fed192be3c9b",
+      "bytes": 5414
     },
     {
       "path": "LICENSE.txt",
@@ -81,8 +91,8 @@
     },
     {
       "path": "Prerequisites.ps1",
-      "sha256": "05cc368aae9def95b0fc6eca84ff18053b35129e889de8e3899ebb258616b9f4",
-      "bytes": 21174
+      "sha256": "402667eb7ec5376e3f7dfeb5a1f5a2b78b0d40c1c66221d979df7be5fa48849a",
+      "bytes": 21625
     },
     {
       "path": "RIPRENDI.cmd",
@@ -91,18 +101,23 @@
     },
     {
       "path": "Repair.ps1",
-      "sha256": "d9216bcd21118847377b9580c0ef6bb996bf34b3d47e8e343f6bee5b729726bf",
-      "bytes": 7499
+      "sha256": "d96a6c52b81b2d775cecddaaadd406bd903c1adcb9622e677809f0db4077c9f8",
+      "bytes": 7515
+    },
+    {
+      "path": "Setup-Settings.ps1",
+      "sha256": "2f74919c698338368ab205bd18933ca1bd59c479d17df9985a5f219873bef697",
+      "bytes": 8191
     },
     {
       "path": "Setup-Worker.ps1",
-      "sha256": "4839044135fedbdf2bc09873ecdc7227615c3f8acb3cb9c4c5caaf08c31c960e",
+      "sha256": "daa83f5e8e4a9f54b6f1b280ddce68907883a5989105ac8620f96370b632a62f",
       "bytes": 3814
     },
     {
       "path": "Setup.ps1",
-      "sha256": "4fc914a43c320f1329c700225207da97d7b354e3fe5122a3660fdc2d950f5834",
-      "bytes": 7028
+      "sha256": "27c624e707912fdc51d5831394d89650278a089def6a5a800e18ba516c064027",
+      "bytes": 10314
     },
     {
       "path": "Start.ps1",
@@ -116,7 +131,7 @@
     },
     {
       "path": "Test-Bootstrap.ps1",
-      "sha256": "81d7af485335630607c29c4701b74dd4558b80ab8e103e9e60892aff25bdad75",
+      "sha256": "597a7440f278ba3ae7d6616555a456ec02edc0a913e671da890529e8422b92ce",
       "bytes": 18628
     },
     {
@@ -126,8 +141,13 @@
     },
     {
       "path": "Test-Installer.ps1",
-      "sha256": "f33338779819ab7feb76b5231234083567c58a269cf0725ca7576e8235c18e34",
+      "sha256": "238291d40219fce01ea515cb63528b2a9791dbb07ac1e1d4d535c8ebef3df3b8",
       "bytes": 14292
+    },
+    {
+      "path": "Test-SetupSettings.ps1",
+      "sha256": "f59fb4b80437cd175a4d1f5e14766fe9f5b6e05a7094c7bdbaff06887410bb2f",
+      "bytes": 5569
     },
     {
       "path": "Test-SfxRegression.py",
@@ -141,8 +161,13 @@
     },
     {
       "path": "script-history.json",
-      "sha256": "16fd2fcd5093ceba587d86db1ab8dd19c2c89d3f849fa7678d5376e6e33e777c",
-      "bytes": 3490
+      "sha256": "4538335063ce12689b66af720935b79810eb8e6581db884fb6afee037f553de5",
+      "bytes": 4287
+    },
+    {
+      "path": "setup.example.env",
+      "sha256": "044deb9277c235c3a271f881d344517f340dcdb881394d0cdaba6af8e9d7c50f",
+      "bytes": 1069
     }
   ]
 }

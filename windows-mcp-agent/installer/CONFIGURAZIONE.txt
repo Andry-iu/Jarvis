@@ -1,0 +1,81 @@
+SETUP DA FILE LOCALE - 1.2.1
+
+Copia setup.example.env come setup.local.env NELLA STESSA CARTELLA
+DI INSTALLA.cmd. Apri la copia con Blocco note, compilala e salva in UTF-8.
+Attenzione: il nome deve terminare .env, NON .env.txt.
+
+Impostazioni minime per Desktop2 e il dominio gia scelto:
+INSTALL_DIR=D:\Jarvis
+DEVICE_NAME=Desktop2
+SETUP_NO_PROMPTS=true
+SETUP_ALLOW_BROWSER_LOGIN=true
+SETUP_REMOTE_MODE=auto
+CLOUDFLARE_API_TOKEN=<token API creato nel proprio account Cloudflare>
+CLOUDFLARE_ZONE_NAME=autech-sm.com
+CLOUDFLARE_ACCESS_EMAIL=<email esatta usata per accedere con Cloudflare>
+
+Sostituire i due placeholder NELLA COPIA LOCALE, non in chat.
+Il modello fornito lascia token/email vuoti: non puo completarsi finche
+non vengono compilati. Non usare parentesi < > nel valore reale.
+Se riprendi un tentativo precedente, mantenere cartella, dispositivo,
+porta, dominio, etichetta host ed email del tentativo originale.
+
+Poi avvia INSTALLA.cmd: il file viene rilevato automaticamente.
+SETUP_NO_PROMPTS=true elimina tutte le domande gestite dal setup;
+un campo mancante produce SETUP_CONFIG_REQUIRED_<NOME>, non un prompt.
+UAC e accesso ChatGPT nel browser restano richieste del sistema/account.
+SETUP_ALLOW_BROWSER_LOGIN=true consente al setup di aprire il login
+se manca; false richiede un login gia valido. Nessuna API key OpenAI.
+Senza setup.local.env continua a funzionare il percorso interattivo.
+
+ALTRE OPZIONI (tutte presenti nel modello)
+PROJECTS_ROOT: vuoto = <INSTALL_DIR>\Projects.
+MCP_PORT: default 8765. CODEX_EXECUTABLE: vuoto = ricerca/installazione.
+SETUP_NO_TASK / SETUP_NO_SHORTCUTS: true o false, default false.
+SETUP_REMOTE_MODE: auto, manual o skip. Skip dichiara collegamento remoto
+non configurato; non finge un'installazione remota completa.
+CLOUDFLARE_ZONE_ID: opzionale, utile se vuoi vincolare anche l'ID.
+CLOUDFLARE_HOST_LABEL: vuoto = jarvis-<nome dispositivo minuscolo>.
+Se nome e ID zona sono presenti, devono riferirsi alla stessa zona.
+Se piu zone sono disponibili e nessuna e scelta, niente scelta arbitraria:
+il setup senza prompt richiede CLOUDFLARE_ZONE_NAME o CLOUDFLARE_ZONE_ID.
+
+Modalita manual: compilare anche CLOUDFLARE_HOSTNAME (https://...),
+CLOUDFLARE_TEAM_DOMAIN, CLOUDFLARE_APP_AUD, CLOUDFLARE_TUNNEL_ID,
+CLOUDFLARE_TUNNEL_TOKEN, salvo dati gia presenti nella ripresa.
+La modalita auto ricava questi dati da Cloudflare e non li richiede.
+
+FORMATO E PRIORITA
+Una variabile KEY=value per riga, mai comandi PowerShell. Spazi esterni
+rimossi; virgolette esterne singole/doppie facoltative. Non usare escape
+JSON: D:\Jarvis resta D:\Jarvis. $, #, = e backslash sono letterali;
+nessuna espansione %VAR%, ${VAR}, $() o variabili di ambiente.
+Commenti solo su righe che iniziano con #, NON a fine riga.
+Booleani true/false minuscoli; nomi variabile maiuscoli; duplicati,
+chiavi sconosciute, codifiche non UTF-8 e valori errati sono rifiutati.
+Parametri PowerShell espliciti prevalgono sul file; dati gia associati
+alla ripresa non vengono sovrascritti in caso di conflitto.
+Uso avanzato: Setup.ps1 -SettingsFile <percorso assoluto locale>.
+
+SEGRETI E RIPRESA
+Il file locale contiene segreti IN CHIARO per tua scelta: custodirlo.
+Il lettore limita la sua ACL all'utente corrente Windows e SYSTEM;
+se non puo proteggerlo, si ferma. Non lavora su link, junction o UNC.
+Nessuna copia del file in Scripts, Config, log, ricevute, ZIP o Git.
+Solo il modello VUOTO e distribuito. setup.local.env e ignorato da Git
+nella cartella installer; per file personalizzati usare cartella esterna.
+Non inviare il file compilato, schermate del token o credenziali in chat.
+Gli errori indicano chiave/codice/riga, mai i valori del file.
+
+Il token API resta nel file locale finche lo conservi; non viene salvato
+una seconda volta nel registro. La credenziale tunnel di esecuzione
+rimane separata nel Config privato, come prima. Dopo il completamento
+puoi revocare il token API e rimuoverlo dal file; serviranno un token
+valido e gli stessi dati se occorre riprendere il provisioning.
+Cambiare token e ammesso; cambiare account/PC/dominio/email della ripresa
+richiede verifica e non viene applicato implicitamente.
+
+Aggiornamento e rollback script: stessi backup/ricevute 1.2.0.
+Il file locale non viene sovrascritto all'aggiornamento o incluso nei backup
+automatici: conservarlo privatamente per la ripresa nella nuova cartella.
+Nessuna modifica alle guardie contro costi aggiuntivi.

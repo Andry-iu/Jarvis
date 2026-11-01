@@ -1,15 +1,30 @@
 [CmdletBinding()]
-param([string]$InstallDir,[string]$DeviceName,[string]$ProjectsRoot,[ValidateRange(1024,65535)][int]$Port=8765,[string]$ExpectedUserSid,[switch]$NonInteractive,[switch]$SkipRemote,[switch]$NoTask,[switch]$NoShortcuts)
+param([string]$InstallDir,[string]$DeviceName,[string]$ProjectsRoot,[ValidateRange(1024,65535)][int]$Port=8765,[string]$ExpectedUserSid,[string]$SettingsFile,[switch]$NonInteractive,[switch]$SkipRemote,[switch]$NoTask,[switch]$NoShortcuts)
 . "$PSScriptRoot\Prerequisites.ps1"
 $principal=New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
 if(-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)){throw 'Avviare INSTALLA.cmd e consentire UAC.'}
 if($ExpectedUserSid -and $ExpectedUserSid -ne [Security.Principal.WindowsIdentity]::GetCurrent().User.Value){throw 'UAC eseguito con un altro account: usare lo stesso utente Windows di Codex.'}
 if(-not [Environment]::Is64BitOperatingSystem -or $env:PROCESSOR_ARCHITECTURE -ne 'AMD64' -or $PSVersionTable.PSVersion.Major -lt 5){throw 'Richiesti Windows x64 e Windows PowerShell 5.1 a 64 bit.'}
 Assert-SetupPackage $PSScriptRoot
+$configExplicit=$PSBoundParameters.ContainsKey('SettingsFile')
+if(-not $SettingsFile){$SettingsFile=Join-Path $PSScriptRoot 'setup.local.env'}
+$setupSettings=Read-SetupSettings $SettingsFile -Required:$configExplicit
+try{
+    if($setupSettings.present){Write-Host 'Configurazione locale caricata; valori segreti non visualizzati.'}
+    if(-not $PSBoundParameters.ContainsKey('NonInteractive')){$NonInteractive=Get-SetupSettingBool $setupSettings 'SETUP_NO_PROMPTS' ([bool]$setupSettings.present)}
+    if(-not $PSBoundParameters.ContainsKey('NoTask')){$NoTask=Get-SetupSettingBool $setupSettings 'SETUP_NO_TASK'}
+    if(-not $PSBoundParameters.ContainsKey('NoShortcuts')){$NoShortcuts=Get-SetupSettingBool $setupSettings 'SETUP_NO_SHORTCUTS'}
+    if(-not $PSBoundParameters.ContainsKey('InstallDir')){$InstallDir=Get-SetupSetting $setupSettings 'INSTALL_DIR'}
+    if(-not $PSBoundParameters.ContainsKey('DeviceName')){$DeviceName=Get-SetupSetting $setupSettings 'DEVICE_NAME'}
+    if(-not $PSBoundParameters.ContainsKey('ProjectsRoot')){$ProjectsRoot=Get-SetupSetting $setupSettings 'PROJECTS_ROOT'}
+    $portExplicit=$PSBoundParameters.ContainsKey('Port') -or $setupSettings.values.ContainsKey('MCP_PORT')
+    if(-not $PSBoundParameters.ContainsKey('Port') -and $setupSettings.values.ContainsKey('MCP_PORT')){$Port=[int]$setupSettings.values.MCP_PORT}
+    $remoteMode=Get-SetupSetting $setupSettings 'SETUP_REMOTE_MODE' 'auto'
+    if($PSBoundParameters.ContainsKey('SkipRemote')){$remoteMode=if($SkipRemote){'skip'}else{'auto'}}
+    $allowBrowserLogin=Get-SetupSettingBool $setupSettings 'SETUP_ALLOW_BROWSER_LOGIN' ([bool]$setupSettings.present)
 if(-not $InstallDir){
-    if($NonInteractive){throw 'InstallDir obbligatoria.'}
     $default=if(Test-Path D:\){'D:\Jarvis'}else{'C:\Jarvis-Desktop2'}
-    $InstallDir=Read-Host ('Cartella Jarvis esistente o nuova ['+$default+']');if(-not $InstallDir){$InstallDir=$default}
+    if($NonInteractive){$InstallDir=$default}else{$InstallDir=Read-Host ('Cartella Jarvis esistente o nuova ['+$default+']');if(-not $InstallDir){$InstallDir=$default}}
 }
 $InstallDir=Get-FullPath $InstallDir
 $ctx=Open-SetupState $InstallDir (Join-Path $env:LOCALAPPDATA 'Jarvis-MCP\Setup')
@@ -21,9 +36,14 @@ try{
         if($existing.home -ine $InstallDir -or $existing.computer -ine $env:COMPUTERNAME -or $existing.user_sid -ne [Security.Principal.WindowsIdentity]::GetCurrent().User.Value){throw 'Tentativo appartenente ad altro contesto.'}
     }
     elseif((Test-Path $InstallDir) -and @(Get-ChildItem -LiteralPath $InstallDir -Force).Count){throw 'Cartella non riconosciuta: nessun contenuto viene sovrascritto.'}
-    if($existing){$DeviceName=$existing.device_name;$ProjectsRoot=$existing.projects_root;$Port=[int]$existing.port}
+    if($existing){
+        if($DeviceName -and $DeviceName -ine $existing.device_name){throw 'SETUP_CONFIG_CONFLICT_DEVICE_NAME'}
+        if($ProjectsRoot -and (Get-FullPath $ProjectsRoot) -ine $existing.projects_root){throw 'SETUP_CONFIG_CONFLICT_PROJECTS_ROOT'}
+        if($portExplicit -and $Port -ne [int]$existing.port){throw 'SETUP_CONFIG_CONFLICT_MCP_PORT'}
+        $DeviceName=$existing.device_name;$ProjectsRoot=$existing.projects_root;$Port=[int]$existing.port
+    }
     else{
-        if(-not $PSBoundParameters.ContainsKey('Port')){$Port=[int]$ctx.state.port}
+        if(-not $portExplicit){$Port=[int]$ctx.state.port}
         if(-not $DeviceName){$DeviceName=$ctx.state.device_name}
         if(-not $DeviceName){if(-not $NonInteractive){$DeviceName=Read-Host 'Nome del dispositivo [Desktop2]'};if(-not $DeviceName){$DeviceName='Desktop2'}}
         if(-not $ProjectsRoot){$ProjectsRoot=$ctx.state.projects_root}
@@ -32,8 +52,19 @@ try{
     }
     $null=Get-DeviceNames $DeviceName;$ProjectsRoot=Get-FullPath $ProjectsRoot
     $ctx.state.device_name=$DeviceName;$ctx.state.projects_root=$ProjectsRoot;$ctx.state.port=$Port;Save-SetupState $ctx 'checking_prerequisites'
-    $git=Ensure-SetupTool $ctx 'git';$go=Ensure-SetupTool $ctx 'go';$codex=Ensure-SetupCodex $ctx
-    Save-SetupState $ctx 'checking_chatgpt_login';Ensure-SetupLogin $codex -NonInteractive:$NonInteractive
+    if($NonInteractive -and $remoteMode -ne 'skip' -and (-not $existing -or -not $existing.remote_configured)){
+        if($remoteMode -eq 'auto'){
+            if(-not (Get-SetupSetting $setupSettings 'CLOUDFLARE_API_TOKEN')){throw 'SETUP_CONFIG_REQUIRED_CLOUDFLARE_API_TOKEN'}
+            if(-not (Test-Path (Join-Path $ctx.dir 'cloudflare-auto.json')) -and -not (Get-SetupSetting $setupSettings 'CLOUDFLARE_ACCESS_EMAIL')){throw 'SETUP_CONFIG_REQUIRED_CLOUDFLARE_ACCESS_EMAIL'}
+        }else{
+            if(-not (Test-Path (Join-Path $InstallDir 'Config\cloudflare-pending.json'))){
+                foreach($key in @('CLOUDFLARE_HOSTNAME','CLOUDFLARE_TEAM_DOMAIN','CLOUDFLARE_APP_AUD','CLOUDFLARE_TUNNEL_ID')){if(-not (Get-SetupSetting $setupSettings $key)){throw ('SETUP_CONFIG_REQUIRED_'+$key)}}
+            }
+            if(-not (Test-Path (Join-Path $InstallDir 'Config\tunnel-token.txt')) -and -not (Get-SetupSetting $setupSettings 'CLOUDFLARE_TUNNEL_TOKEN')){throw 'SETUP_CONFIG_REQUIRED_CLOUDFLARE_TUNNEL_TOKEN'}
+        }
+    }
+    $git=Ensure-SetupTool $ctx 'git';$go=Ensure-SetupTool $ctx 'go';$codex=Ensure-SetupCodex $ctx (Get-SetupSetting $setupSettings 'CODEX_EXECUTABLE')
+    Save-SetupState $ctx 'checking_chatgpt_login';Ensure-SetupLogin $codex -NonInteractive:$NonInteractive -AllowBrowserLogin:$allowBrowserLogin
     if(-not $existing){
         Save-SetupState $ctx 'installing_jarvis'
         & "$PSScriptRoot\Install.ps1" -DeviceName $DeviceName -InstallDir $InstallDir -ProjectsRoot $ProjectsRoot -Port $Port -CodexExecutable $codex -NonInteractive -NoStart -NoTask:$NoTask -NoShortcuts:$NoShortcuts
@@ -49,15 +80,14 @@ try{
     if(Test-Path $toolPath){$old=Get-Content $toolPath -Raw|ConvertFrom-Json;$same=(($old.paths -join '|') -ieq ($paths -join '|'))}
     if(-not $same){Assert-Stopped $InstallDir;Write-SetupJson $toolPath @{format=1;paths=@($paths)}}
     $prepared='';$preparedAsset=$null
-    if(-not $s.remote_configured -and -not $SkipRemote){
-        Save-SetupState $ctx 'preparing_cloudflared';$prepared=Get-SetupDownload $ctx 'cloudflared';$preparedAsset=$ctx.state.assets.cloudflared
-        if(-not $NonInteractive){
-            $choice=Read-Host 'Configurare automaticamente Cloudflare? [S/n; M=manuale]'
-            if($choice -notmatch '^[nN]$'){
-                Save-SetupState $ctx 'configuring_cloudflare'
-                & "$PSScriptRoot\Configure-Cloudflare.ps1" -HomeDir $InstallDir -PreparedExecutable $prepared -PreparedSha256 $preparedAsset.sha256 -PreparedRelease $preparedAsset.version -Automatic:($choice -notmatch '^[mM]$') -SetupContext $ctx
-                $s=Read-Install $InstallDir
-            }
+    if(-not $s.remote_configured -and $remoteMode -ne 'skip'){
+        $choice=if($remoteMode -eq 'manual'){'m'}else{'s'}
+        if(-not $NonInteractive -and -not $setupSettings.present){$choice=Read-Host 'Configurare automaticamente Cloudflare? [S/n; M=manuale]'}
+        if($choice -notmatch '^[nN]$'){
+            Save-SetupState $ctx 'preparing_cloudflared';$prepared=Get-SetupDownload $ctx 'cloudflared';$preparedAsset=$ctx.state.assets.cloudflared
+            Save-SetupState $ctx 'configuring_cloudflare'
+            & "$PSScriptRoot\Configure-Cloudflare.ps1" -HomeDir $InstallDir -PreparedExecutable $prepared -PreparedSha256 $preparedAsset.sha256 -PreparedRelease $preparedAsset.version -Automatic:($choice -notmatch '^[mM]$') -SetupContext $ctx -SetupSettings $setupSettings -NoPrompts:$NonInteractive
+            $s=Read-Install $InstallDir
         }
     }
     Save-SetupState $ctx 'checking_codex_connection'
@@ -76,3 +106,5 @@ try{
     Write-Host ('Passaggio non completato. Dati conservati; riprendere con INSTALLA.cmd. Registro: '+$ctx.dir)
     throw
 }finally{$ctx.lock.Dispose()}
+
+}finally{Clear-SetupSettings $setupSettings}

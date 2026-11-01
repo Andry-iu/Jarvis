@@ -1,5 +1,6 @@
 # Resumable prerequisites. No inference, account reads or paid services.
 . "$PSScriptRoot\Common.ps1"
+. "$PSScriptRoot\Setup-Settings.ps1"
 function Write-SetupJson([string]$Path,$Value) {
     $tmp=$Path+'.new-'+[guid]::NewGuid().ToString('N')
     Write-Utf8 $tmp ($Value|ConvertTo-Json -Depth 20)
@@ -7,8 +8,8 @@ function Write-SetupJson([string]$Path,$Value) {
 }
 function Assert-SetupPackage([string]$PackageDir) {
     $m=Get-Content (Join-Path $PackageDir 'package.json') -Raw|ConvertFrom-Json
-    if($m.installer_version -ne '1.2.0' -or $m.agent_version -ne '0.6.1'){throw 'Pacchetto non compatibile.'}
-    foreach($f in $m.files){if($f.path -notmatch '^[A-Za-z0-9_.-]+$' -or (Get-FileHash (Join-Path $PackageDir $f.path)).Hash -ine $f.sha256){throw ('Pacchetto incompleto o alterato: '+$f.path)}}
+    if($m.installer_version -ne '1.2.1' -or $m.agent_version -ne '0.6.1'){throw 'Pacchetto non compatibile.'}
+    foreach($f in $m.files){if(($f.path -like '*.env' -and $f.path -ne 'setup.example.env') -or $f.path -match '^setup\.local\.env(\.|$)' -or $f.path -like '*.secret.env*'){throw 'SETUP_CONFIG_SECRET_IN_MANIFEST'};if($f.path -notmatch '^[A-Za-z0-9_.-]+$' -or (Get-FileHash (Join-Path $PackageDir $f.path)).Hash -ine $f.sha256){throw ('Pacchetto incompleto o alterato: '+$f.path)}}
 }
 function Open-SetupState([string]$HomeDir,[string]$StateBase) {
     $HomeDir=Get-FullPath $HomeDir
@@ -21,7 +22,7 @@ function Open-SetupState([string]$HomeDir,[string]$StateBase) {
     try {
         $path=Join-Path $dir 'progress.json';$sid=[Security.Principal.WindowsIdentity]::GetCurrent().User.Value
         if(Test-Path $path){$state=Get-Content $path -Raw|ConvertFrom-Json;if($state.format -ne 1 -or $state.home -ine $HomeDir -or $state.computer -ine $env:COMPUTERNAME -or $state.user_sid -ne $sid){throw 'Registro appartenente ad altro PC, utente o cartella.'}}
-        else{$state=[pscustomobject]@{format=1;home=$HomeDir;computer=$env:COMPUTERNAME;user_sid=$sid;installer_version='1.2.0';stage='created';updated_at='';device_name='';projects_root='';port=8765;assets=[pscustomobject]@{};jobs=[pscustomobject]@{};tools=[pscustomobject]@{};last_error=''}}
+        else{$state=[pscustomobject]@{format=1;home=$HomeDir;computer=$env:COMPUTERNAME;user_sid=$sid;installer_version='1.2.1';stage='created';updated_at='';device_name='';projects_root='';port=8765;assets=[pscustomobject]@{};jobs=[pscustomobject]@{};tools=[pscustomobject]@{};last_error=''}}
         return @{dir=$dir;path=$path;lock=$lock;state=$state}
     }catch{$lock.Dispose();throw}
 }
@@ -113,7 +114,7 @@ function Get-SetupAsset($Context,[ValidateSet('git','go','node','codex','cloudfl
         $asset=[pscustomobject]@{version=$r.version;name=$a[0].filename;url=('https://go.dev/dl/'+$a[0].filename);sha256=$a[0].sha256}
     }else{
         if($Kind -eq 'git'){$repo='git-for-windows/git';$pattern='^PortableGit-[0-9.]+-64-bit\.7z\.exe$'}else{$repo='cloudflare/cloudflared';$pattern='^cloudflared-windows-amd64\.exe$'}
-        $r=Invoke-RestMethod ('https://api.github.com/repos/'+$repo+'/releases/latest') -Headers @{'User-Agent'='Jarvis-Setup-1.2.0'} -TimeoutSec 30
+        $r=Invoke-RestMethod ('https://api.github.com/repos/'+$repo+'/releases/latest') -Headers @{'User-Agent'='Jarvis-Setup-1.2.1'} -TimeoutSec 30
         $a=@($r.assets|Where-Object {$_.name -match $pattern})
         if($a.Count -ne 1 -or -not $a[0].PSObject.Properties['digest'] -or $a[0].digest -notmatch '^sha256:([a-fA-F0-9]{64})$'){throw ('Checksum ufficiale assente: '+$Kind)}
         $digest=$matches[1];$prefix='https://github.com/'+$repo+'/releases/download/'
@@ -155,7 +156,7 @@ function Invoke-SetupOperation($Context,[ValidateSet('git','go','node','codex')]
         }
     }
     $id=[guid]::NewGuid().ToString('N');$a=$Context.state.assets.$Kind
-    $request=[pscustomobject]@{format=1;installer_version='1.2.0';kind=$Kind;asset=$AssetPath;sha256=$a.sha256;target=$Target;version=$a.version;state_dir=$Context.dir;id=$id;user_sid=[Security.Principal.WindowsIdentity]::GetCurrent().User.Value;computer=$env:COMPUTERNAME}
+    $request=[pscustomobject]@{format=1;installer_version='1.2.1';kind=$Kind;asset=$AssetPath;sha256=$a.sha256;target=$Target;version=$a.version;state_dir=$Context.dir;id=$id;user_sid=[Security.Principal.WindowsIdentity]::GetCurrent().User.Value;computer=$env:COMPUTERNAME}
     $requestPath=Join-Path $Context.dir ($id+'.request.json');Write-SetupJson $requestPath $request
     $Context.state.jobs|Add-Member -NotePropertyName $Kind -NotePropertyValue ([pscustomobject]@{id=$id;state='dispatched'}) -Force
     Save-SetupState $Context ('installing_'+$Kind)
@@ -182,21 +183,22 @@ function Ensure-SetupTool($Context,[ValidateSet('git','go','node')][string]$Kind
     $Context.state.tools|Add-Member -NotePropertyName $Kind -NotePropertyValue $exe -Force
     Save-SetupState $Context ('verified_'+$Kind);return $exe
 }
-function Ensure-SetupCodex($Context) {
-    $exe=Find-Codex
+function Ensure-SetupCodex($Context,[string]$PreferredExecutable='') {
+    $exe=Find-Codex $PreferredExecutable
+    if($PreferredExecutable -and -not $exe){throw 'SETUP_CONFIG_CODEX_EXECUTABLE_NOT_USABLE'}
     if(-not $exe){$asset=Get-SetupDownload $Context 'codex';Invoke-SetupOperation $Context 'codex' $asset ''; $exe=Find-Codex}
     if(-not $exe){throw 'CLI Codex non verificata dopo installazione.'}
     $Context.state.tools|Add-Member -NotePropertyName codex -NotePropertyValue $exe -Force
     Save-SetupState $Context 'verified_codex';return $exe
 }
-function Ensure-SetupLogin([string]$Exe,[switch]$NonInteractive) {
+function Ensure-SetupLogin([string]$Exe,[switch]$NonInteractive,[switch]$AllowBrowserLogin) {
     $saved=@{};foreach($item in @(Get-ChildItem Env:)){if($item.Name -match '^(CODEX_|OPENAI_)'){$saved[$item.Name]=$item.Value;Remove-Item ('Env:'+$item.Name)}}
     try {
     # Capture, never print login-status output (may contain account details).
     $old=$ErrorActionPreference;$ErrorActionPreference='Continue'
     try{$status=& $Exe login status 2>&1;$ok=($LASTEXITCODE -eq 0 -and ($status -join ' ') -match 'ChatGPT')}finally{$ErrorActionPreference=$old}
     if($ok){return}
-    if($NonInteractive){throw 'Accesso ChatGPT richiesto: rilanciare INSTALLA.cmd in modalita interattiva.'}
+    if($NonInteractive -and -not $AllowBrowserLogin){throw 'Accesso ChatGPT richiesto: rilanciare INSTALLA.cmd in modalita interattiva.'}
     Write-Host 'Completa nel browser l accesso con ChatGPT Business. Non acquistare crediti e non usare API key.'
     # No config overwrite, no API-key login, no TUI, no exec/turn.
     & $Exe login
@@ -209,7 +211,7 @@ function Ensure-SetupLogin([string]$Exe,[switch]$NonInteractive) {
 function Update-SetupScripts([string]$HomeDir,[string]$PackageDir) {
     $s=Read-Install $HomeDir;$manifest=Get-Content (Join-Path $PackageDir 'package.json') -Raw|ConvertFrom-Json
     $history=Get-Content (Join-Path $PackageDir 'script-history.json') -Raw|ConvertFrom-Json
-    $exclude=@('Install.ps1','Repair.ps1','Setup.ps1','Setup-Worker.ps1','Test-Installer.ps1','Test-Bootstrap.ps1')
+    $exclude=@('Install.ps1','Repair.ps1','Setup.ps1','Setup-Worker.ps1','Test-Installer.ps1','Test-Bootstrap.ps1','Test-SetupSettings.ps1')
     $changes=New-Object Collections.Generic.List[object]
     foreach($f in @($manifest.files|Where-Object {($_.path -like '*.ps1' -or $_.path -eq 'Cloudflare-Provision.cjs') -and $_.path -notin $exclude}|Sort-Object @{Expression={if($_.path -eq 'Start.ps1'){0}else{1}}})){
         $target=Join-Path $HomeDir ('Scripts\'+$f.path);$old='missing'
@@ -227,14 +229,14 @@ function Update-SetupScripts([string]$HomeDir,[string]$PackageDir) {
         Assert-Stopped $HomeDir
         $backup=Join-Path $HomeDir ('Backups\installer-scripts-'+[guid]::NewGuid().ToString('N'));New-Item -ItemType Directory -Path $backup|Out-Null
         foreach($c in $changes){if($c.before -ne 'missing'){Copy-Item -LiteralPath $c.target -Destination (Join-Path $backup $c.name);if((Get-FileHash (Join-Path $backup $c.name)).Hash -ine $c.before){throw 'Backup script non verificato.'}}}
-        Write-SetupJson $pending @{version='1.2.0';backup=$backup;files=$changes.ToArray()}
+        Write-SetupJson $pending @{version='1.2.1';backup=$backup;files=$changes.ToArray()}
         foreach($c in $changes){
             if($c.before -ne 'missing' -and (Get-FileHash $c.target).Hash -ine $c.before){throw 'Script cambiato durante aggiornamento; nessuna sovrascrittura.'}
             $tmp=$c.target+'.new-'+[guid]::NewGuid().ToString('N');Copy-Item -LiteralPath (Join-Path $PackageDir $c.name) -Destination $tmp
             if((Get-FileHash $tmp).Hash -ine $c.after){throw 'Copia script non verificata.'}
             if(Test-Path $c.target){[IO.File]::Replace($tmp,$c.target,(Join-Path $backup ($c.name+'.atomic-backup')))}else{[IO.File]::Move($tmp,$c.target)}
         }
-        Write-SetupJson (Join-Path $backup 'receipt.json') @{version='1.2.0';files=$changes.ToArray();at=[DateTime]::UtcNow.ToString('o')}
+        Write-SetupJson (Join-Path $backup 'receipt.json') @{version='1.2.1';files=$changes.ToArray();at=[DateTime]::UtcNow.ToString('o')}
         Remove-Item -LiteralPath $pending
     }finally{$guard.Dispose()}
 }
