@@ -1,3 +1,13 @@
+# Installer 1.3.0 / agente 0.7.0 — allineamento completo
+
+1 novembre 2026. Installer aggiornato ad agente 0.7.0 e updater canonico comune. Nuove installazioni sotto `<root scelta>\Agent\jarvis-mcp.exe`; nessuna migrazione implicita dei percorsi esistenti. Un agente operativo precedente deve aggiornarsi tramite il proprio batch CMD separato prima del setup, che rifiuta un percorso alternativo. Task Windows solo per l'avvio ordinario.
+
+Superati: contratto sorgenti/manifest, 45/45 test Node, suite Windows SetupSettings (51 asserzioni), Bootstrap e Installer (32 verifiche ciascuna + COMPLETE), due installazioni isolate con MCP reale. Produzione Desktop1 conservata, nessuna inferenza. Non sono prove di installazione 1.3.0 in produzione, API Cloudflare reali, refresh cataloghi, reboot fisico o ciclo reale 24 ore.
+
+Regole consolidate in docs/mcp-agent/OPERATING-RULES.md: procedura comune e cause dei problemi dichiarate, privilegi applicazioni standard per default, salvataggio nell'app, manutenzione log/batch 30 giorni avvio/24 ore, guardie economiche, nessun replay incerto, identita distinte e Git completo di soli sorgenti/test/documentazione/risorse. Verbale docs/mcp-agent/INSTALLER-1.3.0.md; AGENTS e RELEASE_POLICY aggiornati. Nessun ZIP/binario generato o segreto aggiunto a Git, nessuna modifica Android/main.
+
+Le sezioni seguenti sono storiche; prevale lo stato attuale qui sopra.
+
 # Windows MCP 0.7.0 — entrambi operativi; aggiornamento unificato
 
 1 novembre 2026. Desktop1 DESKTOP-1ESSB0K (1b927a030fa3b7dfa15c40cfccb4ff60) e Desktop2 AUTECHVPC2 (d41455adf8721c205183224d3c69a1a5) rispondono entrambi con 0.7.0, identita preservate. Prove Notepad candidato e installato superate su entrambi: avvio non amministratore, testo ciao, salvataggio tramite applicazione sul Desktop come ciao-070.txt, verifica dei 4 byte e chiusura ordinaria. SHA-256 documento b133a0c0e9bee3be20163d2ad31d6248db292aa6dcb1ee087a2aa50e0fc75ae2. Azioni installate eseguite tramite MCP task_start/runtime senza batch per scrittura/salvataggio/chiusura.
@@ -115,7 +125,3 @@ Per riprendere, leggere agent_status e machine_info; non fissare l'identita da q
 Punto aperto: Codex App Server funziona per account/quote e lista sessioni, ma balance=null blocca l'inferenza. UI osservata: 0 crediti e 88% quota inclusa residua; ricarica automatica non verificata. Il tentativo di accettare saldo nullo/testare un turno e stato respinto dalla revisione automatica; codice ripristinato rigorosamente chiuso su saldo sconosciuto. Nessuna inferenza avviata. Attendere verifica/autorizzazione appropriata, senza aggiramenti, acquisti o chiavi API.
 
 Servono inoltre aggiornamento catalogo client (38 strumenti sul server, dieci precedenti esposti in questa chat), verifica nuova chat/Voice, e configurazione esplicita di altri PC reali. Non dichiarare questi punti completati. Avvio dopo reboot non verificato. MSBuild/CMake/cl non nel PATH; .NET SDK 9.0.317 disponibile e compilazione riuscita. Clone NestingOpt ancora sospeso.
-
-
-
-

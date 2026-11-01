@@ -56,6 +56,7 @@ try{
         & "$PSScriptRoot\Configure-Cloudflare-Names.ps1" -HomeDir $InstallDir -SetupContext $ctx -SetupSettings $setupSettings -NoPrompts:$NonInteractive
         return
     }
+    Assert-SetupExistingAgentVersion $existing $PSScriptRoot ([bool](Test-Path (Join-Path $InstallDir 'Config\install-complete.json')))
     $ctx.state.device_name=$DeviceName;$ctx.state.projects_root=$ProjectsRoot;$ctx.state.port=$Port;Save-SetupState $ctx 'checking_prerequisites'
     if($NonInteractive -and $remoteMode -ne 'skip' -and (-not $existing -or -not $existing.remote_configured)){
         if($remoteMode -eq 'auto'){

@@ -21,6 +21,7 @@ try {
     };Pass 'powershell_parser'
     $realCodex=Find-Codex
     if(-not $realCodex){throw 'CLI compatibile necessaria per il collaudo.'}
+    $expectedCodexVersion=(& $realCodex --version|Out-String).Trim();if($LASTEXITCODE -ne 0){throw 'Versione CLI non verificabile.'}
     $a=Join-Path $TestRoot 'Desktop 2';$b=Join-Path $TestRoot 'Desktop B'
     & "$PackageDir\Install.ps1" -InstallDir $a -Port 8768 -NonInteractive -NoShortcuts -NoStart
     $installs.Add($a)
@@ -60,7 +61,7 @@ try {
             & "$PackageDir\Connect-Codex.ps1" -HomeDir $incomplete -CodexExecutable $realCodex -NonInteractive
             if(-not (Get-Content (Join-Path $incomplete 'Config\codex-connection.json') -Raw|ConvertFrom-Json).codex_connected){throw 'Avvio e connessione dopo ripresa falliti.'};Pass 'cold_start_and_codex_connection_after_recovery'
             $repaired=Read-Install $incomplete;$recovery=Get-Content (Join-Path $incomplete 'Config\recovery.json') -Raw|ConvertFrom-Json
-            if($repaired.installer_version -ne '1.2.2' -or (Read-AgentEnv $incomplete).JARVIS_CODEX_ENABLED -ne '1'){throw 'Ripresa non completata.'}
+            if($repaired.installer_version -ne '1.3.0' -or (Read-AgentEnv $incomplete).JARVIS_CODEX_ENABLED -ne '1'){throw 'Ripresa non completata.'}
             if((Get-FileHash (Join-Path $recovery.backup 'Config\secrets.env')).Hash -ne $originalSecret){throw 'Backup precedente alterato.'};Pass 'resume_real_101_failure_with_intact_backup'
             $rollbackHome=Join-Path $TestRoot 'Rollback ripresa'
             Expect-Refusal { & $legacyInstall.FullName -InstallDir $rollbackHome -Port 8772 -NonInteractive -NoTask -NoShortcuts -NoStart } 'second_old_101_failure_fixture'
@@ -95,11 +96,21 @@ try {
     $ia=Wait-Agent $a
     $runner=Start-Runner $b;$ib=Wait-Agent $b
     if ($ia.machine_id -eq $ib.machine_id -or $ia.machine_id -eq '1b927a030fa3b7dfa15c40cfccb4ff60' -or $ib.machine_id -eq '1b927a030fa3b7dfa15c40cfccb4ff60') { throw 'Identita clonate.' };Pass 'isolated_identity_and_real_mcp'
+    $packageMetadata=Get-Content (Join-Path $PackageDir 'package.json') -Raw|ConvertFrom-Json
+    if($ia.version -ne '0.7.0' -or $ib.version -ne '0.7.0'){throw 'Versione agente nuova installazione non allineata.'};Pass 'fresh_agent_070_on_both_installations'
+    $required=@('maintenance_status','known_folder','process_start','window_list','window_inspect','window_focus','window_close','ui_action','ui_keys','ui_file_dialog')
+    foreach($info in @($ia,$ib)){foreach($name in $required){if($info.capabilities -notcontains $name){throw ('Strumento 0.7 mancante: '+$name)}}};Pass 'all_new_agent_capabilities_present'
+    foreach($dir in @($a,$b)){
+        if(-not (Test-Path (Join-Path $dir 'Agent\jarvis-mcp.exe')) -or (Test-Path (Join-Path $dir 'jarvis-mcp.exe'))){throw 'Layout agente non conforme.'}
+        if((Get-FileHash (Join-Path $dir 'Scripts\update-agent.ps1')).Hash -ine (Get-FileHash (Join-Path $PackageDir 'update-agent.ps1')).Hash){throw 'Updater comune non installato.'}
+    };Pass 'agent_subdirectory_and_same_common_updater_installed'
+    $maintenance=Invoke-LocalTool $a 'maintenance_status' @{machine_id=$ia.machine_id}
+    if($maintenance.log_retention_days -ne 30 -or $maintenance.batch_retention_days -ne 30 -or $maintenance.interval_hours -ne 24 -or $maintenance.error){throw 'Manutenzione predefinita non allineata.'};Pass 'new_install_retention_30_days_24_hours'
     & (Join-Path $a 'Scripts\Check.ps1') -HomeDir $a;Pass 'catalog_queue_check'
     $beforePid=(Get-Content (Join-Path $a 'Config\running.json') -Raw|ConvertFrom-Json).agent.pid
     & "$PackageDir\Connect-Codex.ps1" -HomeDir $a -CodexExecutable $realCodex -NonInteractive
     $connection=Get-Content (Join-Path $a 'Config\codex-connection.json') -Raw|ConvertFrom-Json
-    if(-not $connection.codex_connected -or $connection.codex_version -ne 'codex-cli 0.165.0-alpha.1.2' -or $connection.account_type -ne 'chatgpt' -or -not $connection.checked_at){throw 'Connessione/account non verificati.'}
+    if(-not $connection.codex_connected -or $connection.codex_version -ne $expectedCodexVersion -or $connection.account_type -ne 'chatgpt' -or -not $connection.checked_at){throw 'Connessione/account non verificati.'}
     if((Get-Content (Join-Path $a 'Config\running.json') -Raw|ConvertFrom-Json).agent.pid -ne $beforePid){throw 'Agente attivo riavviato.'};Pass 'readonly_codex_account_usage_without_restart_or_inference'
     $savedEnv=Read-AgentEnv $a;$changed=@{};foreach($key in $savedEnv.Keys){$changed[$key]=$savedEnv[$key]};$changed.JARVIS_CODEX_ENABLED='0';Write-AgentEnv $a $changed
     try { Expect-Refusal { & "$PackageDir\Connect-Codex.ps1" -HomeDir $a -CodexExecutable $realCodex -NonInteractive } 'different_active_configuration_refused_without_stop' }
@@ -133,5 +144,5 @@ finally {
     }
     foreach ($r in $runners) { $null=$r.WaitForExit(10000) }
     $report|Set-Content (Join-Path $TestRoot 'RESULTS.txt') -Encoding UTF8
-    $report|Set-Content 'D:\Jarvis\Logs\diagnostics\installer-061-test.log' -Encoding UTF8
+    $report|Set-Content 'D:\Jarvis\Logs\diagnostics\installer-130-test.log' -Encoding UTF8
 }

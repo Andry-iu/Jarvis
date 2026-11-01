@@ -1,3 +1,24 @@
+JARVIS MCP SETUP 1.3.0 - AGENTE 0.7.0
+
+Nuove installazioni: <cartella scelta>\Agent\jarvis-mcp.exe.
+Incluso Scripts\update-agent.ps1, la stessa sorgente canonica dei due PC.
+Aggiornamento agente sempre avviato dall'agente con update_prepare /
+update_execute e batch separato; nessun task Windows d'aggiornamento.
+Il task di accesso Windows gia previsto riguarda solo l'avvio ordinario.
+L'installer completo non aggiorna in modo alternativo un agente operativo:
+una versione precedente gia completa richiede prima il batch dell'agente.
+
+Funzioni agente 0.7.0: avvio libero con argomenti/cartella, non amministratore
+per default; elevazione solo esplicita. Finestre, controlli e documenti moderni,
+tasti, dialoghi Apri/Salva con verifica del risultato, cartelle note, ricevute
+contro duplicati. Log e batch: default 30 giorni, all'avvio/ogni 24 ore,
+proteggendo batch preparati o in esecuzione.
+Usare i comandi diretti; batch applicativi solo quando gli strumenti mancano.
+Non sostituire il Salva dell'applicazione con scrittura diretta del file.
+Stato, identita, backup e credenziali restano privati sul computer.
+Sorgenti, test, documentazione e risorse su Git; niente ZIP/eseguibili generati.
+Le precedenti sezioni descrivono rilasci storici, non lo stato di questa versione.
+
 JARVIS MCP SETUP 1.2.2 - NOMI CLOUDFLARE COERENTI
 
 Tunnel, Application name e Policy name derivano da DEVICE_NAME:

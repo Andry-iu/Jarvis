@@ -1,8 +1,8 @@
 {
-  "installer_version": "1.2.2",
-  "agent_version": "0.6.1",
-  "source_commit": "164cb980bd1a936749d41b8692979e98b929cb04",
-  "agent_sha256": "9ff4a136951f464925cc55b96e1a968174204199fa9c7ff681b998b3542742c1",
+  "installer_version": "1.3.0",
+  "agent_version": "0.7.0",
+  "source_commit": "54aed96d94f2b02f35b31168ca8cafee217b4158",
+  "agent_sha256": "1542248e430042d1dab7e913c889a1242318e6cdfd276ebec22a927f4ff16b22",
   "files": [
     {
       "path": ".gitignore",
@@ -11,8 +11,8 @@
     },
     {
       "path": "COLLAUDO.txt",
-      "sha256": "088ae027764349a04bb60cf69b21f3a916186b0a68d697d99e0191489a13c6f0",
-      "bytes": 3593
+      "sha256": "234cf5bb4de0c7ef862efda730a07a206cb51dfce856becc6ae9c04400260c5e",
+      "bytes": 6056
     },
     {
       "path": "COLLEGA-CODEX.cmd",
@@ -21,8 +21,8 @@
     },
     {
       "path": "CONFIGURAZIONE.txt",
-      "sha256": "e355f7112ab4784aa40981e10cbc5b730cdcf22f6d84cc02f30ba5663217b70f",
-      "bytes": 4976
+      "sha256": "d5828723d8aac7c3e21b06421bcec63c5e919386012ae717985e68eddd04309c",
+      "bytes": 6254
     },
     {
       "path": "Check.ps1",
@@ -81,13 +81,13 @@
     },
     {
       "path": "Install.ps1",
-      "sha256": "766e989da16ac57bc868890ae5bad3088439427cfc5ee8267c99304941ecda58",
-      "bytes": 9045
+      "sha256": "e12266c99c5469da1a8b77d162a3385f719789e3d19f94e4c170e4c6cc913014",
+      "bytes": 9143
     },
     {
       "path": "LEGGIMI.txt",
-      "sha256": "adf255e861361803987487e501d324ef09958bf35d7b429e1d3ac4e87ea80aec",
-      "bytes": 6996
+      "sha256": "cb78f42ca6df1605caa1dcc343d53f82ef5783ee7e8f4d8b0f82a7b68f300cfa",
+      "bytes": 8274
     },
     {
       "path": "LICENSE.txt",
@@ -101,8 +101,8 @@
     },
     {
       "path": "Prerequisites.ps1",
-      "sha256": "ab199fe66f0aaefc4d2e06e340aac047d5f86e070466e2a8a61548796c560d5c",
-      "bytes": 21658
+      "sha256": "b9af4c2b215924a1001322ac9fb9245bfd18266bc7c27ac4073f70677f7420f4",
+      "bytes": 22004
     },
     {
       "path": "RINOMINA-CLOUDFLARE.cmd",
@@ -116,8 +116,8 @@
     },
     {
       "path": "Repair.ps1",
-      "sha256": "9a6cc58bd3f2014c68436857cb35482f06ba805edd8308de5772d2c30b49f055",
-      "bytes": 7531
+      "sha256": "0c7b0d0f15d3c3403032b5b810e81ccc757bdff9363668bc33c53b02b28aa2ef",
+      "bytes": 7561
     },
     {
       "path": "Setup-Settings.ps1",
@@ -126,13 +126,13 @@
     },
     {
       "path": "Setup-Worker.ps1",
-      "sha256": "a6ea89c6e990f5157fb2a5268674472ea1a570c275c7cc703af861398a1a09cd",
+      "sha256": "cff7ba10576ab3f6bbd6a83e12e8587a99180889f279da149f37f19894b98eda",
       "bytes": 3814
     },
     {
       "path": "Setup.ps1",
-      "sha256": "9ee6282c1481f164f6dab05b71d9ba320892faea58cbb22040333defc8229784",
-      "bytes": 10656
+      "sha256": "0dc253bbc0e35bb4aeda6e221fe80432b734cb4fead6780424c32f431fffd60c",
+      "bytes": 10792
     },
     {
       "path": "Start.ps1",
@@ -146,8 +146,8 @@
     },
     {
       "path": "Test-Bootstrap.ps1",
-      "sha256": "11abb69f2d5630053e4fe92c281aa9d880202d2a027f4e9270ed023c71570499",
-      "bytes": 18628
+      "sha256": "d46b546e6619ee2a1c3dbadf8722fabbd56f685713737c1e5505977746d199e0",
+      "bytes": 19178
     },
     {
       "path": "Test-Cloudflare.cjs",
@@ -156,8 +156,8 @@
     },
     {
       "path": "Test-Installer.ps1",
-      "sha256": "b14763e57862ff296be3d4d0edc32b74d9d116754166121314eb77ab179dd9e6",
-      "bytes": 14292
+      "sha256": "276e9c25a61f1b76f914f242712365f9db7a5db5b40d77c8a738e0a0ead68662",
+      "bytes": 15807
     },
     {
       "path": "Test-SetupSettings.ps1",
@@ -171,18 +171,24 @@
     },
     {
       "path": "jarvis-mcp.exe",
-      "sha256": "9ff4a136951f464925cc55b96e1a968174204199fa9c7ff681b998b3542742c1",
-      "bytes": 12092416
+      "sha256": "1542248e430042d1dab7e913c889a1242318e6cdfd276ebec22a927f4ff16b22",
+      "bytes": 12193792
     },
     {
       "path": "script-history.json",
-      "sha256": "b753be50b8c6c71f6915b022c779dd13a60e91b83b5360ca1ea37af1b3647cff",
-      "bytes": 5143
+      "sha256": "aa3b152eb0daae8e28608bf556d2a6c1b1992340925bc9059470673acaa85340",
+      "bytes": 6257
     },
     {
       "path": "setup.example.env",
       "sha256": "8f56c6514c2af332d993e5549ead25708ec81a65cd27eeba57cc53537375bb94",
       "bytes": 1206
+    },
+    {
+      "path": "update-agent.ps1",
+      "sha256": "1d84e2b7109b4ff517c9acdff69f88f4dc4a6c8e7161e5efd7ad2262a66b25ab",
+      "bytes": 12400
     }
-  ]
+  ],
+  "updater_source_commit": "a00ba7e164bea83b35f6d4b1767ddb0d82d13b5d"
 }

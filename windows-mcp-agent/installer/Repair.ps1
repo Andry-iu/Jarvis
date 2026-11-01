@@ -15,11 +15,11 @@ elseif(Test-Path $intent){
     $s=Get-Content $intent -Raw|ConvertFrom-Json
     if($s.format -ne 1 -or $s.home -ine $HomeDir -or $s.computer -ine $env:COMPUTERNAME -or $s.user_sid -ne [Security.Principal.WindowsIdentity]::GetCurrent().User.Value){throw 'Tentativo appartenente ad altro contesto.'}
 }else{throw 'Nessun tentativo riconosciuto.'}
-$ownAttempt=($s.installer_version -in @('1.1.0','1.1.1','1.2.0','1.2.1','1.2.2') -and (Test-Path $intent))
+$ownAttempt=($s.installer_version -in @('1.1.0','1.1.1','1.2.0','1.2.1','1.2.2','1.3.0') -and (Test-Path $intent))
 if($ownAttempt -and (Test-Path (Join-Path $HomeDir 'Config\install-complete.json'))){throw 'Installazione completa: usare Setup, senza ripristinare stato.'}
 $oldTaskXml=$null
 $null=Get-DeviceNames $s.device_name
-if (($s.installer_version -ne '1.0.1' -and -not $ownAttempt) -or $s.agent_version -ne '0.6.1' -or (-not $ownAttempt -and $s.task_registered) -or $s.remote_configured) { throw 'Ripresa limitata alla prima installazione 1.0.1 fallita prima della configurazione.' }
+if (($s.installer_version -ne '1.0.1' -and -not $ownAttempt) -or $s.agent_version -notin @('0.6.1','0.7.0') -or (-not $ownAttempt -and $s.task_registered) -or $s.remote_configured) { throw 'Ripresa limitata alla prima installazione 1.0.1 fallita prima della configurazione.' }
 if (-not $ownAttempt -and (-not (Test-Path -LiteralPath (Join-Path $HomeDir 'Config\install-failed.txt')) -or (Test-Path -LiteralPath (Join-Path $HomeDir 'Config\agent.env')))) { throw 'Installazione non riconosciuta come incompleta nel rilevamento Codex; nessuna modifica.' }
 if ($s.task_name -notmatch '^Jarvis-[A-Za-z0-9_-]+-[a-f0-9]{12}$') { throw 'Identificativo task non valido.' }
 $priorTask=Get-ScheduledTask -TaskName $s.task_name -ErrorAction SilentlyContinue
@@ -66,7 +66,7 @@ try {
     if (Test-Path -LiteralPath $HomeDir) {
         if (Test-Path -LiteralPath (Join-Path $HomeDir 'Config\installation.json')) {
             $newSettings=Read-Install $HomeDir
-            if ($newSettings.installer_version -in @('1.1.0','1.1.1','1.2.0','1.2.1','1.2.2') -and $newSettings.task_registered) { Unregister-ScheduledTask -TaskName $newSettings.task_name -Confirm:$false -ErrorAction SilentlyContinue }
+            if ($newSettings.installer_version -in @('1.1.0','1.1.1','1.2.0','1.2.1','1.2.2','1.3.0') -and $newSettings.task_registered) { Unregister-ScheduledTask -TaskName $newSettings.task_name -Confirm:$false -ErrorAction SilentlyContinue }
         }
         $failed=$HomeDir+'-ripresa-fallita-'+[guid]::NewGuid().ToString('N')
         [IO.Directory]::Move($HomeDir,$failed)

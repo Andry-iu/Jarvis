@@ -6,6 +6,9 @@ function Refuse([scriptblock]$Action,[string]$Label,[string]$ExpectedPattern='')
 New-Item -ItemType Directory -Path $TestRoot|Out-Null
 try{
     Assert-SetupPackage $PackageDir;Pass 'package_manifest_before_dependencies'
+    Refuse {Assert-SetupExistingAgentVersion ([pscustomobject]@{agent_version='0.6.1'}) $PackageDir $true} 'completed_older_agent_requires_own_batch_update'
+    Assert-SetupExistingAgentVersion ([pscustomobject]@{agent_version='0.7.0'}) $PackageDir $true;Pass 'completed_current_agent_accepted'
+    Assert-SetupExistingAgentVersion ([pscustomobject]@{agent_version='0.6.1'}) $PackageDir $false;Pass 'incomplete_legacy_install_can_recover'
     $homeDir=Join-Path $TestRoot 'Jarvis resumable';$ctx=Open-SetupState $homeDir (Join-Path $TestRoot 'Setup')
     Refuse {Open-SetupState $homeDir (Join-Path $TestRoot 'Setup')} 'concurrent_setup_same_root_refused'
     $ctx.state.device_name='Desktop2';Save-SetupState $ctx 'fixture_checkpoint';$stateDir=$ctx.dir;$ctx.lock.Dispose();$ctx=$null
@@ -78,7 +81,7 @@ class Fixture {static int Main(string[] a){
     $request.user_sid='other';Write-SetupJson (Join-Path $ctx.dir ($legacyID+'.request.json')) $request
     if(Test-LegacyGitReceiptRepair $ctx 'git' $legacyAsset $legacyTarget $legacyReceipt){throw 'Altro utente accettato.'}
     $request.user_sid=[Security.Principal.WindowsIdentity]::GetCurrent().User.Value;Write-SetupJson (Join-Path $ctx.dir ($legacyID+'.request.json')) $request
-    $legacyReceipt|Add-Member -NotePropertyName installer_version -NotePropertyValue '1.2.2'
+    $legacyReceipt|Add-Member -NotePropertyName installer_version -NotePropertyValue '1.3.0'
     if(Test-LegacyGitReceiptRepair $ctx 'git' $legacyAsset $legacyTarget $legacyReceipt){throw 'Ricevuta nuova trattata come legacy.'}
     $legacyReceipt.PSObject.Properties.Remove('installer_version')
     Invoke-SetupOperation $ctx 'git' $legacyAsset $legacyTarget
@@ -146,10 +149,11 @@ class Fixture {static int Main(string[] a){
         Refuse {Update-SetupScripts $upgrade $PackageDir} 'modified_installed_scripts_not_overwritten'
         Write-Utf8 $check $original
         # Simulate power loss after replacing Start, before replacing the others.
-        Write-SetupJson (Join-Path $upgrade 'Config\installer-scripts-pending.json') @{version='1.2.2';fixture=$true}
+        Write-SetupJson (Join-Path $upgrade 'Config\installer-scripts-pending.json') @{version='1.3.0';fixture=$true}
         Copy-Item (Join-Path $PackageDir 'Start.ps1') (Join-Path $upgrade 'Scripts\Start.ps1') -Force
         Refuse {& (Join-Path $upgrade 'Scripts\Start.ps1') -HomeDir $upgrade} 'partial_script_upgrade_blocks_start'
-        & "$PackageDir\Setup.ps1" -InstallDir $upgrade -NonInteractive -SkipRemote -NoTask -NoShortcuts
+        Refuse {& "$PackageDir\Setup.ps1" -InstallDir $upgrade -NonInteractive -SkipRemote -NoTask -NoShortcuts} 'legacy_completed_agent_requires_batch_before_setup'
+        Update-SetupScripts $upgrade $PackageDir
         if((Test-Path (Join-Path $upgrade 'Config\installer-scripts-pending.json')) -or (Get-FileHash (Join-Path $upgrade 'Scripts\Common.ps1')).Hash -ne (Get-FileHash (Join-Path $PackageDir 'Common.ps1')).Hash -or (Get-FileHash (Join-Path $upgrade 'Config\secrets.env')).Hash -ne $oldToken){throw 'Aggiornamento script non verificato.'};Pass 'upgrade_complete_101_resumes_and_preserves_credentials_with_backup'
     }
     if($CheckNetwork){
@@ -165,5 +169,5 @@ finally{
     if(Test-Path Function:\Invoke-WebRequest){Remove-Item Function:\Invoke-WebRequest -ErrorAction SilentlyContinue}
     foreach($dir in $installs){try{& (Join-Path $dir 'Scripts\Stop.ps1') -HomeDir $dir -Force;$i=Read-Install $dir;if($i.task_registered){Unregister-ScheduledTask -TaskName $i.task_name -Confirm:$false}}catch{$report.Add('CLEANUP_ERROR '+$_.Exception.Message)}}
     $report|Set-Content (Join-Path $TestRoot 'RESULTS.txt') -Encoding UTF8
-    $report|Set-Content 'D:\Jarvis\Logs\diagnostics\bootstrap-110-test.log' -Encoding UTF8
+    $report|Set-Content 'D:\Jarvis\Logs\diagnostics\bootstrap-130-test.log' -Encoding UTF8
 }
