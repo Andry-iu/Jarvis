@@ -1,0 +1,11 @@
+# Cover, Maps e telefonate — .87
+
+Maps legge la connessione dal CarConnection AndroidX: solo CONNECTION_TYPE_PROJECTION confermato mantiene la cover esistente. Stato sconosciuto, non collegato o Automotive nativo non sono proiezione Android Auto del telefono; si mantiene il comportamento precedente mostrando Maps sul telefono. Bluetooth non è prova di collegamento. Nessun HUD viene creato soltanto perché l’auto si collega e nessuna garanzia che il dispatch Maps abbia avviato la rotta sul display auto.
+
+Per una telefonata esplicita viene creata una cover temporanea propria della richiesta (rimuovendo l’eventuale HUD Voice sovrapposto). Si conserva il token del ciclo e si porta ChatGPT in primo piano tramite l’Intent launcher realmente restituito dal PackageManager, senza shortcut progetto, data URI o flag CLEAR_TASK/CLEAR_TOP/NEW_DOCUMENT/MULTIPLE_TASK. L’Intent chiede il recupero dell’app, non garantisce che ChatGPT ripresenti la Voice: la UI viene osservata prima dello stop. Nessuna nuova chat o pressione Voice viene richiesta.
+
+Lo stop semantico è unico e rimangono obbligatori ciclo chiuso e audio libero stabile prima di ACTION_CALL. Attesa massima della fase12s entro la lease originale, nessuna telefonata da timeout/HUD sparito. Cover rimossa prima del dialer; durante attesa doppio tap centrale o swipe rimuovono subito la finestra e annullano il tentativo non ancora partito. Export interrompe la preparazione per lasciare libero il telefono. Nessun poll può ricreare il nuovo HUD. La preparazione non aggiunge un player o una cattura microfono; il tocco centrale in questa breve fase di arresto non invia mute mentre lo stop è già in corso.
+
+Dopo chiamata resta il BridgeCallHold .81, IDLE e rilascio audio per ripresa wake, 30s a schermo spento e richiesta immediata screen-on quando risorse libere. Esiti di Intent non provano chiamata connessa. Android può richiedere SIM/consensi; telefono/Android Auto/recupero effettivo della schermata ChatGPT richiedono collaudo Galaxy.
+
+Fonti primarie: https://developer.android.com/reference/androidx/car/app/connection/CarConnection , https://developer.android.com/reference/android/content/pm/PackageManager#getLaunchIntentForPackage(java.lang.String) , https://developer.android.com/guide/components/activities/secure-bal .

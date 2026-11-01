@@ -7,8 +7,8 @@ android {
         applicationId = "it.jarviswake"
         minSdk = 31
         targetSdk = 36
-        versionCode = 108
-        versionName = "0.5.86"
+        versionCode = 109
+        versionName = "0.5.87"
         ndk { abiFilters += listOf("arm64-v8a") }
     }
     val ciKeystore = System.getenv("JARVIS_KEYSTORE_PATH")
@@ -50,7 +50,19 @@ android {
         }
     }
 }
+val whatsappNative by tasks.registering(Exec::class) {
+    workingDir(rootProject.projectDir)
+    commandLine("bash", rootProject.file("scripts/build-whatsapp-native.sh").absolutePath)
+    inputs.dir(rootProject.file("whatsapp-native"))
+    inputs.file(rootProject.file("scripts/build-whatsapp-native.sh"))
+    outputs.file(layout.buildDirectory.file("whatsapp-native/wabridge.aar"))
+}
+tasks.named("preBuild").configure { dependsOn(whatsappNative) }
+
 dependencies {
+    implementation(files("build/whatsapp-native/wabridge.aar").builtBy(whatsappNative))
+    implementation("com.google.zxing:core:3.5.3")
+    implementation("androidx.car.app:app:1.7.0")
     implementation("com.alphacephei:vosk-android:0.3.75@aar")
     implementation("net.java.dev.jna:jna:5.18.1@aar")
     testImplementation("junit:junit:4.13.2")

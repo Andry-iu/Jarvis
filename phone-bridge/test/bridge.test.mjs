@@ -85,8 +85,8 @@ test('Revocation affects only the authenticated owner and invalidates device cre
  assert.equal(value(await tool(e,'jarviswake_devices',{})).devices.length,0);
 });
 
-async function advertise(e,c) {
- const r=await worker.fetch(request('/device/poll',{deviceId:c.deviceId,versionCode:103,operations:['status','navigate','find_contacts','call_contact','whatsapp']},{Authorization:'Bearer '+c.deviceToken}),e);assert.equal(r.status,200);
+async function advertise(e,c,versionCode=103) {
+ const r=await worker.fetch(request('/device/poll',{deviceId:c.deviceId,versionCode,operations:['status','navigate','find_contacts','call_contact','whatsapp']},{Authorization:'Bearer '+c.deviceToken}),e);assert.equal(r.status,200);
 }
 async function claim(e,c,id) {return worker.fetch(request('/device/claim',{deviceId:c.deviceId,requestId:id},{Authorization:'Bearer '+c.deviceToken}),e);}
 test('New actions require an upgraded device; old polling only receives status',async()=>{
@@ -112,14 +112,14 @@ test('Maps uses a stable idempotency key, claim and correlated honest result',as
  const stored=await e.BUCKET.get(`requests/${c.deviceId}/${id}.json`);assert.equal((await stored.json()).params,undefined);
 });
 test('A send or call result requires a claim and rejects invented delivery success',async()=>{
- const e=env(),c=await pair(e);await advertise(e,c);const id=crypto.randomUUID(),contact_ref=crypto.randomUUID();
+ const e=env(),c=await pair(e);await advertise(e,c,109);const id=crypto.randomUUID(),contact_ref=crypto.randomUUID();
  await tool(e,'jarviswake_whatsapp',{device_id:c.deviceId,contact_ref,text:'Explicit test text',request_id:id});
  const auth={Authorization:'Bearer '+c.deviceToken};
  assert.equal((await worker.fetch(request('/device/respond',{deviceId:c.deviceId,requestId:id,result:{code:'composer_cleared_after_send'}},auth),e)).status,409);
  await claim(e,c,id);
  assert.equal((await worker.fetch(request('/device/respond',{deviceId:c.deviceId,requestId:id,result:{code:'delivered'}},auth),e)).status,400);
  assert.equal((await worker.fetch(request('/device/respond',{deviceId:c.deviceId,requestId:id,result:{code:'composer_cleared_after_send',text:'private'}},auth),e)).status,400);
- assert.equal((await worker.fetch(request('/device/respond',{deviceId:c.deviceId,requestId:id,result:{code:'send_dispatched_unconfirmed'}},auth),e)).status,200);
+ assert.equal((await worker.fetch(request('/device/respond',{deviceId:c.deviceId,requestId:id,result:{code:'whatsapp_server_accepted'}},auth),e)).status,200);
 });
 test('Contacts return bounded opaque references, not entire phonebook records',async()=>{
  const e=env(),c=await pair(e);await advertise(e,c);const id=crypto.randomUUID();
@@ -234,7 +234,7 @@ test('Status remains compatible with old snapshots and reports only the notes co
 
 test('The complete guide is available without pairing or a running phone',async()=>{
  const e=env();const r=value(await tool(e,'jarviswake_guide',{topic:'indice',query:''}));
- assert.equal(r.guide_version,'0.5.86');assert.equal(r.version_code,108);assert.equal(r.phone_required,false);assert.ok(r.topics.length>=19);
+ assert.equal(r.guide_version,'0.5.87');assert.equal(r.version_code,109);assert.equal(r.phone_required,false);assert.ok(r.topics.length>=19);
  assert.equal(e.BUCKET.data.size,0);
  for(const topic of ['wake','cover','audio','chatgpt','collegamento','appunti','plugin','maps','chiamate','whatsapp','diagnostica']) assert.ok(r.topics.some(t=>t.topic===topic));
 });
@@ -248,4 +248,17 @@ test('Unknown guide questions cannot produce fabricated instructions or device w
  const e=env();const missing=value(await tool(e,'jarviswake_guide',{topic:'cerca',query:'xyznonsenseqwerty'}));assert.equal(missing.matched,false);assert.deepEqual(missing.sections,[]);
  for(const args of [{topic:'shell',query:''},{topic:'indice',query:'x'.repeat(301)},{topic:'indice',query:'',device_id:crypto.randomUUID()}]) assert.equal((await tool(e,'jarviswake_guide',args)).isError,true);
  assert.equal((await tool(e,'jarviswake_guide',{topic:'indice',query:''},{})).isError,true);assert.equal(e.BUCKET.data.size,0);
+});
+
+test('QR WhatsApp requires version109 and never offers the legacy UI path',async()=>{
+ const e=env(),c=await pair(e);await advertise(e,c);
+ const args={device_id:c.deviceId,contact_ref:crypto.randomUUID(),text:'Explicit test',request_id:crypto.randomUUID()};
+ assert.equal((await tool(e,'jarviswake_whatsapp',args)).isError,true);
+ await advertise(e,c,109);
+ assert.equal(value(await tool(e,'jarviswake_whatsapp',args)).state,'pending');
+ await claim(e,c,args.request_id);
+ const auth={Authorization:'Bearer '+c.deviceToken};
+ assert.equal((await worker.fetch(request('/device/respond',{deviceId:c.deviceId,requestId:args.request_id,result:{code:'whatsapp_not_linked'}},auth),e)).status,200);
+ const result=value(await tool(e,'jarviswake_status_result',{device_id:c.deviceId,request_id:args.request_id}));
+ assert.equal(result.result.code,'whatsapp_not_linked');
 });

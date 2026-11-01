@@ -1,3 +1,9 @@
+# Aggiornamento 0.5.87 — WhatsApp QR e gestione cover
+
+Le istruzioni UI WhatsApp .81 più sotto sono storiche: nella .87 sono sostituite dal client collegato sul telefono. Configurazione → Collegamento e azioni → Maps, chiamate e WhatsApp → Collega WhatsApp con QR. Genera il QR reale e scansionalo da WhatsApp → Dispositivi collegati (anche fotografandolo con un secondo telefono mentre valido). Attendi Collegato. Invio diretto, nessun editor/bozza/clic WhatsApp e nessun PC sempre acceso; ack server distinto da consegna. Vedi [WHATSAPP_QR.md](WHATSAPP_QR.md).
+
+Maps conserva la cover solo con proiezione Android Auto accertata. Prima di telefonare mostra una cover di preparazione, richiama il launcher ChatGPT senza shortcut progetto e richiede un solo stop; chiamata solo dopo conferma ciclo chiuso/audio libero stabile. Doppio tocco/swipe annullano subito la preparazione, senza riaperture da polling. Vedi [BRIDGE_COVER_CHIAMATE.md](BRIDGE_COVER_CHIAMATE.md). I risultati reali sul Galaxy restano da collaudare.
+
 # Menu .83 e guida interrogabile
 
 Da Configurazione → Collegamento e azioni apri Abbinamento e stato, Maps/chiamate/WhatsApp oppure Accesso agli appunti dal plugin. I consensi e i dati salvati restano gli stessi. Nuovo jarviswake_guide nel plugin permette di consultare istruzioni/argomenti e rispondere a domande, senza telefono online e senza eseguire azioni. Vedi ORGANIZZAZIONE_MENU.md e GUIDA_COMPLETA.md.

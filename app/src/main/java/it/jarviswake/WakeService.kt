@@ -176,6 +176,7 @@ class WakeService : Service() {
 
     override fun onCreate() {
         super.onCreate()
+        BridgeCarConnection.start(this)
         instance = this
         runCatching { BridgeCallHold.connect(this) }
         notifications = getSystemService(NotificationManager::class.java)

@@ -33,6 +33,20 @@ class VoiceAccessibilityService : AccessibilityService() {
                 it.dismissForExit()
             }
         }
+        /** A new explicit action may restore the current Voice HUD; polling/exit recovery never calls this. */
+        internal fun showBridgeVoiceCover():Boolean {
+            val service=instance.get() ?: return false
+            val token=VoiceCycle.id ?: return false
+            if(VoiceCycle.phase!=VoiceCycleState.Phase.VOICE || service.preferences.getBoolean("native_stop",false)) return false
+            val controller=service.nativeController?.takeIf {it.token==token} ?: return false
+            if(!controller.bridgeCoverVisible()) {
+                if(!service.nativeCoverDismissed(token)) return false // Export/temporary visibility is not an exit to restore.
+                service.preferences.edit().putBoolean("native_cover_dismissed",false).apply()
+                controller.launch(openShortcut=false,playWaitingAudio=false)
+            }
+            return true
+        }
+
         internal fun stopBridgeVoice(context:Context):Boolean {
             val token=VoiceCycle.id ?: return true
             val service=instance.get() ?: return false

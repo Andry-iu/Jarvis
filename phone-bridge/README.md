@@ -1,3 +1,7 @@
+# .87 — WhatsApp QR sul telefono
+
+Stesso Site/plugin/abbinamento: WhatsApp richiede APK109 e usa un client collegato sul telefono, senza UI. Risultati whatsapp_not_linked, whatsapp_connection_unavailable e whatsapp_server_accepted; l’ultimo prova soltanto accettazione server. Vecchi client devono aggiornarsi, nessun fallback silenzioso ai tasti. Non transitano QR o chiavi sessione nel Worker. UI di collegamento nell’app Android. Codice/actions Maps e telefonate conservano stessi strumenti; nuova gestione cover e arresto lato telefono. Guida unica aggiornata.
+
 # Guida .86 / 108
 
 Guida aggiornata sullo stesso plugin per Appunti primo, refresh automatico/manuale dell’elenco, Aggiorna/Nuovo nella prima riga, aiuto contestuale modale dal ? e saluto multilinea. Operazioni telefono, pairing, consensi e protocolli restano invariati; nessuna nuova azione remota o cancellazione nel plugin.

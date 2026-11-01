@@ -33,7 +33,7 @@ internal class NativeVoiceController(private val service: VoiceAccessibilityServ
     private var snapshotAt = 0L
     private var snapshotFingerprint: Int? = null
 
-    fun launch(openShortcut: Boolean = true) {
+    fun launch(openShortcut: Boolean = true, playWaitingAudio: Boolean = true) {
         check(!service.getSystemService(KeyguardManager::class.java).isKeyguardLocked) { "Sblocca il telefono per aprire l'app ChatGPT." }
         if (!service.nativeCoverDismissed(token)) {
             val view = HolographicOverlayView(service)
@@ -51,7 +51,7 @@ internal class NativeVoiceController(private val service: VoiceAccessibilityServ
             service.getSystemService(WindowManager::class.java).addView(view, params)
             hud = view
             status("APERTURA PROGETTO CHATGPT")
-            WaitingAudio.coverShown(service, token)
+            if(playWaitingAudio) WaitingAudio.coverShown(service, token)
         }
         if (openShortcut) {
             NativeChatSettings.launch(service)

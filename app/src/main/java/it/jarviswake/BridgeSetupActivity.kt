@@ -67,6 +67,7 @@ class BridgeSetupActivity:Activity() {
             "actions" -> {
                 menu.toggle(getString(R.string.bridge_actions_enabled),BridgeSettings.actionsEnabled(this),help) { BridgeSettings.enableActions(this,it) }
                 menu.button("Autorizza rubrica e chiamate") { requestPermissions(arrayOf(Manifest.permission.READ_CONTACTS,Manifest.permission.CALL_PHONE,Manifest.permission.READ_PHONE_STATE),81) }
+                menu.button("Collega WhatsApp con QR", "Apre il collegamento del tuo WhatsApp come dispositivo aggiuntivo di JarvisWake. Non simula tasti o scrittura nell’app WhatsApp.") { startActivity(Intent(this,WhatsAppQrActivity::class.java)) }
                 menu.button("Guida alle azioni e ai plugin") { startActivity(Intent(this,GuideActivity::class.java).putExtra("topic","azioni")) }
             }
             "notes" -> {

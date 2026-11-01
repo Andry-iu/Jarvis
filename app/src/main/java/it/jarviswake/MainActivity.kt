@@ -83,6 +83,7 @@ class MainActivity : Activity() {
         contentRoot=FrameLayout(this)
         setContentView(contentRoot)
         renderMenu(false)
+        BridgeCarConnection.start(this)
         handler.post { requestStart() }
     }
 

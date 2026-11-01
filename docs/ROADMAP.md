@@ -1,3 +1,7 @@
+# Aggiornamento 0.5.87
+
+Implementati nello stesso rilascio: WhatsApp personale con QR locale in JarvisWake e invio diretto dal client sul telefono (nessun PC sempre acceso, niente UI WhatsApp); Maps conserva cover con proiezione Android Auto confermata; cover temporanea e richiamo ChatGPT prima dello stop Voice per telefonare. Guida app/plugin/Library aggiornata. Restano da collaudare associazione/invio reali e comportamento Galaxy/auto: non sono risultati già acquisiti. Vedi WHATSAPP_QR.md e BRIDGE_COVER_CHIAMATE.md.
+
 # Correzioni .84
 
 Crash Guida/Appunti segnalati dopo consegna .83, più lampeggio Voice e scarso riscontro del pulsante ascolto. Correzioni necessarie allo stesso menu autorizzato; utente ha aggiunto lo spostamento di Indietro e precisato ultimo pulsante scorrevole, non barra fissa. Nessun ampliamento a nuove azioni.

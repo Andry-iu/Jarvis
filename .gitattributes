@@ -1,0 +1,2 @@
+# Preserve upstream license text verbatim, including its original end-of-line spaces.
+app/src/main/assets/whatsapp-native-notices.txt whitespace=-blank-at-eol
