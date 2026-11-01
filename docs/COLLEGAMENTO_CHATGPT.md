@@ -1,3 +1,7 @@
+# Menu .83 e guida interrogabile
+
+Da Configurazione → Collegamento e azioni apri Abbinamento e stato, Maps/chiamate/WhatsApp oppure Accesso agli appunti dal plugin. I consensi e i dati salvati restano gli stessi. Nuovo jarviswake_guide nel plugin permette di consultare istruzioni/argomenti e rispondere a domande, senza telefono online e senza eseguire azioni. Vedi ORGANIZZAZIONE_MENU.md e GUIDA_COMPLETA.md.
+
 # Aggiornamento0.5.82 — appunti locali
 
 Stesso abbinamento e stesse azioni .81. Nuovo consenso separato **Consenti lettura e aggiornamento appunti da ChatGPT** e pulsante **Apri appunti locali**. Elenco/lettura/salvataggio con revisioni e archivio cifrato distinto dal pairing; nessun nuovo permesso Android. Google Calendar resta al plugin dedicato. Vedi [APPUNTI_LOCALI.md](APPUNTI_LOCALI.md) per comandi, istruzione facoltativa di rilettura, trasmissione dei contenuti richiesti e limiti.

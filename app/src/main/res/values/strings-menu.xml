@@ -1,0 +1,21 @@
+<resources>
+    <string name="menu_back">Indietro</string>
+    <string name="menu_next">Avanti</string>
+    <string name="menu_finish">Termina</string>
+    <string name="menu_exit_guide">Esci</string>
+    <string name="menu_instructions">Come usare questa sezione</string>
+    <string name="menu_step">Passo %1$d di %2$d</string>
+    <string name="menu_guide">Configurazione guidata</string>
+    <string name="menu_home">Uso quotidiano</string>
+    <string name="menu_configuration">Configurazione</string>
+    <string name="menu_service">Servizio</string>
+    <string name="menu_permissions">Permessi e assistente</string>
+    <string name="menu_chatgpt">ChatGPT e progetto</string>
+    <string name="menu_greeting">Voce e saluto</string>
+    <string name="menu_audio">Audio di avvio</string>
+    <string name="menu_cover">Cover</string>
+    <string name="menu_link">Collegamento e azioni</string>
+    <string name="menu_summary">Riepilogo</string>
+    <string name="menu_web_maintenance">Manutenzione WebView</string>
+    <string name="menu_diagnostics">Diagnostica</string>
+</resources>

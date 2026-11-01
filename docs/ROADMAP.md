@@ -1,3 +1,7 @@
+# Gruppo menu e guida — via esplicito 1 novembre2026
+
+Riorganizzazione autorizzata e implementata nella .83 con guida completa aggiunta su richiesta durante lo stesso lavoro. Vedi ORGANIZZAZIONE_MENU.md e GUIDA_COMPLETA.md; nessuna nuova funzione calendario/desktop o azione remota.
+
 # Decisione successiva — 1 novembre 2026
 
 Dopo consegna .81, nuovo via esplicito allo sviluppo delle aggiunte; l’utente ha subito escluso Google Calendar perché già gestito dal plugin dedicato. Gruppo .82 limitato agli appunti locali descritti in APPUNTI_LOCALI.md. Il precedente rinvio qui sotto è storico, non il mandato attuale; nessuna funzione calendario/Tasks aggiunta.

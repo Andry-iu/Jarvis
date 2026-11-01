@@ -22,11 +22,12 @@
         <intent><action android:name="android.speech.RecognitionService"/></intent>
     </queries>
     <application android:label="JarvisWake" android:icon="@drawable/ic_jarvis" android:theme="@android:style/Theme.Material.NoActionBar" android:allowBackup="false" android:supportsRtl="true">
-        <activity android:name=".MainActivity" android:exported="true">
+        <activity android:name=".MainActivity" android:enableOnBackInvokedCallback="true" android:exported="true" android:windowSoftInputMode="adjustResize">
             <intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent-filter>
         </activity>
-        <activity android:name=".BridgeSetupActivity" android:exported="false"/>
-        <activity android:name=".LocalNotesActivity" android:exported="false"/>
+        <activity android:name=".BridgeSetupActivity" android:enableOnBackInvokedCallback="true" android:exported="false"/>
+        <activity android:name=".GuideActivity" android:enableOnBackInvokedCallback="true" android:exported="false" android:windowSoftInputMode="adjustResize"/>
+        <activity android:name=".LocalNotesActivity" android:enableOnBackInvokedCallback="true" android:exported="false"/>
         <activity
             android:name=".WebChatActivity"
             android:enableOnBackInvokedCallback="true"

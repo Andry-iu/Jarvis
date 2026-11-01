@@ -1,86 +1,109 @@
 package it.jarviswake
 
+import android.annotation.SuppressLint
 import android.app.Activity
 import android.app.AlertDialog
 import android.Manifest
 import android.content.Intent
-import android.graphics.Color
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.text.InputType
 import android.view.WindowManager
 import android.widget.*
+import android.window.OnBackInvokedCallback
+import android.window.OnBackInvokedDispatcher
 
 class BridgeSetupActivity:Activity() {
     private val handler=Handler(Looper.getMainLooper())
     private lateinit var state:TextView
     private lateinit var enabled:Switch
+    private lateinit var menu:SplitMenuScreen
+    private var section="overview"
+    private var entry="overview"
+    private var backCallback:OnBackInvokedCallback?=null
     private val update=object:Runnable { override fun run() { state.text=BridgeLink.status;handler.postDelayed(this,1000) } }
     override fun onCreate(savedInstanceState:Bundle?) {
         super.onCreate(savedInstanceState)
+        window.setDecorFitsSystemWindows(false)
         window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
-        val layout=LinearLayout(this).apply { orientation=LinearLayout.VERTICAL;setPadding(32,64,32,32);setBackgroundColor(Color.rgb(13,24,36)) }
-        fun text(value:String)=TextView(this).apply { text=value;setTextColor(Color.WHITE);textSize=17f;setPadding(0,16,0,16);layout.addView(this) }
-        fun button(label:String,action:()->Unit) { layout.addView(Button(this).apply { text=label;setOnClickListener { action() } }) }
-        text("Collegamento ChatGPT")
-        text("Legge lo stato di Jarvis e, se abiliti le azioni, apre Maps, cerca i contatti richiesti, avvia chiamate e invia il testo WhatsApp dettato. Funziona mentre il servizio Jarvis è avviato o questa schermata è aperta. L’abbinamento resta salvato dopo aggiornamenti e riavvii.")
-        state=text("")
-        button("1. Apri pagina privata di collegamento") {
-            runCatching { startActivity(Intent(Intent.ACTION_VIEW,Uri.parse(BridgeProtocol.ORIGIN))) }
-                .onFailure { state.setText(R.string.bridge_browser_unavailable) }
+        entry=intent.getStringExtra("section")?.takeIf { it in listOf("pair","actions","notes") } ?: "overview"
+        section=savedInstanceState?.getString("section")?.takeIf { it in listOf("overview","pair","actions","notes") } ?: entry
+        render()
+        if(Build.VERSION.SDK_INT>=33) {
+            val cb=OnBackInvokedCallback { back() };backCallback=cb
+            onBackInvokedDispatcher.registerOnBackInvokedCallback(OnBackInvokedDispatcher.PRIORITY_DEFAULT,cb)
         }
-        button("2. Incolla codice di collegamento") {
-            val field=EditText(this).apply {
-                inputType=InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
-                hint="JW1.…";importantForAutofill=android.view.View.IMPORTANT_FOR_AUTOFILL_NO
-            }
-            val dialog=AlertDialog.Builder(this).setTitle("Codice privato dalla pagina JarvisWake Link")
-                .setMessage("Incolla il codice creato nella pagina privata. Non inviarlo in chat.")
-                .setView(field).setNegativeButton("Annulla",null).setPositiveButton("Salva",null).create()
-            dialog.window?.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
-            dialog.setOnShowListener {
-                dialog.window?.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
-                dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
-                    runCatching { BridgeSettings.saveCode(this,field.text.toString()) }.onSuccess {
-                        field.text.clear();enabled.isChecked=false;BridgeLink.refresh(this);state.setText(R.string.bridge_code_saved);dialog.dismiss()
-                    }.onFailure { field.error="Codice non valido o impossibile salvarlo. Nessun dettaglio privato registrato." }
+    }
+    private fun render() {
+        val title=when(section) { "pair"->"Abbinamento e stato";"actions"->"Maps, chiamate e WhatsApp";"notes"->"Appunti e plugin";else->"Collegamento ChatGPT" }
+        val help=when(section) {
+            "pair"->"Apri la pagina privata di JarvisWake Link, crea un codice e incollalo soltanto qui. Attiva il collegamento e lascia operativo il servizio Jarvis. L’abbinamento resta dopo aggiornamenti firmati e normali riavvii. Cancellarlo disconnette il telefono ma non elimina gli appunti locali. Il codice contiene credenziali: non condividerlo in chat."
+            "actions"->"Attiva le azioni e autorizza rubrica, chiamate e stato telefonico dal pulsante. In ChatGPT usa JarvisWake Link e chiedi una destinazione, una chiamata o un testo WhatsApp a un contatto preciso. Le ambiguità richiedono una scelta. Il comando inviato non prova una chiamata connessa, un messaggio consegnato o la navigazione su Android Auto. Per parlare con Maps aperto abilita le conversazioni in background in ChatGPT Live."
+            "notes"->"Il consenso permette al plugin di leggere, creare e aggiornare gli appunti sul telefono sbloccato. Il contenuto richiesto passa nella conversazione. Gli appunti hanno un archivio cifrato separato dall’abbinamento, escluso dalla diagnostica; disinstallazione o cancellazione dati dell’app li elimina. Apri appunti locali funziona anche senza rete o consenso remoto. Google Calendar resta al suo plugin dedicato."
+            else->"Scegli una categoria: abbinamento, azioni del telefono oppure appunti. Ogni consenso è distinto. Usa sempre lo stesso JarvisWake Link: non serve un nuovo plugin dopo un aggiornamento. La guida del plugin è consultabile anche senza un telefono online."
+        }
+        menu=SplitMenuScreen(this,title,help) { back() }
+        state=menu.text(BridgeLink.status,14f)
+        when(section) {
+            "pair" -> {
+                menu.text(if(BridgeSettings.configured(this)) "Abbinamento presente" else "Abbinamento da configurare")
+                menu.button("Apri pagina privata di collegamento") {
+                    runCatching { startActivity(Intent(Intent.ACTION_VIEW,Uri.parse(BridgeProtocol.ORIGIN))) }.onFailure { state.setText(R.string.bridge_browser_unavailable) }
+                }
+                menu.button("Incolla codice di collegamento") { pasteCode() }
+                enabled=menu.toggle(getString(R.string.bridge_enabled),BridgeSettings.enabled(this),help) { value ->
+                    if(value && !BridgeSettings.configured(this)) { enabled.isChecked=false;state.setText(R.string.bridge_code_required) }
+                    else { BridgeSettings.enable(this,value);BridgeLink.refresh(this) }
+                }
+                menu.button("Cancella collegamento dal telefono") {
+                    AlertDialog.Builder(this).setTitle("Cancellare il collegamento?")
+                        .setMessage("Il codice di collegamento verrà rimosso. Gli appunti locali restano conservati.")
+                        .setNegativeButton("Annulla",null).setPositiveButton("Cancella") { _,_ -> BridgeSettings.clear(this);enabled.isChecked=false;BridgeLink.refresh(this);render() }.showLarge()
                 }
             }
-            dialog.show()
-        }
-        enabled=Switch(this).apply {
-            setText(R.string.bridge_enabled);setTextColor(Color.WHITE);isChecked=BridgeSettings.enabled(this@BridgeSetupActivity)
-            setOnCheckedChangeListener { _,value ->
-                if(value && !BridgeSettings.configured(this@BridgeSetupActivity)) { isChecked=false;state.setText(R.string.bridge_code_required) }
-                else { BridgeSettings.enable(this@BridgeSetupActivity,value);BridgeLink.refresh(this@BridgeSetupActivity) }
+            "actions" -> {
+                menu.toggle(getString(R.string.bridge_actions_enabled),BridgeSettings.actionsEnabled(this),help) { BridgeSettings.enableActions(this,it) }
+                menu.button("Autorizza rubrica e chiamate") { requestPermissions(arrayOf(Manifest.permission.READ_CONTACTS,Manifest.permission.CALL_PHONE,Manifest.permission.READ_PHONE_STATE),81) }
+                menu.button("Guida alle azioni e ai plugin") { startActivity(Intent(this,GuideActivity::class.java).putExtra("topic","azioni")) }
+            }
+            "notes" -> {
+                menu.toggle("Consenti appunti da ChatGPT",PhoneNotes.enabled(this),help) { PhoneNotes.enable(this,it) }
+                menu.button("Apri appunti locali") { startActivity(Intent(this,LocalNotesActivity::class.java)) }
+                menu.button("Guida alla memoria e alla rilettura") { startActivity(Intent(this,GuideActivity::class.java).putExtra("topic","appunti")) }
+            }
+            else -> {
+                menu.button("Abbinamento e stato") { section="pair";render() }
+                menu.button("Maps, chiamate e WhatsApp") { section="actions";render() }
+                menu.button("Appunti e accesso dal plugin") { section="notes";render() }
             }
         }
-        layout.addView(enabled)
-        layout.addView(Switch(this).apply {
-            setText(R.string.bridge_actions_enabled);setTextColor(Color.WHITE)
-            isChecked=BridgeSettings.actionsEnabled(this@BridgeSetupActivity)
-            setOnCheckedChangeListener { _,value -> BridgeSettings.enableActions(this@BridgeSetupActivity,value) }
-        })
-        text("La ricerca restituisce solo i contatti corrispondenti al nome richiesto. Per telefonare, Jarvis chiude prima Voice e verifica il rilascio del microfono. Lo stato telefonico serve a sospendere la wake durante la chiamata. Gli invii WhatsApp richiedono Accessibilità e chat/campo riconosciuti; una bozza personale non viene sovrascritta.")
-        button("Autorizza rubrica e chiamate") {
-            requestPermissions(arrayOf(Manifest.permission.READ_CONTACTS,Manifest.permission.CALL_PHONE,Manifest.permission.READ_PHONE_STATE),81)
-        }
-        layout.addView(Switch(this).apply {
-            text="Consenti lettura e aggiornamento appunti da ChatGPT";setTextColor(Color.WHITE)
-            isChecked=PhoneNotes.enabled(this@BridgeSetupActivity)
-            setOnCheckedChangeListener { _,value -> PhoneNotes.enable(this@BridgeSetupActivity,value) }
-        })
-        text("Gli appunti hanno un archivio cifrato sul telefono. Quando ne chiedi la lettura o l’aggiornamento, il contenuto passa tramite il collegamento nella conversazione ChatGPT. Non entrano nella diagnostica. Cancellare il collegamento non cancella gli appunti; disinstallare Jarvis o cancellarne i dati li elimina. Nessuna funzione Google Calendar è aggiunta: usa il plugin dedicato.")
-        button("Apri appunti locali") { startActivity(Intent(this,LocalNotesActivity::class.java)) }
-        button("Cancella collegamento dal telefono") {
-            BridgeSettings.clear(this);enabled.isChecked=false;BridgeLink.refresh(this)
-        }
-        text("Dopo l’abbinamento avvia l’ascolto dalla Home Jarvis. In ChatGPT Live puoi richiedere lo stato, una destinazione Maps, una telefonata o un messaggio WhatsApp. Se ci sono più contatti o numeri, indica quello corretto. Per continuare a parlare con Maps aperto, abilita le conversazioni in background di ChatGPT Live. Il comando inviato non certifica che il destinatario abbia risposto o letto il messaggio.")
-        button("Torna a JarvisWake") { finish() }
-        setContentView(ScrollView(this).apply { addView(layout) })
+        setContentView(menu);menu.requestFocus()
     }
+    private fun pasteCode() {
+        val field=EditText(this).apply { inputType=InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
+            hint="JW1.…";importantForAutofill=android.view.View.IMPORTANT_FOR_AUTOFILL_NO;isSaveEnabled=false }
+        val dialog=AlertDialog.Builder(this).setTitle("Codice dalla pagina JarvisWake Link")
+            .setMessage("Incolla il codice privato. Non inviarlo in chat.").setView(field)
+            .setNegativeButton("Annulla",null).setPositiveButton("Salva",null).create()
+        dialog.setOnShowListener {
+            dialog.window?.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                runCatching { BridgeSettings.saveCode(this,field.text.toString()) }.onSuccess {
+                    field.text.clear();enabled.isChecked=false;BridgeLink.refresh(this);state.setText(R.string.bridge_code_saved);dialog.dismiss();render()
+                }.onFailure { field.error="Codice non valido o impossibile salvarlo. Nessun dettaglio privato registrato." }
+            }
+        }
+        dialog.showLarge()
+    }
+    private fun back() { if(section==entry || section=="overview") finish() else { section="overview";render() } }
+    @Deprecated("Back navigation is also registered for Android 13+")
+    @SuppressLint("GestureBackNavigation") // API31 fallback; API33+ uses OnBackInvokedCallback above.
+    override fun onBackPressed() { back() }
+    override fun onSaveInstanceState(outState:Bundle) { outState.putString("section",section);super.onSaveInstanceState(outState) }
     override fun onResume() { super.onResume();BridgeLink.owner(this,"setup",true);handler.post(update) }
     override fun onPause() { handler.removeCallbacks(update);BridgeLink.owner(this,"setup",false);super.onPause() }
+    override fun onDestroy() { if(Build.VERSION.SDK_INT>=33) backCallback?.let { onBackInvokedDispatcher.unregisterOnBackInvokedCallback(it) };super.onDestroy() }
 }

@@ -1,3 +1,7 @@
+# Accesso dal menu .83
+
+Uso quotidiano → Appunti locali per elenco/nuovo/modifica, con comandi sopra e istruzioni sotto. Consenso remoto: Configurazione → Collegamento e azioni → Accesso agli appunti dal plugin → Consenti appunti da ChatGPT. Archivio e protocollo .82 invariati; dettagli storici qui sotto.
+
 # Appunti locali — JarvisWake 0.5.82 / 104
 
 Ambito autorizzato: leggere, creare e aggiornare appunti sul telefono tramite lo stesso JarvisWake Link. Google Calendar è escluso per indicazione dell’utente: usa il plugin dedicato già collegato. Nessun evento o attività calendario viene letto o modificato da questa funzione.

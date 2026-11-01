@@ -28,7 +28,7 @@ const snap={app:{version:'0.5.80',versionCode:102},wake:{serviceRunning:true,cap
 test('Discovery exposes bounded status and action tools without fabricated phone data',async()=>{
   const r=await worker.fetch(request('/mcp',{jsonrpc:'2.0',id:1,method:'tools/list'}),env());
   const names=(await r.json()).result.tools.map(t=>t.name);
-  assert.deepEqual(names,['jarviswake_devices','jarviswake_request_status','jarviswake_status_result','jarviswake_find_contacts','jarviswake_navigate','jarviswake_call_contact','jarviswake_whatsapp','jarviswake_list_notes','jarviswake_read_note','jarviswake_save_note']);
+  assert.deepEqual(names,['jarviswake_devices','jarviswake_request_status','jarviswake_status_result','jarviswake_find_contacts','jarviswake_navigate','jarviswake_call_contact','jarviswake_whatsapp','jarviswake_list_notes','jarviswake_read_note','jarviswake_save_note','jarviswake_guide']);
 });
 test('Pairing requires authenticated same-origin browser action',async()=>{
   for(const h of [{},user,{...user,Origin:'https://attacker.example','X-Jarvis-Link':'pair'}]) {
@@ -230,4 +230,22 @@ test('Status remains compatible with old snapshots and reports only the notes co
  const permissions={actionsEnabled:false,contacts:false,callPhone:false,phoneState:false,notesEnabled:true};
  const r=await worker.fetch(request('/device/respond',{deviceId:c.deviceId,requestId:cmd.request_id,snapshot:{...snap,permissions}},{Authorization:'Bearer '+c.deviceToken}),e);assert.equal(r.status,200);
  const result=value(await tool(e,'jarviswake_status_result',{device_id:c.deviceId,request_id:cmd.request_id}));assert.equal(result.snapshot.permissions.notesEnabled,true);
+});
+
+test('The complete guide is available without pairing or a running phone',async()=>{
+ const e=env();const r=value(await tool(e,'jarviswake_guide',{topic:'indice',query:''}));
+ assert.equal(r.guide_version,'0.5.83');assert.equal(r.version_code,105);assert.equal(r.phone_required,false);assert.ok(r.topics.length>=19);
+ assert.equal(e.BUCKET.data.size,0);
+ for(const topic of ['wake','cover','audio','chatgpt','collegamento','appunti','plugin','maps','chiamate','whatsapp','diagnostica']) assert.ok(r.topics.some(t=>t.topic===topic));
+});
+test('Guide answers quote the canonical topics and never invent current phone status',async()=>{
+ const e=env();const r=value(await tool(e,'jarviswake_guide',{topic:'cerca',query:'Come si pronuncia la parola wake Hey Jarvis?'}));
+ assert.equal(r.matched,true);assert.ok(r.sections.some(s=>s.topic==='wake'));assert.ok(r.sections.some(s=>s.text.includes('hey jarvis')));
+ assert.equal(r.snapshot,undefined);assert.equal(r.source,'versioned_jarviswake_guide');assert.ok(r.sections.length<=2);
+ const cover=value(await tool(e,'jarviswake_guide',{topic:'cover',query:''}));assert.ok(cover.sections[0].text.includes('Swipe verso il basso'));assert.ok(cover.sections[0].text.includes('grigia'));
+});
+test('Unknown guide questions cannot produce fabricated instructions or device writes',async()=>{
+ const e=env();const missing=value(await tool(e,'jarviswake_guide',{topic:'cerca',query:'xyznonsenseqwerty'}));assert.equal(missing.matched,false);assert.deepEqual(missing.sections,[]);
+ for(const args of [{topic:'shell',query:''},{topic:'indice',query:'x'.repeat(301)},{topic:'indice',query:'',device_id:crypto.randomUUID()}]) assert.equal((await tool(e,'jarviswake_guide',args)).isError,true);
+ assert.equal((await tool(e,'jarviswake_guide',{topic:'indice',query:''},{})).isError,true);assert.equal(e.BUCKET.data.size,0);
 });

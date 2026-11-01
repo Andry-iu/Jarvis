@@ -1,3 +1,7 @@
+# Guida interrogabile .83
+
+Nuovo jarviswake_guide: tool read-only autenticato sullo stesso plugin, indice/argomento/ricerca domanda, nessun telefono/pairing necessario. Guida canonica docs/guida-jarvis.json nel repo Android, generata in asset app/Markdown e blocco statico Worker con scripts/sync-guide.py.19 argomenti, versione dichiarata0.5.83/105; non rappresenta stati reali né autorizza azioni. Ricerca lessicale normalizzata, due sezioni al massimo, nessun match esplicito.27 test server includono guida senza pairing, query e argomenti reali, input errati e nessuna scrittura storage. Le quattro azioni, appunti e abbinamenti precedenti sono conservati.
+
 # Aggiornamento .82 — appunti locali
 
 Tre tool aggiunti sullo stesso Site/plugin: list_notes, read_note, save_note (capability APK104; azioni103 e status102 compatibili). Consenso appunti separato e archivio autorevole cifrato sul telefono, nessun calendario. Salvataggio con revisione e rilettura, claim/UUID/fingerprint invariati. Il relay trasporta i contenuti richiesti: scadenza logica2min per gli scambi note, pulizia alla successiva attività/poll/lettura/nuova richiesta, non timer fisico garantito. Dopo risposta eliminare i parametri; tombstone senza testo per deduplicazione. Test server24 casi; protocollo/tool descriptions distinguono dati locali da copie nella conversazione e non promettono lettura universale. Vedi docs/APPUNTI_LOCALI.md nel repository Android.

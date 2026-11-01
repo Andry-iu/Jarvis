@@ -54,223 +54,255 @@ class MainActivity : Activity() {
     private lateinit var projectUrlInput: EditText
     private lateinit var waitingAudioName: TextView
     private lateinit var contentRoot: FrameLayout
-    private lateinit var homeScreen: ScrollView
+    private lateinit var homeScreen: View
+    private lateinit var menu: SplitMenuScreen
+    private lateinit var navigation: MenuNavigation
+    private val layout get()=menu.controls
+    private var greetingDraft:String?=null
+    private var projectDraft:String?=null
     private var chatSettingsLayer: FrameLayout? = null
     private var settingsBackCallback: OnBackInvokedCallback? = null
     private val update = object : Runnable {
         override fun run() {
-            status.text = (if (State.running) "● " else "○ ") + State.get(this@MainActivity)
-            attemptStatus.text = State.getAttempt(this@MainActivity)
+            if (::status.isInitialized) status.text = (if (State.running) "● " else "○ ") + State.get(this@MainActivity)
+            if (::attemptStatus.isInitialized) attemptStatus.text = State.getAttempt(this@MainActivity)
             if (::waitingAudioName.isInitialized) updateWaitingAudioName()
             handler.postDelayed(this, 1000)
         }
     }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        window.setDecorFitsSystemWindows(false)
         instance = java.lang.ref.WeakReference(this)
         JarvisRecognitionService.rememberSystemRecognizer(this)
-        val layout = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL; setPadding(32, 48, 32, 32)
-            setBackgroundColor(Color.rgb(13, 24, 36))
-            setOnApplyWindowInsetsListener { v, insets ->
-                val bars = insets.getInsets(android.view.WindowInsets.Type.systemBars())
-                v.setPadding(32 + bars.left, 32 + bars.top, 32 + bars.right, 24 + bars.bottom); insets
+        navigation=MenuNavigation(savedInstanceState?.getStringArrayList("menu_path").orEmpty(),savedInstanceState?.getInt("menu_step",-1) ?: -1)
+        greetingDraft=savedInstanceState?.getString("greeting_draft")
+        projectDraft=savedInstanceState?.getString("project_draft")
+        contentRoot=FrameLayout(this)
+        setContentView(contentRoot)
+        renderMenu(false)
+        handler.post { requestStart() }
+    }
+
+    private fun text(value:String,size:Float=16f)=menu.text(value,size)
+    private fun button(label:String,action:()->Unit)=menu.button(label,action=action)
+    private fun openPage(page:MenuPage) { captureDrafts();navigation.open(page);renderMenu(false) }
+    private fun captureDrafts() {
+        if(navigation.current==MenuPage.GREETING && ::greetingInput.isInitialized) greetingDraft=greetingInput.text.toString()
+        if(navigation.current==MenuPage.CHATGPT && ::projectUrlInput.isInitialized && !NativeChatSettings.enabled(this)) projectDraft=projectUrlInput.text.toString()
+    }
+    private fun title(page:MenuPage)=getString(when(page) {
+        MenuPage.HOME->R.string.menu_home;MenuPage.CONFIGURATION->R.string.menu_configuration
+        MenuPage.SERVICE->R.string.menu_service;MenuPage.PERMISSIONS->R.string.menu_permissions
+        MenuPage.CHATGPT->R.string.menu_chatgpt;MenuPage.GREETING->R.string.menu_greeting
+        MenuPage.AUDIO->R.string.menu_audio;MenuPage.COVER->R.string.menu_cover;MenuPage.LINK->R.string.menu_link
+        MenuPage.SUMMARY->R.string.menu_summary;MenuPage.WEB_MAINTENANCE->R.string.menu_web_maintenance
+        MenuPage.DIAGNOSTICS->R.string.menu_diagnostics
+    })
+    private fun help(page:MenuPage)=when(page) {
+        MenuPage.HOME->"Parla con Jarvis apre il ciclo vocale configurato. Avvia ascolto abilita la parola Hey Jarvis; Ferma ascolto è uno stop volontario. Gli appunti sono accessibili anche senza collegamento. Configurazione e Servizio sono aree separate. Apri la Guida completa per pronuncia, gesti e plugin."
+        MenuPage.CONFIGURATION->"Apri direttamente una categoria oppure Configurazione guidata per attraversarle in ordine. Le impostazioni attuali restano salvate: la guida non le ripristina. Nei passaggi puoi tornare indietro; Avanti salva URL e frase compilati e validi, senza avviare prove vocali o azioni del telefono."
+        MenuPage.SERVICE->"Qui trovi diagnostica, impostazioni Android e manutenzione. Questi strumenti sono separati dall’uso quotidiano. La cancellazione dei dati WebView richiede conferma e può richiedere un nuovo accesso a ChatGPT. Gli appunti locali e il collegamento hanno archivi distinti."
+        MenuPage.PERMISSIONS->"Microfono e notifiche servono all’ascolto. Accessibilità controlla Voice nell’app ChatGPT; HUD consente la cover. Il ruolo Assistente cambia l’assistente digitale predefinito e va scelto nel pannello Android. Permessi e batteria apre le impostazioni di sistema: torna qui dopo la scelta. Nessuna autorizzazione viene concessa automaticamente."
+        MenuPage.CHATGPT->"Scegli l’app ChatGPT nativa o il WebView desktop. Nell’app nativa seleziona lo shortcut creato dal progetto e conferma il nome esatto visibile, rispettando gli spazi. Prova collegamento apre solo il progetto, senza Voice. Nel WebView usa l’URL del progetto e accedi con il tuo account. Modello e livello si scelgono dentro ChatGPT. Termina un ciclo attivo prima di cambiare modalità o collegamento."
+        MenuPage.GREETING->"Questa frase viene richiesta una volta dopo la conferma Voice, nella stessa conversazione. Salva frase applica il testo; Ripristina rimette ciao jarvis. Nella guida Avanti salva una frase valida. Il salvataggio della preferenza non prova che ChatGPT abbia inviato il messaggio o pronunciato il saluto. Le bozze personali non vengono inviate."
+        MenuPage.AUDIO->"Attiva l’audio e scegli un file dal telefono. Volume regola solo l’audio di attesa di Jarvis, non quello di ChatGPT o del telefono. Spostando il volume parte un’anteprima anche con audio disattivato: dura il minimo scelto, o 2 secondi se il minimo è zero. Tempo minimo ritarda solo il comando Voice fino a 30 secondi. Lasciando questa sezione l’anteprima si ferma."
+        MenuPage.COVER->"Scegli l’aspetto iniziale opaco o semitrasparente. Durante Voice: tocco centrale alterna il microfono; mute confermato significa animazione grigia e ferma. Tocco sotto l’animazione cambia trasparenza. Doppio tocco centrale chiude subito la cover e richiede stop Voice. Swipe sinistro lascia la chat, swipe in basso torna Home; doppio tocco in alto a destra esporta diagnostica. Leggi la guida per le zone dei gesti."
+        MenuPage.LINK->"Collegamento ChatGPT abbina il telefono al plugin JarvisWake Link. Abbinamento, consenso Maps/chiamate/WhatsApp e consenso appunti sono categorie distinte. Le azioni richiedono una richiesta esplicita e i rispettivi permessi. Un aggiornamento firmato conserva l’abbinamento; cancellarlo non elimina gli appunti. Il calendario resta al plugin dedicato."
+        MenuPage.SUMMARY->"Questo riepilogo legge le impostazioni attuali, senza eseguire chiamate, messaggi o navigazione. Puoi tornare ai passaggi precedenti. Termina torna all’uso quotidiano. I permessi e l’accesso a ChatGPT restano scelte da effettuare nelle schermate supportate; una configurazione salvata non certifica il collaudo del telefono."
+        MenuPage.WEB_MAINTENANCE->"Svuota cache elimina soltanto risorse WebView e ricarica ChatGPT. Cancella dati WebView elimina anche cookie e dati dei siti del WebView, richiede conferma e può disconnettere l’account. Questi comandi non cancellano l’app ChatGPT nativa, gli appunti locali o il codice del plugin. Non eseguirli durante Voice."
+        MenuPage.DIAGNOSTICS->"Esporta diagnostica crea un file ZIP nella destinazione che scegli. Puoi allegarlo alla chat per analizzare un problema. Contiene eventi e metadati dei controlli: non audio, valori delle note, password o testo generico delle conversazioni. Anche il doppio tocco in alto a destra sulla cover avvia l’esportazione."
+    }
+    private fun renderMenu(capture:Boolean=true) {
+        if(capture && ::menu.isInitialized) captureDrafts()
+        window.insetsController?.hide(android.view.WindowInsets.Type.ime())
+        WaitingAudio.stopPreview()
+        if(::homeScreen.isInitialized) contentRoot.removeView(homeScreen)
+        val page=navigation.current
+        val caption=if(navigation.guided && page!=MenuPage.SUMMARY) getString(R.string.menu_step,navigation.step+1,MenuNavigation.STEPS.size-1)+" · "+title(page) else title(page)
+        menu=SplitMenuScreen(this,caption,help(page),if(navigation.canBack) ({ menuBack() }) else null)
+        homeScreen=menu
+        contentRoot.addView(homeScreen,FrameLayout.LayoutParams(-1,-1))
+        when(page) {
+            MenuPage.HOME -> {
+                text("J.A.R.V.I.S. · "+appVersionName(),22f)
+                status=text(State.get(this));attemptStatus=text(State.getAttempt(this),14f)
+                button("Parla con Jarvis") { startVoiceCycle() }
+                button("Avvia ascolto Hey Jarvis") { requestStart() }
+                button("Ferma ascolto") { startService(Intent(this,WakeService::class.java).setAction("STOP")) }
+                button("Appunti locali") { startActivity(Intent(this,LocalNotesActivity::class.java)) }
+                text("Impostazioni e supporto",18f)
+                button(getString(R.string.menu_configuration)) { openPage(MenuPage.CONFIGURATION) }
+                button(getString(R.string.menu_service)) { openPage(MenuPage.SERVICE) }
+                button("Guida completa") { startActivity(Intent(this,GuideActivity::class.java)) }
             }
-        }
-        fun text(value: String, size: Float) = TextView(this).apply {
-            text = value; textSize = size; setTextColor(Color.WHITE); setPadding(0, 12, 0, 20); layout.addView(this)
-        }
-        fun button(label: String, action: () -> Unit) {
-            layout.addView(Button(this).apply { text = label; setOnClickListener { action() } })
-        }
-        text("J.A.R.V.I.S.", 28f)
-        text(getString(R.string.main_subtitle, appVersionName()), 13f)
-        status = text("", 17f)
-        attemptStatus = text("", 13f)
-        button("Avvia ciclo completo: ChatGPT Voice") { startVoiceCycle() }
-        layout.addView(Switch(this).apply {
-            text = getString(R.string.waiting_audio_enabled)
-            setTextColor(Color.WHITE)
-            isChecked = WaitingAudioSettings.enabled(this@MainActivity)
-            setOnCheckedChangeListener { _, checked ->
-                WaitingAudioSettings.setEnabled(this@MainActivity, checked)
+            MenuPage.CONFIGURATION -> {
+                button(getString(R.string.menu_guide)) { captureDrafts();navigation.begin();renderMenu(false) }
+                for(category in MenuNavigation.STEPS.dropLast(1)) button(title(category)) { openPage(category) }
             }
-        })
-        waitingAudioName = text("", 13f)
-        updateWaitingAudioName()
-        button(getString(R.string.waiting_audio_choose)) {
-            startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
-                addCategory(Intent.CATEGORY_OPENABLE)
-                type = "audio/*"
-            }, waitingAudioRequest)
-        }
-        text(getString(R.string.waiting_audio_description), 13f)
-        val audioVolumeLabel = text(getString(R.string.waiting_audio_volume,
-            WaitingAudioSettings.volume(this)), 16f)
-        layout.addView(SeekBar(this).apply {
-            id = View.generateViewId()
-            audioVolumeLabel.labelFor = id
-            max = 100
-            progress = WaitingAudioSettings.volume(this@MainActivity)
-            contentDescription = audioVolumeLabel.text
-            setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-                override fun onProgressChanged(seekBar: SeekBar, value: Int, fromUser: Boolean) {
-                    audioVolumeLabel.text = getString(R.string.waiting_audio_volume, value)
-                    seekBar.contentDescription = audioVolumeLabel.text
-                    if (fromUser) {
-                        WaitingAudioSettings.setVolume(this@MainActivity, value)
-                        WaitingAudio.preview(this@MainActivity)
-                    }
+            MenuPage.SERVICE -> {
+                for(category in listOf(MenuPage.PERMISSIONS,MenuPage.DIAGNOSTICS,MenuPage.WEB_MAINTENANCE)) button(title(category)) { openPage(category) }
+                button("Gestisci abbinamento ChatGPT") { openBridge("pair") }
+                button("Guida completa e plugin") { startActivity(Intent(this,GuideActivity::class.java)) }
+            }
+            MenuPage.PERMISSIONS -> {
+                text(permissionSummary())
+                button("Autorizza microfono e notifiche") { requestBasicPermissions() }
+                button("Imposta Jarvis come assistente") { requestAssistantRole() }
+                button("Abilita automazione Voice") { startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) }
+                button("Consenti cover sopra le altre app") { startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION,Uri.parse("package:$packageName"))) }
+                button("Permessi Android e batteria") { startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,Uri.parse("package:$packageName"))) }
+            }
+            MenuPage.CHATGPT -> buildChatPage()
+            MenuPage.GREETING -> {
+                greetingInput=menu.field("Frase del saluto",greetingDraft ?: VoiceGreetingSettings.get(this),help(page))
+                button("Salva frase") {
+                    if(VoiceGreetingSettings.save(this,greetingInput.text.toString())) {
+                        greetingInput.setText(VoiceGreetingSettings.get(this));greetingDraft=greetingInput.text.toString()
+                        Toast.makeText(this,"Frase salvata.",Toast.LENGTH_SHORT).show()
+                    } else greetingInput.error="Inserisci una frase prima di salvare."
                 }
-                override fun onStartTrackingTouch(seekBar: SeekBar) = Unit
-                override fun onStopTrackingTouch(seekBar: SeekBar) = Unit
+                button("Ripristina «ciao jarvis»") { VoiceGreetingSettings.reset(this);greetingDraft=VoiceGreetingSettings.get(this);greetingInput.setText(greetingDraft) }
+            }
+            MenuPage.AUDIO -> buildAudioPage()
+            MenuPage.COVER -> {
+                coverButton=menu.button("",help(page)) { CoverSettings.setOpaque(this,!CoverSettings.isOpaque(this));updateCoverButton() }
+                updateCoverButton()
+                button("Guida ai gesti") { startActivity(Intent(this,GuideActivity::class.java).putExtra("topic","cover")) }
+            }
+            MenuPage.LINK -> {
+                text(if(BridgeSettings.configured(this)) "Abbinamento presente" else "Collegamento da configurare")
+                button("Abbinamento e stato") { openBridge("pair") }
+                button("Maps, chiamate e WhatsApp") { openBridge("actions") }
+                button("Accesso agli appunti dal plugin") { openBridge("notes") }
+            }
+            MenuPage.SUMMARY -> text(configurationSummary())
+            MenuPage.WEB_MAINTENANCE -> buildWebMaintenance()
+            MenuPage.DIAGNOSTICS -> button("Esporta diagnostica") { exportDiagnostics() }
+        }
+        if(navigation.guided) menu.navigation(
+            getString(if(navigation.step==0) R.string.menu_exit_guide else R.string.menu_back),{menuBack()},
+            getString(if(page==MenuPage.SUMMARY) R.string.menu_finish else R.string.menu_next),{advanceGuide()})
+        updateMenuBack()
+        menu.requestFocus()
+    }
+    private fun openBridge(section:String) { startActivity(Intent(this,BridgeSetupActivity::class.java).putExtra("section",section)) }
+    private fun permissionSummary():String {
+        fun granted(p:String)=if(checkSelfPermission(p)==PackageManager.PERMISSION_GRANTED) "autorizzato" else "da autorizzare"
+        val roles=getSystemService(RoleManager::class.java)
+        return "Microfono: "+granted(Manifest.permission.RECORD_AUDIO)+
+            (if(Build.VERSION.SDK_INT>=33) "\nNotifiche: "+granted(Manifest.permission.POST_NOTIFICATIONS) else "")+
+            "\nCover sopra le app: "+(if(Settings.canDrawOverlays(this)) "autorizzata" else "da autorizzare")+
+            "\nAccessibilità: "+(if(VoiceAccessibilityService.bridgeService()!=null) "collegata" else "non collegata")+
+            "\nAssistente: "+(if(roles.isRoleHeld(RoleManager.ROLE_ASSISTANT)) "Jarvis selezionato" else "altro assistente")
+    }
+    private fun requestBasicPermissions() {
+        val missing=mutableListOf<String>()
+        if(checkSelfPermission(Manifest.permission.RECORD_AUDIO)!=PackageManager.PERMISSION_GRANTED) missing+=Manifest.permission.RECORD_AUDIO
+        if(Build.VERSION.SDK_INT>=33 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)!=PackageManager.PERMISSION_GRANTED) missing+=Manifest.permission.POST_NOTIFICATIONS
+        if(missing.isNotEmpty()) requestPermissions(missing.toTypedArray(),6) else menu.explain("Microfono e notifiche già autorizzati. Puoi passare al prossimo controllo.")
+    }
+    private fun buildChatPage() {
+        val native=NativeChatSettings.enabled(this)
+        val destination=RadioGroup(this).apply { orientation=RadioGroup.VERTICAL }
+        fun option(label:String)=RadioButton(this).apply { id=View.generateViewId();text=label;textSize=18f;minHeight=dp(64);setTextColor(Color.WHITE);menu.describe(this,help(MenuPage.CHATGPT));destination.addView(this) }
+        val webOption=option("ChatGPT nel WebView desktop")
+        val nativeOption=option("App ChatGPT del telefono")
+        destination.check(if(native) nativeOption.id else webOption.id)
+        destination.setOnCheckedChangeListener { _,checked ->
+            if(VoiceCycle.active) { destination.check(if(NativeChatSettings.enabled(this)) nativeOption.id else webOption.id);Toast.makeText(this,"Termina prima il ciclo attivo.",Toast.LENGTH_SHORT).show() }
+            else { captureDrafts();NativeChatSettings.enable(this,checked==nativeOption.id);renderMenu(false) }
+        }
+        menu.addControl(destination)
+        if(native) {
+            text("Progetto confermato: "+NativeChatSettings.project(this))
+            text(if(NativeChatSettings.id(this)==null) "Shortcut da selezionare" else "Shortcut salvato")
+            button("Seleziona collegamento e nome progetto") { selectNativeShortcut() }
+            button("Prova collegamento senza Voice") {
+                if(VoiceCycle.active) Toast.makeText(this,"Termina prima il ciclo attivo.",Toast.LENGTH_SHORT).show()
+                else runCatching { NativeChatSettings.launch(this) }.onFailure { Toast.makeText(this,it.message ?: "Collegamento non disponibile.",Toast.LENGTH_LONG).show() }
+            }
+        } else {
+            projectUrlInput=menu.field(getString(R.string.chatgpt_project_url_label),projectDraft ?: ChatGptProjectSettings.getUrl(this),getString(R.string.chatgpt_project_url_description))
+            projectUrlInput.inputType=android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_URI
+            button(getString(R.string.chatgpt_project_url_save)) { saveChatGptProjectUrl();projectDraft=projectUrlInput.text.toString() }
+        }
+        button("Apri accesso a ChatGPT") {
+            if(VoiceCycle.active) Toast.makeText(this,"Termina prima il ciclo attivo.",Toast.LENGTH_SHORT).show()
+            else if(NativeChatSettings.enabled(this)) runCatching { NativeChatSettings.launch(this) }.onFailure { Toast.makeText(this,it.message ?: "Collegamento non disponibile.",Toast.LENGTH_LONG).show() }
+            else { ChatGptPreloader.discard();startActivity(Intent(this,WebChatActivity::class.java)) }
+        }
+        button("Imposta modello e livello in ChatGPT") { openChatSettings() }
+    }
+    private fun buildAudioPage() {
+        menu.toggle(getString(R.string.waiting_audio_enabled),WaitingAudioSettings.enabled(this),help(MenuPage.AUDIO)) { WaitingAudioSettings.setEnabled(this,it) }
+        waitingAudioName=text("");updateWaitingAudioName()
+        button(getString(R.string.waiting_audio_choose)) { startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT).apply { addCategory(Intent.CATEGORY_OPENABLE);type="audio/*" },waitingAudioRequest) }
+        val volume=text(getString(R.string.waiting_audio_volume,WaitingAudioSettings.volume(this)))
+        fun slider(maximum:Int,value:Int,description:String,change:(Int)->Unit) {
+            menu.addControl(SeekBar(this).apply {
+                max=maximum;progress=value;minimumHeight=dp(56);contentDescription=description
+                menu.describe(this,help(MenuPage.AUDIO))
+                setOnSeekBarChangeListener(object:SeekBar.OnSeekBarChangeListener {
+                    override fun onProgressChanged(bar:SeekBar,n:Int,user:Boolean) { if(user) { menu.explain(help(MenuPage.AUDIO));change(n) } }
+                    override fun onStartTrackingTouch(bar:SeekBar)=Unit
+                    override fun onStopTrackingTouch(bar:SeekBar)=Unit
+                })
             })
-        }, LinearLayout.LayoutParams(-1, -2))
-        text(getString(R.string.waiting_audio_volume_preview), 13f)
-        val audioMinimumLabel = text(getString(R.string.waiting_audio_minimum,
-            WaitingAudioSettings.minimumSeconds(this)), 16f)
-        layout.addView(SeekBar(this).apply {
-            id = View.generateViewId()
-            audioMinimumLabel.labelFor = id
-            max = WaitingAudioMinimum.MAX_SECONDS
-            progress = WaitingAudioSettings.minimumSeconds(this@MainActivity)
-            contentDescription = audioMinimumLabel.text
-            setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-                override fun onProgressChanged(seekBar: SeekBar, value: Int, fromUser: Boolean) {
-                    audioMinimumLabel.text = getString(R.string.waiting_audio_minimum, value)
-                    seekBar.contentDescription = audioMinimumLabel.text
-                    if (fromUser) WaitingAudioSettings.setMinimumSeconds(this@MainActivity, value)
-                }
-                override fun onStartTrackingTouch(seekBar: SeekBar) = Unit
-                override fun onStopTrackingTouch(seekBar: SeekBar) = Unit
-            })
-        }, LinearLayout.LayoutParams(-1, -2))
-        text(getString(R.string.waiting_audio_minimum_description), 13f)
-        button("Avvia ascolto Hey Jarvis") { requestStart() }
-        button("Ferma ascolto") {
-            startService(Intent(this, WakeService::class.java).setAction("STOP"))
         }
-        button("Imposta Jarvis come assistente del telefono") { requestAssistantRole() }
-        button("Collegamento ChatGPT — stato e azioni") {
-            startActivity(Intent(this, BridgeSetupActivity::class.java))
-        }
-        val destination = RadioGroup(this).apply { orientation = RadioGroup.VERTICAL }
-        val webOption = RadioButton(this).apply { id = View.generateViewId(); text = "ChatGPT nel WebView" }
-        val nativeOption = RadioButton(this).apply { id = View.generateViewId(); text = "App ChatGPT del telefono (shortcut)" }
-        destination.addView(webOption)
-        destination.addView(nativeOption)
-        destination.check(if (NativeChatSettings.enabled(this)) nativeOption.id else webOption.id)
-        destination.setOnCheckedChangeListener { _, checked ->
-            if (VoiceCycle.active) {
-                destination.check(if (NativeChatSettings.enabled(this)) nativeOption.id else webOption.id)
-                Toast.makeText(this, "Termina prima il ciclo attivo.", Toast.LENGTH_SHORT).show()
-            } else NativeChatSettings.enable(this, checked == nativeOption.id)
-        }
-        layout.addView(destination)
-        button("Seleziona collegamento ChatGPT") { selectNativeShortcut() }
-        button("Prova collegamento app ChatGPT (senza Voice)") {
-            if (VoiceCycle.active) Toast.makeText(this, "Termina prima il ciclo attivo.", Toast.LENGTH_SHORT).show()
-            else runCatching { NativeChatSettings.launch(this) }.onFailure {
-                Toast.makeText(this, it.message ?: "Collegamento non disponibile.", Toast.LENGTH_LONG).show()
-            }
-        }
-        button("Configura accesso a ChatGPT") {
-            if (NativeChatSettings.enabled(this)) {
-                runCatching { NativeChatSettings.launch(this) }.onFailure {
-                    Toast.makeText(this, it.message ?: "Collegamento non disponibile.", Toast.LENGTH_LONG).show()
-                }
-            } else {
-                ChatGptPreloader.discard()
-                startActivity(Intent(this, WebChatActivity::class.java))
-            }
-        }
-        button("Imposta modello e livello ChatGPT") { openChatSettings() }
+        slider(100,WaitingAudioSettings.volume(this),"Volume audio di avvio") { n -> volume.text=getString(R.string.waiting_audio_volume,n);WaitingAudioSettings.setVolume(this,n);WaitingAudio.preview(this) }
+        val minimum=text(getString(R.string.waiting_audio_minimum,WaitingAudioSettings.minimumSeconds(this)))
+        slider(WaitingAudioMinimum.MAX_SECONDS,WaitingAudioSettings.minimumSeconds(this),"Tempo minimo audio di avvio") { n -> minimum.text=getString(R.string.waiting_audio_minimum,n);WaitingAudioSettings.setMinimumSeconds(this,n) }
+    }
+    private fun buildWebMaintenance() {
         button(getString(R.string.chatgpt_webview_clear_cache)) {
-            if (ChatGptPreloader.clearResourceCache(this, contentRoot)) {
-                Toast.makeText(this, getString(R.string.chatgpt_webview_cache_cleared), Toast.LENGTH_SHORT).show()
-            } else {
-                Toast.makeText(this, getString(R.string.chatgpt_webview_cache_clear_failed), Toast.LENGTH_SHORT).show()
-            }
+            Toast.makeText(this,if(ChatGptPreloader.clearResourceCache(this,contentRoot)) R.string.chatgpt_webview_cache_cleared else R.string.chatgpt_webview_cache_clear_failed,Toast.LENGTH_SHORT).show()
         }
         button(getString(R.string.chatgpt_webview_clear_data)) {
-            android.app.AlertDialog.Builder(this)
-                .setTitle(R.string.chatgpt_webview_clear_data_title)
-                .setMessage(R.string.chatgpt_webview_clear_data_confirmation)
-                .setNegativeButton(android.R.string.cancel, null)
-                .setPositiveButton(R.string.chatgpt_webview_clear_data_confirm) { _, _ ->
-                    val accepted = ChatGptPreloader.clearChatGptData(this, contentRoot) { success ->
-                        val message = if (success) R.string.chatgpt_webview_data_cleared
-                            else R.string.chatgpt_webview_data_clear_failed
-                        Toast.makeText(this, getString(message), Toast.LENGTH_LONG).show()
-                    }
-                    if (!accepted) {
-                        Toast.makeText(this, getString(R.string.chatgpt_webview_data_clear_failed), Toast.LENGTH_LONG).show()
-                    }
-                }
-                .show()
+            android.app.AlertDialog.Builder(this).setTitle(R.string.chatgpt_webview_clear_data_title).setMessage(R.string.chatgpt_webview_clear_data_confirmation)
+                .setNegativeButton(android.R.string.cancel,null).setPositiveButton(R.string.chatgpt_webview_clear_data_confirm) { _,_ ->
+                    val accepted=ChatGptPreloader.clearChatGptData(this,contentRoot) { success -> Toast.makeText(this,if(success) R.string.chatgpt_webview_data_cleared else R.string.chatgpt_webview_data_clear_failed,Toast.LENGTH_LONG).show() }
+                    if(!accepted) Toast.makeText(this,R.string.chatgpt_webview_data_clear_failed,Toast.LENGTH_LONG).show()
+                }.showLarge()
         }
-        text(getString(R.string.chatgpt_project_url_label), 16f)
-        projectUrlInput = EditText(this).apply {
-            setSingleLine(true)
-            inputType = android.text.InputType.TYPE_CLASS_TEXT or
-                android.text.InputType.TYPE_TEXT_VARIATION_URI
-            setHorizontallyScrolling(true)
-            hint = getString(R.string.chatgpt_project_url_hint)
-            setText(ChatGptProjectSettings.getUrl(this@MainActivity))
-            contentDescription = "Indirizzo del progetto ChatGPT usato da Jarvis"
+    }
+    private fun configurationSummary()=permissionSummary()+
+        "\n\nChatGPT: "+(if(NativeChatSettings.enabled(this)) "app nativa · "+NativeChatSettings.project(this) else "WebView desktop")+
+        "\nSaluto: "+VoiceGreetingSettings.get(this)+
+        "\nAudio di avvio: "+(if(WaitingAudioSettings.enabled(this)) "attivo" else "disattivato")+" · "+WaitingAudioSettings.volume(this)+"% · minimo "+WaitingAudioSettings.minimumSeconds(this)+" s"+
+        "\nCover: "+(if(CoverSettings.isOpaque(this)) "opaca" else "semitrasparente")+
+        "\nCollegamento: "+(if(BridgeSettings.enabled(this)) "attivo" else "disattivato")+
+        "\nAzioni telefono: "+(if(BridgeSettings.actionsEnabled(this)) "consentite" else "disattivate")+
+        "\nAppunti dal plugin: "+(if(PhoneNotes.enabled(this)) "consentiti" else "disattivati")
+    private fun advanceGuide() {
+        if(navigation.current==MenuPage.GREETING) {
+            if(!VoiceGreetingSettings.save(this,greetingInput.text.toString())) { greetingInput.error="Inserisci una frase valida o ripristina quella predefinita.";return }
+            greetingDraft=VoiceGreetingSettings.get(this)
         }
-        layout.addView(projectUrlInput, LinearLayout.LayoutParams(-1, -2))
-        text(getString(R.string.chatgpt_project_url_description), 13f)
-        button(getString(R.string.chatgpt_project_url_save)) { saveChatGptProjectUrl() }
-        text("Frase da inviare dopo l’attivazione di Voice", 16f)
-        greetingInput = EditText(this).apply {
-            setSingleLine(true)
-            inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_FLAG_CAP_SENTENCES
-            hint = VoiceGreetingSettings.DEFAULT_PHRASE
-            setText(VoiceGreetingSettings.get(this@MainActivity))
-            contentDescription = "Frase inviata all’attivazione di Voice"
+        if(navigation.current==MenuPage.CHATGPT && !NativeChatSettings.enabled(this)) {
+            if(!ChatGptProjectSettings.isValidProjectUrl(projectUrlInput.text.toString().trim())) { projectUrlInput.error=getString(R.string.chatgpt_project_url_invalid);return }
+            if(projectUrlInput.text.toString().trim()!=ChatGptProjectSettings.getUrl(this)) saveChatGptProjectUrl()
         }
-        layout.addView(greetingInput, LinearLayout.LayoutParams(-1, -2))
-        text("La frase salvata viene usata alla prossima attivazione. Lascia il campo vuoto per mantenere quella attuale.", 13f)
-        button("Salva frase") {
-            if (VoiceGreetingSettings.save(this, greetingInput.text.toString())) {
-                greetingInput.setText(VoiceGreetingSettings.get(this))
-                Toast.makeText(this, "Frase salvata.", Toast.LENGTH_SHORT).show()
-            } else {
-                Toast.makeText(this, "Inserisci una frase prima di salvare.", Toast.LENGTH_SHORT).show()
-            }
-        }
-        button("Ripristina «ciao jarvis»") {
-            VoiceGreetingSettings.reset(this)
-            greetingInput.setText(VoiceGreetingSettings.get(this))
-            Toast.makeText(this, "Frase predefinita ripristinata.", Toast.LENGTH_SHORT).show()
-        }
-        button("Abilita automazione Voice") {
-            startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
-        }
-        button("Consenti HUD sopra le altre app") {
-            startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:$packageName")))
-        }
-        coverButton = Button(this).apply {
-            setOnClickListener {
-                CoverSettings.setOpaque(this@MainActivity, !CoverSettings.isOpaque(this@MainActivity))
-                updateCoverButton()
-            }
-        }
-        layout.addView(coverButton)
-        updateCoverButton()
-        button("Esporta diagnostica") { exportDiagnostics() }
-        button("Permessi e batteria") {
-            startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:$packageName")))
-        }
-        text("Jarvis riconosce ‘Hey Jarvis’ sul telefono e avvia una nuova chat ChatGPT con Voice. Per iniziare, accedi a ChatGPT e abilita i due permessi richiesti per l’automazione: Accessibilità e HUD.", 14f)
-        text("Per l’ascolto al riavvio, imposta Jarvis come assistente predefinito. Questa scelta sostituisce l’assistente attuale per i richiami di sistema.", 14f)
-        contentRoot = FrameLayout(this)
-        homeScreen = ScrollView(this).apply { addView(layout) }
-        contentRoot.addView(homeScreen,
-            FrameLayout.LayoutParams(-1, -1))
-        setContentView(contentRoot)
-        handler.post { requestStart() }
+        captureDrafts();navigation.next();renderMenu(false)
+    }
+    private fun menuBack():Boolean {
+        if(chatSettingsLayer!=null) { closeChatSettings();return true }
+        captureDrafts()
+        if(!navigation.back()) return false
+        renderMenu(false);return true
+    }
+    private fun updateMenuBack() {
+        if(Build.VERSION.SDK_INT<33) return
+        val needed=chatSettingsLayer!=null || navigation.canBack
+        if(needed && settingsBackCallback==null) {
+            val callback=OnBackInvokedCallback { menuBack() };settingsBackCallback=callback
+            onBackInvokedDispatcher.registerOnBackInvokedCallback(OnBackInvokedDispatcher.PRIORITY_DEFAULT,callback)
+        } else if(!needed) { settingsBackCallback?.let { onBackInvokedDispatcher.unregisterOnBackInvokedCallback(it) };settingsBackCallback=null }
+    }
+    override fun onSaveInstanceState(outState:Bundle) {
+        captureDrafts();outState.putStringArrayList("menu_path",ArrayList(navigation.savedPath()));outState.putInt("menu_step",navigation.step)
+        outState.putString("greeting_draft",greetingDraft);outState.putString("project_draft",projectDraft)
+        super.onSaveInstanceState(outState)
     }
 
     private fun appVersionName(): String = runCatching {
@@ -292,17 +324,17 @@ class MainActivity : Activity() {
         }
         val shortcuts = try { NativeChatSettings.shortcuts(this) } catch (e: RuntimeException) {
             android.app.AlertDialog.Builder(this).setMessage(e.message ?: "Shortcut non accessibili.")
-                .setPositiveButton("OK", null).show()
+                .setPositiveButton("OK", null).showLarge()
             return
         }
         if (shortcuts.isEmpty()) {
             android.app.AlertDialog.Builder(this)
                 .setMessage("ChatGPT non espone collegamenti accessibili a Jarvis. Crea il collegamento al progetto nell'app ChatGPT e verifica che Jarvis sia l'assistente selezionato. Nessun altro collegamento verrà aperto al suo posto.")
-                .setPositiveButton("OK", null).show()
+                .setPositiveButton("OK", null).showLarge()
             return
         }
         android.app.AlertDialog.Builder(this).setTitle("Collegamento al progetto ChatGPT")
-            .setItems(shortcuts.map { it.shortLabel?.toString().orEmpty() }.toTypedArray()) { _, index ->
+            .setAdapter(largeMenuChoices(this,shortcuts.map { it.shortLabel?.toString().orEmpty() })) { _, index ->
                 val selected = shortcuts[index]
                 val projectName = EditText(this).apply {
                     setSingleLine(true)
@@ -323,8 +355,8 @@ class MainActivity : Activity() {
                         }
                     }
                 }
-                dialog.show()
-            }.setNegativeButton("Annulla", null).show()
+                dialog.showLarge()
+            }.setNegativeButton("Annulla", null).showLarge()
     }
 
     private fun requestStart() {
@@ -428,27 +460,19 @@ class MainActivity : Activity() {
         homeScreen.visibility = View.GONE
         contentRoot.addView(layer, FrameLayout.LayoutParams(-1, -1))
         chatSettingsLayer = layer
-        if (Build.VERSION.SDK_INT >= 33) {
-            val callback = OnBackInvokedCallback { closeChatSettings() }
-            settingsBackCallback = callback
-            onBackInvokedDispatcher.registerOnBackInvokedCallback(
-                OnBackInvokedDispatcher.PRIORITY_DEFAULT, callback)
-        }
+        updateMenuBack()
         State.setAttempt(this, "Impostazioni aperte nel WebView usato dal ciclo wake; torna a Jarvis senza chiudere la pagina.")
     }
 
     private fun closeChatSettings() {
         val layer = chatSettingsLayer ?: return
-        if (Build.VERSION.SDK_INT >= 33) settingsBackCallback?.let {
-            onBackInvokedDispatcher.unregisterOnBackInvokedCallback(it)
-        }
-        settingsBackCallback = null
         if (!ChatGptPreloader.hideConfiguration(contentRoot)) {
             Toast.makeText(this, "Non riesco a ripristinare la pagina ChatGPT; lascio la schermata aperta.", Toast.LENGTH_SHORT).show()
             return
         }
         contentRoot.removeView(layer)
         chatSettingsLayer = null
+        updateMenuBack()
         homeScreen.visibility = View.VISIBLE
         State.setAttempt(this, "Pagina ChatGPT mantenuta nel preloader; il prossimo ciclo wake riutilizza questo WebView.")
     }
@@ -457,7 +481,7 @@ class MainActivity : Activity() {
 
     @SuppressLint("GestureBackNavigation")
     override fun onBackPressed() {
-        if (chatSettingsLayer != null) closeChatSettings() else super.onBackPressed()
+        if (!menuBack()) super.onBackPressed()
     }
 
     private fun startVoiceCycle() {
@@ -485,6 +509,7 @@ class MainActivity : Activity() {
     }
     override fun onRequestPermissionsResult(code: Int, permissions: Array<out String>, results: IntArray) {
         super.onRequestPermissionsResult(code, permissions, results)
+        if (code == 6) { renderMenu();return }
         if (code == assistantPermissionRequest) {
             val accepted = results.isNotEmpty() && results.all { it == PackageManager.PERMISSION_GRANTED }
             if (accepted) requestAssistantRole()
@@ -557,6 +582,7 @@ class MainActivity : Activity() {
     }
 
     private fun updateCoverButton() {
+        if (!::coverButton.isInitialized) return
         coverButton.text = if (CoverSettings.isOpaque(this)) {
             "Copertura: opaca\nPassa a semitrasparente"
         } else {
@@ -573,6 +599,7 @@ class MainActivity : Activity() {
 
     override fun onResume() {
         super.onResume()
+        if (::menu.isInitialized && chatSettingsLayer==null) renderMenu()
         runCatching { BridgeLink.owner(this,"main",true) }
         updateCoverButton()
         if (::contentRoot.isInitialized && !VoiceCycle.active) prepareChatGpt()
