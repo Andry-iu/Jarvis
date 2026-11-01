@@ -1,3 +1,9 @@
+# Layout .85 — due pulsanti per riga
+
+Nuovo gruppo autorizzato dopo conferma dell’utente che .84 funziona. Tutti i pulsanti dei menu principali, categorie, wizard, collegamento, guida e appunti usano riquadri su due colonne. Un pulsante dispari occupa metà riga. Controlli consecutivi sono accoppiati; testo/campi/selettori separano i gruppi. Indietro rimane da solo su una riga intera, rettangolare e ultimo nell’elenco scorrevole, mai in un footer fisso. I moduli e le istruzioni inferiori conservano la larghezza disponibile. L’UI Android/ChatGPT esterna e i dialoghi standard mantengono la loro disposizione.
+
+Ogni tasto è quadrato con etichette normali; un testo molto lungo o ingrandito aumenta l’altezza della coppia senza tagliare il contenuto. I due tasti della stessa riga mantengono altezza e larghezza equivalenti. La correzione hideMenuKeyboard .84 e i prerequisiti manuali restano invariati; nessun cambio a Voice, cover, gesti o ripresa wake.
+
 # Correzione .84 — regressione avvio e Indietro
 
 Indietro è ora l’ultimo pulsante della lista superiore, uguale agli altri e dentro lo scorrimento. Non è una barra fissa: la successiva precisazione dell’utente sostituisce l’ipotesi iniziale di footer. Nel wizard anche Avanti/Termina sono normali pulsanti prima di Indietro; sul primo passo Indietro esce al menu chiamante. Due aree e categorie conservate.

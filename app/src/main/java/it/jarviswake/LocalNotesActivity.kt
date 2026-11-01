@@ -18,7 +18,6 @@ import android.window.OnBackInvokedDispatcher
 /** Local viewing/editing is independent of pairing, networking and microphone/cover state. */
 class LocalNotesActivity:Activity() {
     private val main=Handler(Looper.getMainLooper())
-    private lateinit var rows:LinearLayout
     private lateinit var state:TextView
     private lateinit var menu:SplitMenuScreen
     private var generation=0
@@ -41,7 +40,6 @@ class LocalNotesActivity:Activity() {
         menu.importantForAutofill=View.IMPORTANT_FOR_AUTOFILL_NO_EXCLUDE_DESCENDANTS
         state=menu.text("Caricamento appunti locali…")
         menu.button("Nuovo appunto") { editor(null) }
-        rows=LinearLayout(this).apply { orientation=LinearLayout.VERTICAL;menu.addControl(this) }
         setContentView(menu)
         Thread({
             val result=runCatching {
@@ -54,7 +52,7 @@ class LocalNotesActivity:Activity() {
                 if(isFinishing || isDestroyed || request!=generation) return@post
                 result.onSuccess { notes ->
                     state.text=if(notes.isEmpty()) "Nessun appunto locale." else "Appunti locali: ${notes.size}"
-                    for(n in notes) rows.addView(menu.makeButton(n.title) { read(n.id) },LinearLayout.LayoutParams(-1,-2).apply { bottomMargin=(8*resources.displayMetrics.density).toInt() })
+                    for(n in notes) menu.button(n.title) { read(n.id) }
                 }.onFailure { state.text="Archivio non disponibile. Nessun appunto è stato cancellato o ricreato." }
             }
         },"Jarvis-notes-list").start()
@@ -70,18 +68,26 @@ class LocalNotesActivity:Activity() {
     private fun editor(note:LocalNote?) {
         generation++;val request=generation;editing=true
         menu=SplitMenuScreen(this,if(note==null) "Nuovo appunto" else "Modifica appunto · r${note.revision}",
-            "Scrivi titolo (massimo 80 caratteri) e testo (massimo 4000), poi Salva. Il contenuto viene sostituito con quello scritto qui. Torna all’elenco senza salvare per abbandonare le modifiche. In caso di conflitto o esito incerto, rileggi l’appunto prima di provare ancora.") { reload() }
+            "Scrivi titolo (massimo 80 caratteri) e testo (massimo 4000), poi Salva. Per rimuovere un appunto già salvato usa Elimina appunto e conferma: non è annullabile. Indietro torna all’elenco senza salvare. In caso di conflitto o esito incerto, rileggi l’appunto prima di provare ancora.") { reload() }
         menu.importantForAutofill=View.IMPORTANT_FOR_AUTOFILL_NO_EXCLUDE_DESCENDANTS
         val title=menu.field("Titolo",note?.title ?: "","Il titolo identifica l’appunto. Un altro appunto con lo stesso titolo non viene sovrascritto implicitamente.")
         val body=menu.field("Testo dell’appunto",note?.text ?: "","Salva conserva esattamente questo testo nell’archivio locale. Verifica il contenuto prima di confermare.",true)
         val message=menu.text("")
         var save:Button?=null
+        var delete:Button?=null
+        var committing=false
+        var confirmation:AlertDialog?=null
+        fun beginCommit() {
+            committing=true;save?.isEnabled=false;delete?.isEnabled=false
+            title.isEnabled=false;body.isEnabled=false
+        }
         save=menu.button("Salva appunto") {
+            if(committing) return@button
             val t=title.text.toString().trim();val b=body.text.toString()
             if(!LocalNotesRepository.validTitle(t) || !LocalNotesRepository.validBody(b)) {
                 message.text="Inserisci titolo e testo entro i limiti indicati."
             } else {
-                save?.isEnabled=false
+                beginCommit()
                 Thread({
                     val saved=runCatching { PhoneNotes.book(this).save(note?.id ?: "",t,b,note?.revision ?: 0) }
                     main.post {
@@ -93,6 +99,26 @@ class LocalNotesActivity:Activity() {
                     }
                 },"Jarvis-notes-save").start()
             }
+        }
+        if(note!=null) delete=menu.button("Elimina appunto") {
+            if(committing || confirmation?.isShowing==true) return@button
+            confirmation=AlertDialog.Builder(this).setTitle("Eliminare questo appunto?")
+                .setMessage("L’appunto aperto verrà eliminato dal telefono. Non puoi annullare questa operazione. Le modifiche non salvate andranno perse.")
+                .setNegativeButton("Annulla",null).setPositiveButton("Elimina") { _,_ ->
+                    if(committing || request!=generation || isFinishing || isDestroyed) return@setPositiveButton
+                    beginCommit()
+                    Thread({
+                        val deleted=runCatching { PhoneNotes.book(this).delete(note.id,note.revision) }
+                        main.post {
+                            if(isFinishing || isDestroyed || request!=generation) return@post
+                            deleted.onSuccess { reload() }.onFailure { e ->
+                                message.text=if(e is NotesFailure && e.code=="note_conflict")
+                                    "L’appunto è cambiato. Torna all’elenco e rileggilo prima di eliminarlo."
+                                else "Eliminazione non confermata. Torna all’elenco e verifica prima di riprovare."
+                            }
+                        }
+                    },"Jarvis-notes-delete").start()
+                }.showLarge()
         }
         setContentView(menu);menu.requestFocus()
     }

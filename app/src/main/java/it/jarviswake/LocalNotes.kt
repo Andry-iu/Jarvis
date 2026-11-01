@@ -35,6 +35,17 @@ internal class LocalNotesRepository(private val storage:NotesStorage,private val
         if(!BridgeProtocol.validId(id)) throw NotesFailure("invalid_note")
         return load().find { it.id==id } ?: throw NotesFailure("note_not_found")
     }
+    /** Local deletion uses the same lock/revision as saves, including remote updates. */
+    @Synchronized fun delete(id:String,expectedRevision:Int) {
+        if(!BridgeProtocol.validId(id) || expectedRevision<1) throw NotesFailure("invalid_note")
+        val notes=load()
+        val previous=notes.find { it.id==id } ?: throw NotesFailure("note_not_found")
+        if(previous.revision!=expectedRevision) throw NotesFailure("note_conflict")
+        val updated=notes.filter { it.id!=id }
+        storage.store(updated)
+        // Absence alone is insufficient: unrelated records must also survive readback.
+        if(load().sortedBy { it.id }!=updated.sortedBy { it.id }) throw NotesFailure("outcome_uncertain")
+    }
     @Synchronized fun save(id:String,title:String,text:String,expectedRevision:Int,allowed:()->Boolean={true}):LocalNote {
         if(!validTitle(title) || !validBody(text) || expectedRevision<0 || (id.isEmpty() && expectedRevision!=0) ||
             (id.isNotEmpty() && (!BridgeProtocol.validId(id) || expectedRevision==0))) throw NotesFailure("invalid_note")

@@ -1,3 +1,9 @@
+# Eliminazione locale .85
+
+Uso quotidiano → Appunti locali → apri un appunto salvato → **Elimina appunto** → **Elimina**. Annulla lascia l’archivio invariato. Il pulsante è accanto a Salva appunto; Indietro occupa tutta l’ultima riga. Un nuovo appunto non ancora salvato non ha Elimina: Indietro lo abbandona senza creare record.
+
+La cancellazione non è annullabile. Rimuove soltanto il record locale scelto, non altre note o copie già presenti nelle conversazioni/risposte cifrate. Non aggiunge delete_note al plugin. Il repository usa lo stesso lock di UI/salvataggi remoti, confronta la revisione aperta e rifiuta un aggiornamento concorrente; sostituzione atomica e rilettura devono confermare l’assenza del record e la conservazione degli altri. Dopo conflitto, errore o esito incerto i tasti di scrittura restano disabilitati: Indietro e rilettura dell’elenco prima di una nuova decisione. Nessun retry automatico, nessun contenuto nei log.
+
 # Accesso dal menu .83
 
 Uso quotidiano → Appunti locali per elenco/nuovo/modifica, con comandi sopra e istruzioni sotto. Consenso remoto: Configurazione → Collegamento e azioni → Accesso agli appunti dal plugin → Consenti appunti da ChatGPT. Archivio e protocollo .82 invariati; dettagli storici qui sotto.
@@ -18,7 +24,7 @@ Esempi di richieste, con contenuto scelto dall’utente:
 - «Salva un appunto intitolato Preferenze: [testo].»
 - «Rileggi Preferenze e aggiorna [indicazione], conservando il resto.»
 
-Il plugin elenca i titoli con `jarviswake_list_notes` (offset0 e pagine successive fino a next_offset=null), legge il singolo contenuto con `jarviswake_read_note` e salva con `jarviswake_save_note`. Per creare: note_id vuoto e expected_revision0. Per aggiornare: ID e revisione dell’appunto appena letto; il testo è una sostituzione integrale, quindi preservare le parti non interessate dalla richiesta. Un titolo già presente, anche con maiuscole diverse, non viene duplicato o sovrascritto implicitamente. Dopo `note_conflict` rileggere e riconciliare con la richiesta, senza ignorare il conflitto. Nessuna cancellazione, condivisione o sincronizzazione di un archivio cloud è aggiunta.
+Il plugin elenca i titoli con `jarviswake_list_notes` (offset0 e pagine successive fino a next_offset=null), legge il singolo contenuto con `jarviswake_read_note` e salva con `jarviswake_save_note`. Per creare: note_id vuoto e expected_revision0. Per aggiornare: ID e revisione dell’appunto appena letto; il testo è una sostituzione integrale, quindi preservare le parti non interessate dalla richiesta. Un titolo già presente, anche con maiuscole diverse, non viene duplicato o sovrascritto implicitamente. Dopo `note_conflict` rileggere e riconciliare con la richiesta, senza ignorare il conflitto. Nessun comando remoto di cancellazione, condivisione o sincronizzazione di un archivio cloud è aggiunto. La cancellazione locale nel dettaglio è disponibile dalla .85, come descritto sopra.
 
 `note_saved` viene restituito solo dopo scrittura e rilettura del record locale. `pending`, `response_expired`, `outcome_uncertain`, `notes_unavailable` o `notes_disabled` non provano salvataggio o lettura. I comandi mantengono claim/UUIDv4/consumo prima dell’esecuzione della .81. Dopo esito incerto verificare elenco/contenuto prima di una nuova scrittura: un nuovo ID non è un retry innocuo. Nessun clic di UI, audio o cover è necessario per gli appunti.
 

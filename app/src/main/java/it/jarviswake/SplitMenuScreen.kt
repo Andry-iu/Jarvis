@@ -8,6 +8,7 @@ import android.graphics.drawable.GradientDrawable
 import android.graphics.drawable.RippleDrawable
 import android.view.Gravity
 import android.view.View
+import android.view.ViewGroup
 import android.view.WindowInsets
 import android.widget.*
 
@@ -16,6 +17,7 @@ internal class SplitMenuScreen(context:Context,title:String,instructions:String,
     val controls=LinearLayout(context).apply { orientation=VERTICAL;setPadding(dp(16),dp(8),dp(16),dp(12)) }
     private val upper=LinearLayout(context).apply { orientation=VERTICAL }
     private var backControl:Button?=null
+    private var buttonGroup:MenuButtonGrid?=null
     private val guideTitle=TextView(context)
     private val guideBody=TextView(context)
     private val lower=LinearLayout(context).apply { orientation=VERTICAL;setPadding(dp(20),dp(14),dp(20),dp(12)) }
@@ -37,7 +39,7 @@ internal class SplitMenuScreen(context:Context,title:String,instructions:String,
         lower.addView(ScrollView(context).apply { addView(guide) },LayoutParams(-1,-1))
         addView(lower,LayoutParams(-1,0,0.35f))
         if(back!=null) {
-            backControl=makeButton(context.getString(R.string.menu_back)) { back() }
+            backControl=makeButton(context.getString(R.string.menu_back),square=false) { back() }
             controls.addView(backControl,LayoutParams(-1,-2).apply { bottomMargin=dp(8) })
         }
         explain(context.getString(R.string.menu_instructions),instructions)
@@ -61,10 +63,12 @@ internal class SplitMenuScreen(context:Context,title:String,instructions:String,
         text=value;textSize=size;setTextColor(Color.WHITE);setPadding(0,dp(8),0,dp(10));addControl(this)
     }
     fun addControl(view:View) {
+        buttonGroup=null
         val before=backControl?.let { controls.indexOfChild(it) } ?: -1
         controls.addView(view,before,LayoutParams(-1,-2).apply { bottomMargin=dp(8) })
     }
-    fun makeButton(label:String,action:()->Unit)=Button(context).apply {
+    private fun makeButton(label:String,square:Boolean=true,action:()->Unit):Button =
+        (if(square) MenuTileButton(context) else Button(context)).apply {
         text=label;textSize=18f;isAllCaps=false;isSingleLine=false;ellipsize=null;minHeight=dp(64);minimumHeight=dp(64)
         gravity=Gravity.CENTER;setPadding(dp(14),dp(12),dp(14),dp(12));setTextColor(Color.WHITE)
         val shape=GradientDrawable().apply { cornerRadius=dp(14).toFloat();setColor(Color.rgb(24,65,85));setStroke(dp(1),Color.rgb(51,119,142)) }
@@ -74,7 +78,8 @@ internal class SplitMenuScreen(context:Context,title:String,instructions:String,
     fun button(label:String,help:String?=null,action:()->Unit):Button {
         val button=makeButton(label) { if(help!=null) explain(label,help);action() }
         if(help!=null) describe(button,help)
-        addControl(button);return button
+        val group=buttonGroup ?: MenuButtonGrid(context).also { addControl(it);buttonGroup=it }
+        group.addTile(button);return button
     }
     fun toggle(label:String,value:Boolean,help:String,change:(Boolean)->Unit)=Switch(context).apply {
         text=label;textSize=18f;setTextColor(Color.WHITE);minHeight=dp(64);setPadding(dp(8),dp(10),dp(8),dp(10))
@@ -92,6 +97,40 @@ internal class SplitMenuScreen(context:Context,title:String,instructions:String,
     }
     fun navigation(previous:String,back:()->Unit,next:String,forward:()->Unit) {
         backControl?.apply { text=previous;setOnClickListener { back() } }
-        addControl(makeButton(next,forward))
+        button(next,action=forward)
+    }
+}
+
+/** A half-width action keeps its place even when it is the only item in the last row. */
+private class MenuButtonGrid(context:Context):LinearLayout(context) {
+    private var row:LinearLayout?=null
+    private var emptySlot:View?=null
+    private fun dp(n:Int)=(n*resources.displayMetrics.density).toInt()
+    init { orientation=VERTICAL }
+    fun addTile(button:Button) {
+        val current=row
+        if(current!=null) {
+            current.removeView(emptySlot)
+            current.addView(button,LayoutParams(0,ViewGroup.LayoutParams.MATCH_PARENT,1f))
+            row=null;emptySlot=null
+        } else {
+            val next=LinearLayout(context).apply { orientation=HORIZONTAL }
+            next.addView(button,LayoutParams(0,ViewGroup.LayoutParams.MATCH_PARENT,1f).apply { rightMargin=dp(8) })
+            val spacer=View(context)
+            next.addView(spacer,LayoutParams(0,0,1f))
+            addView(next,LayoutParams(-1,-2).apply { bottomMargin=dp(8) })
+            row=next;emptySlot=spacer
+        }
+    }
+}
+
+/** Square at normal font size; expand rather than clip a long or enlarged label. */
+private class MenuTileButton(context:Context):Button(context) {
+    override fun onMeasure(widthMeasureSpec:Int,heightMeasureSpec:Int) {
+        super.onMeasure(widthMeasureSpec,heightMeasureSpec)
+        if(MeasureSpec.getMode(heightMeasureSpec)!=MeasureSpec.EXACTLY) {
+            val height=maxOf(measuredWidth,measuredHeight)
+            super.onMeasure(widthMeasureSpec,MeasureSpec.makeMeasureSpec(height,MeasureSpec.EXACTLY))
+        }
     }
 }

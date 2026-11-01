@@ -1,3 +1,7 @@
+# Guida .85 / 107
+
+Stesso plugin/origine/abbinamento. La guida descrive pulsanti a coppie con Indietro largo in fondo e cancellazione locale degli appunti con conferma. Tool note invariati: elenco, lettura, salvataggio; nessun delete remoto. Una cancellazione locale non rimuove copie già presenti nelle conversazioni. Fonte canonica docs/guida-jarvis.json, rigenerata con sync-guide.py.
+
 # Aggiornamento guida .84
 
 Stesso jarviswake_guide, stessa origine e stessi abbinamenti: solo contenuto/versione della guida aggiornati con Indietro ultimo nell’elenco e indicazioni su correzione avvio/stato ascolto.19 argomenti/0.5.84/106. Nessuna modifica alle operazioni telefono o ai loro esiti;27 test server passati.

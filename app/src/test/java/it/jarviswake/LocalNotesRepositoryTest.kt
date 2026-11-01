@@ -90,4 +90,47 @@ class LocalNotesRepositoryTest {
         start.countDown();threads.forEach { it.join(3000);assertFalse(it.isAlive) }
         assertEquals(listOf("note_conflict","saved"),outcomes.sorted());assertEquals(2,r.read(n.id).revision)
     }
+    @Test fun deleteReadbackRetainsOtherNotesAndSurvivesRepositoryReopen() {
+        val s=Memory();val r=repository(s)
+        val a=r.save("","Da eliminare","Testo",0);val b=r.save("","Da conservare","Altro testo",0)
+        r.delete(a.id,a.revision)
+        code("note_not_found") { repository(s).read(a.id) }
+        assertEquals(listOf(b),repository(s).list(0).first)
+    }
+    @Test fun staleDeleteAndInvalidIdentityNeverWrite() {
+        val s=Memory();val r=repository(s);val n=r.save("","Titolo","Prima",0)
+        val updated=r.save(n.id,"Titolo","Dopo",1);val writes=s.writes
+        code("note_conflict") { r.delete(n.id,1) }
+        code("invalid_note") { r.delete(n.id,0) }
+        code("invalid_note") { r.delete("invalid",1) }
+        code("note_not_found") { r.delete(UUID.randomUUID().toString(),1) }
+        assertEquals(writes,s.writes);assertEquals(updated,r.read(n.id))
+    }
+    @Test fun failedDeletePreservesArchiveAndUncertainDeleteIsNotAcknowledged() {
+        val s=Memory();val r=repository(s);val n=r.save("","Titolo","Originale",0)
+        s.fail=true
+        assertThrows(IllegalStateException::class.java) { r.delete(n.id,1) }
+        assertEquals(n,r.read(n.id));s.fail=false;s.drop=true
+        code("outcome_uncertain") { r.delete(n.id,1) };assertEquals(n,r.read(n.id))
+    }
+    @Test fun deleteReadbackMustAlsoPreserveUnrelatedRecords() {
+        val s=Memory();val r=repository(s);val a=r.save("","Uno","Primo",0);r.save("","Due","Secondo",0)
+        val broken=object:NotesStorage {
+            override fun load()=s.load()
+            override fun store(notes:List<LocalNote>) { s.notes=emptyList() }
+        }
+        code("outcome_uncertain") { LocalNotesRepository(broken,{1L}) { UUID.randomUUID().toString() }.delete(a.id,1) }
+    }
+    @Test fun deletionAndConcurrentUpdateCannotBothCommit() {
+        val s=Memory();val r=repository(s);val n=r.save("","Titolo","Originale",0)
+        val start=CountDownLatch(1);val outcomes=CopyOnWriteArrayList<String>()
+        val actions=listOf<()->Unit>({r.delete(n.id,1);outcomes.add("deleted")},
+            {r.save(n.id,"Titolo","Aggiornato",1);outcomes.add("saved")})
+        val threads=actions.map { action -> Thread {
+            start.await();try { action() } catch(e:NotesFailure) { outcomes.add(e.code) }
+        }.apply { start() } }
+        start.countDown();threads.forEach { it.join(3000);assertFalse(it.isAlive) }
+        assertTrue(outcomes.sorted()==listOf("deleted","note_not_found") || outcomes.sorted()==listOf("note_conflict","saved"))
+        assertEquals(2,s.writes)
+    }
 }
