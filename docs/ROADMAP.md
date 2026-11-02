@@ -1,3 +1,5 @@
+0.5.91 / 113 — gestione Preferiti JarvisWake da chat: elenco, aggiunta da contatto risolto, creazione manuale, rinomina, cambio numero ed eliminazione con consenso dedicato. Solo archivio privato, mai rubrica Android; ID/revisioni e invalidazione cache associata, conflitto rubrica ⚠/da verificare. Menu HUD piatto scuro/ciano con icone lineari e ⋮ → Aiuto/azioni contestuali, due riquadri per riga e Indietro largo ultimo. Home contatti a destra di Appunti, cover/Voice/wake/WhatsApp invariati. Collaudo Galaxy e giro reale nuovo catalogo plugin da fare.
+
 # Aggiornamento .90
 
 Spostata la voce Preferiti e cache contatti nella prima riga Home a destra di Appunti locali. Nessuna funzione aggiunta; collaudo della posizione sul Galaxy ancora da fare.

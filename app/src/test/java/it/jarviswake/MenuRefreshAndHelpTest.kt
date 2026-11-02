@@ -46,14 +46,16 @@ class MenuRefreshAndHelpTest {
         }
         return LocalNotesRepository(memory,{123456L}) { UUID.randomUUID().toString() }.also { repositoryField.set(PhoneNotes,it) }
     }
-    @Test fun helpOpensOnlyFromItsQuestionAndBlocksUnderlyingActionsUntilX() {
+    @Test fun optionsMenuOpensHelpAndBlocksUnderlyingActionsUntilX() {
         val c=Robolectric.buildActivity(Activity::class.java).create().start().resume().visible();val a=c.get()
         val menu=SplitMenuScreen(a,"Menu","Intera sezione da non mostrare") {}
         var calls=0;val action=menu.button("Azione A","Solo informazioni A") { calls++ }
         menu.button("Azione B","Solo informazioni B") { calls+=10 };a.setContentView(menu);measure(menu)
         assertFalse(menu.helpShowing);assertFalse(has(menu,"Intera sezione da non mostrare"))
-        val question=views(action.parent as View).filterIsInstance<Button>().single { it.text.toString()=="?" }
-        question.performClick();assertTrue(menu.helpShowing);assertEquals(0,calls)
+        val question=views(action.parent as View).filterIsInstance<Button>().single { it.text.toString()=="⋮" }
+        question.performClick();assertFalse(menu.helpShowing);action.performClick();assertEquals(0,calls)
+        val popup=org.robolectric.shadows.ShadowPopupMenu.getLatestPopupMenu()
+        shadowOf(popup).onMenuItemClickListener.onMenuItemClick(popup.menu.getItem(0));assertTrue(menu.helpShowing)
         val dialog=ShadowAlertDialog.getLatestAlertDialog();val root=dialog.window!!.decorView
         assertTrue(has(root,"Solo informazioni A"));assertFalse(has(root,"Solo informazioni B"))
         assertFalse(has(root,"Intera sezione da non mostrare"))
@@ -69,7 +71,7 @@ class MenuRefreshAndHelpTest {
         val input=menu.field("Campo","","Descrizione campo");val toggle=menu.toggle("Opzione",false,"Descrizione opzione") {}
         val action=menu.button("Comando","Aiuto comando") {};a.setContentView(menu)
         input.requestFocus();toggle.isChecked=true;assertFalse(menu.helpShowing)
-        button(action.parent as View,"?").performClick();assertTrue(menu.helpShowing)
+        button(action.parent as View,"⋮").performClick();val popup=org.robolectric.shadows.ShadowPopupMenu.getLatestPopupMenu();shadowOf(popup).onMenuItemClickListener.onMenuItemClick(popup.menu.getItem(0));assertTrue(menu.helpShowing)
         a.setContentView(android.widget.LinearLayout(a));assertFalse(menu.helpShowing)
         c.pause().stop().destroy()
     }

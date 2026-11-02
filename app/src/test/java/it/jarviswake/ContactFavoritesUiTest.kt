@@ -65,4 +65,29 @@ class ContactFavoritesUiTest {
         assertEquals(1,provider.rows.size);assertTrue(BridgeContactCache.entries(a).isEmpty())
         c.pause().stop().destroy()
     }
+    @Test fun conflictAlertAndContextActionsStayLocalWhileRemoteRefreshPreservesDrafts() {
+        val app=RuntimeEnvironment.getApplication();shadowOf(app).grantPermissions(Manifest.permission.READ_CONTACTS)
+        val provider=Robolectric.buildContentProvider(BridgeDirectContactTest.Provider::class.java).create().get()
+        ShadowContentResolver.registerProviderInternal(ContactsContract.AUTHORITY,provider)
+        val f=BridgeContactFavorites.save(app,"Test Contact","+39000000001",1)
+        BridgeContactFavorites.change(app,f.getString("id"),f.getInt("revision"),number="+39000000009")
+        val c=Robolectric.buildActivity(ContactCacheActivity::class.java).setup().visible();val a=c.get();click(a,"Preferiti")
+        fun await(check:()->Boolean) {val until=System.nanoTime()+3_000_000_000L;do {shadowOf(android.os.Looper.getMainLooper()).idle();if(check())return;Thread.sleep(10)}while(System.nanoTime()<until);assertTrue(check())}
+        await {all(a.window.decorView).filterIsInstance<Button>().any {it.text.toString().contains("⚠")}}
+        val card=all(a.window.decorView).filterIsInstance<Button>().single {it.text.toString().contains("⚠")}
+        all(card.parent as View).filterIsInstance<Button>().single {it.text=="⋮"}.performClick()
+        val popup=org.robolectric.shadows.ShadowPopupMenu.getLatestPopupMenu()
+        assertEquals(listOf("Aiuto","Rinomina","Cambia numero","Elimina"),(0 until popup.menu.size()).map {popup.menu.getItem(it).title.toString()})
+        shadowOf(popup).onMenuItemClickListener.onMenuItemClick(popup.menu.getItem(1))
+        val field=all(a.window.decorView).filterIsInstance<EditText>().single();field.setText("New Alias")
+        click(a,"Salva modifica")
+        assertEquals("New Alias",BridgeContactFavorites.find(app,f.getString("id"))!!.getString("name"));assertEquals(0,provider.writes)
+        click(a,"Nome e numero manuali")
+        val draft=all(a.window.decorView).filterIsInstance<EditText>().single {it.hint=="Nome del preferito"};draft.setText("Draft")
+        BridgeContactFavorites.save(app,"Remote Example","+39000000008")
+        shadowOf(android.os.Looper.getMainLooper()).idle();assertEquals("Draft",draft.text.toString());assertTrue(draft.isAttachedToWindow)
+        click(a,"Indietro");assertTrue(all(a.window.decorView).filterIsInstance<Button>().any {it.text.toString().startsWith("Remote Example")})
+        c.pause().stop().destroy()
+    }
+
 }

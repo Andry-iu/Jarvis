@@ -28,7 +28,7 @@ const snap={app:{version:'0.5.80',versionCode:102},wake:{serviceRunning:true,cap
 test('Discovery exposes bounded status and action tools without fabricated phone data',async()=>{
   const r=await worker.fetch(request('/mcp',{jsonrpc:'2.0',id:1,method:'tools/list'}),env());
   const names=(await r.json()).result.tools.map(t=>t.name);
-  assert.deepEqual(names,['jarviswake_devices','jarviswake_request_status','jarviswake_status_result','jarviswake_find_contacts','jarviswake_navigate','jarviswake_call_by_name','jarviswake_call_contact','jarviswake_whatsapp','jarviswake_list_notes','jarviswake_read_note','jarviswake_save_note','jarviswake_guide']);
+  assert.deepEqual(names,['jarviswake_devices','jarviswake_request_status','jarviswake_status_result','jarviswake_find_contacts','jarviswake_navigate','jarviswake_call_by_name','jarviswake_call_contact','jarviswake_whatsapp','jarviswake_list_favorites','jarviswake_add_favorite','jarviswake_create_favorite','jarviswake_rename_favorite','jarviswake_change_favorite_number','jarviswake_delete_favorite','jarviswake_list_notes','jarviswake_read_note','jarviswake_save_note','jarviswake_guide']);
 });
 test('Pairing requires authenticated same-origin browser action',async()=>{
   for(const h of [{},user,{...user,Origin:'https://attacker.example','X-Jarvis-Link':'pair'}]) {
@@ -234,7 +234,7 @@ test('Status remains compatible with old snapshots and reports only the notes co
 
 test('The complete guide is available without pairing or a running phone',async()=>{
  const e=env();const r=value(await tool(e,'jarviswake_guide',{topic:'indice',query:''}));
- assert.equal(r.guide_version,'0.5.90');assert.equal(r.version_code,112);assert.equal(r.phone_required,false);assert.ok(r.topics.length>=19);
+ assert.equal(r.guide_version,'0.5.91');assert.equal(r.version_code,113);assert.equal(r.phone_required,false);assert.ok(r.topics.length>=19);
  assert.equal(e.BUCKET.data.size,0);
  for(const topic of ['wake','cover','audio','chatgpt','collegamento','appunti','plugin','maps','chiamate','whatsapp','diagnostica']) assert.ok(r.topics.some(t=>t.topic===topic));
 });
@@ -293,4 +293,54 @@ test('Manual favorite lookup uses the same opaque contact result and never retur
  const r=value(await tool(e,'jarviswake_status_result',{device_id:c.deviceId,request_id:id}));assert.deepEqual(r.result,result);
  assert.equal(value(await tool(e,'jarviswake_call_contact',{device_id:c.deviceId,contact_ref:ref,request_id:crypto.randomUUID()})).state,'pending');
  assert.equal((await tool(e,'jarviswake_call_contact',{device_id:c.deviceId,contact_ref:ref,number:'+39000000001',request_id:crypto.randomUUID()})).isError,true);
+});
+
+const favoriteOps=['list_favorites','add_favorite','create_favorite','rename_favorite','change_favorite_number','delete_favorite'];
+async function advertiseFavorites(e,c,version=113) {
+ return worker.fetch(request('/device/poll',{deviceId:c.deviceId,versionCode:version,operations:favoriteOps},{Authorization:'Bearer '+c.deviceToken}),e);
+}
+const favMetadata={favorite_id:'book:1',name:'Test Favorite',suffix:'0001',source:'book',revision:1,book_conflict:'none'};
+test('Favorite tools require113 and explicit fields; Android contacts are never a mutation target',async()=>{
+ const e=env(),c=await pair(e);await advertiseFavorites(e,c,112);
+ const args={device_id:c.deviceId,request_id:crypto.randomUUID(),name:'Test Favorite',number:'+39000000001'};
+ assert.equal((await tool(e,'jarviswake_create_favorite',args)).content[0].text,'app_update_required');
+ await advertiseFavorites(e,c);
+ for(const bad of [{...args,number:'12345;123'},{...args,number:'*123#'},{...args,android_contacts:true}]) assert.equal((await tool(e,'jarviswake_create_favorite',bad)).isError,true);
+ assert.equal(value(await tool(e,'jarviswake_create_favorite',args)).state,'pending');
+ const p=await worker.fetch(request('/device/poll',{deviceId:c.deviceId,versionCode:113,operations:favoriteOps},{Authorization:'Bearer '+c.deviceToken}),e);
+ assert.deepEqual((await p.json()).request.params,{name:'Test Favorite',number:'+39000000001'});
+ assert.equal((await claim(e,c,args.request_id)).status,200);assert.equal((await claim(e,c,args.request_id)).status,200);
+});
+test('Favorite result contracts reject full numbers and report cache/book conflicts without inventing success',async()=>{
+ const e=env(),c=await pair(e);await advertiseFavorites(e,c);const auth={Authorization:'Bearer '+c.deviceToken};
+ const id=crypto.randomUUID();await tool(e,'jarviswake_change_favorite_number',{device_id:c.deviceId,request_id:id,favorite_id:'book:1',expected_revision:1,number:'+39000000009'});await claim(e,c,id);
+ const result={code:'favorite_updated',favorite:{...favMetadata,source:'manual',revision:2,book_conflict:'different',suffix:'0009'},cache_status:'unconfirmed'};
+ const bad={...result,favorite:{...result.favorite,number:'+39000000009'}};
+ assert.equal((await worker.fetch(request('/device/respond',{deviceId:c.deviceId,requestId:id,result:bad},auth),e)).status,400);
+ assert.equal((await worker.fetch(request('/device/respond',{deviceId:c.deviceId,requestId:id,result},auth),e)).status,200);
+ assert.deepEqual(value(await tool(e,'jarviswake_status_result',{device_id:c.deviceId,request_id:id})).result,result);
+ const stored=await (await e.BUCKET.get(`requests/${c.deviceId}/${id}.json`)).json();assert.equal(stored.params,undefined);
+});
+test('Favorite lookup/add/delete use opaque references, revisions and stable request ids',async()=>{
+ const e=env(),c=await pair(e);await advertiseFavorites(e,c);const auth={Authorization:'Bearer '+c.deviceToken};
+ const cases=[
+  ['list_favorites',{name:'Test',offset:0},{code:'favorites_listed',favorites:[favMetadata],next_offset:null}],
+  ['add_favorite',{contact_ref:crypto.randomUUID()},{code:'favorite_saved',favorite:favMetadata}],
+  ['rename_favorite',{favorite_id:'book:1',expected_revision:1,name:'Alias'},{code:'favorite_updated',favorite:{...favMetadata,name:'Alias',revision:2},cache_status:'cleared'}],
+  ['delete_favorite',{favorite_id:'book:1',expected_revision:2},{code:'favorite_deleted',favorite_id:'book:1',cache_status:'cleared'}]
+ ];
+ for(const [op,params,result] of cases) {
+  const id=crypto.randomUUID(),args={device_id:c.deviceId,request_id:id,...params};
+  assert.equal(value(await tool(e,'jarviswake_'+op,args)).state,'pending');await claim(e,c,id);
+  assert.equal((await worker.fetch(request('/device/respond',{deviceId:c.deviceId,requestId:id,result},auth),e)).status,200);
+  assert.deepEqual(value(await tool(e,'jarviswake_'+op,args)).result,result);
+ }
+ assert.equal((await tool(e,'jarviswake_delete_favorite',{device_id:c.deviceId,request_id:crypto.randomUUID(),favorite_id:'*',expected_revision:1})).isError,true);
+});
+test('Favorite exchanges expire privately and cannot be replayed after payload cleanup',async()=>{
+ const e=env(),c=await pair(e);await advertiseFavorites(e,c);const id=crypto.randomUUID(),params={device_id:c.deviceId,request_id:id,name:'Test',number:'+39000000009'};
+ await tool(e,'jarviswake_create_favorite',params);
+ const key=`requests/${c.deviceId}/${id}.json`,command=await (await e.BUCKET.get(key)).json();command.createdAt=Date.now()-120001;command.expiresAt=Date.now()-95001;await e.BUCKET.put(key,JSON.stringify(command));
+ assert.equal(value(await tool(e,'jarviswake_status_result',{device_id:c.deviceId,request_id:id})).state,'response_expired');assert.equal(await e.BUCKET.get(key),null);
+ assert.equal(value(await tool(e,'jarviswake_create_favorite',params)).state,'outcome_uncertain');
 });

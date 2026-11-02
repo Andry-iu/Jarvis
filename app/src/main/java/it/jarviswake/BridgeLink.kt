@@ -158,7 +158,7 @@ internal object BridgeLink {
                 .put("web",WebChatActivity.bridgeCoverVisible()).put("launch",LaunchActivity.bridgeCoverVisible()))
             .put("permissions",JSONObject().put("actionsEnabled",BridgeSettings.actionsEnabled(c)).put("contacts",permission(Manifest.permission.READ_CONTACTS))
                 .put("callPhone",permission(Manifest.permission.CALL_PHONE)).put("phoneState",permission(Manifest.permission.READ_PHONE_STATE))
-                .put("notesEnabled",PhoneNotes.enabled(c)))
+                .put("notesEnabled",PhoneNotes.enabled(c)).put("favoritesEnabled",BridgeContactFavorites.remoteEnabled(c)))
             .put("screenInteractive",c.getSystemService(PowerManager::class.java).isInteractive)
     }
 }

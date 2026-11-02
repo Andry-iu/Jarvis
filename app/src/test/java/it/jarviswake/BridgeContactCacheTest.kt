@@ -49,7 +49,7 @@ class BridgeContactCacheTest {
         buttons(controller.get().window.decorView).single {it.text.toString()=="Cache frequenti"}.performClick()
         val labels=buttons(controller.get().window.decorView).map {it.text.toString()}
         assertTrue(labels.any {it.contains("Test 1")});assertTrue(labels.any {it.contains("Test 2")})
-        assertEquals("Indietro",labels.filter {it!="?"}.last());controller.pause().stop().destroy()
+        assertEquals("Indietro",labels.filter {it!="⋮"}.last());controller.pause().stop().destroy()
     }
 
 }

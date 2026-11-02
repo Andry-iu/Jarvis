@@ -29,6 +29,14 @@ internal object BridgeActions {
     }
     fun execute(c:Context,deviceId:String,command:JSONObject,deadline:Long,permitted:()->Boolean):JSONObject {
         val operation=command.getString("operation")
+        if(operation in BridgeProtocol.FAVORITE_OPERATIONS) {
+            fun favoritesAllowed()=permitted() && BridgeSettings.enabled(c) && BridgeContactFavorites.remoteEnabled(c) &&
+                SystemClock.elapsedRealtime()<deadline && !c.getSystemService(KeyguardManager::class.java).isKeyguardLocked
+            if(!BridgeContactFavorites.remoteEnabled(c)) return result("favorites_disabled")
+            if(c.getSystemService(KeyguardManager::class.java).isKeyguardLocked) return result("locked")
+            if(!favoritesAllowed()) return result("expired_before_dispatch")
+            return FavoriteOperations.execute(c,deviceId,operation,command.getJSONObject("params"),::favoritesAllowed)
+        }
         if(operation in BridgeProtocol.NOTE_OPERATIONS) {
             fun notesAllowed()=permitted() && BridgeSettings.enabled(c) && PhoneNotes.enabled(c) &&
                 SystemClock.elapsedRealtime()<deadline && !c.getSystemService(KeyguardManager::class.java).isKeyguardLocked

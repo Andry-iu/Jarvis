@@ -44,15 +44,16 @@ internal object BridgeContacts {
                 val display=cursor.getString(1).orEmpty().take(100)
                 if(rows.any { it.getString("number")==normalized && it.getString("name")==display }) continue
                 val custom=cursor.getString(4)?.take(40)
-                val label=Phone.getTypeLabel(c.resources,cursor.getInt(3),custom).toString().take(40)
+                val label=("Rubrica · "+Phone.getTypeLabel(c.resources,cursor.getInt(3),custom)).take(40)
                 rows.add(JSONObject().put("row",cursor.getLong(0)).put("name",display).put("number",normalized).put("label",label))
             }
         }
         for(f in favorites) {
             if(f.getString("kind")=="book" && !bookMatches(c,f)) continue
             val item=JSONObject().put("row",f.getLong("row")).put("name",f.getString("name")).put("number",f.getString("number"))
-                .put("label",(if(f.getString("kind")=="manual") "Preferito manuale" else "Preferito · "+f.optString("label")).take(40))
+                .put("label",(if(f.getString("kind")=="manual") "Preferito JarvisWake" else "Preferito · "+f.optString("label")).take(40))
                 .put("favorite_id",f.getString("id")).put("favorite_revision",f.getInt("revision"))
+                .put("book_name",f.optString("book_name",f.getString("name")))
             val duplicate=rows.indexOfFirst {BridgeContactCache.normalize(it.getString("name"))==BridgeContactCache.normalize(f.getString("name")) && it.getString("number")==f.getString("number")}
             if(duplicate>=0) rows[duplicate]=item else rows.add(item)
         }
@@ -90,10 +91,10 @@ internal object BridgeContacts {
             if(cursor.moveToFirst()) {
                 val current=number(cursor.getString(2).orEmpty())
                 val name=cursor.getString(1).orEmpty().take(100)
-                if(name!=saved.getString("name") || current!=saved.getString("number")) throw BridgeFailure("contact_changed")
+                if(name!=saved.optString("book_name",saved.getString("name")) || current!=saved.getString("number")) throw BridgeFailure("contact_changed")
                 val international=PhoneNumberUtils.formatNumberToE164(current,region(c))
                     ?.takeIf { it.matches(Regex("\\+[0-9]{5,15}")) }
-                return BridgeContact(name,current,international,saved.optBoolean("unique"),saved.getLong("row"),saved.optString("query"),saved.optString("label"),favoriteId,saved.optInt("favorite_revision"))
+                return BridgeContact(saved.getString("name"),current,international,saved.optBoolean("unique"),saved.getLong("row"),saved.optString("query"),saved.optString("label"),favoriteId,saved.optInt("favorite_revision"))
             }
         }
         throw BridgeFailure("contact_changed")
@@ -129,7 +130,7 @@ internal object BridgeContacts {
     private fun bookMatches(c:Context,f:JSONObject):Boolean {
         requirePermission(c)
         return c.contentResolver.query(Phone.CONTENT_URI,projection,Phone._ID+"=?",arrayOf(f.getLong("row").toString()),null)?.use {cur->
-            cur.moveToFirst() && cur.getString(1)==f.getString("name") && runCatching {number(cur.getString(2).orEmpty())}.getOrNull()==f.getString("number")
+            cur.moveToFirst() && cur.getString(1)==f.optString("book_name",f.getString("name")) && runCatching {number(cur.getString(2).orEmpty())}.getOrNull()==f.getString("number")
         }==true
     }
     fun addFavoriteFromUri(c:Context,uri:Uri):JSONObject {

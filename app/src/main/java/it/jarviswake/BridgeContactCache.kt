@@ -38,6 +38,15 @@ internal object BridgeContactCache {
     }
     @Synchronized fun remove(c:Context,key:String) {BridgeContactFavorites.migrate(c);val j=read(c);j.remove(key);write(c,j)}
     @Synchronized fun clear(c:Context) {BridgeContactFavorites.migrate(c);write(c,JSONObject())}
+    @Synchronized fun invalidateFavorite(c:Context,before:JSONObject) {
+        BridgeContactFavorites.migrate(c);val j=read(c)
+        val id=before.getString("id");val row=before.optLong("origin_row",before.optLong("row",-1))
+        val oldName=normalize(before.getString("name"));val oldNumber=before.getString("number")
+        val keys=j.keys().asSequence().toList().filter {key->j.optJSONObject(key)?.let {r->
+            r.optString("favorite_id")==id || (row>=0 && r.optLong("row",-2)==row) || (normalize(r.optString("name"))==oldName && r.optString("number")==oldNumber)
+        }==true}
+        keys.forEach(j::remove);write(c,j)
+    }
     fun candidate(c:Context,query:String):JSONObject? {
         val q=normalize(query)
         return entries(c).filter {r->normalize(r.optString("name"))==q || r.optJSONArray("queries")?.let {a->(0 until a.length()).any {a.optString(it)==q}}==true}.singleOrNull()

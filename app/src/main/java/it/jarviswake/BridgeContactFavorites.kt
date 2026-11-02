@@ -23,9 +23,14 @@ internal object BridgeContactFavorites {
             if(x is JSONObject && y is JSONObject) same(x,y) else x.toString()==y.toString()
         }
     }
-    private fun persist(c:Context,book:JSONObject) {
+    private val listeners=java.util.concurrent.CopyOnWriteArraySet<()->Unit>()
+    fun observe(listener:()->Unit) {listeners.add(listener)}
+    fun removeObserver(listener:()->Unit) {listeners.remove(listener)}
+    private fun persist(c:Context,book:JSONObject,allowed:()->Boolean={true}) {
+        if(!allowed()) throw FavoriteFailure("expired_before_dispatch")
         write(c,book)
         check(same(book,read(c))) {"Salvataggio preferiti non confermato: rileggi prima di riprovare."}
+        listeners.forEach {runCatching {it()}}
     }
     /** Copy legacy .88 favorites first and confirm persistence before touching their old records. */
     @Synchronized private fun book(c:Context):JSONObject {
@@ -57,18 +62,20 @@ internal object BridgeContactFavorites {
             .sortedBy {BridgeContactCache.normalize(it.getString("name"))}
     }
     @Synchronized fun find(c:Context,id:String):JSONObject?=book(c).getJSONObject("items").optJSONObject(id)?.let {JSONObject(it.toString())}
-    @Synchronized fun save(c:Context,name:String,raw:String,row:Long=-1,label:String="Numero manuale"):JSONObject {
+    @Synchronized fun save(c:Context,name:String,raw:String,row:Long=-1,label:String="Numero manuale",allowed:()->Boolean={true}):JSONObject {
         val display=if(row>=0) name else name.trim();require(BridgeProtocol.validText(display,if(row>=0) 100 else 80)) {"Inserisci un nome da1 a80 caratteri."}
         val number=phone(raw);val book=book(c);val items=book.getJSONObject("items")
         val existing=items.keys().asSequence().map {items.getJSONObject(it)}.firstOrNull {
             (row>=0 && it.optString("kind")=="book" && it.optLong("row")==row) ||
                 (row<0 && it.optString("kind")=="manual" && BridgeContactCache.normalize(it.getString("name"))==BridgeContactCache.normalize(display) && it.getString("number")==number)
         }
-        val id=existing?.getString("id") ?: if(row>=0) "book:$row" else UUID.randomUUID().toString()
+        val id=existing?.getString("id") ?: if(row>=0 && !items.has("book:$row")) "book:$row" else UUID.randomUUID().toString()
         require(existing!=null || items.length()<100) {"Hai raggiunto100 preferiti. Rimuovi una voce prima di aggiungerne un’altra."}
         val value=JSONObject().put("id",id).put("kind",if(row>=0) "book" else "manual").put("row",row)
-            .put("name",display).put("number",number).put("label",label.take(40)).put("revision",existing?.optInt("revision",0)?.plus(1) ?: 1)
-        items.put(id,value);book.put("migrated",true);persist(c,book)
+            .put("name",if(row>=0 && existing!=null && existing.optString("book_name",existing.optString("name"))!=existing.optString("name")) existing.getString("name") else display)
+            .put("number",number).put("label",label.take(40)).put("revision",existing?.optInt("revision",0)?.plus(1) ?: 1)
+        if(row>=0) value.put("book_name",display)
+        items.put(id,value);book.put("migrated",true);persist(c,book,allowed)
         return JSONObject(value.toString())
     }
     @Synchronized fun remove(c:Context,id:String,revision:Int) {
@@ -76,6 +83,29 @@ internal object BridgeContactFavorites {
         val value=items.optJSONObject(id) ?: throw IllegalStateException("Preferito non più presente. Rileggi l’elenco.")
         check(value.getInt("revision")==revision) {"Il preferito è cambiato. Rileggi prima di rimuoverlo."}
         items.remove(id);book.put("migrated",true);persist(c,book)
+    }
+    fun remoteEnabled(c:Context)=c.getSharedPreferences("contact_favorites_settings",0).getBoolean("remote",false)
+    fun enableRemote(c:Context,value:Boolean) {c.getSharedPreferences("contact_favorites_settings",0).edit().putBoolean("remote",value).apply()}
+    @Synchronized fun change(c:Context,id:String,revision:Int,name:String?=null,number:String?=null,allowed:()->Boolean={true}):Pair<JSONObject,JSONObject> {
+        val book=book(c);val items=book.getJSONObject("items")
+        val old=items.optJSONObject(id) ?: throw FavoriteFailure("favorite_not_found")
+        if(old.optInt("revision")!=revision) throw FavoriteFailure("favorite_conflict")
+        val before=JSONObject(old.toString());val next=JSONObject(old.toString())
+        if(old.optString("kind")=="book" && !next.has("book_name")) next.put("book_name",old.getString("name"))
+        if(name!=null) {require(BridgeProtocol.validText(name.trim(),80));next.put("name",name.trim())}
+        if(number!=null) {
+            val n=phone(number)
+            if(old.optString("kind")=="book") next.put("origin_row",old.getLong("row")).put("origin_name",old.optString("book_name",old.getString("name")))
+            next.put("number",n).put("kind","manual").put("row",-1).put("label","Numero manuale")
+        }
+        next.put("revision",revision+1);items.put(id,next);book.put("migrated",true);persist(c,book,allowed)
+        return before to JSONObject(next.toString())
+    }
+    @Synchronized fun deleteRemote(c:Context,id:String,revision:Int,allowed:()->Boolean):JSONObject {
+        val book=book(c);val items=book.getJSONObject("items")
+        val old=items.optJSONObject(id) ?: throw FavoriteFailure("favorite_not_found")
+        if(old.optInt("revision")!=revision) throw FavoriteFailure("favorite_conflict")
+        val before=JSONObject(old.toString());items.remove(id);book.put("migrated",true);persist(c,book,allowed);return before
     }
     fun matches(c:Context,name:String)=entries(c).filter {BridgeContactCache.normalize(it.getString("name")).contains(BridgeContactCache.normalize(name))}
 }

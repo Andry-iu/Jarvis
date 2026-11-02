@@ -17,6 +17,9 @@ import android.window.OnBackInvokedDispatcher
 /** Favorites are user data; the separate automatic cache may be removed without losing them. */
 class ContactCacheActivity:Activity() {
     private var page="home"
+    private val main=android.os.Handler(android.os.Looper.getMainLooper())
+    private var generation=0
+    private val changed:()->Unit={main.post {if(page=="favorites" && !isFinishing && !isDestroyed) favorites()};Unit}
     private var active:SplitMenuScreen?=null
     private var backCallback:OnBackInvokedCallback?=null
     override fun onCreate(savedInstanceState:Bundle?) {
@@ -32,6 +35,7 @@ class ContactCacheActivity:Activity() {
     @SuppressLint("GestureBackNavigation") // Only API31/32 fallback; API33+ registers OnBackInvokedCallback.
     override fun onBackPressed() {back()}
     private fun menu(title:String,description:String):SplitMenuScreen {
+        generation++
         window.hideMenuKeyboard()
         return SplitMenuScreen(this,title,description) {back()}.also {active=it;it.importantForAutofill=View.IMPORTANT_FOR_AUTOFILL_NO_EXCLUDE_DESCENDANTS}
     }
@@ -48,6 +52,7 @@ class ContactCacheActivity:Activity() {
     private fun favorites() {
         page="favorites"
         val m=menu("Preferiti","I numeri scelti da te non scadono con la cache. Sono disponibili nella risoluzione dei contatti del plugin, con scelta in caso di ambiguità.")
+        m.toggle("Consenti gestione preferiti da ChatGPT",BridgeContactFavorites.remoteEnabled(this),"Consente ricerca, aggiunta, rinomina, cambio numero e rimozione dei soli Preferiti JarvisWake dal plugin. Telefono sbloccato; i numeri scritti in chat transitano nella richiesta privata.") {BridgeContactFavorites.enableRemote(this,it)}
         m.button("Aggiungi dalla rubrica","Scegli qualsiasi numero della rubrica, anche se non è un preferito Android. Non modifica la rubrica del telefono."){pick()}
         m.button("Nome e numero manuali","Salva un nome e un numero direttamente in JarvisWake, senza creare un contatto nella rubrica Android."){editor()}
         m.button("Importa preferiti rubrica","Importazione facoltativa fino a20 numeri già preferiti Android. Non sostituisce i tuoi preferiti manuali.") {
@@ -56,7 +61,21 @@ class ContactCacheActivity:Activity() {
         m.button("Aggiorna preferiti","Rilegge l’archivio locale, senza telefonare o cancellare dati."){favorites()}
         runCatching {BridgeContactFavorites.entries(this)}.onSuccess {rows->
             if(rows.isEmpty()) m.text("Nessun preferito. Aggiungilo dalla rubrica oppure inserisci nome e numero.")
-            for(r in rows) m.button(r.getString("name")+"\n"+if(r.getString("kind")=="manual") "Manuale · …"+r.getString("number").takeLast(4) else "Rubrica · …"+r.getString("number").takeLast(4),"Mostra questo preferito salvato e permette di rimuoverlo, senza modificare rubrica o cache.") {detail(r)}
+            val cards=rows.map {r->
+                val text=r.getString("name")+"\n"+(if(r.getString("kind")=="manual") "Manuale · …" else "Rubrica · …")+r.getString("number").takeLast(4)
+                val button=m.button(text,"Mostra questo preferito. L’avviso ⚠ indica un numero diverso dalla rubrica; ⋮ apre Aiuto e gestione della sola voce JarvisWake.",more=listOf(
+                    MenuContextAction("Rinomina") {editFavorite(r,false)},MenuContextAction("Cambia numero") {editFavorite(r,true)},MenuContextAction("Elimina") {confirmRemove(r,m)}
+                )) {detail(r)}
+                Triple(r,button,text)
+            }
+            val current=generation
+            Thread({cards.forEach {(r,b,text)->val state=FavoriteOperations.bookConflict(this,r);main.post {
+                if(current==generation && page=="favorites" && !isFinishing && !isDestroyed) b.text=when(state) {
+                    "different"->text.replaceFirst("\n"," ⚠\n")
+                    "unavailable"->text+" · da verificare"
+                    else->text
+                }
+            }}},"Jarvis-favorite-conflicts").start()
         }.onFailure {failure(m,it)}
         setContentView(m)
     }
@@ -74,15 +93,40 @@ class ContactCacheActivity:Activity() {
         page="detail"
         val m=menu(row.getString("name"),"Questo preferito è indipendente dalla cache. La rimozione non tocca la rubrica Android.")
         m.text(row.getString("number"),24f)
+        val conflict=m.text("Verifica rubrica…")
+        val current=generation
+        Thread({val state=FavoriteOperations.bookConflict(this,row);main.post {
+            if(current==generation && !isFinishing && !isDestroyed) conflict.text=when(state) {
+                "different"->"⚠ Il numero di questo Preferito JarvisWake è diverso dalla rubrica. La rubrica non è stata modificata; in caso di ambiguità scegli quale numero usare."
+                "unavailable"->"Confronto rubrica da verificare: dati o permesso non disponibili."
+                else->"Nessun numero diverso rilevato nella rubrica accessibile."
+            }
+        }},"Jarvis-favorite-detail").start()
+        m.button("Rinomina","Cambia solo il nome di questo Preferito JarvisWake."){editFavorite(row,false)}
+        m.button("Cambia numero","Cambia solo il numero del Preferito e invalida la vecchia cache; la rubrica rimane invariata."){editFavorite(row,true)}
         m.text(if(row.getString("kind")=="manual") "Numero manuale salvato in JarvisWake" else "Contatto collegato alla rubrica: i dati vengono ricontrollati prima dell’uso.")
-        m.button("Rimuovi preferito","Rimuove solo questa voce dai preferiti di JarvisWake, dopo conferma.") {
-            AlertDialog.Builder(this).setTitle("Rimuovere questo preferito?").setMessage(row.getString("name")+"\n"+row.getString("number"))
-                .setNegativeButton("Annulla",null).setPositiveButton("Rimuovi") {_,_->
-                    runCatching {BridgeContactFavorites.remove(this,row.getString("id"),row.getInt("revision"))}.onSuccess {favorites()}.onFailure {failure(m,it)}
-                }.showLarge()
+        m.button("Rimuovi preferito","Elimina solo questa voce JarvisWake dopo conferma."){confirmRemove(row,m)}
+        setContentView(m)
+    }
+    private fun confirmRemove(row:org.json.JSONObject,m:SplitMenuScreen) {
+        AlertDialog.Builder(this).setTitle("Rimuovere questo preferito?").setMessage(row.getString("name")+"\n"+row.getString("number"))
+            .setNegativeButton("Annulla",null).setPositiveButton("Rimuovi") {_,_->
+                runCatching {BridgeContactFavorites.remove(this,row.getString("id"),row.getInt("revision"));FavoriteOperations.cleanCache(this,row)}.onSuccess {favorites()}.onFailure {failure(m,it)}
+            }.showLarge()
+    }
+    private fun editFavorite(row:org.json.JSONObject,number:Boolean) {
+        page="editor"
+        val m=menu(if(number) "Cambia numero preferito" else "Rinomina preferito","La modifica riguarda solo JarvisWake, non la rubrica del telefono.")
+        val field=m.field(if(number) "Nuovo numero" else "Nuovo nome",row.getString(if(number) "number" else "name"),"Il salvataggio richiede la revisione corrente e invalida la vecchia cache.")
+        if(number) field.inputType=InputType.TYPE_CLASS_PHONE
+        m.button("Salva modifica","Aggiorna solo questo Preferito, lasciando la rubrica invariata.") {
+            runCatching {val (old,_)=BridgeContactFavorites.change(this,row.getString("id"),row.getInt("revision"),name=if(number)null else field.text.toString(),number=if(number)field.text.toString() else null);FavoriteOperations.cleanCache(this,old)}
+                .onSuccess {status->favorites();if(status=="unconfirmed") active?.feedback("Cache da verificare","Preferito aggiornato; pulizia della vecchia cache non confermata.")}.onFailure {failure(m,it)}
         }
         setContentView(m)
     }
+    override fun onResume() {super.onResume();BridgeContactFavorites.observe(changed);if(page=="favorites") favorites()}
+    override fun onPause() {BridgeContactFavorites.removeObserver(changed);super.onPause()}
     private fun cache() {
         page="cache"
         val m=menu("Cache frequenti","Elenco automatico fino a20 numeri. La rimozione non cancella preferiti o rubrica; una nuova telefonata può aggiungere di nuovo la voce.")

@@ -25,15 +25,16 @@ import org.robolectric.shadows.ShadowContentResolver
 @Config(sdk=[34,36])
 class BridgeDirectContactTest {
     class Provider:ContentProvider() {
+        var writes=0
         val rows=mutableListOf(arrayOf<Any>(1L,"Test Contact","+39000000001",2,"mobile"))
         override fun onCreate()=true
         override fun query(uri:Uri,projection:Array<out String>?,selection:String?,args:Array<out String>?,sort:String?):Cursor = MatrixCursor(projection).apply {
-            rows.filter {(args==null || it[0].toString()==args[0]) && (!uri.path.orEmpty().contains("/filter/") || it[1].toString().contains(uri.lastPathSegment.orEmpty(),ignoreCase=true))}.forEach(::addRow)
+            rows.filter {(args==null || it[0].toString()==args[0]) && (!uri.path.orEmpty().contains("/filter/") || it[1].toString().contains(uri.lastPathSegment.orEmpty(),ignoreCase=true))}.forEach {r->val cols=listOf(android.provider.ContactsContract.CommonDataKinds.Phone._ID,android.provider.ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME,android.provider.ContactsContract.CommonDataKinds.Phone.NUMBER,android.provider.ContactsContract.CommonDataKinds.Phone.TYPE,android.provider.ContactsContract.CommonDataKinds.Phone.LABEL);addRow(projection!!.map {r[cols.indexOf(it)]}.toTypedArray())}
         }
         override fun getType(uri:Uri)="vnd.android.cursor.dir/phone"
-        override fun insert(uri:Uri,values:ContentValues?):Uri?=null
-        override fun delete(uri:Uri,selection:String?,args:Array<out String>?)=0
-        override fun update(uri:Uri,values:ContentValues?,selection:String?,args:Array<out String>?)=0
+        override fun insert(uri:Uri,values:ContentValues?):Uri? {writes++;return null}
+        override fun delete(uri:Uri,selection:String?,args:Array<out String>?):Int {writes++;return 0}
+        override fun update(uri:Uri,values:ContentValues?,selection:String?,args:Array<out String>?):Int {writes++;return 0}
     }
     private val favoriteRead=BridgeContactFavorites.read;private val favoriteWrite=BridgeContactFavorites.write
     private var favoritesStore=JSONObject()

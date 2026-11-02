@@ -24,12 +24,13 @@ internal class SplitMenuScreen(context:Context,title:String,@Suppress("UNUSED_PA
     private var buttonGroup:MenuButtonGrid?=null
     private var feedbackView:TextView?=null
     private var helpDialog:AlertDialog?=null
+    private var contextMenu:PopupMenu?=null
     val helpShowing:Boolean get()=helpDialog?.isShowing==true
     init {
-        orientation=VERTICAL;setBackgroundColor(Color.rgb(9,19,29))
+        orientation=VERTICAL;setBackgroundColor(Color.rgb(13,18,24))
         addView(TextView(context).apply {
-            text=title;textSize=22f;setTextColor(Color.WHITE);setTypeface(null,Typeface.BOLD)
-            setPadding(dp(24),dp(14),dp(16),dp(14));isAccessibilityHeading=true
+            text=title;textSize=25f;setTextColor(Color.rgb(237,242,246));typeface=Typeface.create("sans-serif-medium",Typeface.NORMAL);letterSpacing=0.01f
+            setPadding(dp(22),dp(22),dp(22),dp(20));isAccessibilityHeading=true
         },LayoutParams(-1,-2))
         addView(ScrollView(context).apply { addView(controls);isFocusableInTouchMode=true },LayoutParams(-1,0,1f))
         if(back!=null) {
@@ -44,7 +45,7 @@ internal class SplitMenuScreen(context:Context,title:String,@Suppress("UNUSED_PA
         isFocusableInTouchMode=true
     }
     override fun onAttachedToWindow() { super.onAttachedToWindow();requestApplyInsets() }
-    override fun onDetachedFromWindow() { helpDialog?.dismiss();super.onDetachedFromWindow() }
+    override fun onDetachedFromWindow() { contextMenu?.dismiss();helpDialog?.dismiss();super.onDetachedFromWindow() }
     private fun dp(n:Int)=(n*resources.displayMetrics.density).toInt()
     /** Action feedback is visible status, never an automatically opened help panel. */
     fun feedback(title:String,body:String) {
@@ -64,44 +65,59 @@ internal class SplitMenuScreen(context:Context,title:String,@Suppress("UNUSED_PA
     }
     fun buttonsArea()=LinearLayout(context).apply { orientation=VERTICAL;addControl(this) }
     private fun makeButton(label:String,square:Boolean=true,action:()->Unit)=Button(context).apply {
-        text=label;textSize=18f;isAllCaps=false;isSingleLine=false;ellipsize=null;minHeight=dp(64);minimumHeight=dp(64)
+        text=label;textSize=17f;typeface=Typeface.create("sans-serif-medium",Typeface.NORMAL);letterSpacing=0.01f;isAllCaps=false;isSingleLine=false;ellipsize=null;minHeight=dp(64);minimumHeight=dp(64)
         gravity=Gravity.CENTER
-        setPadding(dp(14),dp(if(square) 48 else 12),dp(if(square) 14 else 56),dp(12));setTextColor(Color.WHITE)
-        val shape=GradientDrawable().apply { cornerRadius=dp(14).toFloat();setColor(Color.rgb(24,65,85));setStroke(dp(1),Color.rgb(51,119,142)) }
+        setPadding(dp(14),dp(if(square) 24 else 12),dp(if(square) 14 else 56),dp(16));setTextColor(Color.rgb(231,238,243))
+        elevation=0f;stateListAnimator=null;backgroundTintList=null
+        val icon=FlatMenuIcon(label,dp(28));compoundDrawablePadding=dp(14)
+        setCompoundDrawablesRelativeWithIntrinsicBounds(if(square) null else icon,if(square) icon else null,null,null)
+        val shape=FlatTechPanel(resources.displayMetrics.density)
         background=RippleDrawable(ColorStateList.valueOf(Color.rgb(47,119,145)),shape,null)
-        setOnClickListener { if(!helpShowing) action() }
+        setOnClickListener { if(!helpShowing && contextMenu==null) action() }
     }
-    private fun card(button:Button,square:Boolean,help:String)=MenuActionCard(context,square).apply {
+    private fun card(button:Button,square:Boolean,help:String,more:List<MenuContextAction> = emptyList())=MenuActionCard(context,square).apply {
         addView(button,FrameLayout.LayoutParams(-1,-1))
         addView(Button(context).apply {
-            text="?";textSize=22f;isAllCaps=false;setTextColor(Color.rgb(119,235,247))
+            text="⋮";textSize=24f;isAllCaps=false;setTextColor(Color.rgb(155,179,193));elevation=0f;stateListAnimator=null
             minHeight=0;minimumHeight=0;minWidth=0;minimumWidth=0;setPadding(0,0,0,0)
             background=RippleDrawable(ColorStateList.valueOf(Color.rgb(47,119,145)),null,null)
-            contentDescription="Informazioni: "+button.text
+            contentDescription="Opzioni: "+button.text
             button.addTextChangedListener(object:android.text.TextWatcher {
                 override fun beforeTextChanged(s:CharSequence?,start:Int,count:Int,after:Int) {}
-                override fun onTextChanged(s:CharSequence?,start:Int,before:Int,count:Int) { contentDescription="Informazioni: "+s }
+                override fun onTextChanged(s:CharSequence?,start:Int,before:Int,count:Int) { contentDescription="Opzioni: "+s }
                 override fun afterTextChanged(s:android.text.Editable?) {}
             })
-            setOnClickListener { showHelp(button.text.toString(),help) }
+            setOnClickListener {
+                if(helpShowing || contextMenu!=null) return@setOnClickListener
+                val popup=PopupMenu(context,this)
+                popup.menu.add(0,0,0,"Aiuto")
+                more.forEachIndexed {i,item->popup.menu.add(0,i+1,i+1,item.title)}
+                popup.setOnMenuItemClickListener {chosen->
+                    popup.dismiss();contextMenu=null
+                    if(chosen.itemId==0) showHelp(button.text.toString(),help) else more.getOrNull(chosen.itemId-1)?.action?.invoke()
+                    true
+                }
+                popup.setOnDismissListener {if(contextMenu===popup) contextMenu=null}
+                contextMenu=popup;popup.show()
+            }
         },FrameLayout.LayoutParams(dp(48),dp(48),Gravity.TOP or Gravity.END))
     }
-    fun button(label:String,help:String?=null,area:LinearLayout?=null,action:()->Unit):Button {
+    fun button(label:String,help:String?=null,area:LinearLayout?=null,more:List<MenuContextAction> = emptyList(),action:()->Unit):Button {
         val button=makeButton(label,action=action)
-        val tile=card(button,true,help ?: MenuCommandHelp.text(label))
+        val tile=card(button,true,help ?: MenuCommandHelp.text(label),more)
         val group=if(area!=null) (area.getChildAt(area.childCount-1) as? MenuButtonGrid)
             ?: MenuButtonGrid(context).also { area.addView(it,LayoutParams(-1,-2)) }
         else buttonGroup ?: MenuButtonGrid(context).also { addControl(it);buttonGroup=it }
         group.addTile(tile);return button
     }
     fun toggle(label:String,value:Boolean,help:String,change:(Boolean)->Unit)=Switch(context).apply {
-        text=label;textSize=18f;setTextColor(Color.WHITE);minHeight=dp(64);setPadding(dp(8),dp(10),dp(8),dp(10))
+        text=label;textSize=18f;setTextColor(Color.WHITE);minHeight=dp(64);setPadding(dp(12),dp(12),dp(12),dp(12))
         buttonTintList=ColorStateList.valueOf(Color.rgb(99,226,241));isChecked=value;contentDescription=label+". "+help
         setOnCheckedChangeListener { _,checked -> change(checked) };addControl(this)
     }
     fun field(hintText:String,value:String,help:String,multiline:Boolean=false,minRows:Int=4)=EditText(context).apply {
         hint=hintText;setText(value);textSize=18f;setTextColor(Color.WHITE);setHintTextColor(Color.rgb(160,183,198))
-        minHeight=dp(64);setPadding(dp(12),dp(12),dp(12),dp(12));isSingleLine=!multiline
+        minHeight=dp(64);setPadding(dp(16),dp(14),dp(16),dp(14));background=GradientDrawable().apply {cornerRadius=dp(12).toFloat();setColor(Color.rgb(21,29,38));setStroke(dp(1),Color.rgb(54,74,88))};isSingleLine=!multiline
         contentDescription=hintText
         if(multiline) {
             inputType=android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE
@@ -119,7 +135,7 @@ internal class SplitMenuScreen(context:Context,title:String,@Suppress("UNUSED_PA
         val panel=LinearLayout(context).apply {
             orientation=VERTICAL;setPadding(dp(16),dp(8),dp(16),dp(16))
             background=GradientDrawable().apply {
-                cornerRadius=dp(24).toFloat();setColor(Color.argb(235,18,35,49));setStroke(dp(1),Color.rgb(72,135,156))
+                cornerRadius=dp(24).toFloat();setColor(Color.argb(240,25,33,43));setStroke(dp(1),Color.rgb(68,92,108))
             }
         }
         val header=LinearLayout(context).apply { orientation=HORIZONTAL;gravity=Gravity.CENTER_VERTICAL }
