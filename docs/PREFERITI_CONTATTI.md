@@ -1,10 +1,14 @@
+# Percorso aggiornato .90 / 112
+
+La voce contatti è ora nella prima riga della Home, a destra di Appunti locali, e non più nella Configurazione. Funzioni e dati .89 restano gli stessi.
+
 # Preferiti e cache contatti — .89 / 111
 
 Gruppo esplicitamente autorizzato: distinguere Preferiti dalla cache dei frequenti; aggiungere da qualsiasi numero rubrica o impostando nome e numero direttamente; rimuovere voci senza confondere i due archivi. Nessuna modifica ai flussi cover/PiP/stop/audio/wake/polling/WhatsApp della .88.
 
 ## Uso
 
-Configurazione → Collegamento e azioni → Maps, chiamate e WhatsApp → **Preferiti e cache contatti**:
+Home → **Preferiti e cache contatti**, nella prima riga a destra di **Appunti locali**:
 
 - **Preferiti → Aggiungi dalla rubrica:** apre ACTION_PICK su ContactsContract.CommonDataKinds.Phone.CONTENT_URI. Scegli una persona e uno dei suoi numeri, anche se non era preferito Android. URI content/authority ufficiale, riga e numero vengono revalidati prima del salvataggio. Il permesso Contatti è richiesto se mancante; annullare la scelta non salva. Nessuna scrittura nella rubrica.
 - **Preferiti → Nome e numero manuali:** due campi e Salva preferito. Il nome manuale può avere1–80 caratteri, il numero5–15 cifre con eventuale + iniziale; spazi/trattini/parentesi di formattazione normalizzati. Codici *, #, pause/interni, lettere e + interno sono rifiutati. Non viene creato un contatto Android. Errori di validazione non svuotano i campi. Identico nome/numero manuale riutilizza lo stesso ID invece di duplicarlo.

@@ -113,10 +113,21 @@ class MenuRefreshAndHelpTest {
         button(a.window.decorView,"Indietro").performClick();await { has(a.window.decorView,"Appunti locali: 3") }
         c.pause().stop().destroy()
     }
-    @Test fun homeStartsWithNotesAndGreetingWrapsFiveRowsAndSavesAllLines() {
+    @Test fun homeStartsWithNotesAndContactsTogetherAndGreetingWrapsFiveRowsAndSavesAllLines() {
         val app=RuntimeEnvironment.getApplication();NativeChatSettings.enable(app,true)
         val c=Robolectric.buildActivity(MainActivity::class.java).create();val a=c.get();val root=a.window.decorView
         assertEquals("Appunti locali",views(root).filterIsInstance<Button>().first().text.toString())
+        val notes=button(root,"Appunti locali");val contacts=button(root,"Preferiti e cache contatti")
+        measure(root)
+        val notesCard=notes.parent as View;val contactsCard=contacts.parent as View
+        assertSame(notesCard.parent,contactsCard.parent)
+        assertEquals(notesCard.top,contactsCard.top);assertTrue(notesCard.right<=contactsCard.left)
+        assertTrue(notesCard.width>0 && contactsCard.width>0)
+        shadowOf(app).clearNextStartedActivities();contacts.performClick()
+        assertEquals(ContactCacheActivity::class.java.name,shadowOf(app).nextStartedActivity?.component?.className)
+        val setup=Robolectric.buildActivity(BridgeSetupActivity::class.java,android.content.Intent(app,BridgeSetupActivity::class.java).putExtra("section","actions")).create()
+        assertFalse(views(setup.get().window.decorView).filterIsInstance<Button>().any {it.text.toString()=="Preferiti e cache contatti"})
+        setup.destroy()
         button(root,"Configurazione").performClick();button(root,"Voce e saluto").performClick()
         val field=views(root).filterIsInstance<EditText>().single { it.contentDescription=="Frase del saluto" }
         assertTrue(field.minLines>=5)

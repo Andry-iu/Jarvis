@@ -1,3 +1,7 @@
+# Aggiornamento .90
+
+Spostata la voce Preferiti e cache contatti nella prima riga Home a destra di Appunti locali. Nessuna funzione aggiunta; collaudo della posizione sul Galaxy ancora da fare.
+
 # Aggiornamento .89
 
 Implementato nel gruppo autorizzato: Preferiti e Cache frequenti separati; aggiunta locale dalla rubrica e nome/numero manuali; migrazione preferiti .88 senza perdita, rimozione indipendente e risoluzione per nome con controlli. Restano da collaudare picker Samsung, aggiornamento con dati effettivi e chiamata al preferito manuale; nessuna promessa di risultato già acquisito sul Galaxy.

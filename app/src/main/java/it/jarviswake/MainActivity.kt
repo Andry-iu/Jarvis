@@ -131,6 +131,7 @@ class MainActivity : Activity() {
                 text("J.A.R.V.I.S. · "+appVersionName(),22f)
                 status=text(State.get(this));attemptStatus=text(State.getAttempt(this),14f)
                 button("Appunti locali") { startActivity(Intent(this,LocalNotesActivity::class.java)) }
+                menu.button("Preferiti e cache contatti", "Due sezioni separate: preferiti dalla rubrica o con nome e numero manuali, cache automatica rimovibile. Non avvia telefonate.") { startActivity(Intent(this,ContactCacheActivity::class.java)) }
                 button("Parla con Jarvis") { startVoiceCycle() }
                 button("Avvia ascolto Hey Jarvis") {
                     actionFeedback=true

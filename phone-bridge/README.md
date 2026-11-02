@@ -1,3 +1,7 @@
+# .90 / 112 — percorso guida
+
+Guida aggiornata: Home → Preferiti e cache contatti, a destra di Appunti locali nella prima riga. Nessuna modifica dei tool, trasporto, consensi o abbinamenti.
+
 # .89 / 111 — Preferiti locali separati
 
 Stesse operazioni/pairing/audience. Ricerca e chiamata risolvono anche Preferiti locali scelti dalla rubrica o creati dall’utente con nome/numero manuali. Il comando remoto continua a contenere soltanto nome/contact_ref: nessun numero arbitrario o elenco completo dei Preferiti. Fonti e revisioni revalidate sul telefono, omonimi richiedono scelta. Cache20 indipendente, Preferiti persistenti fino a100.
