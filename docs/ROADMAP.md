@@ -1,3 +1,5 @@
+0.5.92 / 114 — correzione saluto nativo autorizzata dopo ZIP _6_ della .91: controllo Invia affiancato al campo breve o sotto il multilinea, centro del controllo corrente univoco/abilitato; rimosso il punto dedotto sotto editor in assenza del controllo. Frase esatta, focus/finestra, stabilità e revalidazione prima dell’unico gesto conservati. Uscite cover .70, stop/wake .79, menu/preferiti .91 invariati. Invio/risposta parlata sul Galaxy da collaudare, non provati dal completamento del gesto.
+
 0.5.91 / 113 — gestione Preferiti JarvisWake da chat: elenco, aggiunta da contatto risolto, creazione manuale, rinomina, cambio numero ed eliminazione con consenso dedicato. Solo archivio privato, mai rubrica Android; ID/revisioni e invalidazione cache associata, conflitto rubrica ⚠/da verificare. Menu HUD piatto scuro/ciano con icone lineari e ⋮ → Aiuto/azioni contestuali, due riquadri per riga e Indietro largo ultimo. Home contatti a destra di Appunti, cover/Voice/wake/WhatsApp invariati. Collaudo Galaxy e giro reale nuovo catalogo plugin da fare.
 
 # Aggiornamento .90

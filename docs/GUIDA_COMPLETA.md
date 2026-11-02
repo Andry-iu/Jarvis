@@ -1,4 +1,4 @@
-# Guida completa JarvisWake — 0.5.91 / 113
+# Guida completa JarvisWake — 0.5.92 / 114
 
 ## Iniziare e orientarsi
 
@@ -45,6 +45,7 @@ Configurazione → Voce e saluto permette di scrivere e salvare la frase richies
 Se il testo compare ma resta nel campo, o senti soltanto il beep e Voice attende te, l’invio o la risposta non sono confermati. Non dichiarare il saluto riuscito sulla base della preferenza o di un evento di clic. Esporta la diagnostica per controllare fase, riconoscimento dei pulsanti ed esito del comando.
 Il volume dell’audio di avvio, quello multimediale del telefono e il comportamento audio di ChatGPT sono distinti. Durante Voice la wake resta sospesa. Un doppio tocco o swipe richiede l’arresto unico e rimuove la cover subito; la ripresa wake richiede la verifica del rilascio audio.
 Prima di aprire la cover, Parla con Jarvis controlla ciclo già attivo, Accessibilità abilitata e, nella modalità nativa, servizio collegato e shortcut accessibile. Se manca una condizione mostra il motivo e il percorso da correggere, invece di aprire e annullare subito la cover.
+Dalla .92 il tap del saluto riconosce il controllo destro anche affiancato al campo su una sola riga, oltre al compositore multilinea osservato. Usa il centro del controllo attuale, unico e abilitato, con frase esatta e nuova verifica prima del gesto. Se il controllo non è rilevabile non inventa più un punto sotto il campo. Nessun invio ripetuto dopo incertezza. Il completamento del gesto Android non prova accettazione del messaggio o risposta parlata: il comportamento va confermato sul telefono.
 
 ## Cover: tutti i tocchi e gli swipe
 

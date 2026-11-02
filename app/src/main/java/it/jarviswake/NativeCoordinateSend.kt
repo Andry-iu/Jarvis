@@ -19,17 +19,19 @@ internal object NativeCoordinateSend {
             b.width in (28*density).toInt()..(80*density).toInt() &&
                 b.height in (28*density).toInt()..(80*density).toInt() &&
                 b.x>=field.right-56*density && b.x<=field.right+24*density &&
-                b.top>=field.bottom && b.top<=field.bottom+32*density
-        }.distinctBy { it.box }
-        if (near.size>1 || near.any { !it.enabled || !it.labelAllowed }) return null
-        val target=near.singleOrNull()?.box
-        // Galaxy observations: button centre is ~12dp left of editor right, 32dp below its bottom.
-        // This fallback is relative to the LIVE editor, never to a fixed screenshot/screen position.
-        if (target==null && window.height<=window.width) return null
-        val x=target?.x ?: field.right-12*density
-        val y=target?.y ?: field.bottom+32*density
+                // Multiline composer: actions below the text. Live short composer: same row.
+                ((b.top>=field.bottom && b.top<=field.bottom+32*density) ||
+                    (field.height<=80*density && b.top>=field.top-8*density &&
+                        b.bottom<=field.bottom+8*density && b.y>=field.top && b.y<=field.bottom))
+        }
+        if (near.any { !it.enabled || !it.labelAllowed }) return null
+        val target=near.distinctBy { it.box }.singleOrNull()?.box ?: return null
+        // Only the centre of a live, unique control. Never invent a point below the editor.
+        if (target.left<window.left || target.right>window.right || target.top<window.top || target.bottom>window.bottom) return null
+        val x=target.x
+        val y=target.y
         if (!window.contains(x,y) || blocked.any { it.contains(x,y) }) return null
-        return Plan(field,window,windowId,x,y,if (target!=null) "control_bounds" else "field_anchor")
+        return Plan(field,window,windowId,x,y,"control_bounds")
     }
 }
 

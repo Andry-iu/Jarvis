@@ -17,15 +17,35 @@ class NativeCoordinateSendTest {
         assertEquals(1288f,p.x);assertEquals(1608f,p.y)
         assertEquals("control_bounds",p.source)
     }
-    @Test fun explicitFallbackUsesLiveFieldAnchorWhenNoAccessibleArrowExists() {
-        val p=plan(emptyList())!!
-        assertEquals(1286f,p.x);assertEquals(1608f,p.y)
-        assertEquals("field_anchor",p.source)
+    @Test fun missingControlNeverInventsAPointBelowTheField() {
+        assertNull(plan(emptyList()))
+        assertNull(NativeCoordinateSend.plan(b(240,1512,1392,1704),window,710,3.5f,emptyList(),listOf(ime)))
+    }
+    @Test fun observed091SingleLineComposerTargetsTheExistingRightControl() {
+        // Sanitized ZIP _6_ after_greeting_focus: field and right action occupy the same row.
+        val short=b(240,1512,1392,1704)
+        val controls=listOf(c(b(48,1512,240,1704)),c(b(976,1512,1168,1704)),c(arrow))
+        val p=NativeCoordinateSend.plan(short,window,710,3.5f,controls,listOf(ime))!!
+        assertEquals(1288f,p.x);assertEquals(1608f,p.y);assertTrue(arrow.contains(p.x,p.y))
+        assertEquals("control_bounds",p.source)
+        val stable=NativeSendStability<NativeCoordinateSend.Plan>()
+        assertFalse(stable.observe(p,0));assertTrue(stable.observe(p,250))
+        assertNull(NativeCoordinateSend.plan(short,window,710,3.5f,controls,listOf(b(0,1500,1440,3120))))
+    }
+    @Test fun inlineControlStillRequiresUniqueEnabledAllowedAndCurrentBounds() {
+        val short=b(240,1512,1392,1704)
+        fun check(cs:List<NativeCoordinateSend.Control>)=NativeCoordinateSend.plan(short,window,710,3.5f,cs,listOf(ime))
+        assertNull(check(listOf(c(arrow,false))))
+        assertNull(check(listOf(c(arrow,label=false))))
+        assertNull(check(listOf(c(arrow),c(b(1160,1512,1352,1704)))))
+        assertNull(check(listOf(c(arrow),c(arrow,false))))
+        assertNull(check(listOf(c(b(1192,1300,1384,1492)))))
+        assertNotNull(check(listOf(c(arrow),c(arrow))))
     }
     @Test fun liveDensityAndKeyboardMovementScaleAndTranslateThePoint() {
         val p=NativeCoordinateSend.plan(b(56,800,664,1000),b(0,0,720,1560),4,1.75f,
-            emptyList(),listOf(b(0,1200,720,1560)))!!
-        assertEquals(643f,p.x);assertEquals(1056f,p.y)
+            listOf(c(b(596,1008,692,1104))),listOf(b(0,1200,720,1560)))!!
+        assertEquals(644f,p.x);assertEquals(1056f,p.y)
     }
     @Test fun disabledOrConflictingLabelNeverFallsBackToBlindAnchor() {
         assertNull(plan(listOf(c(arrow,false))))
@@ -33,7 +53,7 @@ class NativeCoordinateSendTest {
         assertNull(plan(listOf(c(arrow),c(b(1160,1512,1352,1704)))))
     }
     @Test fun tapCannotEnterKeyboardOrLeaveTheApp() {
-        assertNull(plan(emptyList(),listOf(b(0,1500,1440,3120))))
+        assertNull(plan(listOf(c(arrow)),listOf(b(0,1500,1440,3120))))
         assertNull(NativeCoordinateSend.plan(field,b(0,0,1440,1550),1,3.5f,emptyList(),emptyList()))
     }
     @Test fun unknownLayoutAndInvalidGeometryCannotInventATap() {
@@ -44,7 +64,7 @@ class NativeCoordinateSendTest {
     }
     @Test fun stabilityRequiresTheExactPointAndWindowToRemainCurrent() {
         val stable=NativeSendStability<NativeCoordinateSend.Plan>()
-        val p=plan(emptyList())!!
+        val p=plan(listOf(c(arrow)))!!
         assertFalse(stable.observe(p,0));assertTrue(stable.observe(p,250))
         assertFalse(stable.observe(p.copy(windowId=900),300))
         assertFalse(stable.observe(p.copy(x=p.x+10),600))

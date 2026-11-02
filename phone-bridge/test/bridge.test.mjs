@@ -234,7 +234,7 @@ test('Status remains compatible with old snapshots and reports only the notes co
 
 test('The complete guide is available without pairing or a running phone',async()=>{
  const e=env();const r=value(await tool(e,'jarviswake_guide',{topic:'indice',query:''}));
- assert.equal(r.guide_version,'0.5.91');assert.equal(r.version_code,113);assert.equal(r.phone_required,false);assert.ok(r.topics.length>=19);
+ assert.equal(r.guide_version,'0.5.92');assert.equal(r.version_code,114);assert.equal(r.phone_required,false);assert.ok(r.topics.length>=19);
  assert.equal(e.BUCKET.data.size,0);
  for(const topic of ['wake','cover','audio','chatgpt','collegamento','appunti','plugin','maps','chiamate','whatsapp','diagnostica']) assert.ok(r.topics.some(t=>t.topic===topic));
 });

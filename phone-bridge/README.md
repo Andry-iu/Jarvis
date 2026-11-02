@@ -1,3 +1,7 @@
+# .92 / 114 — guida saluto nativo
+
+Solo guida aggiornata al riconoscimento del controllo Invia affiancato o sotto il compositore nell’app. Tool, parametri, consensi, abbinamenti, dati e trasporto .91 invariati. Nessuna azione reale sul telefono eseguita in cloud.
+
 # .91 / 113 — Preferiti remoti autorizzati
 
 Sei tool aggiunti per i soli Preferiti JarvisWake: list/add/create/rename/change_number/delete. Consenso dedicato sul telefono; mutazioni con revisioni, parametri privati120s e stesso UUID/claim/journal. Nessuna scrittura Android Contacts. Risultati metadata con ultime4cifre, conflitto rubrica e cache_status, mai numero completo. Solo create/change ammettono numero esplicito dell’utente. Nuova guida20argomenti e menu ⋮. Stesso progetto/plugin/audience/pairing/segreti. Le limitazioni numero/elenco locale delle .89/.90 sotto sono storiche, superate solo per questi sei strumenti; i comandi di chiamata continuano a richiedere risoluzione locale.
