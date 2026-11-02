@@ -1,3 +1,25 @@
+# Prova .94/116 telefono, Watch .93/115 invariato
+
+## Riscontri già acquisiti e prossimo confronto
+
+L’utente conferma registrazione/riascolto Watch e avvio Jarvis/ChatGPT Voice dal Watch. Fotografia durante VOICE: dispositivi comunicazione SM-S926B tipi1/2, selezionato SM-S926B, una registrazione visibile con ingresso SM-S926B tipo15. Questo documenta soltanto quel momento: non esclude ogni possibile percorso HFP. Il commutatore Chiamate Bluetooth è dichiarato attivo; non riproporre la stessa verifica come se mancasse. Sblocco già false nello scatto: non prova sblocco automatico separato. Nessuna attribuzione della causa al firmware è accertata.
+
+Installa soltanto l’APK telefono .94 sopra l’esistente. Non reinstallare o ricompilare l’app Watch .93. Apri **Servizio → Galaxy Watch · prova audio → Autorizza dispositivi vicini → Leggi profili Bluetooth** e annota profilo, dispositivo, supporto canale vocale e Audio SCO. Questo è il minimo riscontro successivo: nessun dispositivo HFP oppure supporto false/non disponibile separano il limite dal caso in cui tentare l’audio. Nomi e MAC restano solo UI, il log riporta codici/conteggi.
+
+Se compare il proprio Watch supportato: con prova registrazione Watch ferma, avvia Voice dal Watch, poi usa la notifica **Prova audio Watch** sul telefono per riaprire la pagina. L’ingresso esplicito rimuove HUD senza fermare Voice e senza ripresentarlo ai poll. Con notifiche negate, abilitarle per questo ritorno. Conferma la casella e premi **Prova canale** sul Watch riconosciuto. La guardia verifica ciclo nativo in fase VOICE, nessuna cattura wake, telefono sbloccato, BLUETOOTH_CONNECT, READ_PHONE_STATE e chiamate IDLE; la casella conferma l’intenzione e la prova Watch ferma. Non identifica automaticamente quale periferica sia il Watch.
+
+Una sola richiesta pubblica startVoiceRecognition, senza scan/nuovo pairing/falsa chiamata/API private. Vero significa richiesta accettata, non canale connesso. Poll1s legge isAudioConnected; timeout connessione15s e totale90s. Stop consumato una sola volta su pulsante, pausa pagina, perdita condizioni o canale/profilo. Un canale già connesso prima non viene avviato né fermato. Esito incerto non viene ritentato; release_unconfirmed non prova audio libero. Nessuna modifica al recupero wake .79, nessuna registrazione sul telefono e nessun cambio AudioManager.mode. Il canale HFP dipende dal firmware e dall’altro proprietario della comunicazione.
+
+Restando sulla pagina, se Android espone SCO puoi scegliere quel dispositivo. L’accettazione riguarda Jarvis, non attribuisce a ChatGPT. Solo un confronto fisico con telefono distante e connessione mantenuta può provare sia frase ricevuta sia risposta dal Watch. Se non si collega/non è supportato, fermarsi sul codice osservato. Non presentare richieste accettate, test cloud o metadata globali come riuscita ChatGPT.
+
+Aggiornamenti Watch futuri: l’utente mantiene **Wear Installer 2**; nessun updater integrato in questo gruppo. Gli APK rimangono distinti. Il vecchio percorso .93 seguente documenta la prova iniziale, non richiede di ripeterla.
+
+## Fonti primarie aggiuntive
+
+- [BluetoothHeadset: dispositivi connessi, supporto riconoscimento, start/stop e audio connesso](https://developer.android.com/reference/android/bluetooth/BluetoothHeadset)
+- [Permessi Bluetooth per dispositivi già collegati](https://developer.android.com/develop/connectivity/bluetooth/bt-permissions)
+- [Samsung: chiamate dal Watch connesso](https://www.samsung.com/us/support/answer/ANS10002847/)
+
 # Galaxy Watch · prova .93/115
 
 La .93 aggiunge un’app sperimentale Wear OS e una pagina di prova sul telefono. Non è una conversazione ChatGPT già funzionante dal polso. Il telefono continua a usare lo stesso progetto/account e le regole Voice/wake già consolidate; nessuna API a pagamento aggiunta.

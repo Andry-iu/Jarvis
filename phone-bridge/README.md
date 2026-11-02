@@ -1,3 +1,7 @@
+# .94 / 116 — guida HFP telefono
+
+Solo guida aggiornata; prova Bluetooth locale nella pagina telefono, Watch .93 invariato. Nessun comando audio MCP, nessuna modifica a tool/trasporto/abbinamenti/audience o segreti. Stato accettato, canale connesso e routing ChatGPT restano distinti.
+
 # .93 / 115 — guida prova Watch
 
 Solo guida aggiornata. La prova Wear OS usa Data Layer tra app dello stesso package/certificato, non il relay MCP. Nessun nuovo tool o trasmissione audio nel plugin; pairing/audience/segreti invariati.
