@@ -25,6 +25,19 @@
         <activity android:name=".MainActivity" android:enableOnBackInvokedCallback="true" android:exported="true" android:windowSoftInputMode="adjustResize">
             <intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent-filter>
         </activity>
+        <activity android:name=".WatchProbeActivity" android:exported="false"/>
+        <activity android:name=".WatchEntryActivity" android:exported="true" android:showWhenLocked="true" android:turnScreenOn="true" android:excludeFromRecents="true">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW"/><category android:name="android.intent.category.DEFAULT"/><category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="jarviswake" android:host="watch" android:path="/start"/>
+            </intent-filter>
+        </activity>
+        <service android:name=".WatchProbeService" android:exported="true">
+            <intent-filter>
+                <action android:name="com.google.android.gms.wearable.MESSAGE_RECEIVED"/>
+                <data android:scheme="wear" android:host="*" android:pathPrefix="/jarviswake/probe/v1/"/>
+            </intent-filter>
+        </service>
         <activity android:name=".ContactCacheActivity" android:exported="false"/>
         <activity android:name=".WhatsAppQrActivity" android:exported="false"/>
         <activity android:name=".BridgeSetupActivity" android:enableOnBackInvokedCallback="true" android:exported="false"/>

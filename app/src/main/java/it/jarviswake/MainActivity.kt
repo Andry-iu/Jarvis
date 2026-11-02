@@ -149,6 +149,7 @@ class MainActivity : Activity() {
                 for(category in MenuNavigation.STEPS.dropLast(1)) button(title(category)) { openPage(category) }
             }
             MenuPage.SERVICE -> {
+                button("Galaxy Watch · prova audio") { startActivity(Intent(this,WatchProbeActivity::class.java)) }
                 for(category in listOf(MenuPage.PERMISSIONS,MenuPage.DIAGNOSTICS,MenuPage.WEB_MAINTENANCE)) button(title(category)) { openPage(category) }
                 button("Gestisci abbinamento ChatGPT") { openBridge("pair") }
                 button("Guida completa e plugin") { startActivity(Intent(this,GuideActivity::class.java)) }
@@ -644,6 +645,9 @@ class MainActivity : Activity() {
         updateCoverButton()
         if (::contentRoot.isInitialized && !VoiceCycle.active) prepareChatGpt()
         handler.post(update)
+        val watchTicket=intent.getStringExtra(it.jarviswake.watch.WatchProtocol.EXTRA)
+        intent.removeExtra(it.jarviswake.watch.WatchProtocol.EXTRA)
+        if(watchTicket!=null && WatchTickets.transition(this,watchTicket,"ready","consumed")) startVoiceCycle()
     }
     override fun onPause() {
         runCatching { BridgeLink.owner(this,"main",false) }

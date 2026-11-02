@@ -4,7 +4,7 @@ import json,sys
 from pathlib import Path
 root=Path(__file__).resolve().parent.parent
 source=root/'docs/guida-jarvis.json';data=json.loads(source.read_text())
-assert data['version']=='0.5.92' and data['versionCode']==114
+assert data['version']=='0.5.93' and data['versionCode']==115
 assert len(data['sections'])>=15
 ids=[s['id'] for s in data['sections']];assert len(ids)==len(set(ids))
 for s in data['sections']:

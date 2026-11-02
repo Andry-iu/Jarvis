@@ -1,14 +1,15 @@
 plugins { id("com.android.application"); id("org.jetbrains.kotlin.android") }
 android {
     namespace = "it.jarviswake"
+    sourceSets.getByName("main").java.srcDir(rootProject.file("watch-common"))
     compileSdk = 36
     buildToolsVersion = "36.0.0"
     defaultConfig {
         applicationId = "it.jarviswake"
         minSdk = 31
         targetSdk = 36
-        versionCode = 114
-        versionName = "0.5.92"
+        versionCode = 115
+        versionName = "0.5.93"
         ndk { abiFilters += listOf("arm64-v8a") }
     }
     val ciKeystore = System.getenv("JARVIS_KEYSTORE_PATH")
@@ -60,6 +61,7 @@ val whatsappNative by tasks.registering(Exec::class) {
 tasks.named("preBuild").configure { dependsOn(whatsappNative) }
 
 dependencies {
+    implementation("com.google.android.gms:play-services-wearable:20.0.1")
     implementation(files("build/whatsapp-native/wabridge.aar").builtBy(whatsappNative))
     implementation("com.google.zxing:core:3.5.3")
     implementation("androidx.car.app:app:1.7.0")

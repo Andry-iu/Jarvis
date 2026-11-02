@@ -1,3 +1,7 @@
+# .93 / 115 — guida prova Watch
+
+Solo guida aggiornata. La prova Wear OS usa Data Layer tra app dello stesso package/certificato, non il relay MCP. Nessun nuovo tool o trasmissione audio nel plugin; pairing/audience/segreti invariati.
+
 # .92 / 114 — guida saluto nativo
 
 Solo guida aggiornata al riconoscimento del controllo Invia affiancato o sotto il compositore nell’app. Tool, parametri, consensi, abbinamenti, dati e trasporto .91 invariati. Nessuna azione reale sul telefono eseguita in cloud.
