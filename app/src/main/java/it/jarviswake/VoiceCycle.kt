@@ -26,6 +26,7 @@ internal object VoiceCycle {
     private var app: Application? = null
     val active: Boolean get() = state.id != null
     val hiddenForWake: Boolean get() = state.hiddenForWake
+    val coverRevealed: Boolean get() = state.coverRevealed
     val id: String? get() = state.id
     val phase: VoiceCycleState.Phase get() = state.phase
     val touchGate: WebVoiceTouchGate get() = state.touchGate
@@ -106,6 +107,14 @@ internal object VoiceCycle {
         }
     }
 
+    fun revealCover(context: Context, token: String) {
+        state.revealCover(token)
+        // Window removal must not depend on active Voice/stop state and must never stop media.
+        VoiceAccessibilityService.coverHidden(token, false)
+        WebChatActivity.setExternalCoverVisible(token,true)
+        if (matches(token)) DiagnosticLog.record(context,DiagnosticLog.Event.COVER_ONLY_REVEALED,token)
+    }
+
     fun hideForWake(context: Context, token: String, returnHome: Boolean = true) {
         if (!matches(token) || phase != VoiceCycleState.Phase.VOICE || hiddenForWake ||
             hideStopInFlightToken == token) return
@@ -146,6 +155,7 @@ internal object VoiceCycle {
     fun cancel(context: Context, token: String, message: String) {
         if (matches(token) && VoiceAccessibilityService.endNative(context, token, message)) return
         if (!state.cancel(token)) return
+        WatchProbeReturn.cycleEnded(context,token)
         WaitingAudio.stop()
         if (hideStopInFlightToken == token) hideStopInFlightToken = null
         DiagnosticLog.record(context, DiagnosticLog.Event.CYCLE_CANCELLED, token)

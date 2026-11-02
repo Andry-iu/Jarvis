@@ -505,7 +505,7 @@ class WebChatActivity : Activity() {
 
         fun setExternalCoverVisible(token: String, visible: Boolean) {
             active.get()?.takeIf { it.cycleToken == token }?.let {
-                it.localHud?.visibility = if (visible) View.GONE else View.VISIBLE
+                it.localHud?.visibility = if (visible || VoiceCycle.coverRevealed) View.GONE else View.VISIBLE
                 it.updateLockScreenUi()
             }
         }
@@ -857,11 +857,12 @@ class WebChatActivity : Activity() {
                     export = { DiagnosticExportActivity.open(this@WebChatActivity) },
                     hide = { VoiceCycle.hideForWake(this@WebChatActivity, cycleToken!!) },
                     revealChat = {
-                        VoiceCycle.hideForWake(this@WebChatActivity, cycleToken!!, returnHome = false)
+                        VoiceCycle.revealCover(this@WebChatActivity, cycleToken!!)
                     }
                 )
             }
             root.addView(localHud, FrameLayout.LayoutParams(-1, -1))
+            if(VoiceCycle.coverRevealed) localHud?.visibility=View.GONE
             val density = resources.displayMetrics.density
             localUnlock = Button(this).apply {
                 text = "Sblocca telefono"

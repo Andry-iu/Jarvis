@@ -114,6 +114,7 @@ class WakeService : Service() {
                 if (VoiceCycle.active) {
                     if (captureRequested) setCaptureRequested(false)
                     if (pending!=null) VoiceAccessibilityService.finishReleasedNative(this@WakeService,pending)
+                    else VoiceAccessibilityService.finishReleasedHiddenNative(this@WakeService)
                 }
                 if (!VoiceCycle.active && !wakeDispatchPending && !BridgeCallHold.holding) {
                     val audio=recorder

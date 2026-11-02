@@ -110,7 +110,7 @@ class MainActivity : Activity() {
         MenuPage.CHATGPT->"Scegli l’app ChatGPT nativa o il WebView desktop. Nell’app nativa seleziona lo shortcut creato dal progetto e conferma il nome esatto visibile, rispettando gli spazi. Prova collegamento apre solo il progetto, senza Voice. Nel WebView usa l’URL del progetto e accedi con il tuo account. Modello e livello si scelgono dentro ChatGPT. Termina un ciclo attivo prima di cambiare modalità o collegamento."
         MenuPage.GREETING->"Questa frase viene richiesta una volta dopo la conferma Voice, nella stessa conversazione. Salva frase applica il testo; Ripristina rimette ciao jarvis. Nella guida Avanti salva una frase valida. Il salvataggio della preferenza non prova che ChatGPT abbia inviato il messaggio o pronunciato il saluto. Le bozze personali non vengono inviate."
         MenuPage.AUDIO->"Attiva l’audio e scegli un file dal telefono. Volume regola solo l’audio di attesa di Jarvis, non quello di ChatGPT o del telefono. Spostando il volume parte un’anteprima anche con audio disattivato: dura il minimo scelto, o 2 secondi se il minimo è zero. Tempo minimo ritarda solo il comando Voice fino a 30 secondi. Lasciando questa sezione l’anteprima si ferma."
-        MenuPage.COVER->"Scegli l’aspetto iniziale opaco o semitrasparente. Durante Voice: tocco centrale alterna il microfono; mute confermato significa animazione grigia e ferma. Tocco sotto l’animazione cambia trasparenza. Doppio tocco centrale chiude subito la cover e richiede stop Voice. Swipe sinistro lascia la chat, swipe in basso torna Home; doppio tocco in alto a destra esporta diagnostica. Leggi la guida per le zone dei gesti."
+        MenuPage.COVER->"Scegli l’aspetto iniziale opaco o semitrasparente. Durante Voice: tocco centrale alterna il microfono; mute confermato significa animazione grigia e ferma. Tocco sotto l’animazione cambia trasparenza. Doppio tocco centrale chiude subito la cover e richiede stop Voice. Swipe sinistro nasconde soltanto la cover mantenendo Voice attiva; swipe in basso termina Voice e torna Home; doppio tocco in alto a destra esporta diagnostica. Leggi la guida per le zone dei gesti."
         MenuPage.LINK->"Collegamento ChatGPT abbina il telefono al plugin JarvisWake Link. Abbinamento, consenso Maps/chiamate/WhatsApp e consenso appunti sono categorie distinte. Le azioni richiedono una richiesta esplicita e i rispettivi permessi. Un aggiornamento firmato conserva l’abbinamento; cancellarlo non elimina gli appunti. Il calendario resta al plugin dedicato."
         MenuPage.SUMMARY->"Questo riepilogo legge le impostazioni attuali, senza eseguire chiamate, messaggi o navigazione. Puoi tornare ai passaggi precedenti. Termina torna all’uso quotidiano. I permessi e l’accesso a ChatGPT restano scelte da effettuare nelle schermate supportate; una configurazione salvata non certifica il collaudo del telefono."
         MenuPage.WEB_MAINTENANCE->"Svuota cache elimina soltanto risorse WebView e ricarica ChatGPT. Cancella dati WebView elimina anche cookie e dati dei siti del WebView, richiede conferma e può disconnettere l’account. Questi comandi non cancellano l’app ChatGPT nativa, gli appunti locali o il codice del plugin. Non eseguirli durante Voice."
@@ -647,7 +647,11 @@ class MainActivity : Activity() {
         handler.post(update)
         val watchTicket=intent.getStringExtra(it.jarviswake.watch.WatchProtocol.EXTRA)
         intent.removeExtra(it.jarviswake.watch.WatchProtocol.EXTRA)
-        if(watchTicket!=null && WatchTickets.transition(this,watchTicket,"ready","consumed")) startVoiceCycle()
+        if(watchTicket!=null && WatchTickets.transition(this,watchTicket,"ready","consumed")) {
+            val previous=VoiceCycle.id
+            startVoiceCycle()
+            WatchProbeReturn.bindWatch(this,VoiceCycle.id?.takeIf {previous==null})
+        }
     }
     override fun onPause() {
         runCatching { BridgeLink.owner(this,"main",false) }

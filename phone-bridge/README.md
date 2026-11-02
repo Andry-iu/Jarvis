@@ -1,3 +1,7 @@
+# .96 / 118 — guida swipe sinistro e preparazione prova Watch
+
+Solo guida: sinistro nasconde cover/Voice resta, basso stop/Home; preparazione locale monouso per prossimo Watch, guardia stop pendente. Nessun nuovo tool/trasporto/audio MCP o modifica audience/pairing/segreti.
+
 # .95 / 117 — guida secondo tentativo SCO Android
 
 Solo guida aggiornata: API pubblica precedente SCO nel telefono, Watch .93 invariato, nessuna cattura o azione audio MCP. Tool/abbinamenti/audience/segreti invariati; dispatch globale non prova audio Watch/ChatGPT.

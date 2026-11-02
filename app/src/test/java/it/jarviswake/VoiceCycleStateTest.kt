@@ -135,4 +135,13 @@ class VoiceCycleStateTest {
         assertEquals(VoiceCycleState.Phase.UNLOCK, state.phase)
     }
 
+    @Test fun revealOnlyKeepsSameVoiceGateAndDoesNotEnableWakeOrFreshVoiceGesture() {
+        val state=waiting();state.openWeb("wake-A",2000,true,true,false,false);state.voiceDispatched("wake-A")
+        assertTrue(state.revealCover("wake-A"));assertTrue(state.coverRevealed)
+        assertEquals(VoiceCycleState.Phase.VOICE,state.phase);assertFalse(state.hiddenForWake)
+        assertFalse(state.touchGate.canDispatch);assertFalse(state.resumeFromWake("wake-A",3000))
+        assertFalse(state.revealCover("stale"));assertTrue(state.coverRevealed)
+        assertTrue(state.cancel("wake-A"));assertFalse(state.coverRevealed)
+    }
+
 }

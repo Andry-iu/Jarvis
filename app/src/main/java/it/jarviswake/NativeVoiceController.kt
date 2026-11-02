@@ -43,7 +43,7 @@ internal class NativeVoiceController(private val service: VoiceAccessibilityServ
                 close = { dismissForExit(); service.requestNativeExit(token, returnHome = false, emergency = true) },
                 export = { exportControls() },
                 hide = { dismissForExit(); service.requestNativeExit(token, returnHome = true) },
-                revealChat = { dismissForExit(); service.requestNativeExit(token, returnHome = false) }
+                revealChat = { dismissForExit(); service.revealNativeChat(token) }
             )
             val params = WindowManager.LayoutParams(-1, -1, WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
                 WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
@@ -243,11 +243,16 @@ internal class NativeVoiceController(private val service: VoiceAccessibilityServ
             start.performAction(AccessibilityNodeInfo.ACTION_CLICK)
             status("COMANDO VOICE INVIATO — ATTENDO CONFERMA")
         } else if (active) {
-            if (!observed) DiagnosticLog.record(service, DiagnosticLog.Event.NATIVE_VOICE_CONFIRMED, token)
+            val firstObservation=!observed
+            if (firstObservation) {
+                DiagnosticLog.record(service, DiagnosticLog.Event.NATIVE_VOICE_CONFIRMED, token)
+                service.markNativeVoiceObserved(token)
+            }
             observed = true
             captureButtons(nodes, "voice_active")
             WaitingAudio.voiceActive(token)
             VoiceCycle.voiceDispatched(token)
+            if(firstObservation) WatchProbeReturn.nativeVoiceObserved(service,token)
             hud?.setVoiceActive()
             hud?.setMicrophoneMuted(unmute != null)
 

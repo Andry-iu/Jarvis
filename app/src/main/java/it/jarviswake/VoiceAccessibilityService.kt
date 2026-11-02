@@ -96,6 +96,21 @@ class VoiceAccessibilityService : AccessibilityService() {
             instance.get()?.startPolling()
         }
 
+        internal fun nativeVoiceObserved(context:Context,token:String):Boolean =
+            context.getSharedPreferences(PREFS,Context.MODE_PRIVATE).getString("native_voice_observed",null)==token
+
+        internal fun finishReleasedHiddenNative(context:Context):Boolean {
+            val p=context.getSharedPreferences(PREFS,Context.MODE_PRIVATE)
+            val token=p.getString("native_token",null) ?: return false
+            if(!VoiceCycle.matches(token) || VoiceCycle.phase!=VoiceCycleState.Phase.VOICE || !nativeVoiceObserved(context,token) ||
+                !p.getBoolean("native_cover_dismissed",false) || p.getBoolean("native_stop",false) || !NativeAudioRelease.confirmed(context,token)) return false
+            val service=instance.get()
+            if(service!=null) return service.finishNative(token,"Audio Voice rilasciato; ripresa wake richiesta.")
+            // Only after stable free audio; no stop is dispatched and no cover is recreated.
+            p.edit().putBoolean("native_stop",true).apply()
+            return finishReleasedNative(context,token)
+        }
+
         internal fun pendingNativeExit(context: Context): String? {
             val p=context.getSharedPreferences(PREFS,Context.MODE_PRIVATE)
             return p.getString("native_token",null)?.takeIf {
@@ -180,6 +195,16 @@ class VoiceAccessibilityService : AccessibilityService() {
             .putBoolean("native_stop", state.stopRequested).putBoolean("native_stop_sent", state.stopSent)
             .putBoolean("native_return_home", state.returnHome).putBoolean("native_exit_error", state.errorReported)
             .apply { state.requestedAt?.let { putLong("native_exit_at", it) } }.apply()
+    }
+
+    internal fun revealNativeChat(token:String) {
+        val same=preferences.getString("native_token",null)==token
+        if(same) preferences.edit().putBoolean("native_cover_dismissed",true).apply()
+        nativeController?.takeIf {it.token==token}?.dismissForExit()
+        if(same) DiagnosticLog.record(this,DiagnosticLog.Event.COVER_ONLY_REVEALED,token)
+    }
+    internal fun markNativeVoiceObserved(token:String) {
+        if(VoiceCycle.matches(token)) preferences.edit().putString("native_voice_observed",token).apply()
     }
 
     internal fun requestNativeExit(token: String, returnHome: Boolean, emergency: Boolean = false) {
@@ -413,6 +438,7 @@ class VoiceAccessibilityService : AccessibilityService() {
 
     private fun processAutomation() {
         val token = currentToken() ?: return
+        if(finishReleasedHiddenNative(this)) return
         nativeController?.let {
             runCatching { it.poll() }.onFailure {
                 VoiceCycle.cancel(this, token, "Interazione nativa non disponibile; arresto da verificare.")
@@ -435,7 +461,7 @@ class VoiceAccessibilityService : AccessibilityService() {
             return
         }
         if (VoiceCycle.hiddenForWake) return
-        showOverlay(token)
+        if(!VoiceCycle.coverRevealed) showOverlay(token)
         if (VoiceCycle.phase == VoiceCycleState.Phase.VOICE && !activeShown) {
             activeShown = true
             overlay?.setVoiceActive()
@@ -550,7 +576,7 @@ class VoiceAccessibilityService : AccessibilityService() {
             WebChatActivity.setExternalCoverVisible(token, true)
             return
         }
-        if (overlayFailed || !Settings.canDrawOverlays(this) ||
+        if (VoiceCycle.coverRevealed || overlayFailed || !Settings.canDrawOverlays(this) ||
             !WebChatActivity.isCycleVisible(token)) return
         val keyguard = getSystemService(KeyguardManager::class.java)
         if (keyguard.isDeviceLocked || keyguard.isKeyguardLocked) return
@@ -562,7 +588,7 @@ class VoiceAccessibilityService : AccessibilityService() {
             close = { VoiceCycle.cancel(this, token, "Jarvis chiuso. Ascolto Hey Jarvis riattivato.") },
             export = { openDiagnosticsExport() },
             hide = { VoiceCycle.hideForWake(this, token, returnHome = true) },
-            revealChat = { VoiceCycle.hideForWake(this, token, returnHome = false) }
+            revealChat = { VoiceCycle.revealCover(this, token) }
         )
         val hudParams = WindowManager.LayoutParams(-1, -1,
             WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
