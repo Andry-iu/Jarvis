@@ -72,7 +72,7 @@ internal class WatchHfpProbe(private val c:Context,private val changed:()->Unit)
         append("HFP: $serviceCode\nProva: ${trial.code}\n")
         val rows=devices()
         if(rows.isEmpty()) append("Nessun dispositivo HFP connesso esposto. Questo non significa che il Watch non sia collegato tramite Data Layer.\n")
-        for(d in rows) {val s=state(d);append("${name(d)}\nSupporto canale vocale: ${s?.supported ?: "non disponibile"}\nAudio SCO connesso: ${s?.audioConnected ?: "non disponibile"}\n")}
+        for(d in rows) {val s=state(d);append("${name(d)}\nSupporto riconoscimento vocale HFP: ${s?.supported ?: "non disponibile"}\nAudio SCO connesso: ${s?.audioConnected ?: "non disponibile"}\n")}
         append("\nSolo audio_connected conferma il canale Bluetooth; non prova che ChatGPT lo usi. La prova richiede scelta esplicita del Watch, nessuna telefonata e assenza della cattura wake.")
     }
     fun log() {

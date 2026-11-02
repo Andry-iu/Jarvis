@@ -1,3 +1,26 @@
+# Prova .95/117 telefono: SCO Android, Watch .93 invariato
+
+## Riscontro .94 e percorso distinto
+
+Fotografia inviata dall’utente: HFP profile_connected, supporto riconoscimento HFP=false, audio SCO=false, prova idle. Si tratta di capacità del comando di riconoscimento, non di inesistenza del microfono. Non ripetere startVoiceRecognition con quella guardia. Il risultato non prova ancora se il Watch appaia nella lista AudioManager più in basso: richiesto all’utente il solo elenco Prova dispositivo, senza dedurre il dato dallo screenshot tagliato. .94 già permette setCommunicationDevice senza guardia VR: se il Watch è selezionabile, è il percorso moderno; non creare o sintetizzare AudioDeviceInfo mancanti.
+
+Secondo tentativo .95, via esplicito «Procedi» dopo il blocco del comando HFP: pagina telefono aggiunge **Prova SCO Android**. Usa solo AudioManager.startBluetoothSco/stopBluetoothSco pubblici, deprecati API34. Non è rimozione della guardia isVoiceRecognitionSupported: il vecchio comando rimane separato. Non richiede il bit VR, ma non accetta un dispositivo: guardia HFP unico corrente scelto, audio iniziale falso noto, off-call disponibile noto, nessun SCO già attivo/connecting, native VOICE/wake non in cattura/lock/telefonia/permessi .94. Nessuna disconnessione automatica di altre periferiche.
+
+Avvia Voice dal Watch, riapri la pagina dalla notifica Prova audio Watch, conferma la casella e premi **Prova SCO Android** sul Watch una volta. Il comando void produce request_dispatched o request_uncertain, mai request_accepted. Broadcast pubblico SCO e isAudioConnected sul target osservati distintamente; un globale connesso da solo non conferma il target. Profilo perso/nuovo dispositivo/perdita condizioni/pausa interrompono una volta la richiesta propria. Timeout connessione15s/totale90s e nessun retry. Se collegato, verifica frase riconosciuta e risposta dal Watch con telefono distante, connessione mantenuta e pagina aperta. Non registrare contemporaneamente il campione locale Watch. Esito successivo da acquisire: target_audio_connected oppure codice timeout/rifiuto; nessun esito hardware noto da build cloud.
+
+Nessuna telefonata a numeri, evento Telecom simulato, modalità audio imposta o API privata. Fonti AOSP16 mostrano che il sistema può scegliere internamente SCO_MODE_VIRTUAL_CALL e relativa implementazione: non promettere che il firmware non mostri UI chiamata né attribuire tale scelta al Samsung senza osservazione. Non invocare direttamente startScoUsingVirtualVoiceCall né scrivere le impostazioni bluetooth_sco_channel. L’API pubblica deprecata non garantisce che ChatGPT, proprietario della comunicazione, accetti la selezione. Una richiesta Jarvis non trasforma un’app normale in microfono virtuale per un’altra app.
+
+I log watch_sco contengono solo codici, receiver registrato e stato numerico globale; nessun nome/indirizzo/audio. Receiver su pagina visibile, nessun avvio da broadcast/poll, stop e unregister su pausa, nessuna persistenza/ripresa automatica della prova. Nessuna modifica a uscita cover .70/recupero wake .79/saluto .92/Maps. Aggiornare solo APK telefono: Watch resta .93, Wear Installer 2 per aggiornamenti futuri.
+
+## Fonti primarie del secondo percorso
+
+- [AudioManager: startBluetoothSco, deprecazione e ciclo richiesta/stop](https://developer.android.com/reference/android/media/AudioManager#startBluetoothSco())
+- [AudioManager: dispositivi selezionabili, priorità proprietario modo e conferma richiesta](https://developer.android.com/reference/android/media/AudioManager#setCommunicationDevice(android.media.AudioDeviceInfo))
+- [Guida moderna AudioManager, compatibile HFP](https://developer.android.com/develop/connectivity/bluetooth/ble-audio/audio-manager)
+- [AOSP Android16 AudioService, startBluetoothSco e modo non definito](https://android.googlesource.com/platform/frameworks/base/+/refs/heads/android16-release/services/core/java/com/android/server/audio/AudioService.java)
+- [AOSP Android16 BtHelper, scelta interna della modalità SCO](https://raw.githubusercontent.com/aosp-mirror/platform_frameworks_base/android16-release/services/core/java/com/android/server/audio/BtHelper.java)
+- [AudioRecord.setPreferredDevice vale per quella istanza](https://developer.android.com/reference/android/media/AudioRecord#setPreferredDevice(android.media.AudioDeviceInfo))
+
 # Prova .94/116 telefono, Watch .93/115 invariato
 
 ## Riscontri già acquisiti e prossimo confronto

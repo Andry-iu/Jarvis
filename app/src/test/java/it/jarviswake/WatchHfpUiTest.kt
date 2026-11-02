@@ -47,4 +47,22 @@ class WatchHfpUiTest {
         a.finish();lifecycle.pause().stop().destroy()
         assertNull(shadowOf(c.getSystemService(NotificationManager::class.java)).getNotification(94))
     }
+    @Test @Config(sdk=[31,34,36]) fun scoReceiverObservesGlobalStateButNeverStartsAudioAndClosesOnPause() {
+        val c=RuntimeEnvironment.getApplication()
+        val lifecycle=Robolectric.buildActivity(WatchProbeActivity::class.java).setup();val a=lifecycle.get()
+        val field=WatchProbeActivity::class.java.getDeclaredField("sco").apply {isAccessible=true}
+        val sco=field.get(a) as WatchScoProbe
+        c.sendBroadcast(android.content.Intent(android.media.AudioManager.ACTION_SCO_AUDIO_STATE_UPDATED)
+            .putExtra(android.media.AudioManager.EXTRA_SCO_AUDIO_STATE,1))
+        shadowOf(android.os.Looper.getMainLooper()).idle()
+        assertTrue(sco.describe().contains("globale: connesso"));assertFalse(sco.trial.active)
+        assertEquals("idle",sco.trial.code);assertFalse(VoiceCycle.active)
+        lifecycle.pause()
+        c.sendBroadcast(android.content.Intent(android.media.AudioManager.ACTION_SCO_AUDIO_STATE_UPDATED)
+            .putExtra(android.media.AudioManager.EXTRA_SCO_AUDIO_STATE,1))
+        shadowOf(android.os.Looper.getMainLooper()).idle()
+        assertTrue(sco.describe().contains("globale: non osservato"));assertFalse(sco.trial.active)
+        lifecycle.stop().destroy()
+    }
+
 }

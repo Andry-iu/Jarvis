@@ -1,3 +1,7 @@
+# .95 / 117 — guida secondo tentativo SCO Android
+
+Solo guida aggiornata: API pubblica precedente SCO nel telefono, Watch .93 invariato, nessuna cattura o azione audio MCP. Tool/abbinamenti/audience/segreti invariati; dispatch globale non prova audio Watch/ChatGPT.
+
 # .94 / 116 — guida HFP telefono
 
 Solo guida aggiornata; prova Bluetooth locale nella pagina telefono, Watch .93 invariato. Nessun comando audio MCP, nessuna modifica a tool/trasporto/abbinamenti/audience o segreti. Stato accettato, canale connesso e routing ChatGPT restano distinti.

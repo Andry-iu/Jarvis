@@ -25,11 +25,13 @@ class WatchProbeActivity:Activity() {
     private val handler=Handler(Looper.getMainLooper())
     private lateinit var output:TextView
     private lateinit var hfpStatus:TextView
+    private lateinit var scoStatus:TextView
     private lateinit var consent:CheckBox
     private lateinit var menu:SplitMenuScreen
     private lateinit var hfpArea:LinearLayout
     private lateinit var routeArea:LinearLayout
     private lateinit var hfp:WatchHfpProbe
+    private lateinit var sco:WatchScoProbe
     private var selected=false
     private var resumed=false
     private var hfpKey=""
@@ -37,14 +39,15 @@ class WatchProbeActivity:Activity() {
     private val poll=object:Runnable {override fun run() {
         if(!resumed) return
         hfp.trial.observe(SystemClock.elapsedRealtime(),allowed())
-        hfpStatus.text=hfp.describe();hfp.log();renderChoices()
+        sco.trial.observe(SystemClock.elapsedRealtime(),allowed())
+        hfpStatus.text=hfp.describe();scoStatus.text=sco.describe();hfp.log();sco.log();renderChoices()
         output.text=WatchAudioProbe.describe(WatchAudioProbe.snapshot(this@WatchProbeActivity))
-        if(hfp.trial.active) window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) else window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        if(hfp.trial.active || sco.trial.active) window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) else window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         handler.postDelayed(this,1000)
     }}
     override fun onCreate(b:Bundle?) {
         super.onCreate(b)
-        menu=SplitMenuScreen(this,"Galaxy Watch · prova Bluetooth","Prova .94 sul telefono; app Watch .93 invariata. Nessuna cattura audio sul telefono e nessuna chiamata simulata."){finish()}
+        menu=SplitMenuScreen(this,"Galaxy Watch · prova Bluetooth","Prova .95 sul telefono; app Watch .93 invariata. Nessuna cattura audio sul telefono e nessuna telefonata a un numero. La gestione SCO interna dipende da Android."){finish()}
         val m=menu
         m.toggle("Consenti prova dal Watch",WatchTickets.enabled(this),"Consente richieste Data Layer da app Watch con la stessa firma. Non abilita automaticamente HFP o il microfono ChatGPT.") {WatchTickets.enable(this,it)}
         m.button("Autorizza dispositivi vicini","Richiede BLUETOOTH_CONNECT per leggere il profilo HFP dei dispositivi già collegati. Nessuna scansione, associazione o connessione automatica.") {
@@ -54,14 +57,16 @@ class WatchProbeActivity:Activity() {
         consent=CheckBox(this).apply {text="Scelgo il mio Watch per la prova. Nessuna telefonata; ChatGPT Voice già attiva e registrazione di prova sul Watch ferma.";setTextColor(android.graphics.Color.WHITE)}
         m.addControl(consent)
         hfpStatus=m.text("Profilo HFP non ancora letto.",15f)
+        scoStatus=m.text("SCO Android non ancora osservato.",15f)
         hfpArea=m.buttonsArea()
-        m.button("Ferma prova Bluetooth","Richiede lo stop una sola volta del canale aperto da questa prova. Un canale già attivo prima non viene chiuso.") {hfp.trial.stop();hfpStatus.text=hfp.describe();hfp.log()}
-        m.text("Avvia Voice dal Watch come prima. Per tornare qui usa la notifica Prova audio Watch sul telefono: apre questa pagina e nasconde la cover, mantenendo il ciclo Voice. Se non ci sono dispositivi HFP, invia lo stato senza ripetere avvii. Se compare il tuo Watch, prova il suo canale. Il tentativo attende al massimo15s la connessione e termina entro90s o uscendo dalla pagina.")
+        m.button("Ferma prova Bluetooth","Richiede lo stop una sola volta del canale aperto da questa prova. Un canale già attivo prima non viene chiuso.") {hfp.trial.stop();sco.trial.stop();hfpStatus.text=hfp.describe();scoStatus.text=sco.describe();hfp.log();sco.log()}
+        m.text("Avvia Voice dal Watch come prima. Per tornare qui usa la notifica Prova audio Watch sul telefono: apre questa pagina e nasconde la cover, mantenendo il ciclo Voice. Se riconoscimento HFP è false, non ripetere Prova canale: puoi scegliere la prova separata Prova SCO Android, solo con il Watch come unico HFP connesso. È sperimentale e non imposta AudioManager.mode. Non avviare la registrazione di prova Watch durante Voice. Il tentativo attende al massimo15s la connessione e termina entro90s o uscendo dalla pagina.")
         routeArea=m.buttonsArea()
         m.button("Rilascia selezione audio","Rimuove soltanto la richiesta di dispositivo fatta da Jarvis."){releaseRoute()}
         m.text("Se dopo l’apertura HFP compare un dispositivo Bluetooth SCO, puoi sceglierlo qui. Non basta request_accepted: confronta audio_connected e l’ingresso riportato sotto. Voce riconosciuta e risposta dal Watch vanno verificate con il telefono distante. La selezione di Jarvis può essere ignorata o sostituita da ChatGPT; nessun microfono virtuale viene creato.")
         output=m.text("Leggo i metadati…",14f)
         hfp=WatchHfpProbe(this) {if(::hfp.isInitialized && resumed) {hfpStatus.text=hfp.describe();renderChoices()}}
+        sco=WatchScoProbe(this,hfp) {if(::sco.isInitialized && resumed) scoStatus.text=sco.describe()}
         setContentView(m);showReturnNotification()
     }
     private fun allowed():Boolean {
@@ -76,8 +81,12 @@ class WatchProbeActivity:Activity() {
         val rows=hfp.devices();val key=rows.joinToString("|") {it.hashCode().toString()+":"+hfp.name(it)}
         if(key!=hfpKey) {hfpKey=key;hfpArea.removeAllViews()
             for(d in rows) menu.button("Prova canale: ${hfp.name(d)}","Un solo startVoiceRecognition sul dispositivo scelto, soltanto se supportato e audio non già connesso. Usa la richiesta pubblica HFP di riconoscimento vocale; la risposta del firmware Watch resta da verificare. Non avvia una telefonata.",area=hfpArea) {
-                val code=hfp.trial.start(d,SystemClock.elapsedRealtime(),allowed())
+                val code=if(sco.trial.active) "busy" else hfp.trial.start(d,SystemClock.elapsedRealtime(),allowed())
                 menu.feedback("Prova HFP",explain(code));hfpStatus.text=hfp.describe();hfp.log()
+            }
+            for(d in rows) menu.button("Prova SCO Android: ${hfp.name(d)}","Tentativo pubblico startBluetoothSco, distinto dal riconoscimento HFP: non richiede supporto riconoscimento=true. È deprecato, non restituisce conferma e non seleziona direttamente un dispositivo. Solo un HFP connesso, nessuna telefonata/cattura wake e Voice nativa già avviata. Un solo tentativo15s/90s, stop uscendo. Il firmware può trattarlo come canale chiamata; non usiamo Telecom, telefonate simulate o API private.",area=hfpArea) {
+                val code=if(hfp.trial.active) "busy" else sco.trial.start(d,SystemClock.elapsedRealtime(),allowed())
+                menu.feedback("Prova SCO Android",explain(code));scoStatus.text=sco.describe();sco.log()
             }
         }
         val devices=runCatching {getSystemService(AudioManager::class.java).availableCommunicationDevices}.getOrDefault(emptyList())
@@ -96,8 +105,13 @@ class WatchProbeActivity:Activity() {
     }
     private fun releaseRoute() {if(selected) runCatching {getSystemService(AudioManager::class.java).clearCommunicationDevice()};selected=false}
     private fun explain(code:String)=when(code) {
+        "request_dispatched"->"Richiesta SCO inviata; Android non restituisce un’accettazione. Attendo target_audio_connected, senza confermare il routing ChatGPT."
+        "target_not_unique"->"Serve che il Watch scelto sia l’unico dispositivo HFP connesso. Il comando Android non accetta un indirizzo."
+        "off_call_unavailable"->"Android non dichiara disponibile SCO fuori telefonata. Nessun tentativo eseguito."
+        "audio_already_active"->"Audio Bluetooth già attivo o in collegamento. La prova non lo modifica."
+        "busy"->"Una prova è già in corso; nessun nuovo comando inviato."
         "request_accepted"->"Richiesta accettata. Attendo audio_connected; non è ancora prova di audio ChatGPT."
-        "unsupported"->"Il dispositivo non dichiara supporto al canale vocale HFP richiesto. Nessun tentativo eseguito."
+        "unsupported"->"Il dispositivo non dichiara supporto al comando di riconoscimento vocale HFP richiesto. Nessun tentativo eseguito."
         "audio_already_connected"->"Un canale audio era già connesso. La prova non lo modifica e non lo chiuderà."
         "not_allowed"->"Conferma la casella e i permessi, nessuna telefonata, telefono sbloccato e wake sospesa. Nessun tentativo eseguito."
         else->"Stato: $code. Nessuna ripetizione automatica."
@@ -116,8 +130,8 @@ class WatchProbeActivity:Activity() {
     override fun onResume() {
         super.onResume();resumed=true
         if(VoiceCycle.active && NativeChatSettings.enabled(this)) VoiceAccessibilityService.releaseBridgeCover()
-        hfp.open();handler.post(poll)
+        hfp.open();sco.open();handler.post(poll)
     }
-    override fun onPause() {resumed=false;handler.removeCallbacks(poll);hfp.close();releaseRoute();window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);super.onPause()}
+    override fun onPause() {resumed=false;handler.removeCallbacks(poll);sco.close();hfp.close();releaseRoute();window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);super.onPause()}
     override fun onDestroy() {if(isFinishing) getSystemService(NotificationManager::class.java).cancel(94);super.onDestroy()}
 }
