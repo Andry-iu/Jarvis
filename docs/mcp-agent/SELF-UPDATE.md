@@ -37,3 +37,7 @@ Lo scheletro non e un aggiornamento pronto: i byte finali devono avere CRLF e ha
 ## Verifiche
 
 Collaudo finale 1 novembre 2026: stesso motore, stesso protocollo batch e intero ciclo di rimpiazzo/riavvio 0.7.0 su entrambi, senza task temporaneo. Entrambi self-update.log terminano PASS common_batch_update_identity_config_maintenance; identita e hash preservati. Vedere VALIDATION-0.7.0-20261101.md. Il test non certifica versioni future o reboot fisico.
+
+## Contatori e temporanei dalla 0.7.2
+
+Backup protetto di State\tool-usage.json quando presente; nessun azzeramento nel rollback. Rehearsal e manifest intermedio nella cartella temporanea dedicata, rimossa e verificata nel finally. Sostituzione atomica della configurazione definitiva; backup permanenti protetti.

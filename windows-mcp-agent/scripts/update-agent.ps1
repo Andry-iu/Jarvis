@@ -134,9 +134,11 @@ try{
   if($f.Name -eq 'agent.lock'){continue}
   CopyChecked $f.FullName (Join-Path $saved $f.FullName.Substring($state.Length).TrimStart('\'))
  }
+ $usagePath=Join-Path $root 'State\tool-usage.json'
+ if(Test-Path -LiteralPath $usagePath){CopyChecked $usagePath (Join-Path $backup 'tool-usage.json')}
  Report ('BACKUP_VERIFIED '+$backup)
  if(Get-NetTCPConnection -LocalPort 8767 -State Listen -ErrorAction SilentlyContinue){throw 'rehearsal_port_busy'}
- $testHome=Join-Path $backup 'rehearsal';New-Item -ItemType Directory -Force (Join-Path $testHome 'Config')|Out-Null
+ $testHome=Join-Path $root ('Temp\rehearsal-'+[guid]::NewGuid().ToString('N'));New-Item -ItemType Directory -Force (Join-Path $testHome 'Config')|Out-Null
  Copy-Item -LiteralPath $saved -Destination (Join-Path $testHome 'State') -Recurse
  $token=[guid]::NewGuid().ToString('N')+[guid]::NewGuid().ToString('N')
  $projects=$env:JARVIS_PROJECTS_ROOT
@@ -158,7 +160,7 @@ try{
  if($managed){
   $manifest.agent_version=$TargetVersion;$manifest.agent_sha256=$ExpectedHash.ToLowerInvariant()
   $manifest|Add-Member -NotePropertyName agent_source_commit -NotePropertyValue $SourceCommit -Force
-  $pending=Join-Path $root ('Config\release-'+[guid]::NewGuid().ToString('N')+'.tmp')
+  $pending=Join-Path $testHome 'installation.next.json'
   [IO.File]::WriteAllText($pending,($manifest|ConvertTo-Json -Depth 20),(New-Object Text.UTF8Encoding($false)))
   [IO.File]::Replace($pending,$manifestPath,(Join-Path $backup 'manifest-before-promotion.json'))
  }
@@ -189,4 +191,11 @@ try{
   try{StopAgent;ReplaceBinary $previous $ExpectedPreviousHash;if($managed){Copy-Item -LiteralPath (Join-Path $backup 'Config\installation.json') -Destination $manifestPath -Force};$newProcess=StartConfigured;WaitHealth $port $ExpectedPreviousVersion $newProcess;Report 'ROLLBACK_RESTORED'}catch{Report ('ROLLBACK_ERROR '+$_.Exception.Message)}
  }
  exit 1
-}finally{StopProbe;if($lock){$lock.Dispose()}}
+}finally{
+ StopProbe
+ if($testHome -and (Test-Path -LiteralPath $testHome)){
+  Remove-Item -LiteralPath $testHome -Recurse -Force
+  if(Test-Path -LiteralPath $testHome){throw 'rehearsal_cleanup_failed'}
+ }
+ if($lock){$lock.Dispose()}
+}

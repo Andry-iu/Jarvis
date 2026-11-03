@@ -1,3 +1,7 @@
+## 3 novembre 2026 - contatori strumenti 0.7.2
+
+Contatori persistenti separati, tool_usage e compatibilita senza doppioni. Suite Go/vet/build e MCP isolato verificati su entrambi. Aggiunta suite PowerShell ripetibile e pulizia verificata. Backup contatori e manifest intermedio nella cartella temporanea dell'updater. Pubblicazione e installazione ancora da completare; vedere VALIDATION-0.7.2-20261103.md.
+
 # Verifica finale 0.7.1 — installata su entrambi i computer
 
 1 novembre 2026. Desktop1 DESKTOP-1ESSB0K e Desktop2 AUTECHVPC2 sono stati aggiornati e riavviati tramite i rispettivi batch e lo stesso updater canonico. machine_info da ChatGPT conferma 0.7.1 e le identita precedenti. Entrambi i self-update.log riportano BACKUP_VERIFIED, ROLLBACK_REHEARSAL_PASS e PASS common_batch_update_identity_config_maintenance. Una prova avviata dai due agenti installati conferma console_visible=false ed elevated=true per il processo PowerShell discendente.

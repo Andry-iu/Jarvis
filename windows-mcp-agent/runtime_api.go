@@ -15,19 +15,19 @@ import (
 )
 
 type runtimeRequest struct {
- WindowID string `json:"window_id,omitempty"`
- SnapshotID string `json:"snapshot_id,omitempty"`
- ElementID string `json:"element_id,omitempty"`
- Action string `json:"action,omitempty"`
- Keys []string `json:"keys,omitempty"`
- Executable string `json:"executable,omitempty"`
- Args []string `json:"args,omitempty"`
- WorkingDirectory string `json:"working_directory,omitempty"`
- Elevated bool `json:"elevated,omitempty"`
- Folder string `json:"folder,omitempty"`
- DialogMode string `json:"dialog_mode,omitempty"`
- Overwrite bool `json:"overwrite,omitempty"`
- ExpectedText *string `json:"expected_text,omitempty"`
+	WindowID         string   `json:"window_id,omitempty"`
+	SnapshotID       string   `json:"snapshot_id,omitempty"`
+	ElementID        string   `json:"element_id,omitempty"`
+	Action           string   `json:"action,omitempty"`
+	Keys             []string `json:"keys,omitempty"`
+	Executable       string   `json:"executable,omitempty"`
+	Args             []string `json:"args,omitempty"`
+	WorkingDirectory string   `json:"working_directory,omitempty"`
+	Elevated         bool     `json:"elevated,omitempty"`
+	Folder           string   `json:"folder,omitempty"`
+	DialogMode       string   `json:"dialog_mode,omitempty"`
+	Overwrite        bool     `json:"overwrite,omitempty"`
+	ExpectedText     *string  `json:"expected_text,omitempty"`
 
 	QueueID     string          `json:"queue_id,omitempty"`
 	BeforeID    string          `json:"before_id,omitempty"`
@@ -75,6 +75,7 @@ type runtimeTool struct {
 }
 
 var runtimeCatalog = []runtimeTool{
+	{"tool_usage", "Read persistent per-tool invocation counts, sorted by total; query optionally selects an exact tool name. Counts immediate responses, not completion of queued work; no quota measurement.", []string{"query"}, nil, true},
 	{"activity_history", "Read the local per-computer archive of terminal activities, bounded pages or exact queue_id. Raw logs/receipts remain private; no inference, replay or Git export.", []string{"project", "queue_id", "offset", "limit"}, nil, true},
 	{"queue_add", "Queue one fixed command_start or attached codex_turn for a project; call contains the named operation and its arguments. Outer project/request_id are inherited. One active operation per overlapping project path; fresh quota checks at dispatch. Returns queue_id; inspect queue_list.", []string{"project", "call", "label", "depends_on", "resources", "request_id"}, []string{"project", "call", "request_id"}, false},
 	{"queue_list", "Show persistent operations with IDs, project, state, waiting order, dependencies, pause reason and active job/turn IDs. Read-only; does not wait for processing completion.", []string{"project", "offset", "limit"}, nil, true},
@@ -141,10 +142,19 @@ func toolsList() any {
 				typ = "object"
 			}
 			s := map[string]any{"type": typ}
-			if f == "keys" || f == "args" { s["items"] = map[string]string{"type":"string"}; s["maxItems"]=128 }
-			if f == "elevated" || f == "overwrite" { s["default"] = false }
-			if f == "action" { s["enum"] = []string{"invoke","set_text","type_text","focus","toggle","select"} }
-			if f == "dialog_mode" { s["enum"] = []string{"open","save"} }
+			if f == "keys" || f == "args" {
+				s["items"] = map[string]string{"type": "string"}
+				s["maxItems"] = 128
+			}
+			if f == "elevated" || f == "overwrite" {
+				s["default"] = false
+			}
+			if f == "action" {
+				s["enum"] = []string{"invoke", "set_text", "type_text", "focus", "toggle", "select"}
+			}
+			if f == "dialog_mode" {
+				s["enum"] = []string{"open", "save"}
+			}
 			if f == "region" {
 				s["items"] = map[string]string{"type": "integer"}
 				s["minItems"] = 4
@@ -223,8 +233,15 @@ func decodeRuntime(name string, b json.RawMessage) (runtimeRequest, error) {
 			}
 		}
 	}
-	if p.Operation=="ui_action" && (p.Action=="set_text"||p.Action=="type_text") { if _,ok:=fields["text"];!ok{return p,errors.New("text is required for text actions")}; if len([]rune(p.Text))>4096{return p,errors.New("text exceeds 4096 characters")} }
- if p.Limit < 0 || p.Limit > 200 || p.Offset < 0 || p.After < 0 {
+	if p.Operation == "ui_action" && (p.Action == "set_text" || p.Action == "type_text") {
+		if _, ok := fields["text"]; !ok {
+			return p, errors.New("text is required for text actions")
+		}
+		if len([]rune(p.Text)) > 4096 {
+			return p, errors.New("text exceeds 4096 characters")
+		}
+	}
+	if p.Limit < 0 || p.Limit > 200 || p.Offset < 0 || p.After < 0 {
 		return p, errors.New("invalid pagination")
 	}
 	p.Path = filepath.FromSlash(p.Path)
@@ -243,6 +260,13 @@ func (a *Agent) invokeRuntime(name string, raw json.RawMessage) any {
 	if p.Operation != "machine_info" && p.MachineID != r.MachineID {
 		return toolResult(map[string]any{"error": "machine_id mismatch; read machine_info and select the intended computer"}, true)
 	}
+	if p.Operation == "tool_usage" {
+		v, err := a.toolUsage(p.Query)
+		if err != nil {
+			return toolResult(map[string]any{"error": err.Error()}, true)
+		}
+		return toolResult(map[string]any{"machine_id": r.MachineID, "operation": "tool_usage", "usage": v}, false)
+	}
 	if p.Operation == "screen_capture" {
 		v, e := screenCapture(p)
 		if e != nil {
@@ -251,7 +275,11 @@ func (a *Agent) invokeRuntime(name string, raw json.RawMessage) any {
 		return v
 	}
 	var v any
-	if isDirectUI(p.Operation) { v,e = a.directUI(r,p) } else { v,e = r.call(p) }
+	if isDirectUI(p.Operation) {
+		v, e = a.directUI(r, p)
+	} else {
+		v, e = r.call(p)
+	}
 	if e != nil {
 		return toolResult(map[string]any{"error": e.Error(), "request_id": p.RequestID, "machine_id": r.MachineID}, true)
 	}
@@ -272,9 +300,12 @@ func (a *Agent) invokeRuntime(name string, raw json.RawMessage) any {
 }
 func (r *Runtime) call(p runtimeRequest) (any, error) {
 	switch p.Operation {
- case "maintenance_status": return maintenanceStatus(),nil
- case "known_folder": return knownFolder(p.Folder)
- case "process_start": return r.externalMutation(p,func()(any,error){ return launchProcess(p) })
+	case "maintenance_status":
+		return maintenanceStatus(), nil
+	case "known_folder":
+		return knownFolder(p.Folder)
+	case "process_start":
+		return r.externalMutation(p, func() (any, error) { return launchProcess(p) })
 	case "activity_history":
 		return r.activityHistory(p)
 	case "machine_info":
@@ -400,4 +431,3 @@ func requireProject(p runtimeRequest) error {
 	}
 	return nil
 }
-

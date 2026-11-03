@@ -1,3 +1,24 @@
+# Agente 0.7.2 - contatori persistenti degli strumenti
+
+3 novembre 2026. Candidati verificati su entrambi i desktop; pubblicazione,
+installazione e collaudo operativo da completare. Le sezioni successive sono storiche.
+
+Contatori separati in D:\Jarvis\State\tool-usage.json, fuori da Projects e Git.
+tool_usage restituisce la classifica o il filtro query con nome esatto, anche via
+task_start/runtime, senza doppio conteggio. Totali, risposte immediate riuscite/fallite
+e chiamate senza esito; nessun argomento o contenuto registrato.
+Non misurano quota o completamento dei job. Ogni retry conta come nuova invocazione;
+tool_usage include se stessa ancora in corso.
+Scritture atomiche sincronizzate, stato corrotto preservato senza azzerarlo,
+operazioni disponibili anche su guasto della telemetria.
+Updater comune: backup contatori, rehearsal e manifest intermedio in Temp dedicata.
+
+Verificati su entrambi: suite Go/vet/build dei candidati e suite MCP ripetibile
+scripts/test-tool-usage.ps1 (catalogo, alias, esiti, filtri, classifica, persistenza,
+assenza di argomenti, stato corrotto e pulizia).
+Verbale: docs/mcp-agent/VALIDATION-0.7.2-20261103.md.
+Installer 1.3.1/agente incluso 0.7.1: release distinta, non aggiornata implicitamente.
+
 # Agente 0.7.1 / installer 1.3.1 - batch silenziosi
 
 1 novembre 2026. Lanciatore batch con CREATE_NO_WINDOW e HideWindow, senza DETACHED_PROCESS; token ereditato e sopravvivenza all'uscita del genitore verificati dal test Windows. Codice runtime pubblicato nel commit a8b0bca1901d96de9604388bbec5ec9b8aecc847. go test, vet e build Windows superati su entrambi i computer (Desktop2 build standard; il tentativo separato con -trimpath e fallito per eccezione interna del compilatore Go 1.27.3); suite installer SetupSettings, Bootstrap e Installer superate con installazioni isolate 0.7.1. Manifest completo di hash/dimensioni, updater canonico invariato. Agenti operativi ancora 0.7.0: backup verificato e prova isolata candidato/precedente superati su entrambi i computer; distribuzione 0.7.1 e push bloccati dalla revisione automatica in attesa di conferma esplicita dell'utente.

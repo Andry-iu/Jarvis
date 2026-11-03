@@ -22,7 +22,7 @@ import (
 	"time"
 )
 
-const version = "0.7.1"
+const version = "0.7.2"
 
 type RPCRequest struct {
 	JSONRPC string          `json:"jsonrpc"`
@@ -51,8 +51,10 @@ type Task struct {
 	cancel     context.CancelFunc
 }
 type Agent struct {
- uiMu sync.Mutex
- windows map[string]json.RawMessage
+	usageMu   sync.Mutex
+	usage     *toolUsageStore
+	uiMu      sync.Mutex
+	windows   map[string]json.RawMessage
 	runtimeMu sync.Mutex
 	runtime   *Runtime
 	mu        sync.Mutex
@@ -124,7 +126,7 @@ func toolResult(value any, isError bool) any {
 	b, _ := json.Marshal(value)
 	return map[string]any{"content": []any{map[string]any{"type": "text", "text": string(b)}}, "isError": isError}
 }
-func (a *Agent) invoke(name string, args json.RawMessage) any {
+func (a *Agent) invokeUncounted(name string, args json.RawMessage) any {
 	if name == "task_start" {
 		var bridge struct {
 			Operation string          `json:"operation"`
@@ -467,4 +469,3 @@ func main() {
 		log.Fatal(err)
 	}
 }
-
