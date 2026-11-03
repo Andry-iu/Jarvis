@@ -1,3 +1,11 @@
+# Chiusura 0.7.3 - 3 novembre 2026
+
+Sorgenti b00e7e6 pubblicati con albero identico al commit collaudato. Installati
+entrambi gli agenti con updater canonico: backup/rehearsal, hash, configurazione,
+identita e manutenzione PASS. Lettura live privilegi amministratore e no-op del
+comando senza cambio PID PASS. Contatori persistenti conservati. Esiti, problemi
+risolti e limiti documentati in VALIDATION-0.7.3-20261103.md.
+
 ## 3 novembre 2026 - controllo amministratore 0.7.3
 
 Richiesta raccolta e autorizzata: stato dei privilegi del processo e riavvio elevato su richiesta quando necessario. Implementati token true/false/null, agent_restart_admin/status, ricevute, gate e helper locale autenticato. Gia elevato no-op, lavori attivi/incerti rifiutati, UAC annullato prima dell'handoff non arresta l'originale. Suite Go/vet/build ed end-to-end isolato con token standard reale e helper elevato PASS su entrambi; dialogo UAC interattivo non automatizzato. Desktop2 ICE libreria standard, ripetizione seriale PASS senza causa univoca isolata. Pubblicazione e installazione da completare; vedere VALIDATION-0.7.3-20261103.md.

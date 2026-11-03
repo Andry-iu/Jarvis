@@ -1,10 +1,13 @@
 # Validazione 0.7.3 - 3 novembre 2026
 
-## Stato prima dell'installazione
-Candidati verificati su entrambi; pubblicazione/installazione e riscontro sui
-processi operativi da completare. Base Git 6ff603aa9b2f6877c06ea51872edc0f878a7fc3e,
-branch feature/agent-admin-control-20261103, repository Andry-iu/Jarvis.
-Ambito approvato: lettura dei privilegi reali dell'agente e riavvio elevato su richiesta.
+## Stato finale
+0.7.3 installata e collaudata su entrambi, branch
+feature/agent-admin-control-20261103, repository Andry-iu/Jarvis.
+Ambito approvato: lettura dei privilegi reali e riavvio elevato su richiesta.
+Sorgenti pubblicati: b00e7e6d4fffd93e127c460408e274176e87ee9d, parent 6ff603a.
+Albero 3af32ba70532f0cb5162027131f40598840107af identico al commit locale
+b6a26da5e91f6e55aab003e94cb378c252a2f8d2 collaudato. I diversi SHA derivano dai
+metadata di commit. Il commit locale e conservato in un branch backup Desktop1.
 
 ## Prove effettive Windows
 - Desktop1: suite Go completa 13.348 s, go vet, build e test executable PASS.
@@ -49,3 +52,34 @@ esistente preservati. Applicazioni normali standard per default.
 Catalogo client diretto, reboot fisico e ciclo 24 ore non certificati.
 La compatibilita task_start/runtime evita il refresh necessario per la sola consultazione.
 Installer 1.3.1/agente 0.7.1 restano una release separata.
+## Installazione e verifiche live
+- Updater canonico scripts/update-agent.ps1 via batch separato, sequenziale.
+- Desktop1: backup self-update-1c62eb8fb31a4710b0afe16054ce4e46.
+- Desktop2: backup self-update-0614d81c440944f187bc47261b9ee018.
+- Entrambi: backup verificato, rollback rehearsal PASS, hash installato uguale
+  al proprio candidato, PASS common_batch_update_identity_config_maintenance.
+- Avvio diretto Desktop1 e supervisore Start.ps1 Desktop2 preservati.
+- machine_info e agent_status live: versione 0.7.3, token elevated=true,
+  PID 187600 Desktop1 e 9332 Desktop2 alle 20:06-20:08 UTC del 3 novembre.
+- agent_restart_admin via task_start/runtime: already_elevated, restarted=false,
+  PID invariato su entrambi. Nessuna demozione artificiale dei processi operativi.
+- tool_usage conta la nuova chiamata e conserva started_at preesistente:
+  Desktop1 2026-11-03T17:53:58.4575006Z, Desktop2 18:12:52.4840496Z.
+- agent_status e diretto: un tentativo nel wrapper runtime ha restituito unknown
+  runtime operation; corretto usando lo strumento esistente, senza ricollegamenti.
+
+## Problemi operativi risolti
+Il push CLI Desktop1 e rimasto in attesa nel gestore credenziali Git locale.
+Diagnosi con PID/nome/creazione/parent; annullata soltanto quella catena Git,
+non l'agente. Nessun rifiuto di autorizzazione, nessun login nuovo richiesto.
+Pubblicazione con il collegamento GitHub gia attivo: blob del commit locale,
+confronto esatto dell'albero, ref remoto verificato. Fetch in lettura riuscito;
+checkout allineati con reset --soft solo dopo confronto degli alberi identici,
+indice verificato e backup del commit locale. Nessun force-push/reset hard/clean.
+Gli script di allineamento hanno richiesto correzioni: nome funzione Git in
+conflitto con l'eseguibile; stderr informativo trattato come errore PowerShell;
+percorso CHANGELOG relativo errato. Correzioni limitate agli script di supporto,
+poi confronto alberi e checkout puliti PASS. Non confondere questi errori con
+problemi dell'agente o mancanza di autenticazione. Storico non tracciato preservato.
+Riscontri privati: diagnostics/admin073-release-complete.log, self-update.log,
+admin073-integration.log (Desktop1), admin073-serial-build.log (Desktop2).

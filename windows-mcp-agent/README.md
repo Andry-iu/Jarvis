@@ -1,16 +1,27 @@
-# Agente 0.7.3 - stato amministratore e riavvio elevato
+# Agente 0.7.3 - installato e collaudato sui due desktop
 
-3 novembre 2026. Implementati privileges in machine_info/agent_status e nuovi
-agent_restart_admin/agent_restart_status, anche via task_start/runtime.
-Token effettivo del processo: true/false/null; mai dedurre i privilegi dall'account.
-Gia amministratore: no-op. Lavori attivi/accodati/incerti: rifiuto senza stop.
-Ricevute persistenti, gate delle mutazioni e handoff locale autenticato.
-UAC puo richiedere conferma sul PC; annullamento prima del passaggio conserva
-l'originale. Successo solo dopo nuovo PID/identita/versione/token verificati.
-Nessun nuovo task/servizio, nessuna modifica UAC o alle applicazioni standard.
-Specifica e suite: docs/mcp-agent/ADMIN-CONTROL-0.7.3.md.
-Stato di test/installazione aggiornato in VALIDATION-0.7.3-20261103.md.
-Sviluppo sul branch feature/agent-admin-control-20261103; base 6ff603a.
+3 novembre 2026. Desktop1 e Desktop2 aggiornati alla 0.7.3. Letture live di
+machine_info e agent_status: privileges.elevated=true dal token del processo,
+PID rispettivamente 187600 e 9332 (istantanee, da rileggere prima di nuove azioni).
+agent_restart_admin via task_start/runtime: already_elevated, restarted=false;
+nessun riavvio superfluo. Contatori precedenti conservati, nuova chiamata conteggiata.
+Sorgenti pubblicati: b00e7e6d4fffd93e127c460408e274176e87ee9d sul branch
+feature/agent-admin-control-20261103 di Andry-iu/Jarvis. Checkout locali allineati.
+Suite Go/vet/build e integrazione Windows standard -> helper -> nuovo admin PASS
+su entrambi; backup/rehearsal, hash, identita/configurazione/manutenzione PASS.
+
+Per chiedere i privilegi usare machine_info o agent_status. Per richiedere
+l'elevazione usare agent_restart_admin con machine_id e request_id; leggere
+agent_restart_status con lo stesso request_id fino all'esito verificato.
+I due nuovi comandi sono disponibili anche come task_start operation=runtime,
+request={operation:<nome>,machine_id:<id>,request_id:<id-univoco>}.
+agent_status resta uno strumento diretto, non un'operazione runtime.
+Un ack awaiting_elevation non prova il completamento. UAC puo richiedere consenso
+locale sul PC; stesso utente richiesto. Con lavori attivi/accodati/incerti il
+riavvio viene rifiutato. Nessun arresto forzato dei lavori o nuovo servizio/task.
+Applicazioni ordinarie sempre standard per default. UI UAC non automatizzata.
+Specifica: docs/mcp-agent/ADMIN-CONTROL-0.7.3.md.
+Prove e limiti: docs/mcp-agent/VALIDATION-0.7.3-20261103.md.
 Le sezioni successive sono storiche.
 
 # Agente 0.7.2 - installato e collaudato su entrambi i desktop
