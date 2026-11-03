@@ -1,3 +1,7 @@
+## 3 novembre 2026 - 0.7.2 installata e collaudata
+
+Runtime pubblicato in 31c900d240b2188d6e3ef7d8577bd0951fc87dcd. Aggiornati entrambi gli agenti tramite updater canonico; backup/rehearsal, hash, identita, configurazioni e manutenzione PASS. Suite installata e persistenza dopo riavvio reale PASS; errore iniziale del solo script di prova corretto dopo rollback automatico riuscito. Stato statistico precedente e chiamate di validazione conservati. Nessuna inferenza. Verbale VALIDATION-0.7.2-20261103.md; nuovi script di collaudo ripetibili.
+
 ## 3 novembre 2026 - contatori strumenti 0.7.2
 
 Contatori persistenti separati, tool_usage e compatibilita senza doppioni. Suite Go/vet/build e MCP isolato verificati su entrambi. Aggiunta suite PowerShell ripetibile e pulizia verificata. Backup contatori e manifest intermedio nella cartella temporanea dell'updater. Pubblicazione e installazione ancora da completare; vedere VALIDATION-0.7.2-20261103.md.

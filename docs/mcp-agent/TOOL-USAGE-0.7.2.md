@@ -33,3 +33,7 @@ Scritture atomiche sincronizzate; stato invalido conservato senza azzeramento.
 Le operazioni continuano su guasto della telemetria e tool_usage segnala il problema.
 Non ripetere una mutazione gia eseguita per un problema dei contatori.
 Test: tool_usage_test.go e scripts/test-tool-usage.ps1.
+
+## Periodo di raccolta verificato
+
+Lo stato precedente e preservato: inizio 3 novembre 2026, Desktop1 17:53:58.4575006 UTC e Desktop2 18:12:52.4840496 UTC. Le chiamate di validazione contano come le altre, anche quelle precedenti alla promozione finale. Lo script scripts/verify-tool-usage-live.ps1 verifica una installazione attiva con riavvio reale tramite updater canonico; i valori non vengono azzerati.

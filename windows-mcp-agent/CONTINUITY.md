@@ -1,23 +1,29 @@
-# Agente 0.7.2 - contatori persistenti degli strumenti
+# Agente 0.7.2 - installato e collaudato su entrambi i desktop
 
-3 novembre 2026. Candidati verificati su entrambi i desktop; pubblicazione,
-installazione e collaudo operativo da completare. Le sezioni successive sono storiche.
+3 novembre 2026. Desktop1 e Desktop2 rispondono con 0.7.2, identita e root Projects
+preservate. Sorgenti runtime pubblicati nel commit 31c900d240b2188d6e3ef7d8577bd0951fc87dcd
+sul branch reconcile-windows-mcp-agent-20261031 di Andry-iu/Jarvis.
 
 Contatori separati in D:\Jarvis\State\tool-usage.json, fuori da Projects e Git.
-tool_usage restituisce la classifica o il filtro query con nome esatto, anche via
-task_start/runtime, senza doppio conteggio. Totali, risposte immediate riuscite/fallite
-e chiamate senza esito; nessun argomento o contenuto registrato.
-Non misurano quota o completamento dei job. Ogni retry conta come nuova invocazione;
-tool_usage include se stessa ancora in corso.
-Scritture atomiche sincronizzate, stato corrotto preservato senza azzerarlo,
+tool_usage legge classifica o query esatta, anche via task_start/runtime senza
+doppioni. Risposte immediate riuscite/fallite e chiamate senza esito; nessun
+argomento o contenuto registrato. Non misura quota ne completamento dei job.
+Retry e prove contano; tool_usage include se stessa ancora in corso.
+Stato preesistente preservato, comprese le date di inizio raccolta:
+Desktop1 2026-11-03T17:53:58.4575006Z, Desktop2 2026-11-03T18:12:52.4840496Z.
+Le chiamate di validazione sono invocazioni e sono comprese nei contatori.
+Scritture atomiche sincronizzate, stato corrotto conservato senza azzerarlo,
 operazioni disponibili anche su guasto della telemetria.
-Updater comune: backup contatori, rehearsal e manifest intermedio in Temp dedicata.
 
-Verificati su entrambi: suite Go/vet/build dei candidati e suite MCP ripetibile
-scripts/test-tool-usage.ps1 (catalogo, alias, esiti, filtri, classifica, persistenza,
-assenza di argomenti, stato corrotto e pulizia).
-Verbale: docs/mcp-agent/VALIDATION-0.7.2-20261103.md.
-Installer 1.3.1/agente incluso 0.7.1: release distinta, non aggiornata implicitamente.
+Verificati: suite Go/vet/build dei candidati su entrambi, suite MCP isolata
+scripts/test-tool-usage.ps1 e collaudo installato scripts/verify-tool-usage-live.ps1.
+Updater canonico, backup/rehearsal, installazione, riconnessione MCP, identita,
+hash/configurazione/manutenzione e persistenza dopo riavvio effettivo PASS.
+Nessuna inferenza Codex. Verbale VALIDATION-0.7.2-20261103.md e CHECKSUMS-0.7.2.json.
+Il catalogo client diretto non risulta aggiornato; compatibilita funzionante.
+Reboot fisico e ciclo reale 24 ore non certificati.
+Installer 1.3.1/agente incluso 0.7.1: release distinta.
+Le sezioni successive sono storiche.
 
 # Verifica finale 0.7.1 — installata su entrambi i computer
 
