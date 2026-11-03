@@ -4,7 +4,7 @@ Questo sottoprogetto e l'agente Windows Jarvis MCP / Jarvis-Desktop1, distinto d
 
 Prima di intervenire leggere README.md, CONTINUITY.md, CHANGELOG.md e ../docs/mcp-agent/{STATUS,RELEASE_POLICY,OPERATING-RULES,VALIDATION-0.7.0-20261101,SELF-UPDATE}.md. Verificare identita e versione correnti con machine_info; non assumere che gli ID dei verbali siano ancora il bersaglio corretto. Consultare coda, job, ricevute e sessioni del progetto esatto prima di nuove mutazioni.
 
-- Branch di lavoro autorizzato: reconcile-windows-mcp-agent-20261031. Verificare il remoto attuale e le modifiche locali; nessun merge implicito su main, force push o modifica Android.
+- Branch di riferimento: reconcile-windows-mcp-agent-20261031. Dal 3 novembre 2026 l utente autorizza permanentemente creazione/uso di ulteriori branch di Andry-iu/Jarvis, con commit/push per i lavori approvati, senza nuova conferma per il solo nome del branch. Non anticipare il via allo sviluppo. Verificare il remoto attuale e le modifiche locali; nessun merge implicito su main, force push o modifica Android.
 - Sorgenti operativi D:\Jarvis\MCP-Source\windows-mcp-agent; root Git D:\Jarvis\MCP-Source. Checkout sparse: includere windows-mcp-agent e docs/mcp-agent. I documenti remoti sono la fonte se non presenti localmente.
 - Ogni rilascio richiede sorgenti/test/documenti/versione/checksum su Git remoto, test/vet/build Windows, backup verificato, rollback isolato, installazione e collaudo MCP. Distinguere ciascun esito. Non sostituire l'agente funzionante prima di queste protezioni.
 - Conservare backup, stato/identita/ricevute, update.go.bak e stash backup update.go locale 20261031. Non usare git clean o cancellazioni ricorsive indiscriminate. Staging e binari non vanno aggiunti a Git.

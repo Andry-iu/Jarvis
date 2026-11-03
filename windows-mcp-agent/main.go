@@ -22,7 +22,7 @@ import (
 	"time"
 )
 
-const version = "0.7.2"
+const version = "0.7.3"
 
 type RPCRequest struct {
 	JSONRPC string          `json:"jsonrpc"`
@@ -51,27 +51,33 @@ type Task struct {
 	cancel     context.CancelFunc
 }
 type Agent struct {
-	usageMu   sync.Mutex
-	usage     *toolUsageStore
-	uiMu      sync.Mutex
-	windows   map[string]json.RawMessage
-	runtimeMu sync.Mutex
-	runtime   *Runtime
-	mu        sync.Mutex
-	task      *Task
-	next      int
-	desktop   *desktopSnapshot
+	controlMu         sync.RWMutex
+	restartPending    bool
+	listenAddress     string
+	shutdownRequest   func()
+	testPrivileges    func() agentPrivileges
+	testLaunchRestart func(*adminRestart) error
+	usageMu           sync.Mutex
+	usage             *toolUsageStore
+	uiMu              sync.Mutex
+	windows           map[string]json.RawMessage
+	runtimeMu         sync.Mutex
+	runtime           *Runtime
+	mu                sync.Mutex
+	task              *Task
+	next              int
+	desktop           *desktopSnapshot
 }
 
 func (a *Agent) snapshot() any {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 	if a.task == nil {
-		return map[string]any{"version": version, "state": "idle", "task": nil}
+		return map[string]any{"version": version, "state": "idle", "task": nil, "privileges": currentAgentPrivileges()}
 	}
 	t := *a.task
 	t.cancel = nil
-	return map[string]any{"version": version, "state": t.Status, "task": t}
+	return map[string]any{"version": version, "state": t.Status, "task": t, "privileges": currentAgentPrivileges()}
 }
 func (a *Agent) start(name string, seconds int) (any, error) {
 	if seconds < 1 || seconds > 300 {
@@ -127,6 +133,11 @@ func toolResult(value any, isError bool) any {
 	return map[string]any{"content": []any{map[string]any{"type": "text", "text": string(b)}}, "isError": isError}
 }
 func (a *Agent) invokeUncounted(name string, args json.RawMessage) any {
+	release, err := a.enterControlGate(name, args)
+	if err != nil {
+		return toolResult(map[string]any{"error": err.Error()}, true)
+	}
+	defer release()
 	if name == "task_start" {
 		var bridge struct {
 			Operation string          `json:"operation"`
@@ -292,6 +303,7 @@ func response(id json.RawMessage, result any, e *RPCError) RPCResponse {
 }
 func handler(a *Agent, token string, access *AccessVerifier) http.Handler {
 	mux := http.NewServeMux()
+	mux.HandleFunc("/internal/agent-restart", func(w http.ResponseWriter, r *http.Request) { a.restartHandoff(w, r, token) })
 	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != "GET" {
 			http.Error(w, "method not allowed", 405)
@@ -418,9 +430,24 @@ func handler(a *Agent, token string, access *AccessVerifier) http.Handler {
 }
 func main() {
 	listen := flag.String("listen", "127.0.0.1:8765", "listen address (localhost by default)")
+	restartID := flag.String("restart-admin-helper", "", "internal elevation handoff")
+	restartHome := flag.String("restart-home", "", "internal configured home")
 	flag.Parse()
+	if *restartID != "" {
+		if !filepath.IsAbs(*restartHome) {
+			os.Exit(2)
+		}
+		os.Setenv("JARVIS_HOME", *restartHome)
+	}
 	if err := loadLocalConfig(); err != nil {
 		log.Fatalf("Configuration error: %v", err)
+	}
+	if *restartID != "" {
+		if err := runAdminRestartHelper(*restartHome, *restartID); err != nil {
+			log.Print("Admin restart helper failed; inspect agent_restart_status")
+			os.Exit(1)
+		}
+		return
 	}
 	token := os.Getenv("JARVIS_MCP_TOKEN")
 	teamDomain := strings.TrimSuffix(os.Getenv("JARVIS_CF_TEAM_DOMAIN"), "/")
@@ -439,7 +466,13 @@ func main() {
 		os.Exit(2)
 	}
 	startLogMaintenance()
-	a := &Agent{}
+	shutdown := make(chan struct{}, 1)
+	a := &Agent{listenAddress: *listen, shutdownRequest: func() {
+		select {
+		case shutdown <- struct{}{}:
+		default:
+		}
+	}}
 	if _, err := a.getRuntime(); err != nil {
 		log.Fatalf("Runtime initialization failed: %v", err)
 	}
@@ -456,7 +489,10 @@ func main() {
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 	go func() {
-		<-c
+		select {
+		case <-c:
+		case <-shutdown:
+		}
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 		server.Shutdown(ctx)

@@ -1,3 +1,18 @@
+# Agente 0.7.3 - stato amministratore e riavvio elevato
+
+3 novembre 2026. Implementati privileges in machine_info/agent_status e nuovi
+agent_restart_admin/agent_restart_status, anche via task_start/runtime.
+Token effettivo del processo: true/false/null; mai dedurre i privilegi dall'account.
+Gia amministratore: no-op. Lavori attivi/accodati/incerti: rifiuto senza stop.
+Ricevute persistenti, gate delle mutazioni e handoff locale autenticato.
+UAC puo richiedere conferma sul PC; annullamento prima del passaggio conserva
+l'originale. Successo solo dopo nuovo PID/identita/versione/token verificati.
+Nessun nuovo task/servizio, nessuna modifica UAC o alle applicazioni standard.
+Specifica e suite: docs/mcp-agent/ADMIN-CONTROL-0.7.3.md.
+Stato di test/installazione aggiornato in VALIDATION-0.7.3-20261103.md.
+Sviluppo sul branch feature/agent-admin-control-20261103; base 6ff603a.
+Le sezioni successive sono storiche.
+
 # Agente 0.7.2 - installato e collaudato su entrambi i desktop
 
 3 novembre 2026. Desktop1 e Desktop2 rispondono con 0.7.2, identita e root Projects

@@ -1,0 +1,18 @@
+{
+  "version": "0.7.3",
+  "source_base": "6ff603aa9b2f6877c06ea51872edc0f878a7fc3e",
+  "branch": "feature/agent-admin-control-20261103",
+  "artifacts": [
+    {
+      "computer": "Desktop1",
+      "sha256": "a0a5ee1b95a8222b769b320165cf92a614ce58be7c0c004c37696c4c430d091b",
+      "bytes": 12299264
+    },
+    {
+      "computer": "Desktop2",
+      "sha256": "c77b43a851de409ceda18b712259a72fedcc07e2c00d80bec0f0c580437d66ca",
+      "bytes": 12333568
+    }
+  ],
+  "note": "Generated binaries remain outside Git. Exact Go sources belong to the commit containing this manifest."
+}

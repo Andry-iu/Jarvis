@@ -1,3 +1,7 @@
+## 3 novembre 2026 - controllo amministratore 0.7.3
+
+Richiesta raccolta e autorizzata: stato dei privilegi del processo e riavvio elevato su richiesta quando necessario. Implementati token true/false/null, agent_restart_admin/status, ricevute, gate e helper locale autenticato. Gia elevato no-op, lavori attivi/incerti rifiutati, UAC annullato prima dell'handoff non arresta l'originale. Suite Go/vet/build ed end-to-end isolato con token standard reale e helper elevato PASS su entrambi; dialogo UAC interattivo non automatizzato. Desktop2 ICE libreria standard, ripetizione seriale PASS senza causa univoca isolata. Pubblicazione e installazione da completare; vedere VALIDATION-0.7.3-20261103.md.
+
 ## 3 novembre 2026 - 0.7.2 installata e collaudata
 
 Runtime pubblicato in 31c900d240b2188d6e3ef7d8577bd0951fc87dcd. Aggiornati entrambi gli agenti tramite updater canonico; backup/rehearsal, hash, identita, configurazioni e manutenzione PASS. Suite installata e persistenza dopo riavvio reale PASS; errore iniziale del solo script di prova corretto dopo rollback automatico riuscito. Stato statistico precedente e chiamate di validazione conservati. Nessuna inferenza. Verbale VALIDATION-0.7.2-20261103.md; nuovi script di collaudo ripetibili.

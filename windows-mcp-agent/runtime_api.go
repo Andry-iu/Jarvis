@@ -75,6 +75,8 @@ type runtimeTool struct {
 }
 
 var runtimeCatalog = []runtimeTool{
+	{"agent_restart_admin", "Request an idle agent restart with Windows administrator privileges. Already elevated is a no-op. UAC may require local approval; original remains active on pre-handoff cancellation/failure. Read agent_restart_status and verify new process privileges.", []string{"request_id"}, []string{"request_id"}, false},
+	{"agent_restart_status", "Read durable status of an administrator restart by request_id; acknowledgement is not completion.", []string{"request_id"}, []string{"request_id"}, true},
 	{"tool_usage", "Read persistent per-tool invocation counts, sorted by total; query optionally selects an exact tool name. Counts immediate responses, not completion of queued work; no quota measurement.", []string{"query"}, nil, true},
 	{"activity_history", "Read the local per-computer archive of terminal activities, bounded pages or exact queue_id. Raw logs/receipts remain private; no inference, replay or Git export.", []string{"project", "queue_id", "offset", "limit"}, nil, true},
 	{"queue_add", "Queue one fixed command_start or attached codex_turn for a project; call contains the named operation and its arguments. Outer project/request_id are inherited. One active operation per overlapping project path; fresh quota checks at dispatch. Returns queue_id; inspect queue_list.", []string{"project", "call", "label", "depends_on", "resources", "request_id"}, []string{"project", "call", "request_id"}, false},
@@ -260,6 +262,20 @@ func (a *Agent) invokeRuntime(name string, raw json.RawMessage) any {
 	if p.Operation != "machine_info" && p.MachineID != r.MachineID {
 		return toolResult(map[string]any{"error": "machine_id mismatch; read machine_info and select the intended computer"}, true)
 	}
+	if p.Operation == "agent_restart_admin" {
+		v, e := a.restartAdmin(r, p)
+		if e != nil {
+			return toolResult(map[string]any{"error": e.Error(), "request_id": p.RequestID}, true)
+		}
+		return toolResult(v, false)
+	}
+	if p.Operation == "agent_restart_status" {
+		v, e := a.restartStatus(r, p.RequestID)
+		if e != nil {
+			return toolResult(map[string]any{"error": e.Error()}, true)
+		}
+		return toolResult(v, false)
+	}
 	if p.Operation == "tool_usage" {
 		v, err := a.toolUsage(p.Query)
 		if err != nil {
@@ -351,7 +367,7 @@ func (r *Runtime) machineInfo() any {
 		p, e := exec.LookPath(n)
 		tools[n] = map[string]any{"available": e == nil, "path": p}
 	}
-	return map[string]any{"machine_id": r.MachineID, "name": host, "version": version, "os": runtime.GOOS, "arch": runtime.GOARCH, "tools": tools, "profiles": commandProfiles, "capabilities": runtimeCatalogNames(), "limits": map[string]any{"file_bytes": maxFileBytes, "command_output_bytes": maxJobOutput, "command_timeout_seconds": 600, "screen_locked": "refused", "paid_fallback": false}, "checked_at": utcNow()}
+	return map[string]any{"machine_id": r.MachineID, "name": host, "version": version, "os": runtime.GOOS, "arch": runtime.GOARCH, "tools": tools, "profiles": commandProfiles, "capabilities": runtimeCatalogNames(), "limits": map[string]any{"file_bytes": maxFileBytes, "command_output_bytes": maxJobOutput, "command_timeout_seconds": 600, "screen_locked": "refused", "paid_fallback": false}, "checked_at": utcNow(), "privileges": currentAgentPrivileges()}
 }
 func runtimeCatalogNames() []string {
 	v := []string{}
