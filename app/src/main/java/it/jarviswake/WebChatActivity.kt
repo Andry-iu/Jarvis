@@ -40,6 +40,8 @@ class WebChatActivity : Activity() {
         private const val MICROPHONE_REQUEST_CODE = 41
         private val FILL_GREETING_SCRIPT = """
             (() => {
+              const message = __JARVIS_GREETING_JSON__;
+              if (!message.trim()) return JSON.stringify({result:'disabled'});
               const state = window.__jarvisGreeting;
               if (state?.submitted) return JSON.stringify({result:'submitted'});
               const capture = window.__jarvisWakeMedia;
@@ -79,7 +81,6 @@ class WebChatActivity : Activity() {
                 return JSON.stringify({result:'composer_waiting'});
               const current = (target.value || target.innerText || target.textContent || '').trim();
               if (current) return JSON.stringify({result:'composer_not_empty'});
-              const message = __JARVIS_GREETING_JSON__;
               if (target.isContentEditable) {
                 // Update the editor DOM without focusing it, which can open Android's keyboard.
                 const before = new InputEvent('beforeinput', {
@@ -1249,18 +1250,21 @@ class WebChatActivity : Activity() {
 
     private fun sendGreetingToVoice(callback: (VoiceGreetingResult) -> Unit) {
         if (!isValidCycle() || webDestroyed) { callback(VoiceGreetingResult.UNAVAILABLE); return }
+        val phrase=VoiceGreetingSettings.get(this)
+        if(phrase.isBlank()) {callback(VoiceGreetingResult.DISABLED);return}
         if (!resumed || !hasWindowFocus() || !automationPageReady) {
             callback(VoiceGreetingResult.SEND_NOT_READY)
             return
         }
         val generation = documentGeneration
-        val greeting = JSONObject.quote(VoiceGreetingSettings.get(this))
+        val greeting = JSONObject.quote(phrase)
         webView.evaluateJavascript(FILL_GREETING_SCRIPT.replace("__JARVIS_GREETING_JSON__", greeting)) { rawResult ->
             if (!isValidCycle() || webDestroyed || generation != documentGeneration) {
                 callback(VoiceGreetingResult.UNAVAILABLE)
                 return@evaluateJavascript
             }
             when (parseGreetingResult(rawResult)) {
+                "disabled" -> callback(VoiceGreetingResult.DISABLED)
                 "submitted" -> callback(VoiceGreetingResult.SENT)
                 "filled" -> webView.evaluateJavascript(SUBMIT_GREETING_SCRIPT) { submitRaw ->
                     if (!isValidCycle() || webDestroyed || generation != documentGeneration) {
@@ -1357,6 +1361,6 @@ internal data class VoiceViewPoint(val x: Float, val y: Float)
 enum class WebVoiceTapResult { DISPATCHED, BLOCKED, ACTIVE, NOT_FOUND, UNAVAILABLE }
 enum class WebVoicePageState { ACTIVE, START_READY, NOT_FOUND, UNAVAILABLE }
 enum class VoiceGreetingResult {
-    SENT, COMPOSER_MISSING, COMPOSER_WAITING, COMPOSER_UNAVAILABLE,
+    SENT, DISABLED, COMPOSER_MISSING, COMPOSER_WAITING, COMPOSER_UNAVAILABLE,
     SEND_NOT_READY, COMPOSER_OCCUPIED, UNAVAILABLE
 }

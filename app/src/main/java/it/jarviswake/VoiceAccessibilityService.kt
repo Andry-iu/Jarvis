@@ -331,6 +331,13 @@ class VoiceAccessibilityService : AccessibilityService() {
     private fun messageKey(beforeVoice: Boolean, suffix: String) =
         "native_${if (beforeVoice) "opening" else "greeting"}_$suffix"
 
+    internal fun skipNativeOpening(token:String) {
+        if(!VoiceCycle.matches(token) || preferences.getString("native_token",null)!=token) return
+        preferences.edit().putInt(messageKey(true,"stage"),NativeGreetingPolicy.SKIPPED)
+            .putBoolean("native_opening_confirmed",true)
+            .putLong("native_opening_completed_at",SystemClock.elapsedRealtime()).apply()
+    }
+
     internal fun confirmPreparedOpening(token:String) {
         if(!VoiceCycle.matches(token)) return
         // The observed web reply settled for >=3s after submission; the original300ms minimum has elapsed.
@@ -558,6 +565,11 @@ class VoiceAccessibilityService : AccessibilityService() {
 
     private fun tryGreeting(token: String, now: Long) {
         if (preferences.getBoolean(GREETING_DONE, false) || greetingPending || now < nextGreetingAt) return
+        if(VoiceGreetingSettings.get(this).isBlank()) {
+            preferences.edit().putBoolean(GREETING_DONE,true).apply()
+            DiagnosticLog.record(this,DiagnosticLog.Event.GREETING_DISABLED,token)
+            return
+        }
         val started = preferences.getLong(GREETING_STARTED, 0L)
         if (started == 0L) {
             preferences.edit().putLong(GREETING_STARTED, now).apply()
@@ -573,6 +585,7 @@ class VoiceAccessibilityService : AccessibilityService() {
                 lastGreetingResult = result
                 val event = when (result) {
                     VoiceGreetingResult.SENT -> DiagnosticLog.Event.GREETING_SENT
+                    VoiceGreetingResult.DISABLED -> DiagnosticLog.Event.GREETING_DISABLED
                     VoiceGreetingResult.COMPOSER_MISSING -> DiagnosticLog.Event.GREETING_COMPOSER_MISSING
                     VoiceGreetingResult.COMPOSER_WAITING -> DiagnosticLog.Event.GREETING_COMPOSER_WAITING
                     VoiceGreetingResult.COMPOSER_UNAVAILABLE -> DiagnosticLog.Event.GREETING_COMPOSER_UNAVAILABLE
@@ -583,6 +596,7 @@ class VoiceAccessibilityService : AccessibilityService() {
                 DiagnosticLog.record(this, event, token)
             }
             when (VoiceGreetingRetryPolicy.action(result)) {
+                VoiceGreetingAction.SKIP -> {preferences.edit().putBoolean(GREETING_DONE,true).apply()}
                 VoiceGreetingAction.RETRY -> Unit // No click occurred; continue until ready or cycle cancellation.
                 VoiceGreetingAction.SENT -> {
                     preferences.edit().putBoolean(GREETING_DONE, true).apply()

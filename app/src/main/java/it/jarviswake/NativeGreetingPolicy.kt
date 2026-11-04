@@ -6,10 +6,11 @@ internal object NativeGreetingPolicy {
     const val WRITING = 1
     const val DISPATCHED = 2
     const val ABORTED = 3
+    const val SKIPPED = 4
     enum class Action { WAIT, WRITE, SEND, ABORT, NONE }
     fun decide(stage: Int, elapsedMs: Long, editableCount: Int, empty: Boolean,
         matchesGreeting: Boolean, canWrite: Boolean, canSend: Boolean): Action {
-        if (stage == DISPATCHED || stage == ABORTED) return Action.NONE
+        if (stage == DISPATCHED || stage == ABORTED || stage == SKIPPED) return Action.NONE
         if (elapsedMs >= 10_000L) return Action.ABORT
         if (editableCount != 1) return Action.WAIT
         return when (stage) {

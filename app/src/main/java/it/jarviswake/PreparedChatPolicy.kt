@@ -113,6 +113,7 @@ internal class PreparedChatLedger(initial: PreparedConversation?, private val pe
         return true
     }
     fun claim(cycle: String, project: String, name: String, now: Long, openingText:String=OpeningMessagePolicy.TEXT): PreparedConversation? {
+        if(openingText.isBlank()) return null
         val current=record?.takeIf {it.phase==PreparationPhase.READY && it.project==project && it.projectName==name && it.openingText==openingText} ?: return null
         val linkCapture=current.linkOnly && current.submittedAt>=current.createdAt && current.readyAt>=current.submittedAt
         val oldProof=!current.linkOnly && current.proofLength in 24..64 && current.hash.matches(Regex("[a-f0-9]{64}"))

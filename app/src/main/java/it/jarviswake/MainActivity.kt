@@ -114,7 +114,7 @@ class MainActivity : Activity() {
         MenuPage.SERVICE->"Qui trovi diagnostica, impostazioni Android e manutenzione. Questi strumenti sono separati dall’uso quotidiano. La cancellazione dei dati WebView richiede conferma e può richiedere un nuovo accesso a ChatGPT. Gli appunti locali e il collegamento hanno archivi distinti."
         MenuPage.PERMISSIONS->"Microfono e notifiche servono all’ascolto. Accessibilità controlla Voice nell’app ChatGPT; HUD consente la cover. Il ruolo Assistente cambia l’assistente digitale predefinito e va scelto nel pannello Android. Permessi e batteria apre le impostazioni di sistema: torna qui dopo la scelta. Nessuna autorizzazione viene concessa automaticamente."
         MenuPage.CHATGPT->"Scegli l’app ChatGPT nativa o il WebView desktop. Nell’app nativa seleziona lo shortcut creato dal progetto e conferma il nome esatto visibile, rispettando gli spazi. Prova collegamento apre solo il progetto, senza Voice. Nel WebView usa l’URL del progetto e accedi con il tuo account. Modello e livello si scelgono dentro ChatGPT. Termina un ciclo attivo prima di cambiare modalità o collegamento."
-        MenuPage.GREETING->"Messaggio prima di Voice configura il testo iniziale per app ChatGPT e preparazione in background; Salva o Avanti lo applicano a ciclo chiuso e invalidano la vecchia preparazione se cambia. Il campo Frase del saluto viene richiesto una volta dopo la conferma Voice, nella stessa conversazione. Salva frase applica il testo; Ripristina rimette ciao jarvis. Nella guida Avanti salva una frase valida. Il salvataggio della preferenza non prova che ChatGPT abbia inviato il messaggio o pronunciato il saluto. Le bozze personali non vengono inviate."
+        MenuPage.GREETING->"Messaggio prima di Voice configura il testo iniziale per app ChatGPT e preparazione in background; Salva o Avanti lo applicano a ciclo chiuso e invalidano la vecchia preparazione se cambia. Il campo Frase del saluto viene richiesto una volta dopo la conferma Voice, nella stessa conversazione. Salva frase applica il testo; Ripristina rimette ciao jarvis. I campi vuoti disattivano i rispettivi messaggi, anche usando Avanti nella guida. Il salvataggio della preferenza non prova che ChatGPT abbia inviato il messaggio o pronunciato il saluto. Le bozze personali non vengono inviate."
         MenuPage.AUDIO->"Attiva l’audio e scegli un file dal telefono. Volume regola solo l’audio di attesa di Jarvis, non quello di ChatGPT o del telefono. Spostando il volume parte un’anteprima anche con audio disattivato: dura il minimo scelto, o 2 secondi se il minimo è zero. Tempo minimo ritarda solo il comando Voice fino a 30 secondi. Lasciando questa sezione l’anteprima si ferma."
         MenuPage.COVER->"Scegli l’aspetto iniziale opaco o semitrasparente. Durante Voice: tocco centrale alterna il microfono; mute confermato significa animazione grigia e ferma. Tocco sotto l’animazione cambia trasparenza. Doppio tocco centrale chiude subito la cover e richiede stop Voice. Swipe sinistro nasconde soltanto la cover mantenendo Voice attiva; swipe in basso termina Voice e torna Home; doppio tocco in alto a destra esporta diagnostica. Leggi la guida per le zone dei gesti."
         MenuPage.LINK->"Collegamento ChatGPT abbina il telefono al plugin JarvisWake Link. Abbinamento, consenso Maps/chiamate/WhatsApp e consenso appunti sono categorie distinte. Le azioni richiedono una richiesta esplicita e i rispettivi permessi. Un aggiornamento firmato conserva l’abbinamento; cancellarlo non elimina gli appunti. Il calendario resta al plugin dedicato."
@@ -171,7 +171,7 @@ class MainActivity : Activity() {
             MenuPage.CHATGPT -> buildChatPage()
             MenuPage.GREETING -> {
                 openingInput=menu.field("Messaggio prima di Voice",openingDraft ?: OpeningMessageSettings.get(this),
-                    "Testo inviato prima di Voice nell’app ChatGPT e nella preparazione in background. Salva a ciclo chiuso: una frase diversa sostituisce la preparazione precedente. Il saluto dopo Voice ha un campo separato.",multiline=true,minRows=5)
+                    "Testo inviato prima di Voice nell’app ChatGPT e nella preparazione in background. Salva a ciclo chiuso: una frase diversa sostituisce la preparazione precedente. Vuoto disattiva invio iniziale e preparazione testuale. Il saluto dopo Voice ha un campo separato.",multiline=true,minRows=5)
                 button("Salva messaggio prima di Voice") {saveOpeningMessage()}
                 button("Ripristina messaggio predefinito") {
                     if(OpeningMessageSettings.reset(this)) {
@@ -183,11 +183,11 @@ class MainActivity : Activity() {
                 greetingInput=menu.field("Frase del saluto",greetingDraft ?: VoiceGreetingSettings.get(this),help(page),multiline=true,minRows=5)
                 button("Salva frase") {
                     if(VoiceGreetingSettings.save(this,greetingInput.text.toString())) {
-                        greetingInput.setText(VoiceGreetingSettings.get(this));greetingDraft=greetingInput.text.toString()
+                        greetingInput.setText(VoiceGreetingSettings.get(this));greetingDraft=greetingInput.text.toString();greetingInput.error=null
                         Toast.makeText(this,"Frase salvata.",Toast.LENGTH_SHORT).show()
-                    } else greetingInput.error="Inserisci una frase prima di salvare."
+                    } else greetingInput.error="Impossibile salvare la frase."
                 }
-                button("Ripristina «ciao jarvis»") { VoiceGreetingSettings.reset(this);greetingDraft=VoiceGreetingSettings.get(this);greetingInput.setText(greetingDraft) }
+                button("Ripristina «ciao jarvis»") { VoiceGreetingSettings.reset(this);greetingDraft=VoiceGreetingSettings.get(this);greetingInput.setText(greetingDraft);greetingInput.error=null }
             }
             MenuPage.AUDIO -> buildAudioPage()
             MenuPage.COVER -> {
@@ -318,7 +318,6 @@ class MainActivity : Activity() {
         }
     }
     private fun saveOpeningMessage():Boolean {
-        if(openingInput.text.isNullOrBlank()) {openingInput.error="Inserisci un messaggio prima di salvare.";return false}
         if(!OpeningMessageSettings.save(this,openingInput.text.toString())) {
             openingInput.error=if(VoiceCycle.active) "Termina prima il ciclo Voice attivo." else "Impossibile salvare il messaggio."
             return false
@@ -330,8 +329,8 @@ class MainActivity : Activity() {
     }
     private fun configurationSummary()=permissionSummary()+
         "\n\nChatGPT: "+(if(NativeChatSettings.enabled(this)) "app nativa · "+NativeChatSettings.project(this) else "WebView desktop")+
-        "\nMessaggio prima di Voice: "+OpeningMessageSettings.get(this)+
-        "\nSaluto dopo Voice: "+VoiceGreetingSettings.get(this)+
+        "\nMessaggio prima di Voice: "+OpeningMessageSettings.get(this).ifBlank {"disattivato"}+
+        "\nSaluto dopo Voice: "+VoiceGreetingSettings.get(this).ifBlank {"disattivato"}+
         "\nAudio di avvio: "+(if(WaitingAudioSettings.enabled(this)) "attivo" else "disattivato")+" · "+WaitingAudioSettings.volume(this)+"% · minimo "+WaitingAudioSettings.minimumSeconds(this)+" s"+
         "\nCover: "+(if(CoverSettings.isOpaque(this)) "opaca" else "semitrasparente")+
         "\nCollegamento: "+(if(BridgeSettings.enabled(this)) "attivo" else "disattivato")+
@@ -339,9 +338,8 @@ class MainActivity : Activity() {
         "\nAppunti dal plugin: "+(if(PhoneNotes.enabled(this)) "consentiti" else "disattivati")
     private fun advanceGuide() {
         if(navigation.current==MenuPage.GREETING) {
-            if(greetingInput.text.isNullOrBlank()) {greetingInput.error="Inserisci una frase valida o ripristina quella predefinita.";return}
             if(!saveOpeningMessage()) return
-            if(!VoiceGreetingSettings.save(this,greetingInput.text.toString())) { greetingInput.error="Inserisci una frase valida o ripristina quella predefinita.";return }
+            if(!VoiceGreetingSettings.save(this,greetingInput.text.toString())) { greetingInput.error="Impossibile salvare la frase.";return }
             greetingDraft=VoiceGreetingSettings.get(this)
         }
         if(navigation.current==MenuPage.CHATGPT && !NativeChatSettings.enabled(this)) {

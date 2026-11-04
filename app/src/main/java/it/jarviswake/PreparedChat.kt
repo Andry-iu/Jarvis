@@ -61,6 +61,7 @@ internal object PreparedChat {
     private fun project(c:Context)=ChatGptProjectSettings.getUrl(c)
     fun status(c:Context):String {
         if (!enabled(c)) return "Preparazione disattivata. Accedi nel WebView con lo stesso account ChatGPT e verifica il progetto prima di abilitarla."
+        if(OpeningMessageSettings.get(c).isBlank()) return "Preparazione testuale sospesa: il messaggio prima di Voice è disattivato."
         return runCatching {
             when(repository(c).record?.phase) {
                 PreparationPhase.STARTED -> when(lastProgress) {
@@ -100,11 +101,12 @@ internal object PreparedChat {
         destroyView();repository(c).reset();maintain(c)
     }
     fun savedLink(c:Context):String?=runCatching {
+        if(OpeningMessageSettings.get(c).isBlank()) return@runCatching null
         repository(c).record?.takeIf {it.project==project(c) && it.projectName==NativeChatSettings.project(c) && it.openingText==OpeningMessageSettings.get(c) &&
             PreparedChatPolicy.conversationUrl(it.url,it.project)!=null}?.url
     }.getOrNull()
     fun claim(c:Context,cycle:String):PreparedConversation? {
-        if (!enabled(c)) return null
+        if (!enabled(c) || OpeningMessageSettings.get(c).isBlank()) return null
         return runCatching {
             repository(c).claim(cycle,project(c),NativeChatSettings.project(c),System.currentTimeMillis(),OpeningMessageSettings.get(c))?.also {
                 destroyView();record(c,it.attempt,"claimed")
@@ -149,6 +151,7 @@ internal object PreparedChat {
             if (current!=null && (current.project!=project(c) || current.projectName!=NativeChatSettings.project(c) || current.openingText!=OpeningMessageSettings.get(c))) {
                 destroyView();repo.reset()
             }
+            if(OpeningMessageSettings.get(c).isBlank()) {preparationPermit=null;return}
             val permit=preparationPermit
             val mayPrepareDuringCycle=permit!=null && VoiceCycle.id==permit
             if (view!=null) {preparationPermit=null;return}
@@ -213,7 +216,7 @@ internal object PreparedChat {
         }
     }
     private val waiting=setOf("waiting_editor","written","waiting_send","submitted","waiting_url","waiting_user","waiting_acceptance","waiting_reply")
-    private val phases=waiting+setOf("ready","login","foreign_attempt","wrong_project","existing_conversation","draft","write_failed","send_uncertain","wrong_conversation")
+    private val phases=waiting+setOf("ready","login","foreign_attempt","wrong_project","existing_conversation","draft","write_failed","send_uncertain","wrong_conversation","empty_message")
     private fun fail(attempt:PreparedConversation,code:String) {
         runCatching {ledger?.fail(attempt.attempt,code)}
         app?.let {record(it,attempt.attempt,code)}

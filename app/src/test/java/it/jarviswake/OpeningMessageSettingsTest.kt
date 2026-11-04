@@ -34,12 +34,21 @@ class OpeningMessageSettingsTest {
         assertEquals(greeting,VoiceGreetingSettings.get(app))
         assertTrue(OpeningMessageSettings.reset(app));assertEquals(OpeningMessagePolicy.TEXT,OpeningMessageSettings.get(app))
     }
-    @Test fun blankTextAndChangesDuringAnActiveCycleAreRejectedWithoutChangingTheValue() {
+    @Test fun blankTextIsPersistedButChangesDuringAnActiveCycleRemainRejected() {
         assertTrue(OpeningMessageSettings.save(app,"Messaggio personalizzato"))
-        assertFalse(OpeningMessageSettings.save(app," \n "))
+        assertTrue(OpeningMessageSettings.save(app," \n "));assertEquals("",OpeningMessageSettings.get(app))
         cycleField.set(null,VoiceCycleState().apply {begin("active",0)})
         assertFalse(OpeningMessageSettings.save(app,"Altro testo"));assertFalse(OpeningMessageSettings.reset(app))
-        assertEquals("Messaggio personalizzato",OpeningMessageSettings.get(app))
+        assertEquals("",OpeningMessageSettings.get(app))
+    }
+    @Test fun bothEmptyChoicesSurviveReadsAndOnlyExplicitResetRestoresTheirDefaults() {
+        assertTrue(OpeningMessageSettings.save(app," \n\t "))
+        assertTrue(VoiceGreetingSettings.save(app," \n\t "))
+        assertEquals("",OpeningMessageSettings.get(app.applicationContext))
+        assertEquals("",VoiceGreetingSettings.get(app.applicationContext))
+        assertTrue(OpeningMessageSettings.reset(app));assertEquals(OpeningMessagePolicy.TEXT,OpeningMessageSettings.get(app))
+        assertEquals("",VoiceGreetingSettings.get(app))
+        VoiceGreetingSettings.reset(app);assertEquals(VoiceGreetingSettings.DEFAULT_PHRASE,VoiceGreetingSettings.get(app))
     }
     @Test fun savingTheUnchangedTextKeepsAnExistingPreparation() {
         val project=ChatGptProjectSettings.getUrl(app)

@@ -4,6 +4,9 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class VoiceGreetingRetryPolicyTest {
+    @Test fun disabledGreetingIsSkippedWithoutRetryOrClaimingItWasSent() {
+        assertEquals(VoiceGreetingAction.SKIP,VoiceGreetingRetryPolicy.action(VoiceGreetingResult.DISABLED))
+    }
     @Test fun onlyKnownNoSendOutcomesCanBeRetried() {
         listOf(VoiceGreetingResult.COMPOSER_MISSING, VoiceGreetingResult.COMPOSER_WAITING,
             VoiceGreetingResult.COMPOSER_UNAVAILABLE, VoiceGreetingResult.SEND_NOT_READY).forEach {

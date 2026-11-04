@@ -4,6 +4,7 @@
   const message = __JARVIS_MESSAGE_JSON__;
   let verification = {};
   const result = (phase, extra={}) => JSON.stringify({phase, ...verification, ...extra});
+  if (!message.trim()) return result('empty_message');
   const url = new URL(location.href);
   if (url.origin !== 'https://chatgpt.com') return result('login');
   let state = window.__jarvisPreparation;

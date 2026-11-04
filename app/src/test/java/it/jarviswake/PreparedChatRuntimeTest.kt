@@ -57,6 +57,18 @@ class PreparedChatRuntimeTest {
         return JSONObject.quote(JSONObject().put("phase","ready").put("url",url).put("submitted",true).toString())
     }
 
+    @Test fun emptyOpeningTextInvalidatesTheOldSlotAndNeverCreatesAHiddenRendererUntilReenabled() {
+        val web=start();probe(web);shadowOf(web).lastEvaluatedJavascriptCallback.onReceiveValue(ready())
+        assertNotNull(PreparedChat.savedLink(app))
+        assertTrue(OpeningMessageSettings.save(app," \n "))
+        shadowOf(Looper.getMainLooper()).idle();PreparedChat.maintain(app)
+        assertNull(viewField.get(null));assertNull(ledger.record);assertNull(PreparedChat.savedLink(app))
+        assertNull(PreparedChat.claim(app,"disabled"));assertTrue(PreparedChat.status(app).contains("sospesa"))
+        PreparedChat.coverClosed(app,"closed-disabled");shadowOf(Looper.getMainLooper()).idle()
+        assertNull(viewField.get(null));assertNull(shadowOf(app).nextStartedActivity)
+        assertTrue(OpeningMessageSettings.save(app,"Nuovo messaggio"));shadowOf(Looper.getMainLooper()).idle()
+        assertNotNull(viewField.get(null));assertEquals("Nuovo messaggio",ledger.record!!.openingText)
+    }
     @Test fun customOpeningTextIsSnapshottedIntoThePreparationAndQuotedSafelyInJavascript() {
         val custom="Prima riga \"Jarvis\"\nSeconda riga `test`"
         assertTrue(OpeningMessageSettings.save(app,custom))

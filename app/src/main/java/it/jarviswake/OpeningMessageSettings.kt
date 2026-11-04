@@ -7,11 +7,11 @@ import android.annotation.SuppressLint
 internal object OpeningMessageSettings {
     private fun prefs(c:Context)=c.applicationContext.getSharedPreferences("opening_message",Context.MODE_PRIVATE)
     fun get(c:Context):String=prefs(c).getString("text",OpeningMessagePolicy.TEXT)
-        ?.takeIf {it.isNotBlank()} ?: OpeningMessagePolicy.TEXT
+        ?: OpeningMessagePolicy.TEXT
     @SuppressLint("ApplySharedPref") // Persist the choice before invalidating its prepared conversation.
     fun save(c:Context,raw:String):Boolean {
         val text=raw.replace("\r\n","\n").replace('\r','\n').trim()
-        if(text.isEmpty() || VoiceCycle.active) return false
+        if(VoiceCycle.active) return false
         if(text==get(c)) return true
         if(!prefs(c).edit().putString("text",text).commit()) return false
         PreparedChat.openingMessageChanged(c)

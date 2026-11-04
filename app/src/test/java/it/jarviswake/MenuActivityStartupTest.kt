@@ -48,10 +48,14 @@ class MenuActivityStartupTest {
             assertEquals(greeting,VoiceGreetingSettings.get(a))
             editors[0].setText("  ")
             buttons(a.window.decorView).single {it.text.toString()=="Salva messaggio prima di Voice"}.performClick()
-            assertNotNull(editors[0].error);assertEquals("Messaggio personalizzato\nSeconda riga",OpeningMessageSettings.get(a))
+            assertNull(editors[0].error);assertEquals("",OpeningMessageSettings.get(a))
             buttons(a.window.decorView).single {it.text.toString()=="Ripristina messaggio predefinito"}.performClick()
             assertEquals(OpeningMessagePolicy.TEXT,OpeningMessageSettings.get(a))
             assertEquals(greeting,VoiceGreetingSettings.get(a))
+            editors[1].setText(" \n ")
+            buttons(a.window.decorView).single {it.text.toString()=="Salva frase"}.performClick()
+            assertEquals("",VoiceGreetingSettings.get(a));assertNull(editors[1].error)
+            assertEquals(OpeningMessagePolicy.TEXT,OpeningMessageSettings.get(a))
         } finally {controller.destroy();field.set(null,old);cycle.set(null,previous)}
     }
     @Test fun uncreatedDecorMustBeCheckedBeforeAskingForTheInsetsController() {

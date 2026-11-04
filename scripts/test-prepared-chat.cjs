@@ -60,5 +60,9 @@ function submitted(){const f=fixture();assert.equal(f.run().phase,'written');ass
  assert.equal(f.run().phase,'submitted');f.location.href=url;assert.equal(f.run().phase,'ready');
  assert.equal(f.counts().writes,1);assert.equal(f.counts().sends,1);
 }
+for(const phrase of ['', ' \n\t ']) {
+ const f=fixture(phrase);assert.equal(f.run().phase,'empty_message');
+ assert.equal(f.counts().writes,0);assert.equal(f.counts().sends,0);assert.equal(f.counts().editorQueries,0);
+}
 assert.ok(!source.includes('getUserMedia') && !source.includes('.focus(') && !source.includes('fetch('));
 console.log('PASS: one write/send, immediate URL capture without transcript/editor/response wait, project/draft/ambiguity guards and no media.');

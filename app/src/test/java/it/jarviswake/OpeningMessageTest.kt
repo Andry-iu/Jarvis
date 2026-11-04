@@ -76,6 +76,45 @@ class OpeningMessageTest {
         controller.launch(openShortcut=false,playWaitingAudio=false)
     }
     @After fun cleanup() { controller.destroy(); lifecycle.destroy(); cycleField.set(null,previousCycle) }
+    private fun showActiveVoiceControls() {
+        for(label in listOf("Termina","Disattiva microfono")) {
+            val control=node(label).apply {isClickable=true}
+            shadowOf(control).setAccessibilityWindowInfo(window);shadowOf(root).addChild(control)
+        }
+    }
+    @Test fun bothEmptyMessagesStartVoiceWithoutTextOrSendDelayAndNeverAttemptAGreeting() {
+        service.getSharedPreferences("opening_message",0).edit().putString("text","").commit()
+        assertTrue(VoiceGreetingSettings.save(service,""))
+        controller.poll();assertEquals(1,starts);assertEquals(0,writes)
+        assertEquals(NativeGreetingPolicy.SKIPPED,service.nativeGreetingStage(token,true))
+        showActiveVoiceControls();controller.poll()
+        assertEquals(NativeGreetingPolicy.SKIPPED,service.nativeGreetingStage(token))
+        advance(11000);controller.poll();controller.poll()
+        assertEquals(1,starts);assertEquals(0,writes);assertTrue(shadowOf(service).gesturesDispatched.isEmpty())
+        assertEquals(NativeGreetingPolicy.SKIPPED,service.nativeGreetingStage(token))
+    }
+    @Test fun emptyOpeningStillProtectsAnExistingDraft() {
+        service.getSharedPreferences("opening_message",0).edit().putString("text","").commit()
+        editor.text="Bozza personale";controller.poll()
+        assertEquals("Bozza personale",editor.text.toString());assertEquals(0,writes);assertEquals(0,starts)
+        editor.text="";controller.poll();assertEquals(1,starts);assertEquals(0,writes)
+    }
+    @Test fun anEmptyGreetingDoesNotSkipTheConfiguredOpeningMessageOrItsDelay() {
+        assertTrue(VoiceGreetingSettings.save(service,""))
+        queueSend();completeSend();controller.poll();advance(299);controller.poll();assertEquals(0,starts)
+        advance(1);controller.poll();assertEquals(1,starts)
+        showActiveVoiceControls();controller.poll();advance(11000);controller.poll()
+        assertEquals(1,writes);assertEquals(1,shadowOf(service).gesturesDispatched.size)
+        assertEquals(NativeGreetingPolicy.SKIPPED,service.nativeGreetingStage(token))
+    }
+    @Test fun anEmptyOpeningDoesNotDisableANonemptyGreetingAfterVoice() {
+        service.getSharedPreferences("opening_message",0).edit().putString("text","").commit()
+        assertTrue(VoiceGreetingSettings.save(service,"Saluto configurato"))
+        controller.poll();assertEquals(1,starts);assertEquals(0,writes)
+        showActiveVoiceControls();controller.poll()
+        assertEquals("Saluto configurato",editor.text.toString());assertEquals(1,writes)
+        assertEquals(NativeGreetingPolicy.WRITING,service.nativeGreetingStage(token))
+    }
     private fun advance(ms: Long) { ShadowSystemClock.advanceBy(Duration.ofMillis(ms)) }
     private fun queueSend() {
         controller.poll()

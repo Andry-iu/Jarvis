@@ -1,4 +1,4 @@
-# Preparazione della prossima chat — 0.5.105 / 127
+# Preparazione della prossima chat — 0.5.106 / 128
 
 Una seconda WebView senza finestre carica il progetto, invia una sola volta
 «leggi le istruzioni del progetto», cattura il link privato e viene distrutta.
@@ -7,7 +7,7 @@ non istruzioni elaborate o generazione completata lato server.
 
 ## Configurazione
 
-Installare l’APK telefono .105 sopra la versione precedente. In Configurazione →
+Installare l’APK telefono .106 sopra la versione precedente. In Configurazione →
 ChatGPT e progetto, modalità nativa, usare Accesso WebView per preparazione con
 lo stesso account/spazio di lavoro e progetto dell’app ChatGPT. Salvare URL progetto
 per preparazione e abilitare Prepara la prossima chat in background (default OFF).
@@ -173,3 +173,25 @@ in LF; righe interne/Unicode/virgolette conservati. Testo escluso dai log diagno
 Non riguarda il normale avvio WebView desktop, non modifica invio singolo, timer300ms,
 bozze, stop/wake/cover, né il riconoscimento64/ACTION_CLICK .104 confermato sul Galaxy.
 La nuova configurazione/invio personalizzato richiede collaudo sul dispositivo.
+
+## Messaggi opzionali .106
+
+I due campi in Configurazione → Voce e saluto accettano vuoto o soli spazi.
+La preferenza vuota è distinta dall’assenza di preferenza: resta disattivata dopo
+riapertura/aggiornamento. Solo Ripristina recupera il default. Salva a ciclo chiuso;
+un invio già avviato non è annullabile retroattivamente. Avanti nella guida ammette
+il vuoto e il riepilogo mostra disattivato.
+
+Prima vuoto invalida lo slot/renderer vecchi, sospende maintain/claim/link della
+preparazione testuale, senza perdere l’opzione background. Reinserendo testo la
+preparazione può riprendere. Nel percorso nativo il messaggio è SKIPPED persistito,
+conferma progetto/editor vuoto e controllo Voice univoco; nessuna scrittura/gesto
+Invia o300ms senza invio. Microfono libero e minimo audio restano richiesti.
+Dopo vuoto è SKIPPED terminale nativo, senza scrittura/timeout/retry; in WebView il
+servizio non avvia il saluto, il metodo e lo script hanno guardie DISABLED prima
+di inserimenti. DISABLED è distinto da SENT/ABORT. Nessun messaggio bianco/Enter.
+
+Se soltanto uno è vuoto, l’altro continua a funzionare. Se entrambi sono vuoti,
+Voice rimane disponibile con0messaggi applicativi. Non è una garanzia di silenzio
+del modello né un filtro dell’audio ChatGPT. Restano tutte le protezioni e la
+lettura64 già confermata sul Galaxy; nuova opzione da collaudare sul dispositivo.

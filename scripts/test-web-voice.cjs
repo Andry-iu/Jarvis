@@ -210,6 +210,11 @@ function page({controls = [], headings = [], composer = null, locked = false,
     let clicks = 0;
     return Object.assign(element(label, options), {type:'submit', click() { clicks++; }, count:() => clicks});
   }
+  for(const message of ['', ' \n\t ']) {
+    const disabled=greetingPage({message});disabled.show();
+    assert.equal(disabled.fill(),'disabled');assert.equal(disabled.composer.value,'');
+    disabled.composer.value='bozza';assert.equal(disabled.fill(),'disabled');assert.equal(disabled.composer.value,'bozza');
+  }
   const greeting = greetingPage();
   assert.equal(greeting.fill(), 'composer_missing', 'Late composer must remain retryable');
   greeting.show();

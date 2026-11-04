@@ -10,11 +10,10 @@ internal object VoiceGreetingSettings {
     fun get(context: Context): String = context.applicationContext
         .getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE)
         .getString(PHRASE, DEFAULT_PHRASE)
-        ?.takeIf { it.isNotBlank() }
         ?: DEFAULT_PHRASE
 
     fun save(context: Context, rawPhrase: String): Boolean {
-        val phrase = VoiceGreetingPhrase.normalize(rawPhrase) ?: return false
+        val phrase = VoiceGreetingPhrase.normalize(rawPhrase)
         context.applicationContext.getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE)
             .edit().putString(PHRASE, phrase).apply()
         return true
@@ -27,5 +26,5 @@ internal object VoiceGreetingSettings {
 }
 
 internal object VoiceGreetingPhrase {
-    fun normalize(rawPhrase: String): String? = rawPhrase.trim().takeIf { it.isNotEmpty() }
+    fun normalize(rawPhrase: String): String = rawPhrase.trim()
 }

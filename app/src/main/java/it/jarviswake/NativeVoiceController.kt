@@ -315,6 +315,15 @@ internal class NativeVoiceController(private val service: VoiceAccessibilityServ
         val emptyComposer = fields.singleOrNull()?.let {
             it.windowId == service.nativeGreetingWindow(token, true) && (it.isShowingHintText || it.text.isNullOrBlank())
         } == true
+        if(service.nativeGreetingText(token,true).isBlank()) {
+            val blank=fields.singleOrNull()?.let {it.isShowingHintText || it.text.isNullOrBlank()}==true
+            if(!blank) {status("MESSAGGIO INIZIALE DISATTIVATO — ATTENDO CAMPO VUOTO");return false}
+            if(service.nativeGreetingStage(token,true)!=NativeGreetingPolicy.SKIPPED) {
+                service.skipNativeOpening(token)
+                NativeRuntimeSnapshot.save(service,token,"opening","phase=disabled")
+            }
+            return true
+        }
         // Gesture completion alone is not evidence that the chat submitted the text.
         if (service.nativeGreetingStage(token, true) == NativeGreetingPolicy.DISPATCHED &&
             completedAt >= 0L && emptyComposer && !service.nativeOpeningConfirmed(token)) {
@@ -354,8 +363,13 @@ internal class NativeVoiceController(private val service: VoiceAccessibilityServ
         if (ending != null || !VoiceCycle.matches(token)) return
         fun phase(value: String) = if (beforeVoice) "opening_$value" else value
         val stage = service.nativeGreetingStage(token, beforeVoice)
-        if (stage == NativeGreetingPolicy.DISPATCHED || stage == NativeGreetingPolicy.ABORTED) return
+        if (stage == NativeGreetingPolicy.DISPATCHED || stage == NativeGreetingPolicy.ABORTED || stage == NativeGreetingPolicy.SKIPPED) return
         val phrase = service.nativeGreetingText(token, beforeVoice)
+        if(phrase.isBlank()) {
+            service.setNativeGreetingStage(token,NativeGreetingPolicy.SKIPPED,beforeVoice)
+            NativeRuntimeSnapshot.save(service,token,if(beforeVoice) "opening" else "greeting","phase=disabled")
+            return
+        }
         val fields = nodes.filter { it.packageName?.toString() == NativeChatSettings.PACKAGE &&
             it.isEditable && !it.isPassword && it.isEnabled && it.isVisibleToUser &&
                 (stage != NativeGreetingPolicy.WRITING || it.windowId == service.nativeGreetingWindow(token, beforeVoice)) }.distinct()
