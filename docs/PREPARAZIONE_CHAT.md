@@ -1,4 +1,4 @@
-# Preparazione della prossima chat — 0.5.99 / 121
+# Preparazione della prossima chat — 0.5.100 / 122
 
 La preparazione è un percorso testuale separato dalla cover e dalla sessione Voice.
 Una seconda WebView, appartenente a Jarvis, carica il progetto configurato,
@@ -20,7 +20,7 @@ Il telefono resta utilizzabile e la chiusura della cover mantiene le regole .96.
 5. Abilitare **Prepara la prossima chat in background**, inizialmente OFF.
    L’abilitazione conferma che account/spazio/progetto della WebView sono quelli desiderati.
 6. Avviare l’ascolto e tornare alle altre app. **Aggiorna stato preparazione** mostra
-   l’avanzamento; **Copia link chat preparata** copia esplicitamente solo il link privato.
+   l’avanzamento (attesa link, riscontro del messaggio o risposta); **Copia link chat preparata** copia esplicitamente solo il link privato.
 
 L’accesso di configurazione disabilita e invalida la preparazione precedente:
 riabilitarla dopo aver controllato l’account. Cancellare i dati WebView ha lo stesso effetto.
@@ -32,7 +32,14 @@ Il documento deve partire dall’URL esatto del progetto, senza messaggi preesis
 né bozze. Un solo editor e un solo Invia semantico; scrittura e invio sono consumati
 prima delle azioni. Nessuna richiesta all’assistente di inventare o riferire il proprio ID.
 Il link viene letto da `location.href` dopo l’invio della frase e il suo riscontro
-come unico messaggio utente della nuova conversazione.
+come unico messaggio utente della nuova conversazione. Se l’URL compare prima del
+messaggio, attende il caricamento del DOM anziché dichiarare subito un’altra chat.
+Il confronto usa il corpo del messaggio, senza i controlli UI, e normalizza solo gli
+spazi: parole e contenuto devono restare esatti. Il riscontro viene conservato solo
+nel documento del proprio invio, anche se il sito rimuove poi il messaggio dal DOM;
+un cambio ID interrompe la preparazione. Nodi mancanti restano in attesa fino al
+watchdog; testo non corrispondente o messaggi indipendenti multipli stabili per15s
+interrompono senza nuovi invii. Nessuna chat precedente viene adottata.
 
 Sono ammessi soltanto link HTTPS privati chatgpt.com `/c/UUID` oppure
 `/g/progetto-configurato/c/UUID`, senza credenziali, porta, frammenti o parametri

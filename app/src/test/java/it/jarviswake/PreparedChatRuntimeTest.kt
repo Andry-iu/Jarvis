@@ -52,7 +52,7 @@ class PreparedChatRuntimeTest {
         shadowOf(web).webViewClient.onPageFinished(web,project)
         shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(500))
     }
-    private fun ready()=JSONObject.quote(JSONObject().put("phase","ready").put("url",url).put("reply",reply).toString())
+    private fun ready()=JSONObject.quote(JSONObject().put("phase","ready").put("url",url).put("reply",reply).put("echoObserved",true).put("urlObserved",true).toString())
     @Test fun rendererIsDetachedWithConfiguredViewportNeverOpensActivityAndDeniesBothMediaResources() {
         val web=start()
         assertNull(web.parent);assertFalse(web.isAttachedToWindow);// Robolectric's WebView provider has no setFrame delegate; real renderer sizing needs a device.
@@ -125,6 +125,27 @@ class PreparedChatRuntimeTest {
         assertNull(viewField.get(null));assertEquals(PreparationPhase.FAILED,ledger.record!!.phase)
         callback.onReceiveValue(ready());PreparedChat.maintain(app)
         assertNull(PreparedChat.savedLink(app));assertNull(viewField.get(null));assertNull(shadowOf(app).nextStartedActivity)
+    }
+    @Test fun readyWithoutOwnedMessageEchoIsRejectedDespiteAValidUrlAndReply() {
+        val web=start();probe(web)
+        val outcome=JSONObject().put("phase","ready").put("url",url).put("reply",reply)
+            .put("echoObserved",false).put("urlObserved",true)
+        shadowOf(web).lastEvaluatedJavascriptCallback.onReceiveValue(JSONObject.quote(outcome.toString()))
+        assertEquals(PreparationPhase.FAILED,ledger.record!!.phase);assertNull(PreparedChat.savedLink(app))
+        assertNull(shadowOf(app).nextStartedActivity)
+    }
+    @Test fun verificationDiagnosticsContainOnlyBoundedCountsBooleansAndKnownCodes() {
+        val web=start();probe(web)
+        val outcome=JSONObject().put("phase","waiting_user").put("users",9999999).put("rawUsers",-200)
+            .put("source",url).put("reason","PRIVATE_RESPONSE").put("reply","PRIVATE_RESPONSE").put("url",url)
+        shadowOf(web).lastEvaluatedJavascriptCallback.onReceiveValue(JSONObject.quote(outcome.toString()))
+        val done=java.util.concurrent.CountDownLatch(1)
+        DiagnosticLog.afterPendingWrites {done.countDown()}
+        assertTrue(done.await(5,java.util.concurrent.TimeUnit.SECONDS))
+        val log=java.io.File(app.filesDir,"diagnostics/"+NativeRuntimeSnapshot.FILE_NAME).readText()
+        assertTrue(log.contains("phase=waiting_user users=1000 rawUsers=-1 source=none"))
+        assertFalse(log.contains(url));assertFalse(log.contains("PRIVATE_RESPONSE"))
+        assertEquals(PreparationPhase.STARTED,ledger.record!!.phase)
     }
     @Test fun nativeLinkIntentTargetsOnlyChatGptAndKeepsTheCapturedConversationUri() {
         val expected=Intent(Intent.ACTION_VIEW,Uri.parse(url)).setPackage(NativeChatSettings.PACKAGE)

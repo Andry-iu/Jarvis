@@ -28,6 +28,7 @@ internal object PreparedChat {
     private var pageReady=false
     private var script: String?=null
     private var lastPhase=""
+    private var lastProgress=""
     private const val NAMESPACE="prepared_chat_private"
     private fun prefs(c:Context)=c.getSharedPreferences("prepared_chat_settings",Context.MODE_PRIVATE)
     // Enabling is also the user's confirmation that the WebView has the same account/project.
@@ -60,13 +61,20 @@ internal object PreparedChat {
         if (!enabled(c)) return "Preparazione disattivata. Accedi nel WebView con lo stesso account ChatGPT e verifica il progetto prima di abilitarla."
         return runCatching {
             when(repository(c).record?.phase) {
-                PreparationPhase.STARTED -> "Preparazione testuale in corso; puoi usare il telefono."
+                PreparationPhase.STARTED -> when(lastProgress) {
+                    "waiting_url" -> "Messaggio inviato; attendo l’indirizzo della nuova chat."
+                    "waiting_user", "waiting_acceptance" -> "Messaggio inviato; attendo conferma nella pagina della chat."
+                    "waiting_reply" -> "Messaggio verificato; attendo la risposta di ChatGPT."
+                    else -> "Preparazione testuale in corso; puoi usare il telefono."
+                }
                 PreparationPhase.READY -> if(System.currentTimeMillis()-repository(c).record!!.readyAt in 0..PreparedChatPolicy.READY_TTL_MS)
                     "Chat preparata e link salvato. Verrà usata una sola volta al prossimo avvio Voice."
                     else "Preparazione scaduta; usa Riprova preparazione."
                 PreparationPhase.CLAIMED -> "Chat preparata già assegnata a un ciclo; nessuna seconda apertura automatica."
                 PreparationPhase.FAILED -> if(repository(c).record?.error=="handoff_unconfirmed")
                     "Riapertura nativa non confermata. Controlla il link salvato e l’account; nessuna nuova preparazione automatica."
+                    else if(repository(c).record?.error=="wrong_conversation")
+                        "Messaggio inviato ma non verificato nella nuova chat. Esporta la diagnostica prima di riprovare."
                     else "Preparazione non confermata. Verifica l’accesso nel WebView e usa Riprova preparazione."
                 null -> "In attesa di preparare una chat. Avvia l’ascolto per mantenerla in background."
             }
@@ -100,11 +108,21 @@ internal object PreparedChat {
         // Never perform storage work in the immediate HUD removal/exit callback.
         main.post {runCatching {repository(c).rejectClaim(cycle)}}
     }
-    private fun record(c:Context,attempt:String,phase:String) {
-        if (phase==lastPhase) return
-        lastPhase=phase
-        // Only fixed status codes and the random local attempt, never URL, ID, title or response.
-        NativeRuntimeSnapshot.save(c,attempt,"preparation","phase=$phase")
+    private fun progressDetails(outcome:JSONObject?):String {
+        if(outcome==null || !outcome.has("users")) return ""
+        val source=outcome.optString("source").takeIf {it in setOf("none","body","root","clean_root")} ?: "none"
+        val reason=outcome.optString("reason").takeIf {it in setOf("message_absent","message_count","body_pending",
+            "message_mismatch","pending_acceptance","verified","url_changed")} ?: "unknown"
+        return " users=${outcome.optInt("users",-1).coerceIn(-1,1000)} rawUsers=${outcome.optInt("rawUsers",-1).coerceIn(-1,1000)}"+
+            " source=$source matches=${outcome.optBoolean("userMatches")} echo=${outcome.optBoolean("echoObserved")}"+
+            " urlObserved=${outcome.optBoolean("urlObserved")} reason=$reason"
+    }
+    private fun record(c:Context,attempt:String,phase:String,details:String="") {
+        val key="$attempt|$phase|$details"
+        if (key==lastPhase) return
+        lastPhase=key;lastProgress=phase
+        // Only bounded counts, booleans and fixed codes; never URL, ID, title or response.
+        NativeRuntimeSnapshot.save(c,attempt,"preparation","phase=$phase$details")
     }
     fun maintain(c:Context) {
         if (!enabled(c) || !NativeChatSettings.enabled(c)) {if(view!=null) stop(c,"disabled");return}
@@ -146,10 +164,11 @@ internal object PreparedChat {
                     pending=false
                     val outcome=runCatching {JSONObject(JSONTokener(raw).nextValue() as String)}.getOrNull()
                     val phase=outcome?.optString("phase").orEmpty()
-                    record(c,attempt.attempt,phase.takeIf {it in phases} ?: "invalid_result")
+                    record(c,attempt.attempt,phase.takeIf {it in phases} ?: "invalid_result",progressDetails(outcome))
                     when {
                         phase=="ready" -> {
-                            if (ledger?.complete(attempt.attempt,outcome!!.optString("url"),outcome.optString("reply"),System.currentTimeMillis())==true) {
+                            if (outcome?.optBoolean("echoObserved")==true && outcome.optBoolean("urlObserved") &&
+                                ledger?.complete(attempt.attempt,outcome.optString("url"),outcome.optString("reply"),System.currentTimeMillis())==true) {
                                 destroyView();record(c,attempt.attempt,"ready")
                             } else fail(attempt,"invalid_result")
                         }
@@ -160,7 +179,7 @@ internal object PreparedChat {
             }.onFailure {pending=false;fail(attempt,"script_error")}
         }
     }
-    private val waiting=setOf("waiting_editor","written","waiting_send","submitted","waiting_url","waiting_acceptance","waiting_reply")
+    private val waiting=setOf("waiting_editor","written","waiting_send","submitted","waiting_url","waiting_user","waiting_acceptance","waiting_reply")
     private val phases=waiting+setOf("ready","login","foreign_attempt","wrong_project","existing_conversation","draft","write_failed","send_uncertain","wrong_conversation")
     private fun fail(attempt:PreparedConversation,code:String) {
         runCatching {ledger?.fail(attempt.attempt,code)}

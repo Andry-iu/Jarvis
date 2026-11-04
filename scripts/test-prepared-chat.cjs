@@ -57,11 +57,49 @@ function readyDocument(f){f.editor._value='';f.location.href=url;
  assert.equal(f.run().phase,'send_uncertain');assert.equal(f.run().phase,'waiting_url');assert.equal(f.counts().writes,1);
 }
 {
- const f=submitted();readyDocument(f);f.state.users=[{innerText:'different message'}];assert.equal(f.run().phase,'wrong_conversation');
+ const f=submitted();readyDocument(f);f.state.users=[{innerText:'different message'}];assert.equal(f.run().phase,'waiting_user');f.advance(15000);assert.equal(f.run().phase,'wrong_conversation');
 }
 {
  const f=fixture();f.state.users=[{innerText:'previous conversation'}];assert.equal(f.run().phase,'existing_conversation');
  assert.deepEqual(f.counts(),{writes:0,sends:0});
 }
 assert.ok(!source.includes('getUserMedia') && !source.includes('.focus(') && !source.includes('fetch('));
-console.log('PASS: hidden text preparation, one write/send, owned new project chat, URL capture, settled reply, blocked approval, drafts and uncertain sends.');
+
+// A conversation URL can be mounted before the corresponding user message nodes.
+{
+ const f=submitted();readyDocument(f);f.state.users=[];
+ assert.equal(f.run().phase,'waiting_user');
+ f.state.users=[{innerText:message}];assert.equal(f.run().phase,'waiting_reply');
+ f.advance(3000);assert.equal(f.run().phase,'ready');assert.deepEqual(f.counts(),{writes:1,sends:1});
+}
+
+// Message body is distinct from accessible labels/buttons; exact text is still mandatory.
+{
+ const f=submitted();readyDocument(f);
+ f.state.users=[{innerText:'Hai detto: '+message+' Modifica Copia',querySelectorAll:()=>[{innerText:message}]}];
+ assert.equal(f.run().phase,'waiting_reply');f.advance(3000);assert.equal(f.run().phase,'ready');
+}
+{
+ const f=submitted();readyDocument(f);
+ f.state.users=[{innerText:'leggi le istruzioni\ndel progetto'}];
+ assert.equal(f.run().phase,'waiting_reply');f.advance(3000);assert.equal(f.run().phase,'ready');
+}
+// Observe the echo while the URL is pending, before the site removes the bubble from the DOM.
+{
+ const f=submitted();readyDocument(f);f.location.href=project;
+ assert.equal(f.run().phase,'waiting_url');f.state.users=[];f.location.href=url;
+ assert.equal(f.run().phase,'waiting_reply');f.advance(3000);assert.equal(f.run().phase,'ready');
+ f.location.href=url.replace('123456789abc','123456789abd');assert.equal(f.run().phase,'wrong_conversation');
+}
+{
+ const f=submitted();readyDocument(f);f.state.users=[{innerText:message},{innerText:message}];
+ assert.equal(f.run().phase,'waiting_user');f.advance(15000);assert.equal(f.run().phase,'wrong_conversation');
+ assert.deepEqual(f.counts(),{writes:1,sends:1});
+}
+// A missing echo is never enough to declare ready, however long the reply has been present.
+{
+ const f=submitted();readyDocument(f);f.state.users=[];f.advance(20000);
+ const result=f.run();assert.equal(result.phase,'waiting_user');assert.equal(result.users,0);assert.equal(result.echoObserved,false);
+ assert.equal(result.reason,'message_absent');assert.ok(!('reply' in result));assert.ok(!('url' in result));
+}
+console.log('PASS: single send, delayed/virtualized user echo, message-only extraction, strict mismatch/count/URL guards, settled reply and privacy-safe diagnostics.');

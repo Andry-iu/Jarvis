@@ -2,7 +2,8 @@
   const project = __JARVIS_PROJECT_JSON__;
   const attempt = __JARVIS_ATTEMPT_JSON__;
   const message = 'leggi le istruzioni del progetto';
-  const result = (phase, extra={}) => JSON.stringify({phase, ...extra});
+  let verification = {};
+  const result = (phase, extra={}) => JSON.stringify({phase, ...verification, ...extra});
   const url = new URL(location.href);
   if (url.origin !== 'https://chatgpt.com') return result('login');
   let state = window.__jarvisPreparation;
@@ -59,11 +60,47 @@
     try { buttons[0].click(); } catch (_) { return result('send_uncertain'); }
     return result('submitted');
   }
-  // The URL is observed from the document, never requested from the assistant or inferred from a title.
-  if (!/\/(?:c)\/[0-9a-f-]{36}\/?$/i.test(url.pathname)) return result('waiting_url');
-  const users=[...document.querySelectorAll('[data-message-author-role="user"]')];
-  if (users.length!==1 || value(users[0])!==message) return result('wrong_conversation');
-  if (value(editor)) return result('waiting_acceptance');
+  // Observe the owned send before waiting for the URL: the user bubble may later be virtualized.
+  const normal = text => text.replace(/\s+/g,' ').trim();
+  const rawUsers=[...document.querySelectorAll('[data-message-author-role="user"]')];
+  const users=rawUsers.filter(node => !rawUsers.some(parent => parent!==node && parent.contains?.(node)));
+  const userBody = node => {
+    if (!node) return {text:'',source:'none'};
+    const candidates=node.querySelectorAll ? [...node.querySelectorAll('.whitespace-pre-wrap,[data-message-content]')] : [];
+    const leaves=candidates.filter(item => !candidates.some(child => child!==item && item.contains?.(child)));
+    if (leaves.length) return {text:normal(leaves.map(value).join(' ')),source:'body'};
+    const direct=normal(value(node));
+    if (direct===message) return {text:direct,source:'root'};
+    if (node.cloneNode) {
+      const copy=node.cloneNode(true);
+      copy.querySelectorAll('button,[role="button"],.sr-only,[aria-hidden="true"]').forEach(item => item.remove());
+      return {text:normal(copy.textContent || ''),source:'clean_root'};
+    }
+    return {text:direct,source:'root'};
+  };
+  const bodyCheck=users.length===1 ? userBody(users[0]) : {text:'',source:'none'};
+  const userMatches=users.length===1 && bodyCheck.text===message;
+  const accepted=value(editor)==='';
+  if (userMatches && accepted) state.echoObserved=true;
+  const chat=url.pathname.match(/\/c\/([0-9a-f-]{36})\/?$/i);
+  const reason=users.length===0 ? 'message_absent' : users.length!==1 ? 'message_count' :
+    !bodyCheck.text ? 'body_pending' : !userMatches ? 'message_mismatch' : !accepted ? 'pending_acceptance' : 'verified';
+  verification={users:users.length,rawUsers:rawUsers.length,source:bodyCheck.source,userMatches,
+    echoObserved:!!state.echoObserved,urlObserved:!!chat,reason};
+  if (state.chatId && (!chat || state.chatId!==chat[1].toLowerCase()))
+    return result('wrong_conversation',{reason:'url_changed'});
+  if (!chat) return result('waiting_url');
+  state.chatId=chat[1].toLowerCase();
+  // Missing/empty nodes are a pending render, not evidence of another conversation.
+  // A stable, nonempty mismatch or multiple independent messages stays ineligible and then stops.
+  if (users.length>1 || (users.length===1 && bodyCheck.text && !userMatches)) {
+    const key=users.length+':'+bodyCheck.text;
+    if (state.mismatchKey!==key) {state.mismatchKey=key;state.mismatchAt=Date.now();}
+    return result(Date.now()-state.mismatchAt>=15000 ? 'wrong_conversation' : 'waiting_user');
+  }
+  state.mismatchKey='';
+  if (!accepted) return result('waiting_acceptance');
+  if (!state.echoObserved) return result('waiting_user');
   const messages=[...document.querySelectorAll('[data-message-author-role="assistant"]')];
   const last=messages.at(-1);
   const body=last?.querySelector('.markdown,[data-message-content]') || last;
