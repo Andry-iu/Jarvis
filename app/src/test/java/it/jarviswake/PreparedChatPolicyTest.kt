@@ -18,6 +18,32 @@ class PreparedChatPolicyTest {
             assertNull(bad,PreparedChatPolicy.conversationUrl(bad,project))
         }
     }
+    @Test fun sameProjectIdAcceptsADecorativeSlugButNeverAnotherProjectOrPrefix() {
+        val id="0123456789abcdef0123456789abcdef"
+        val project="https://chatgpt.com/g/g-p-$id/project"
+        val decorated=url.replace("/c/","/g/g-p-$id-project-name/c/")
+        assertEquals(decorated,PreparedChatPolicy.conversationUrl(decorated,project))
+        assertEquals(decorated,PreparedChatPolicy.conversationUrl(decorated,project.replace("/project","-other-title/project")))
+        assertNotNull(PreparedChatPolicy.conversationUrl(url.replace("/c/","/g/g-p-$id/c/"),project.replace("/project","-title/project")))
+        for(bad in listOf(decorated.replace(id,id.dropLast(1)+"0"),decorated.replace(id,id+"0"),
+            decorated.replace("project-name",""),decorated.replace("project-name","title%2Fother")))
+            assertNull(PreparedChatPolicy.conversationUrl(bad,project))
+    }
+    @Test fun linkFailureCodesSeparateUrlSubmissionAndPersistenceWithoutReturningPrivateData() {
+        assertEquals("link_origin",PreparedChatPolicy.checkConversationUrl(url.replace("chatgpt.com","other.example"),project).error)
+        assertEquals("link_parameters",PreparedChatPolicy.checkConversationUrl("$url?private=secret",project).error)
+        assertEquals("link_path",PreparedChatPolicy.checkConversationUrl(url.replace("/c/","/share/"),project).error)
+        assertEquals("link_project",PreparedChatPolicy.checkConversationUrl(url.replace("/c/","/g/g-p-other/c/"),project).error)
+        val l=PreparedChatLedger(null) {};val a=l.begin(project,"Jarvis",100)!!
+        assertEquals("submission_missing",l.captureLinkResult(a.attempt,url,110))
+        assertTrue(l.markSubmitted(a.attempt,120))
+        assertEquals("submission_time",l.captureLinkResult(a.attempt,url,119))
+        assertEquals("attempt_mismatch",l.captureLinkResult("other",url,130))
+        val storage=PreparedChatLedger(l.record) {error("private-storage-error")}
+        assertThrows(IllegalStateException::class.java) {storage.captureLinkResult(a.attempt,url,130)}
+        assertEquals(PreparationPhase.STARTED,storage.record!!.phase)
+        assertNull(l.captureLinkResult(a.attempt,url,130))
+    }
     @Test fun claimIsPersistedBeforeReturningAndCannotBeReusedByAnotherCycle() {
         var persisted:PreparedConversation?=null
         val ledger=PreparedChatLedger(null) {persisted=it}

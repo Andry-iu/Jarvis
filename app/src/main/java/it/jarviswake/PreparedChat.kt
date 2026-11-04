@@ -77,6 +77,10 @@ internal object PreparedChat {
                     "Riapertura nativa non confermata. Controlla il link salvato e l’account; nessuna nuova preparazione automatica."
                     else if(repository(c).record?.error=="wrong_conversation")
                         "Messaggio inviato ma non verificato nella nuova chat. Esporta la diagnostica prima di riprovare."
+                    else if(repository(c).record?.error?.startsWith("link_")==true)
+                        "Link ricevuto ma rifiutato dal controllo dell’indirizzo. Esporta la diagnostica prima di riprovare."
+                    else if(repository(c).record?.error=="storage_error")
+                        "Impossibile salvare il link sul telefono. Esporta la diagnostica prima di riprovare."
                     else "Preparazione non confermata. Verifica l’accesso nel WebView e usa Riprova preparazione."
                 null -> "In attesa di preparare una chat. Avvia l’ascolto per mantenerla in background."
             }
@@ -179,7 +183,7 @@ internal object PreparedChat {
                     pending=false
                     val outcome=runCatching {JSONObject(JSONTokener(raw).nextValue() as String)}.getOrNull()
                     val phase=outcome?.optString("phase").orEmpty()
-                    record(c,attempt.attempt,phase.takeIf {it in phases} ?: "invalid_result",progressDetails(outcome))
+                    record(c,attempt.attempt,if(phase=="ready") "link_received" else phase.takeIf {it in phases} ?: "invalid_result",progressDetails(outcome))
                     when {
                         phase=="submitted" -> {
                             if(runCatching {ledger?.markSubmitted(attempt.attempt,System.currentTimeMillis())==true}.getOrDefault(false))
@@ -187,12 +191,13 @@ internal object PreparedChat {
                             else fail(attempt,"storage_error")
                         }
                         phase=="ready" -> {
-                            val captured=outcome?.optBoolean("submitted")==true && runCatching {
-                                ledger?.captureLink(attempt.attempt,outcome.optString("url"),System.currentTimeMillis())==true
-                            }.getOrDefault(false)
-                            if (captured) {
+                            val failure=if(outcome?.optBoolean("submitted")!=true) "submission_marker_missing" else runCatching {
+                                ledger?.captureLinkResult(attempt.attempt,outcome.optString("url"),System.currentTimeMillis())
+                                    ?: if(ledger==null) "attempt_mismatch" else null
+                            }.getOrElse {"storage_error"}
+                            if (failure==null) {
                                 destroyView();record(c,attempt.attempt,"link_saved")
-                            } else fail(attempt,"invalid_result")
+                            } else fail(attempt,failure)
                         }
                         phase !in waiting -> fail(attempt,phase.takeIf {it in phases} ?: "invalid_result")
                         else -> main.postDelayed(this,500L)

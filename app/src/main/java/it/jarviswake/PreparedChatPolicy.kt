@@ -8,19 +8,33 @@ internal object PreparedChatPolicy {
     const val READY_TTL_MS = 24 * 60 * 60_000L
     const val PREPARE_TIMEOUT_MS = 5 * 60_000L
     private val chat = Regex("^/(?:g/([^/]+)/)?c/([0-9a-fA-F-]{36})/?$")
-    fun conversationUrl(raw: String, project: String): String? = runCatching {
-        if(!ChatGptProjectSettings.isValidProjectUrl(project)) return null
+    internal data class LinkCheck(val url:String?=null,val error:String="")
+    // A project may carry a decorative slug; compare its complete 32-hex identity, never a prefix.
+    private val projectIdentity=Regex("^g-p-([0-9a-f]{32})(?:-[a-z0-9]+(?:-[a-z0-9]+)*)?$",RegexOption.IGNORE_CASE)
+    private fun sameProject(actual:String,expected:String):Boolean {
+        if(actual==expected) return true
+        val a=projectIdentity.matchEntire(actual)?.groupValues?.get(1) ?: return false
+        val b=projectIdentity.matchEntire(expected)?.groupValues?.get(1) ?: return false
+        return a.equals(b,ignoreCase=true)
+    }
+    fun conversationUrl(raw:String,project:String):String?=checkConversationUrl(raw,project).url
+    fun checkConversationUrl(raw:String,project:String):LinkCheck = runCatching {
+        if(!ChatGptProjectSettings.isValidProjectUrl(project)) return LinkCheck(error="link_project_settings")
         val uri=URI(raw)
+        if(uri.scheme!="https" || uri.host!="chatgpt.com" || uri.port!=-1 || uri.rawUserInfo!=null)
+            return LinkCheck(error="link_origin")
         val queryAllowed=uri.rawQuery==null || uri.rawQuery!!.matches(Regex("model=[A-Za-z0-9_.-]{1,128}"))
-        if (uri.scheme!="https" || uri.host!="chatgpt.com" || uri.port!=-1 || uri.rawUserInfo!=null ||
-            !queryAllowed || uri.rawFragment!=null || uri.rawPath!=uri.path) return null
-        val match=chat.matchEntire(uri.path) ?: return null
+        if(!queryAllowed || uri.rawFragment!=null) return LinkCheck(error="link_parameters")
+        if(uri.rawPath!=uri.path) return LinkCheck(error="link_encoding")
+        val match=chat.matchEntire(uri.path) ?: return LinkCheck(error="link_path")
         val id=match.groupValues[2]
-        if (UUID.fromString(id).toString()!=id.lowercase()) return null
-        val expected=URI(project).path.split('/').getOrNull(2) ?: return null
-        if (match.groupValues[1].isNotEmpty() && match.groupValues[1]!=expected) return null
-        "https://chatgpt.com${uri.path.trimEnd('/')}"
-    }.getOrNull()
+        if(runCatching {UUID.fromString(id).toString()==id.lowercase()}.getOrDefault(false)!=true)
+            return LinkCheck(error="link_id")
+        val expected=URI(project).path.split('/').getOrNull(2) ?: return LinkCheck(error="link_project_settings")
+        if(match.groupValues[1].isNotEmpty() && !sameProject(match.groupValues[1],expected))
+            return LinkCheck(error="link_project")
+        LinkCheck(url="https://chatgpt.com${uri.path.trimEnd('/')}")
+    }.getOrDefault(LinkCheck(error="link_syntax"))
     fun normalized(text: String)=text.replace(Regex("\\s+")," ").trim()
     fun digest(text: String)=MessageDigest.getInstance("SHA-256").digest(text.toByteArray(Charsets.UTF_8))
         .joinToString("") { "%02x".format(it.toInt() and 255) }
@@ -71,13 +85,17 @@ internal class PreparedChatLedger(initial: PreparedConversation?, private val pe
         if(current.submittedAt>=0L) return true
         set(current.copy(submittedAt=now));return true
     }
-    fun captureLink(attempt:String,url:String,now:Long):Boolean {
-        val current=record?.takeIf {it.attempt==attempt && it.phase==PreparationPhase.STARTED} ?: return false
-        if(current.submittedAt<current.createdAt || current.submittedAt>now ||
-            now-current.createdAt !in 0..PreparedChatPolicy.PREPARE_TIMEOUT_MS) return false
-        val destination=PreparedChatPolicy.conversationUrl(url,current.project) ?: return false
+    fun captureLink(attempt:String,url:String,now:Long):Boolean=captureLinkResult(attempt,url,now)==null
+    /** null means persisted; all failures are fixed codes, never URL/content or exception messages. */
+    fun captureLinkResult(attempt:String,url:String,now:Long):String? {
+        val current=record?.takeIf {it.attempt==attempt && it.phase==PreparationPhase.STARTED} ?: return "attempt_mismatch"
+        if(current.submittedAt<current.createdAt) return "submission_missing"
+        if(current.submittedAt>now || now-current.createdAt !in 0..PreparedChatPolicy.PREPARE_TIMEOUT_MS)
+            return "submission_time"
+        val checked=PreparedChatPolicy.checkConversationUrl(url,current.project)
+        val destination=checked.url ?: return checked.error
         set(current.copy(phase=PreparationPhase.READY,url=destination,hash="",proofLength=0,readyAt=now,linkOnly=true))
-        return true
+        return null
     }
     fun complete(attempt: String, url: String, reply: String, now: Long): Boolean {
         val current=record?.takeIf {it.attempt==attempt && it.phase==PreparationPhase.STARTED} ?: return false

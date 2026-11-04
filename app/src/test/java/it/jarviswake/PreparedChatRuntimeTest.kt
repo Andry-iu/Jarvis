@@ -161,6 +161,42 @@ class PreparedChatRuntimeTest {
         assertEquals(PreparationPhase.READY,ledger.record!!.phase);assertTrue(ledger.record!!.linkOnly)
         assertEquals(url,PreparedChat.savedLink(app));assertNull(viewField.get(null));assertNull(shadowOf(app).nextStartedActivity)
     }
+    @Test fun decoratedProjectLinkIsSavedAfterRealSubmittedCallbackAndCanBeClaimedOnce() {
+        val id="0123456789abcdef0123456789abcdef"
+        ChatGptProjectSettings.save(app,"https://chatgpt.com/g/g-p-$id/project")
+        val web=start();probe(web)
+        shadowOf(web).lastEvaluatedJavascriptCallback.onReceiveValue(JSONObject.quote(JSONObject().put("phase","submitted").toString()))
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(500))
+        val decorated=url.replace("/c/","/g/g-p-$id-project-name/c/")
+        shadowOf(web).lastEvaluatedJavascriptCallback.onReceiveValue(JSONObject.quote(JSONObject()
+            .put("phase","ready").put("url",decorated).put("submitted",true).toString()))
+        assertEquals(decorated,PreparedChat.savedLink(app));assertNull(viewField.get(null))
+        assertEquals(decorated,PreparedChat.claim(app,"one")!!.url);assertNull(PreparedChat.claim(app,"two"))
+        assertNull(shadowOf(app).nextStartedActivity)
+    }
+    @Test fun rejectedLinkReportsFixedReasonWithoutLeakingTheUrlAndStorageFailureIsSeparate() {
+        val web=start();probe(web)
+        ledger.markSubmitted(ledger.record!!.attempt,System.currentTimeMillis())
+        val privateUrl="$url?private=PRIVATE_VALUE"
+        shadowOf(web).lastEvaluatedJavascriptCallback.onReceiveValue(JSONObject.quote(JSONObject()
+            .put("phase","ready").put("url",privateUrl).put("submitted",true).toString()))
+        assertEquals("link_parameters",ledger.record!!.error);assertNull(PreparedChat.savedLink(app));assertNull(viewField.get(null))
+        val done=java.util.concurrent.CountDownLatch(1);DiagnosticLog.afterPendingWrites {done.countDown()}
+        assertTrue(done.await(5,java.util.concurrent.TimeUnit.SECONDS))
+        val log=java.io.File(app.filesDir,"diagnostics/"+NativeRuntimeSnapshot.FILE_NAME).readText()
+        assertTrue(log.contains("phase=link_received"));assertTrue(log.contains("phase=link_parameters"))
+        assertFalse(log.contains("PRIVATE_VALUE"));assertFalse(log.contains(url))
+        ledger=PreparedChatLedger(null) {};ledgerField.set(null,ledger)
+        val next=start();probe(next);ledger.markSubmitted(ledger.record!!.attempt,System.currentTimeMillis())
+        ledger=PreparedChatLedger(ledger.record) {error("PRIVATE_STORAGE_VALUE")};ledgerField.set(null,ledger)
+        shadowOf(next).lastEvaluatedJavascriptCallback.onReceiveValue(JSONObject.quote(JSONObject()
+            .put("phase","ready").put("url",url).put("submitted",true).toString()))
+        assertNull(viewField.get(null));assertNull(PreparedChat.savedLink(app))
+        val saved=java.util.concurrent.CountDownLatch(1);DiagnosticLog.afterPendingWrites {saved.countDown()}
+        assertTrue(saved.await(5,java.util.concurrent.TimeUnit.SECONDS))
+        val storedLog=java.io.File(app.filesDir,"diagnostics/"+NativeRuntimeSnapshot.FILE_NAME).readText()
+        assertTrue(storedLog.contains("phase=storage_error"));assertFalse(storedLog.contains("PRIVATE_STORAGE_VALUE"))
+    }
     @Test fun closingCoverQueuesOnePreparationDuringTheSameVoiceCycleWithoutOpeningActivity() {
         val a=ledger.begin(project,NativeChatSettings.project(app),System.currentTimeMillis())!!
         assertTrue(ledger.complete(a.attempt,url,reply,System.currentTimeMillis()))

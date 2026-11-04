@@ -1,4 +1,4 @@
-# Preparazione della prossima chat — 0.5.101 / 123
+# Preparazione della prossima chat — 0.5.102 / 124
 
 Una seconda WebView senza finestre carica il progetto, invia una sola volta
 «leggi le istruzioni del progetto», cattura il link privato e viene distrutta.
@@ -7,7 +7,7 @@ non istruzioni elaborate o generazione completata lato server.
 
 ## Configurazione
 
-Installare l’APK telefono .101 sopra la versione precedente. In Configurazione →
+Installare l’APK telefono .102 sopra la versione precedente. In Configurazione →
 ChatGPT e progetto, modalità nativa, usare Accesso WebView per preparazione con
 lo stesso account/spazio di lavoro e progetto dell’app ChatGPT. Salvare URL progetto
 per preparazione e abilitare Prepara la prossima chat in background (default OFF).
@@ -77,3 +77,28 @@ Fonti primarie consultate: [WebView](https://developer.android.com/reference/and
 [Intent/setPackage](https://developer.android.com/reference/android/content/Intent),
 [apertura URL](https://developer.android.com/guide/components/intents-common#Browser).
 Documentano Android, non il comportamento effettivo del sito/client ChatGPT.
+
+## Correzione .102 dopo ZIP _13_
+
+La .101 ha avviato la preparazione56–79ms dopo tre rimozioni cover osservate,
+ma tutti gli8 tentativi recenti hanno restituito ready dal JS e invalid_result
+dal controllo Android. Nessun link_saved/claim: apertura nativa ancora non provata.
+Il vecchio log non conserva URL o ragione distinta, quindi non identifica la guardia.
+
+Riprodotto in test il rifiuto di un link con stesso ID progetto completo32hex e
+nome decorativo dopo l’ID. La .102 confronta quell’identità completa anche quando
+i nomi nell’URL progetto e conversazione differiscono; non ammette altri ID,
+prefissi o percorsi codificati. Gli identificatori di formato diverso conservano
+il confronto esatto. Origine/UUID/parametri e protezione bozze restano richiesti.
+Questo è un difetto locale riprodotto, non prova dell’URL preciso sul telefono.
+
+Il log ora distingue link_received (risultato JS) da link_saved (persistenza riuscita),
+link_origin/parameters/encoding/path/id/project/project_settings/syntax,
+submission_marker_missing/missing/time, attempt_mismatch e storage_error.
+Sono solo codici fissi: niente URL, ID, nomi, query private o eccezioni nel log.
+Dopo aggiornamento usare Riprova preparazione fuori Voice per il vecchio stato fallito;
+nessuna necessità di rifare accesso se account/progetto corretti.
+
+Ulteriori fonti primarie consultate: [URI Java17](https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/net/URI.html)
+per componenti raw/decodificati, oltre a Intent Android per il dispatch nel pacchetto.
+Non documentano né provano il formato specifico del link osservato sul Galaxy.
