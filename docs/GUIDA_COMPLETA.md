@@ -1,4 +1,4 @@
-# Guida completa JarvisWake — 0.5.97 / 119
+# Guida completa JarvisWake — 0.5.98 / 120
 
 ## Iniziare e orientarsi
 

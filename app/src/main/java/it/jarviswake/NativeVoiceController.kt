@@ -336,7 +336,7 @@ internal class NativeVoiceController(private val service: VoiceAccessibilityServ
         }
         // Explicit user request: send this greeting with a real coordinate tap, not ACTION_CLICK.
         val tap = if (stage == NativeGreetingPolicy.WRITING && fields.size == 1 && field != null &&
-            field.isFocused && text == phrase) coordinatePlan(nodes, field) else null
+            field.isFocused && text == phrase) coordinatePlan(nodes, field, beforeVoice) else null
         val tapReady = (if (beforeVoice) openingTapStability else tapStability).observe(tap, SystemClock.elapsedRealtime())
         val metadata = "stage=$stage fields=${fields.size} empty=${text.isBlank()} matches=${text == phrase} focused=${field?.isFocused == true} write=$canWrite coordinateCandidate=${tap != null} coordinateStable=$tapReady coordinateSource=${tap?.source ?: "none"} voiceControls=$allowWrite window=${field?.windowId ?: -1}"
         if (metadata != lastGreetingMetadata) {
@@ -374,7 +374,7 @@ internal class NativeVoiceController(private val service: VoiceAccessibilityServ
         }
     }
 
-    private fun coordinatePlan(nodes: List<AccessibilityNodeInfo>, field: AccessibilityNodeInfo): NativeCoordinateSend.Plan? {
+    private fun coordinatePlan(nodes: List<AccessibilityNodeInfo>, field: AccessibilityNodeInfo, beforeVoice: Boolean = false): NativeCoordinateSend.Plan? {
         fun box(r: android.graphics.Rect) = NativeCoordinateSend.Box(r.left,r.top,r.right,r.bottom)
         fun bounds(node: AccessibilityNodeInfo) = android.graphics.Rect().also(node::getBoundsInScreen)
         val window = service.windows.singleOrNull { it.id == field.windowId } ?: return null
@@ -389,7 +389,7 @@ internal class NativeVoiceController(private val service: VoiceAccessibilityServ
             NativeCoordinateSend.Control(box(bounds(it)),it.isEnabled,label.isEmpty() || label.any(sendLabels::contains))
         }
         return NativeCoordinateSend.plan(box(bounds(field)),box(frame),field.windowId,
-            service.resources.displayMetrics.density,controls,blocked)
+            service.resources.displayMetrics.density,controls,blocked,allowRowOverlap = beforeVoice)
     }
 
     private fun dispatchCoordinateGreeting(plan: NativeCoordinateSend.Plan, beforeVoice: Boolean = false): Boolean {
@@ -442,7 +442,7 @@ internal class NativeVoiceController(private val service: VoiceAccessibilityServ
                     it.packageName?.toString()==NativeChatSettings.PACKAGE && it.windowId==plan.windowId }
                 val field=fields.singleOrNull()
                 if (field==null || !field.isFocused || field.isShowingHintText || field.text?.toString()!=service.nativeGreetingText(token, beforeVoice)) null
-                else coordinatePlan(current,field)
+                else coordinatePlan(current,field,beforeVoice)
             }.getOrNull()
             if (!gate.dispatch(fresh==plan)) {
                 finish("coordinate_target_changed")

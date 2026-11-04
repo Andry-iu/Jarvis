@@ -11,7 +11,7 @@ internal object NativeCoordinateSend {
     }
     data class Control(val box: Box,val enabled: Boolean,val labelAllowed: Boolean = true)
     data class Plan(val field: Box,val window: Box,val windowId: Int,val x: Float,val y: Float,val source: String)
-    fun plan(field: Box,window: Box,windowId: Int,density: Float,controls: List<Control>,blocked: List<Box>): Plan? {
+    fun plan(field: Box,window: Box,windowId: Int,density: Float,controls: List<Control>,blocked: List<Box>,allowRowOverlap: Boolean = false): Plan? {
         if (!density.isFinite() || density<=0 || field.width<window.width*0.6f || field.height<=0 ||
             field.left<window.left || field.right>window.right || field.top<window.top || field.bottom>=window.bottom) return null
         val near = controls.filter { c ->
@@ -19,8 +19,9 @@ internal object NativeCoordinateSend {
             b.width in (28*density).toInt()..(80*density).toInt() &&
                 b.height in (28*density).toInt()..(80*density).toInt() &&
                 b.x>=field.right-56*density && b.x<=field.right+24*density &&
-                // Multiline composer: actions below the text. Live short composer: same row.
-                ((b.top>=field.bottom && b.top<=field.bottom+32*density) ||
+                // The opening editor's accessibility bounds can overlap the lower action row
+                // by a small padded edge (ZIP _10_). Keep the tap centre below the editor.
+                ((b.top>=field.bottom-(if (allowRowOverlap) 12*density else 0f) && b.top<=field.bottom+32*density && b.y>field.bottom) ||
                     (field.height<=80*density && b.top>=field.top-8*density &&
                         b.bottom<=field.bottom+8*density && b.y>=field.top && b.y<=field.bottom))
         }

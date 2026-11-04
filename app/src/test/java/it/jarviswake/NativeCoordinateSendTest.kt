@@ -17,6 +17,29 @@ class NativeCoordinateSendTest {
         assertEquals(1288f,p.x);assertEquals(1608f,p.y)
         assertEquals("control_bounds",p.source)
     }
+    @Test fun observed097OpeningEditorOverlapsTheActionRowButArrowCentreIsBelowIt() {
+        // ZIP _10_, after_greeting_focus: only geometry retained, no chat content or identifiers.
+        val opening=b(112,1352,1328,1544)
+        val controls=listOf(c(b(48,1512,240,1704)),c(b(1000,1512,1192,1704)),c(arrow))
+        // Live greeting retains the previous rules; opt-in applies only to the opening message.
+        assertNull(NativeCoordinateSend.plan(opening,window,1,3.5f,controls,listOf(ime)))
+        for (density in listOf(3.5f,4f)) {
+            val p=NativeCoordinateSend.plan(opening,window,1,density,controls,listOf(ime),allowRowOverlap=true)
+            assertNotNull("opening geometry at density=$density",p)
+            assertEquals(1288f,p!!.x);assertEquals(1608f,p.y)
+        }
+    }
+    @Test fun overlappingRowRejectsExcessiveOverlapKeyboardAndAmbiguity() {
+        val opening=b(112,1352,1328,1544)
+        fun check(cs:List<NativeCoordinateSend.Control>,blocked:List<NativeCoordinateSend.Box> = listOf(ime))=
+            NativeCoordinateSend.plan(opening,window,1,3.5f,cs,blocked,allowRowOverlap=true)
+        assertNull(check(listOf(c(b(1192,1464,1384,1656))))) // Overlap80px exceeds12dp.
+        assertNull(check(listOf(c(arrow,false))))
+        assertNull(check(listOf(c(arrow,label=false))))
+        assertNull(check(listOf(c(arrow),c(b(1170,1512,1362,1704)))))
+        assertNull(check(listOf(c(arrow)),listOf(b(0,1510,1440,3120))))
+        assertNull(check(listOf(c(b(1000,1512,1192,1704))))) // Microphone is not Invia.
+    }
     @Test fun missingControlNeverInventsAPointBelowTheField() {
         assertNull(plan(emptyList()))
         assertNull(NativeCoordinateSend.plan(b(240,1512,1392,1704),window,710,3.5f,emptyList(),listOf(ime)))

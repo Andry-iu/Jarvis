@@ -31,6 +31,7 @@ class OpeningMessageTest {
     private lateinit var window: AccessibilityWindowInfo
     private lateinit var root: AccessibilityNodeInfo
     private lateinit var editor: AccessibilityNodeInfo
+    private lateinit var send: AccessibilityNodeInfo
     private lateinit var voice: AccessibilityNodeInfo
     private var writes = 0
     private var starts = 0
@@ -57,7 +58,7 @@ class OpeningMessageTest {
         }
         voice = node("Voice",Rect(880,1700,940,1760)).apply { isClickable = true }
         val edge = (48*service.resources.displayMetrics.density).toInt()
-        val send = node("Invia",Rect(950-edge,1500,950,1500+edge)).apply { isClickable = true }
+        send = node("Invia",Rect(950-edge,1500,950,1500+edge)).apply { isClickable = true }
         listOf(root,editor,voice,send).forEach { shadowOf(it).setAccessibilityWindowInfo(window) }
         shadowOf(root).apply {
             addChild(node(NativeChatSettings.project(service))); addChild(editor); addChild(voice); addChild(send)
@@ -88,6 +89,26 @@ class OpeningMessageTest {
         val gesture=shadowOf(service).gesturesDispatched.single()
         gesture.callback().onCompleted(gesture.description())
         if (clear) editor.text=""
+    }
+    @Test fun observed097OverlappingComposerSendsOnceAndStillWaits300msBeforeVoice() {
+        // Sanitized ZIP _10_ geometry, scaled to this test display's density.
+        val scale=service.resources.displayMetrics.density/3.5f
+        fun box(l:Int,t:Int,r:Int,b:Int)=Rect((l*scale).toInt(),(t*scale).toInt(),(r*scale).toInt(),(b*scale).toInt())
+        shadowOf(window).setBoundsInScreen(box(0,0,1440,3120))
+        editor.setBoundsInScreen(box(112,1352,1328,1544))
+        send.text="" // The real actionable wrapper has no accessible label.
+        send.setBoundsInScreen(box(1192,1512,1384,1704))
+        val microphone=node(bounds=box(1000,1512,1192,1704)).apply {isClickable=true}
+        shadowOf(microphone).setAccessibilityWindowInfo(window);shadowOf(root).addChild(microphone)
+        val keyboard=AccessibilityWindowInfo.obtain()
+        shadowOf(keyboard).apply {setId(9);setType(AccessibilityWindowInfo.TYPE_INPUT_METHOD);setBoundsInScreen(box(0,1752,1440,3120))}
+        shadowOf(service).setWindows(listOf(window,keyboard))
+        voice.isEnabled=false
+        queueSend();completeSend();controller.poll();assertEquals(0,starts)
+        advance(299);voice.isEnabled=true;controller.poll();assertEquals(0,starts)
+        advance(1);controller.poll();assertEquals(1,starts)
+        controller.poll();assertEquals(1,starts);assertEquals(1,writes)
+        assertEquals(1,shadowOf(service).gesturesDispatched.size)
     }
     @Test fun exactTextIsSentBeforeVoiceAndTimerStartsAtSendCompletion() {
         queueSend();advance(300);controller.poll();assertEquals(0,starts)
