@@ -3,7 +3,7 @@ const source=fs.readFileSync('app/src/main/assets/prepare-chat.js','utf8');
 const project='https://chatgpt.com/g/g-p-abc123/project';
 const url='https://chatgpt.com/c/12345678-1234-4234-8234-123456789abc';
 const message='leggi le istruzioni del progetto';
-function fixture(){
+function fixture(phrase=message){
  let writes=0,sends=0,editorQueries=0;
  class Editor {constructor(){this._value='';}get value(){return this._value;}set value(v){writes++;this._value=v;}
   getAttribute(){return null;}getBoundingClientRect(){return {width:500,height:80};}
@@ -20,7 +20,7 @@ function fixture(){
  const location={href:project},window={};
  const context={window,document,location,URL,Date,HTMLInputElement:class{},HTMLTextAreaElement:Editor,
   InputEvent:class{},Event:class{},getComputedStyle:()=>({display:'block',visibility:'visible',opacity:'1'})};
- const script=source.replace('__JARVIS_PROJECT_JSON__',JSON.stringify(project)).replace('__JARVIS_ATTEMPT_JSON__','"attempt"');
+ const script=source.replace('__JARVIS_PROJECT_JSON__',JSON.stringify(project)).replace('__JARVIS_ATTEMPT_JSON__','"attempt"').replace('__JARVIS_MESSAGE_JSON__',JSON.stringify(phrase));
  return {state,editor,button,location,window,run:()=>JSON.parse(vm.runInNewContext(script,context)),counts:()=>({writes,sends,editorQueries})};
 }
 function submitted(){const f=fixture();assert.equal(f.run().phase,'written');assert.equal(f.editor.value,message);
@@ -53,6 +53,12 @@ function submitted(){const f=fixture();assert.equal(f.run().phase,'written');ass
 {
  const f=submitted();f.location.href='https://other.example/c/12345678-1234-4234-8234-123456789abc';assert.equal(f.run().phase,'login');
  f.location.href=url.replace('/c/','/share/');assert.equal(f.run().phase,'waiting_url');
+}
+{
+ const custom='Istruzioni "Jarvis"\nNon dire `un attimo`; ${nessuna_esecuzione} \u2028 sì.';
+ const f=fixture(custom);assert.equal(f.run().phase,'written');assert.equal(f.editor.value,custom);
+ assert.equal(f.run().phase,'submitted');f.location.href=url;assert.equal(f.run().phase,'ready');
+ assert.equal(f.counts().writes,1);assert.equal(f.counts().sends,1);
 }
 assert.ok(!source.includes('getUserMedia') && !source.includes('.focus(') && !source.includes('fetch('));
 console.log('PASS: one write/send, immediate URL capture without transcript/editor/response wait, project/draft/ambiguity guards and no media.');

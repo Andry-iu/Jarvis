@@ -1,7 +1,7 @@
 (() => {
   const project = __JARVIS_PROJECT_JSON__;
   const attempt = __JARVIS_ATTEMPT_JSON__;
-  const message = 'leggi le istruzioni del progetto';
+  const message = __JARVIS_MESSAGE_JSON__;
   let verification = {};
   const result = (phase, extra={}) => JSON.stringify({phase, ...verification, ...extra});
   const url = new URL(location.href);

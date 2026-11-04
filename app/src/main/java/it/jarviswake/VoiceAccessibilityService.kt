@@ -373,7 +373,7 @@ class VoiceAccessibilityService : AccessibilityService() {
 
     internal fun nativeGreetingText(token: String, beforeVoice: Boolean = false): String {
         if (!VoiceCycle.matches(token)) return ""
-        return preferences.getString(messageKey(beforeVoice, "text"), null) ?: (if (beforeVoice) OpeningMessagePolicy.TEXT else VoiceGreetingSettings.get(this)).also {
+        return preferences.getString(messageKey(beforeVoice, "text"), null) ?: (if (beforeVoice) OpeningMessageSettings.get(this) else VoiceGreetingSettings.get(this)).also {
             preferences.edit().putString(messageKey(beforeVoice, "text"), it).apply()
         }
     }

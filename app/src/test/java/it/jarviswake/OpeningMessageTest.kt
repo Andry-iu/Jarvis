@@ -106,6 +106,18 @@ class OpeningMessageTest {
             service.getSharedPreferences("prepared_chat_settings",0).edit().putBoolean("enabled",false).apply()
         }
     }
+    @Test fun configuredOpeningTextIsWrittenAndSentOnceBeforeTheOriginalVoiceDelay() {
+        val custom="Leggi le regole.\nRispondi senza annunci preliminari."
+        service.getSharedPreferences("opening_message",0).edit().putString("text",custom).commit()
+        controller.poll();assertEquals(custom,editor.text.toString());assertEquals(1,writes)
+        controller.poll();advance(250);controller.poll()
+        assertEquals(NativeGreetingPolicy.DISPATCHED,service.nativeGreetingStage(token,true))
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(80));completeSend()
+        controller.poll();advance(299);controller.poll();assertEquals(0,starts)
+        advance(1);controller.poll();assertEquals(1,starts);controller.poll();assertEquals(1,starts)
+        assertEquals(1,writes);assertEquals(1,shadowOf(service).gesturesDispatched.size)
+        assertEquals(VoiceGreetingSettings.DEFAULT_PHRASE,service.nativeGreetingText(token,false))
+    }
     @Test fun linkOnlyPreparationStartsVoiceWithoutRequiringOrReinsertingAResponse() {
         val f=PreparedChat::class.java.getDeclaredField("ledger").apply {isAccessible=true};val previous=f.get(null)
         val l=PreparedChatLedger(null) {};val project=ChatGptProjectSettings.getUrl(service)

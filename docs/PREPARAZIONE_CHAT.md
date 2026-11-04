@@ -1,4 +1,4 @@
-# Preparazione della prossima chat — 0.5.104 / 126
+# Preparazione della prossima chat — 0.5.105 / 127
 
 Una seconda WebView senza finestre carica il progetto, invia una sola volta
 «leggi le istruzioni del progetto», cattura il link privato e viene distrutta.
@@ -7,7 +7,7 @@ non istruzioni elaborate o generazione completata lato server.
 
 ## Configurazione
 
-Installare l’APK telefono .104 sopra la versione precedente. In Configurazione →
+Installare l’APK telefono .105 sopra la versione precedente. In Configurazione →
 ChatGPT e progetto, modalità nativa, usare Accesso WebView per preparazione con
 lo stesso account/spazio di lavoro e progetto dell’app ChatGPT. Salvare URL progetto
 per preparazione e abilitare Prepara la prossima chat in background (default OFF).
@@ -152,3 +152,24 @@ dump conserva l’etichetta del controllo. Una gerarchia ancora più profonda re
 limitata. È riproduzione del difetto del limite, non cattura dei figli ignoti del
 telefono: avvio effettivo Voice da collaudare sul Galaxy. Non serve rifare login o
 preparazione se esiste una chat pronta valida.
+
+## Messaggio configurabile .105
+
+Configurazione → Voce e saluto → Messaggio prima di Voice, campo multilinea con
+Salva messaggio prima di Voice e Ripristina messaggio predefinito. Default invariato.
+Frase del saluto/Salva frase restano il messaggio separato dopo Voice. Il salvataggio
+è consentito fuori da un ciclo attivo; non cambia la conversazione in corso.
+
+OpeningMessageSettings conserva la scelta privata. La frase viene fissata nelle
+fasi native e nel record cifrato di preparazione (openingText). Vecchi record senza
+quel campo ricevono il default precedente. Il JS riceve la stringa attraverso
+JSONObject.quote, non tramite concatenazione di codice. Cambiare frase distrugge
+la WebView precedente e invalida lo slot prima di accodare la nuova preparazione;
+una callback tardiva è esclusa per identità view/tentativo. Claim e copia link
+richiedono che la frase del record coincida con quella corrente. Salvataggio dello
+stesso valore non invalida una chat pronta. Spazi esterni rimossi, CRLF/CR normalizzati
+in LF; righe interne/Unicode/virgolette conservati. Testo escluso dai log diagnostici.
+
+Non riguarda il normale avvio WebView desktop, non modifica invio singolo, timer300ms,
+bozze, stop/wake/cover, né il riconoscimento64/ACTION_CLICK .104 confermato sul Galaxy.
+La nuova configurazione/invio personalizzato richiede collaudo sul dispositivo.

@@ -42,12 +42,12 @@ internal object PreparedChat {
     private fun encode(r:PreparedConversation?)=if(r==null) JSONObject() else JSONObject()
         .put("attempt",r.attempt).put("project",r.project).put("name",r.projectName).put("created",r.createdAt)
         .put("phase",r.phase.name).put("url",r.url).put("hash",r.hash).put("length",r.proofLength)
-        .put("ready",r.readyAt).put("cycle",r.cycle).put("error",r.error).put("linkOnly",r.linkOnly).put("submitted",r.submittedAt)
+        .put("ready",r.readyAt).put("cycle",r.cycle).put("error",r.error).put("linkOnly",r.linkOnly).put("submitted",r.submittedAt).put("openingText",r.openingText)
     private fun decode(j:JSONObject):PreparedConversation? {
         if (!j.has("attempt")) return null
         return PreparedConversation(j.getString("attempt"),j.getString("project"),j.getString("name"),j.getLong("created"),
             PreparationPhase.valueOf(j.getString("phase")),j.optString("url"),j.optString("hash"),j.optInt("length"),
-            j.optLong("ready"),j.optString("cycle"),j.optString("error"),j.optBoolean("linkOnly"),j.optLong("submitted",-1L))
+            j.optLong("ready"),j.optString("cycle"),j.optString("error"),j.optBoolean("linkOnly"),j.optLong("submitted",-1L),j.optString("openingText",OpeningMessagePolicy.TEXT))
     }
     private fun repository(c:Context):PreparedChatLedger {
         ledger?.let {return it}
@@ -90,18 +90,23 @@ internal object PreparedChat {
         enable(c,false)
         runCatching {repository(c).reset()}
     }
+    fun openingMessageChanged(c:Context) {
+        stop(c,"message_changed")
+        runCatching {repository(c).reset()}.onFailure {record(c,"settings","storage_error")}
+        if(enabled(c)) main.post {maintain(c)}
+    }
     fun retry(c:Context) {
         if (VoiceCycle.active) return
         destroyView();repository(c).reset();maintain(c)
     }
     fun savedLink(c:Context):String?=runCatching {
-        repository(c).record?.takeIf {it.project==project(c) && it.projectName==NativeChatSettings.project(c) &&
+        repository(c).record?.takeIf {it.project==project(c) && it.projectName==NativeChatSettings.project(c) && it.openingText==OpeningMessageSettings.get(c) &&
             PreparedChatPolicy.conversationUrl(it.url,it.project)!=null}?.url
     }.getOrNull()
     fun claim(c:Context,cycle:String):PreparedConversation? {
         if (!enabled(c)) return null
         return runCatching {
-            repository(c).claim(cycle,project(c),NativeChatSettings.project(c),System.currentTimeMillis())?.also {
+            repository(c).claim(cycle,project(c),NativeChatSettings.project(c),System.currentTimeMillis(),OpeningMessageSettings.get(c))?.also {
                 destroyView();record(c,it.attempt,"claimed")
             }
         }.getOrNull()
@@ -141,7 +146,7 @@ internal object PreparedChat {
         runCatching {
             val repo=repository(c)
             val current=repo.record
-            if (current!=null && (current.project!=project(c) || current.projectName!=NativeChatSettings.project(c))) {
+            if (current!=null && (current.project!=project(c) || current.projectName!=NativeChatSettings.project(c) || current.openingText!=OpeningMessageSettings.get(c))) {
                 destroyView();repo.reset()
             }
             val permit=preparationPermit
@@ -155,7 +160,7 @@ internal object PreparedChat {
                 if(permit==null) return
                 repo.reset()
             }
-            val attempt=repo.begin(project(c),NativeChatSettings.project(c),System.currentTimeMillis()) ?: return
+            val attempt=repo.begin(project(c),NativeChatSettings.project(c),System.currentTimeMillis(),OpeningMessageSettings.get(c)) ?: return
             start(c.applicationContext,attempt)
         }.onFailure {
             ledger?.record?.takeIf {it.phase==PreparationPhase.STARTED}?.let {fail(it,"setup_error")}
@@ -177,6 +182,7 @@ internal object PreparedChat {
             val code=(script ?: c.assets.open("prepare-chat.js").bufferedReader().use {it.readText()}.also {script=it})
                 .replace("__JARVIS_PROJECT_JSON__",JSONObject.quote(attempt.project))
                 .replace("__JARVIS_ATTEMPT_JSON__",JSONObject.quote(attempt.attempt))
+                .replace("__JARVIS_MESSAGE_JSON__",JSONObject.quote(attempt.openingText))
             runCatching {
                 current.evaluateJavascript(code) { raw ->
                     if (view!==current || ledger?.record?.attempt!=attempt.attempt) return@evaluateJavascript

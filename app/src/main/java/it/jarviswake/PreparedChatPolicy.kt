@@ -63,7 +63,7 @@ internal enum class PreparationPhase { STARTED, READY, CLAIMED, FAILED }
 internal data class PreparedConversation(
     val attempt: String, val project: String, val projectName: String, val createdAt: Long,
     val phase: PreparationPhase = PreparationPhase.STARTED, val url: String = "", val hash: String = "",
-    val proofLength: Int = 0, val readyAt: Long = 0, val cycle: String = "", val error: String = "", val linkOnly: Boolean = false, val submittedAt: Long = -1L
+    val proofLength: Int = 0, val readyAt: Long = 0, val cycle: String = "", val error: String = "", val linkOnly: Boolean = false, val submittedAt: Long = -1L, val openingText:String = OpeningMessagePolicy.TEXT
 )
 
 /** Persistent consumption precedes opening another app; uncertain preparation is never replayed. */
@@ -75,9 +75,10 @@ internal class PreparedChatLedger(initial: PreparedConversation?, private val pe
         record?.takeIf {it.phase==PreparationPhase.STARTED}?.let {set(it.copy(phase=PreparationPhase.FAILED,error="interrupted"))}
     }
     fun reset() = set(null)
-    fun begin(project: String, name: String, now: Long): PreparedConversation? {
+    fun begin(project: String, name: String, now: Long, openingText:String=OpeningMessagePolicy.TEXT): PreparedConversation? {
+        if(openingText.isBlank()) return null
         if (record?.phase in setOf(PreparationPhase.STARTED,PreparationPhase.READY,PreparationPhase.FAILED)) return null
-        val next=PreparedConversation(UUID.randomUUID().toString(),project,name,now)
+        val next=PreparedConversation(UUID.randomUUID().toString(),project,name,now,openingText=openingText)
         set(next);return next
     }
     fun fail(attempt: String, reason: String) {
@@ -111,8 +112,8 @@ internal class PreparedChatLedger(initial: PreparedConversation?, private val pe
         set(current.copy(phase=PreparationPhase.READY,url=destination,hash=proof.first,proofLength=proof.second,readyAt=now))
         return true
     }
-    fun claim(cycle: String, project: String, name: String, now: Long): PreparedConversation? {
-        val current=record?.takeIf {it.phase==PreparationPhase.READY && it.project==project && it.projectName==name} ?: return null
+    fun claim(cycle: String, project: String, name: String, now: Long, openingText:String=OpeningMessagePolicy.TEXT): PreparedConversation? {
+        val current=record?.takeIf {it.phase==PreparationPhase.READY && it.project==project && it.projectName==name && it.openingText==openingText} ?: return null
         val linkCapture=current.linkOnly && current.submittedAt>=current.createdAt && current.readyAt>=current.submittedAt
         val oldProof=!current.linkOnly && current.proofLength in 24..64 && current.hash.matches(Regex("[a-f0-9]{64}"))
         if (now-current.readyAt !in 0..PreparedChatPolicy.READY_TTL_MS ||

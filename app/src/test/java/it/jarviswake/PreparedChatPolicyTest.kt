@@ -53,6 +53,15 @@ class PreparedChatPolicyTest {
             "$url?token=private",url.replace("chatgpt.com","other.example"),project))
             assertNull(PreparedChatPolicy.nativeConversationUrl(bad,project))
     }
+    @Test fun aPreparedConversationIsBoundToItsInitialTextAndCannotBeClaimedWithADifferentMessage() {
+        val custom="Prima riga\nSeconda riga"
+        val l=PreparedChatLedger(null) {};val a=l.begin(project,"Jarvis",100,custom)!!
+        assertEquals(custom,a.openingText);assertTrue(l.markSubmitted(a.attempt,110))
+        assertTrue(l.captureLink(a.attempt,url,120))
+        assertNull(l.claim("old",project,"Jarvis",130))
+        assertNull(l.claim("different",project,"Jarvis",130,"Testo diverso"))
+        assertNotNull(l.claim("same",project,"Jarvis",130,custom))
+    }
     @Test fun claimIsPersistedBeforeReturningAndCannotBeReusedByAnotherCycle() {
         var persisted:PreparedConversation?=null
         val ledger=PreparedChatLedger(null) {persisted=it}

@@ -30,6 +30,30 @@ class MenuActivityStartupTest {
     private fun buttons(view:View):List<Button> = (if(view is Button) listOf(view) else emptyList())+
         if(view is ViewGroup) (0 until view.childCount).flatMap { buttons(view.getChildAt(it)) } else emptyList()
 
+    @Test fun openingMessageHasItsOwnMultilineEditorSaveAndResetWithoutChangingTheGreeting() {
+        val field=PreparedChat::class.java.getDeclaredField("ledger").apply {isAccessible=true};val old=field.get(null)
+        val cycle=VoiceCycle::class.java.getDeclaredField("state").apply {isAccessible=true};val previous=cycle.get(null)
+        field.set(null,PreparedChatLedger(null) {});cycle.set(null,VoiceCycleState())
+        val controller=mainActivity();val a=controller.get()
+        try {
+            buttons(a.window.decorView).single {it.text.toString()=="Configurazione"}.performClick()
+            buttons(a.window.decorView).single {it.text.toString()=="Voce e saluto"}.performClick()
+            fun inputs(v:View):List<android.widget.EditText> = (if(v is android.widget.EditText) listOf(v) else emptyList())+
+                if(v is ViewGroup) (0 until v.childCount).flatMap {inputs(v.getChildAt(it))} else emptyList()
+            val editors=inputs(a.window.decorView);assertEquals(2,editors.size)
+            val greeting=editors[1].text.toString()
+            editors[0].setText("Messaggio personalizzato\nSeconda riga")
+            buttons(a.window.decorView).single {it.text.toString()=="Salva messaggio prima di Voice"}.performClick()
+            assertEquals("Messaggio personalizzato\nSeconda riga",OpeningMessageSettings.get(a))
+            assertEquals(greeting,VoiceGreetingSettings.get(a))
+            editors[0].setText("  ")
+            buttons(a.window.decorView).single {it.text.toString()=="Salva messaggio prima di Voice"}.performClick()
+            assertNotNull(editors[0].error);assertEquals("Messaggio personalizzato\nSeconda riga",OpeningMessageSettings.get(a))
+            buttons(a.window.decorView).single {it.text.toString()=="Ripristina messaggio predefinito"}.performClick()
+            assertEquals(OpeningMessagePolicy.TEXT,OpeningMessageSettings.get(a))
+            assertEquals(greeting,VoiceGreetingSettings.get(a))
+        } finally {controller.destroy();field.set(null,old);cycle.set(null,previous)}
+    }
     @Test fun uncreatedDecorMustBeCheckedBeforeAskingForTheInsetsController() {
         val a=Robolectric.buildActivity(Activity::class.java).get()
         assertNull(a.window.peekDecorView())

@@ -57,6 +57,44 @@ class PreparedChatRuntimeTest {
         return JSONObject.quote(JSONObject().put("phase","ready").put("url",url).put("submitted",true).toString())
     }
 
+    @Test fun customOpeningTextIsSnapshottedIntoThePreparationAndQuotedSafelyInJavascript() {
+        val custom="Prima riga \"Jarvis\"\nSeconda riga `test`"
+        assertTrue(OpeningMessageSettings.save(app,custom))
+        val web=start();probe(web)
+        assertEquals(custom,ledger.record!!.openingText)
+        assertTrue(shadowOf(web).lastEvaluatedJavascript.contains("const message = "+JSONObject.quote(custom)))
+        assertFalse(shadowOf(web).lastEvaluatedJavascript.contains("__JARVIS_MESSAGE_JSON__"))
+        assertNull(shadowOf(app).nextStartedActivity)
+    }
+    @Test fun changingTheMessageDestroysAnInflightViewAndItsLateResultCannotReplaceTheNewAttempt() {
+        val web=start();probe(web);val callback=shadowOf(web).lastEvaluatedJavascriptCallback
+        val old=ledger.record!!.attempt
+        assertTrue(OpeningMessageSettings.save(app,"Nuova preparazione"))
+        assertNull(viewField.get(null));assertNull(PreparedChat.savedLink(app));assertNull(PreparedChat.claim(app,"old"))
+        callback.onReceiveValue(JSONObject.quote(JSONObject().put("phase","ready").put("url",url).put("submitted",true).toString()))
+        shadowOf(Looper.getMainLooper()).idle()
+        assertNotEquals(old,ledger.record!!.attempt);assertEquals("Nuova preparazione",ledger.record!!.openingText)
+        assertEquals(PreparationPhase.STARTED,ledger.record!!.phase);assertNotNull(viewField.get(null))
+    }
+    @Test fun readyLinkSurvivesAnUnchangedSaveButIsInvalidatedByANewText() {
+        val web=start();probe(web);shadowOf(web).lastEvaluatedJavascriptCallback.onReceiveValue(ready())
+        val old=ledger.record!!.attempt
+        assertTrue(OpeningMessageSettings.save(app,OpeningMessagePolicy.TEXT))
+        assertEquals(old,ledger.record!!.attempt);assertEquals(url,PreparedChat.savedLink(app))
+        assertTrue(OpeningMessageSettings.save(app,"Nuove istruzioni"))
+        assertNull(PreparedChat.savedLink(app));assertNull(PreparedChat.claim(app,"old"))
+        shadowOf(Looper.getMainLooper()).idle();assertNotEquals(old,ledger.record!!.attempt)
+        assertEquals("Nuove istruzioni",ledger.record!!.openingText)
+    }
+    @Test fun encryptedSlotSerializationPreservesCustomTextAndMigratesOldSlotsWithTheDefault() {
+        val custom=PreparedConversation("test",project,NativeChatSettings.project(app),100,openingText="Riga1\nRiga2")
+        val encode=PreparedChat::class.java.getDeclaredMethod("encode",PreparedConversation::class.java).apply {isAccessible=true}
+        val decode=PreparedChat::class.java.getDeclaredMethod("decode",JSONObject::class.java).apply {isAccessible=true}
+        val json=encode.invoke(PreparedChat,custom) as JSONObject
+        assertEquals(custom,decode.invoke(PreparedChat,json))
+        json.remove("openingText")
+        assertEquals(OpeningMessagePolicy.TEXT,(decode.invoke(PreparedChat,json) as PreparedConversation).openingText)
+    }
     @Test fun rendererIsDetachedWithConfiguredViewportNeverOpensActivityAndDeniesBothMediaResources() {
         val web=start()
         assertNull(web.parent);assertFalse(web.isAttachedToWindow);// Robolectric's WebView provider has no setFrame delegate; real renderer sizing needs a device.
