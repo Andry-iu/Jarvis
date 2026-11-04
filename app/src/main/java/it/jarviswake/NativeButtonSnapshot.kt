@@ -21,7 +21,7 @@ internal object NativeButtonSnapshot {
             if (node.packageName?.toString() != NativeChatSettings.PACKAGE) return@forEachIndexed
             val chain = ArrayList<AccessibilityNodeInfo>()
             var current: AccessibilityNodeInfo? = node
-            repeat(41) {
+            repeat(NativeObservationWalker.MAX_DEPTH + 1) {
                 val candidate = current
                 if (candidate != null && candidate.packageName?.toString() == NativeChatSettings.PACKAGE) {
                     chain.add(candidate)

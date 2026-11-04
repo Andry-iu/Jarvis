@@ -109,6 +109,7 @@ internal class NativeVoiceController(private val service: VoiceAccessibilityServ
         snapshotFingerprint = fingerprint
         snapshotCount++
         NativeControlSnapshot.save(service, token, snapshotCount, "phase=$phase\n" + snapshot)
+        if(phase=="prepared_chat_pending") captureButtons(nodes,phase,force=true)
     }
 
     private fun nodes(): List<AccessibilityNodeInfo> {

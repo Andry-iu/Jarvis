@@ -120,6 +120,22 @@ class OpeningMessageTest {
             f.set(null,previous);service.getSharedPreferences("prepared_chat_settings",0).edit().putBoolean("enabled",false).apply()
         }
     }
+    @Test fun preparedChatWithDeepWrappersUsesTheExistingVoiceClickOnceAndExportsItsLabel() {
+        var outer=root
+        repeat(40) {
+            val wrapper=node();shadowOf(wrapper).setAccessibilityWindowInfo(window)
+            shadowOf(wrapper).addChild(outer);outer=wrapper
+        }
+        shadowOf(window).setRoot(outer)
+        voice.contentDescription="Avvia una conversazione vocale"
+        linkOnlyPreparationStartsVoiceWithoutRequiringOrReinsertingAResponse()
+        controller.poll();assertEquals(1,starts);assertEquals(0,writes)
+        assertTrue(shadowOf(service).gesturesDispatched.isEmpty())
+        val capture=NativeObservationWalker.capture(outer,{it.isVisibleToUser},{it.childCount},
+            {n,i->n.getChild(i)},{it.isEditable})
+        val dump=NativeButtonSnapshot.describe(capture.visible)
+        assertTrue(dump.contains("description=[Avvia una conversazione vocale]"))
+    }
     @Test fun preparedNativeContentStartsVoiceWithoutReinsertingTheOpeningMessage() = withPreparedClaim {
         shadowOf(root).addChild(node("Ho letto le istruzioni del progetto e sono pronto a continuare questa conversazione."))
         controller.poll();assertEquals(0,writes);assertEquals(1,starts)

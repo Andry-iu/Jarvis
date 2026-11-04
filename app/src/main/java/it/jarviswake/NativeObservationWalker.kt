@@ -5,10 +5,11 @@ package it.jarviswake
  * Voice control collection still traverses them as before.
  */
 internal object NativeObservationWalker {
+    const val MAX_DEPTH = 64
     data class Capture<T : Any>(val visible: List<T>, val graph: NativeNodeObservation<T>)
     fun <T : Any> capture(root: T, visible: (T) -> Boolean, childCount: (T) -> Int,
         child: (T, Int) -> T?, composerLeaf: (T) -> Boolean,
-        maxDepth: Int = 40, maxVisible: Int = 1500, maxGraph: Int = 2500): Capture<T> {
+        maxDepth: Int = MAX_DEPTH, maxVisible: Int = 1500, maxGraph: Int = 2500): Capture<T> {
         val result = ArrayList<T>()
         val graph = NativeNodeObservation<T>()
         fun visit(node: T, depth: Int, parent: Int?) {

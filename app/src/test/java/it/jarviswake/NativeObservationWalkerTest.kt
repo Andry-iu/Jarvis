@@ -33,6 +33,27 @@ class NativeObservationWalkerTest {
         val nodes = c.graph.entries.mapIndexed { i,e -> e.value.node.copy(parent=e.parent,unresolvedChildren=missing[i]?:0) }
         return NativeComposerSendSelector.inspect(nodes,c.graph.indexOfIdentity(field))
     }
+    @Test fun deepConversationWrappersDoNotHideSemanticVoiceAndTraversalRemainsBounded() {
+        class Control(val label:String="",val clickable:Boolean=false,var parent:Control?=null) {
+            val children=ArrayList<Control>()
+        }
+        val root=Control();var tail=root
+        // The manual export ends at depth40 at the right-hand composer wrappers.
+        repeat(40) {val next=Control(parent=tail);tail.children.add(next);tail=next}
+        val button=Control(clickable=true,parent=tail);tail.children.add(button)
+        val label=Control("Avvia una conversazione vocale",parent=button);button.children.add(label)
+        fun collect(limit:Int?=null)=if(limit==null) NativeObservationWalker.capture(root,{true},{it.children.size},
+            {n,i->n.children[i]},{false}) else NativeObservationWalker.capture(root,{true},{it.children.size},
+            {n,i->n.children[i]},{false},maxDepth=limit)
+        fun targets(nodes:List<Control>)=NativeControlResolver.targets(nodes,NativeVoiceLabels.start,
+            {listOf(NativeVoiceLabels.normalize(it.label))},{it.parent},{true},{true},{it.clickable})
+        assertTrue(targets(collect(40).visible).isEmpty())
+        assertEquals(listOf(button),targets(collect().visible))
+        var bottom=label
+        repeat(80) {val next=Control(parent=bottom);bottom.children.add(next);bottom=next}
+        val bounded=collect();assertFalse(bounded.visible.any {it===bottom})
+        assertTrue(bounded.graph.missingEdges.any {it.reason=="traversal_limit"})
+    }
     @Test fun replayExportedGalaxyComposerThroughTheProductionWalkerAndSelector() {
         val nodes=fixture();val field=nodes.single { it.node.editable }
         val c=capture(nodes[0]);val result=inspect(c,field)

@@ -1,4 +1,4 @@
-# Preparazione della prossima chat — 0.5.103 / 125
+# Preparazione della prossima chat — 0.5.104 / 126
 
 Una seconda WebView senza finestre carica il progetto, invia una sola volta
 «leggi le istruzioni del progetto», cattura il link privato e viene distrutta.
@@ -7,7 +7,7 @@ non istruzioni elaborate o generazione completata lato server.
 
 ## Configurazione
 
-Installare l’APK telefono .103 sopra la versione precedente. In Configurazione →
+Installare l’APK telefono .104 sopra la versione precedente. In Configurazione →
 ChatGPT e progetto, modalità nativa, usare Accesso WebView per preparazione con
 lo stesso account/spazio di lavoro e progetto dell’app ChatGPT. Salvare URL progetto
 per preparazione e abilitare Prepara la prossima chat in background (default OFF).
@@ -127,3 +127,28 @@ Fonti consultate: [Deep link Android](https://developer.android.com/training/app
 e Intent/setPackage citato sopra: il destinatario deve gestire il percorso;
 la risoluzione dell’Activity non certifica quale conversazione il client mostri.
 Non documentano il routing effettivo dell’app ChatGPT installata sul Galaxy.
+
+## Correzione lettura controlli .104
+
+Il manual_export della .10320:09:49UTC contiene la schermata giusta: starts=0,
+editor unico vuoto e conversazione aperta. La catena osservata ha contenitore
+comune compositore a profondità37 (radice0), gruppo icone a39 e i due rettangoli
+terminali a40. NativeObservationWalker tagliava ogni visita oltre40: nessun figlio
+ulteriore poteva raggiungere il riconoscitore Voice. Il vecchio dump .97 mostrava
+invece etichetta Avvia una conversazione vocale esattamente a profondità40,
+con genitore cliccabile nella stessa zona destra. Non sono visibili nel dump i figli che il limite escludeva.
+
+La .104 alza il limite fisso a64. Restano1500nodi visibili/2500nodi grafo, protezione
+da gerarchie eccessive e nessun allargamento di etichette o salita al genitore.
+Il verificatore diagnostico antenati usa65visite coerenti col nuovo massimo,
+per non oscurare controlli profondi scambiandoli per provenienza non verificata;
+editor/password restano protetti. Nei3dump strutturali durante prepared_chat_pending
+si salva anche native-buttons.log completo, oltre all’esportazione manuale.
+
+Test riproducono wrapper fino40 seguiti dal controllo semantico: taglio precedente
+non trova Voice, nuovo walker la risolve. Il controller con chat preparata e radice
+più profonda invia un solo ACTION_CLICK, senza scritture/gesti a coordinate, e il
+dump conserva l’etichetta del controllo. Una gerarchia ancora più profonda resta
+limitata. È riproduzione del difetto del limite, non cattura dei figli ignoti del
+telefono: avvio effettivo Voice da collaudare sul Galaxy. Non serve rifare login o
+preparazione se esiste una chat pronta valida.
