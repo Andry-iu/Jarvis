@@ -288,9 +288,9 @@ class VoiceAccessibilityService : AccessibilityService() {
         }
     }
 
-    internal fun consumeNativeGreetingFocus(token: String): Boolean {
-        if (!VoiceCycle.matches(token) || preferences.getBoolean("native_greeting_focus", false)) return false
-        preferences.edit().putBoolean("native_greeting_focus", true).apply()
+    internal fun consumeNativeGreetingFocus(token: String, beforeVoice: Boolean = false): Boolean {
+        if (!VoiceCycle.matches(token) || preferences.getBoolean(messageKey(beforeVoice, "focus"), false)) return false
+        preferences.edit().putBoolean(messageKey(beforeVoice, "focus"), true).apply()
         return true
     }
 
@@ -328,36 +328,55 @@ class VoiceAccessibilityService : AccessibilityService() {
         return true // Dispatch only: this void API does not acknowledge message acceptance.
     }
 
-    internal fun nativeGreetingStarted(token: String): Boolean =
-        VoiceCycle.matches(token) && preferences.contains("native_greeting_at")
+    private fun messageKey(beforeVoice: Boolean, suffix: String) =
+        "native_${if (beforeVoice) "opening" else "greeting"}_$suffix"
 
-    internal fun nativeGreetingWindow(token: String): Int =
-        if (VoiceCycle.matches(token)) preferences.getInt("native_greeting_window", -1) else -1
+    internal fun nativeOpeningCompletedAt(token: String): Long =
+        if (VoiceCycle.matches(token)) preferences.getLong("native_opening_completed_at", -1L) else -1L
 
-    internal fun setNativeGreetingWindow(token: String, window: Int) {
-        if (VoiceCycle.matches(token)) preferences.edit().putInt("native_greeting_window", window).apply()
+    internal fun markNativeOpeningCompleted(token: String) {
+        if (VoiceCycle.matches(token) && nativeGreetingStage(token, true) == NativeGreetingPolicy.DISPATCHED &&
+            nativeOpeningCompletedAt(token) < 0L)
+            preferences.edit().putLong("native_opening_completed_at", SystemClock.elapsedRealtime()).apply()
     }
 
-    internal fun nativeGreetingStage(token: String): Int =
-        if (preferences.getString("native_token", null) == token) preferences.getInt("native_greeting_stage", 0)
+    internal fun nativeOpeningConfirmed(token: String): Boolean =
+        VoiceCycle.matches(token) && preferences.getBoolean("native_opening_confirmed", false)
+
+    internal fun confirmNativeOpening(token: String) {
+        if (VoiceCycle.matches(token)) preferences.edit().putBoolean("native_opening_confirmed", true).apply()
+    }
+
+    internal fun nativeGreetingStarted(token: String, beforeVoice: Boolean = false): Boolean =
+        VoiceCycle.matches(token) && preferences.contains(messageKey(beforeVoice, "at"))
+
+    internal fun nativeGreetingWindow(token: String, beforeVoice: Boolean = false): Int =
+        if (VoiceCycle.matches(token)) preferences.getInt(messageKey(beforeVoice, "window"), -1) else -1
+
+    internal fun setNativeGreetingWindow(token: String, window: Int, beforeVoice: Boolean = false) {
+        if (VoiceCycle.matches(token)) preferences.edit().putInt(messageKey(beforeVoice, "window"), window).apply()
+    }
+
+    internal fun nativeGreetingStage(token: String, beforeVoice: Boolean = false): Int =
+        if (preferences.getString("native_token", null) == token) preferences.getInt(messageKey(beforeVoice, "stage"), 0)
         else NativeGreetingPolicy.ABORTED
 
-    internal fun nativeGreetingText(token: String): String {
+    internal fun nativeGreetingText(token: String, beforeVoice: Boolean = false): String {
         if (!VoiceCycle.matches(token)) return ""
-        return preferences.getString("native_greeting_text", null) ?: VoiceGreetingSettings.get(this).also {
-            preferences.edit().putString("native_greeting_text", it).apply()
+        return preferences.getString(messageKey(beforeVoice, "text"), null) ?: (if (beforeVoice) OpeningMessagePolicy.TEXT else VoiceGreetingSettings.get(this)).also {
+            preferences.edit().putString(messageKey(beforeVoice, "text"), it).apply()
         }
     }
 
-    internal fun nativeGreetingElapsed(token: String): Long {
+    internal fun nativeGreetingElapsed(token: String, beforeVoice: Boolean = false): Long {
         if (!VoiceCycle.matches(token)) return Long.MAX_VALUE
         val now = SystemClock.elapsedRealtime()
-        if (!preferences.contains("native_greeting_at")) preferences.edit().putLong("native_greeting_at", now).apply()
-        return now - preferences.getLong("native_greeting_at", now)
+        if (!preferences.contains(messageKey(beforeVoice, "at"))) preferences.edit().putLong(messageKey(beforeVoice, "at"), now).apply()
+        return now - preferences.getLong(messageKey(beforeVoice, "at"), now)
     }
 
-    internal fun setNativeGreetingStage(token: String, stage: Int) {
-        if (VoiceCycle.matches(token)) preferences.edit().putInt("native_greeting_stage", stage).apply()
+    internal fun setNativeGreetingStage(token: String, stage: Int, beforeVoice: Boolean = false) {
+        if (VoiceCycle.matches(token)) preferences.edit().putInt(messageKey(beforeVoice, "stage"), stage).apply()
     }
 
     internal fun finishNative(token: String, message: String): Boolean {

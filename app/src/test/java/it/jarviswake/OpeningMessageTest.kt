@@ -1,0 +1,161 @@
+package it.jarviswake
+
+import android.graphics.Rect
+import android.os.Looper
+import android.view.View
+import android.view.accessibility.AccessibilityNodeInfo
+import android.view.accessibility.AccessibilityWindowInfo
+import java.time.Duration
+import java.util.UUID
+import org.junit.After
+import org.junit.Assert.*
+import org.junit.Before
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.Robolectric
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.Shadows.shadowOf
+import org.robolectric.annotation.Config
+import org.robolectric.shadows.ShadowSystemClock
+
+/** Real controller/actions and delayed gesture callbacks; no device/network acceptance implied. */
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk=[34,36])
+class OpeningMessageTest {
+    private val token = UUID.randomUUID().toString()
+    private val cycleField = VoiceCycle::class.java.getDeclaredField("state").apply { isAccessible = true }
+    private val previousCycle = cycleField.get(null)
+    private lateinit var lifecycle: org.robolectric.android.controller.ServiceController<VoiceAccessibilityService>
+    private lateinit var service: VoiceAccessibilityService
+    private lateinit var controller: NativeVoiceController
+    private lateinit var window: AccessibilityWindowInfo
+    private lateinit var root: AccessibilityNodeInfo
+    private lateinit var editor: AccessibilityNodeInfo
+    private lateinit var voice: AccessibilityNodeInfo
+    private var writes = 0
+    private var starts = 0
+    private fun node(text: String = "", bounds: Rect = Rect(0,0,500,50)) = AccessibilityNodeInfo.obtain().apply {
+        packageName = NativeChatSettings.PACKAGE
+        this.text = text
+        isEnabled = true; isVisibleToUser = true
+        setBoundsInScreen(bounds)
+    }
+    @Before fun setup() {
+        lifecycle = Robolectric.buildService(VoiceAccessibilityService::class.java).create()
+        service = lifecycle.get()
+        cycleField.set(null, VoiceCycleState().apply { begin(token, 0L); openWeb(token,0L,true,true,false,false) })
+        service.getSharedPreferences("voice_accessibility",0).edit().clear().putString("native_token",token).apply()
+        window = AccessibilityWindowInfo.obtain()
+        shadowOf(window).apply {
+            setId(7); setType(AccessibilityWindowInfo.TYPE_APPLICATION); setLayer(1)
+            setActive(true); setFocused(true); setBoundsInScreen(Rect(0,0,1000,2000))
+        }
+        root = node()
+        editor = node(bounds=Rect(50,1400,950,1500)).apply {
+            isEditable = true; isFocused = true
+            addAction(AccessibilityNodeInfo.AccessibilityAction.ACTION_SET_TEXT)
+        }
+        voice = node("Voice",Rect(880,1700,940,1760)).apply { isClickable = true }
+        val edge = (48*service.resources.displayMetrics.density).toInt()
+        val send = node("Invia",Rect(950-edge,1500,950,1500+edge)).apply { isClickable = true }
+        listOf(root,editor,voice,send).forEach { shadowOf(it).setAccessibilityWindowInfo(window) }
+        shadowOf(root).apply {
+            addChild(node(NativeChatSettings.project(service))); addChild(editor); addChild(voice); addChild(send)
+        }
+        shadowOf(window).setRoot(root); shadowOf(service).setWindows(listOf(window))
+        shadowOf(editor).setOnPerformActionListener { action, args ->
+            assertEquals(AccessibilityNodeInfo.ACTION_SET_TEXT,action)
+            writes++; editor.text=args.getCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE);true
+        }
+        shadowOf(voice).setOnPerformActionListener { action, _ ->
+            assertEquals(AccessibilityNodeInfo.ACTION_CLICK,action);starts++;true
+        }
+        shadowOf(service).setCanDispatchGestures(true)
+        controller = NativeVoiceController(service,token)
+        controller.launch(openShortcut=false,playWaitingAudio=false)
+    }
+    @After fun cleanup() { controller.destroy(); lifecycle.destroy(); cycleField.set(null,previousCycle) }
+    private fun advance(ms: Long) { ShadowSystemClock.advanceBy(Duration.ofMillis(ms)) }
+    private fun queueSend() {
+        controller.poll()
+        assertEquals(OpeningMessagePolicy.TEXT,editor.text.toString()); assertEquals(1,writes);assertEquals(0,starts)
+        controller.poll();advance(250);controller.poll()
+        assertEquals(NativeGreetingPolicy.DISPATCHED, service.nativeGreetingStage(token,true))
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(80))
+        assertEquals(1,shadowOf(service).gesturesDispatched.size)
+    }
+    private fun completeSend(clear: Boolean = true) {
+        val gesture=shadowOf(service).gesturesDispatched.single()
+        gesture.callback().onCompleted(gesture.description())
+        if (clear) editor.text=""
+    }
+    @Test fun exactTextIsSentBeforeVoiceAndTimerStartsAtSendCompletion() {
+        queueSend();advance(300);controller.poll();assertEquals(0,starts)
+        completeSend(clear=false);advance(300);controller.poll();assertEquals(0,starts)
+        editor.text="";controller.poll();assertEquals(1,starts)
+        controller.poll();assertEquals(1,starts);assertEquals(1,writes)
+    }
+    @Test fun earlyReadyVoiceWaits299ThenStartsAt300WithoutAnotherDelay() {
+        queueSend();completeSend();controller.poll();assertEquals(0,starts)
+        advance(299);controller.poll();assertEquals(0,starts)
+        advance(1);controller.poll();assertEquals(1,starts)
+    }
+    @Test fun lateReadyVoiceStartsOnFirstEligiblePollWithoutRestartingTimer() {
+        voice.isEnabled=false;queueSend();completeSend();advance(1000);controller.poll();assertEquals(0,starts)
+        voice.isEnabled=true;controller.poll();assertEquals(1,starts)
+    }
+    @Test fun draftIsNeverOverwrittenAndTextDoesNotWaitForVoiceReadiness() {
+        voice.isEnabled=false;editor.text="bozza personale";controller.poll()
+        assertEquals(0,writes);assertEquals("bozza personale",editor.text.toString());assertEquals(0,starts)
+        editor.text="";advance(500);controller.poll();assertEquals(0,writes);assertEquals(0,starts)
+    }
+    @Test fun rejectedGestureNeverStartsVoiceOrRetriesTheMessage() {
+        shadowOf(service).setCanDispatchGestures(false)
+        controller.poll();controller.poll();advance(250);controller.poll()
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(80))
+        editor.text="";advance(1000);controller.poll();assertEquals(0,starts);assertEquals(1,writes)
+        assertEquals(NativeGreetingPolicy.ABORTED,service.nativeGreetingStage(token,true))
+    }
+    @Test fun reconnectKeepsTextAndTimerConsumedAndLiveGreetingIndependent() {
+        queueSend();completeSend();controller.poll();advance(300)
+        controller.destroy();controller=NativeVoiceController(service,token)
+        controller.launch(openShortcut=false,playWaitingAudio=false);controller.poll()
+        assertEquals(1,starts);assertEquals(1,writes)
+        assertEquals(NativeGreetingPolicy.WAITING,service.nativeGreetingStage(token))
+        assertFalse(service.nativeGreetingStarted(token))
+    }
+    @Test fun exitWhileTapIsQueuedRemovesWindowAndLateCallbackCannotStartOrRestore() {
+        controller.poll();controller.poll();advance(250);controller.poll()
+        val hudField=NativeVoiceController::class.java.getDeclaredField("hud").apply { isAccessible=true }
+        val hud=hudField.get(controller) as HolographicOverlayView
+        controller.dismissForExit();VoiceCycle.cancel(service,token,"annullato")
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(1000))
+        assertNull(hudField.get(controller));assertEquals(View.GONE,hud.visibility);assertFalse(hud.isAttachedToWindow)
+        assertTrue(shadowOf(service).gesturesDispatched.isEmpty());assertEquals(0,starts)
+    }
+    @Test fun sentConversationMayReplaceProjectHeaderWithoutBlockingVoice() {
+        queueSend();completeSend()
+        root.getChild(0).text="titolo conversazione"
+        advance(300);controller.poll();assertEquals(1,starts)
+    }
+    @Test fun projectSwitchBeforeDelayedSendPreventsGestureAndVoice() {
+        controller.poll();controller.poll();advance(250);controller.poll()
+        service.getSharedPreferences("native_chat",0).edit().putString("project","altro progetto").apply()
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(80))
+        assertTrue(shadowOf(service).gesturesDispatched.isEmpty());assertEquals(0,starts)
+        assertEquals(NativeGreetingPolicy.ABORTED,service.nativeGreetingStage(token,true))
+    }
+    @Test fun cancelledGestureNeverStartsVoiceAndLateCompletionCannotReverseCancellation() {
+        queueSend()
+        val gesture=shadowOf(service).gesturesDispatched.single()
+        gesture.callback().onCancelled(gesture.description())
+        gesture.callback().onCompleted(gesture.description());editor.text="";advance(300);controller.poll()
+        assertEquals(0,starts);assertEquals(-1L,service.nativeOpeningCompletedAt(token))
+    }
+    @Test fun completedCallbackDoesNotCertifySendAndUncertainSendTimesOutWithoutVoice() {
+        queueSend();completeSend(clear=false);advance(10000);controller.poll()
+        assertEquals(0,starts);assertEquals(1,writes)
+        editor.text="";controller.poll();assertEquals(0,starts)
+        assertEquals(NativeGreetingPolicy.ABORTED,service.nativeGreetingStage(token,true))
+    }
+}

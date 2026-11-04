@@ -1,4 +1,4 @@
-# Guida completa JarvisWake — 0.5.96 / 118
+# Guida completa JarvisWake — 0.5.97 / 119
 
 ## Iniziare e orientarsi
 
@@ -40,6 +40,7 @@ JarvisRuntime è il progetto configurato, non il dot specifico discusso in prece
 
 ## Conversazione e saluto automatico
 
+Nella modalità App ChatGPT, prima di Voice, Jarvis invia automaticamente il testo esatto «leggi le istruzioni del progetto» appena il campo del progetto è disponibile sotto la cover. Il minimo di 0,3 secondi parte dall’invio: trascorso quello, preme Voice appena il controllo è attivo, senza un altro ritardo se compare più tardi. Restano microfono libero e minimo audio eventualmente configurato. Non attende che ChatGPT termini la risposta o dimostra che abbia letto le istruzioni. Non sovrascrive bozze; se l’invio resta incerto, non ripete il testo e non avvia automaticamente Voice. La modalità WebView resta invariata.
 Parla con Jarvis avvia il ciclo completo della modalità selezionata; anche la wake conduce allo stesso percorso. L’automazione nativa conferma il nome del progetto prima del gesto Voice e non ripete automaticamente il gesto nello stesso ciclo. Il solo lancio dello shortcut non prova la chiamata.
 Configurazione → Voce e saluto permette di scrivere e salvare la frase richiesta a ChatGPT dopo l’attivazione. Il campo ha almeno cinque righe visibili, va a capo entro la larghezza dello schermo e cresce con il testo; scorri verticalmente la pagina per leggere testi più lunghi. Salva frase conserva anche le righe inserite. Ripristina rimette ciao jarvis. Questa è una preferenza locale: non equivale a un saluto già pronunciato. Il percorso attuale tenta una sola scrittura e un solo invio nella stessa conversazione, proteggendo le bozze dell’utente. Il tap a coordinate del saluto è una specifica euristica autorizzata per quel percorso, non un comando generico per tutte le app.
 Se il testo compare ma resta nel campo, o senti soltanto il beep e Voice attende te, l’invio o la risposta non sono confermati. Non dichiarare il saluto riuscito sulla base della preferenza o di un evento di clic. Esporta la diagnostica per controllare fase, riconoscimento dei pulsanti ed esito del comando.
