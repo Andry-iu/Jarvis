@@ -18,6 +18,12 @@ internal object PreparedChatPolicy {
         return a.equals(b,ignoreCase=true)
     }
     fun conversationUrl(raw:String,project:String):String?=checkConversationUrl(raw,project).url
+    /** Native dispatch uses the direct conversation path after validating the captured project link. */
+    fun nativeConversationUrl(raw:String,project:String):String? {
+        val validated=conversationUrl(raw,project) ?: return null
+        val id=URI(validated).path.substringAfterLast('/').lowercase()
+        return "https://chatgpt.com/c/$id"
+    }
     fun checkConversationUrl(raw:String,project:String):LinkCheck = runCatching {
         if(!ChatGptProjectSettings.isValidProjectUrl(project)) return LinkCheck(error="link_project_settings")
         val uri=URI(raw)

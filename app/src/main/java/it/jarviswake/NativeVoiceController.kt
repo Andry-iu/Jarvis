@@ -31,6 +31,7 @@ internal class NativeVoiceController(private val service: VoiceAccessibilityServ
     private var snapshotCount = 0
     private var snapshotAt = 0L
     private var snapshotFingerprint: Int? = null
+    private var preparedProbe: String? = null
 
     fun launch(openShortcut: Boolean = true, playWaitingAudio: Boolean = true) {
         check(!service.getSystemService(KeyguardManager::class.java).isKeyguardLocked) { "Sblocca il telefono per aprire l'app ChatGPT." }
@@ -54,8 +55,10 @@ internal class NativeVoiceController(private val service: VoiceAccessibilityServ
         }
         if (openShortcut) {
             val prepared=PreparedChat.claim(service,token)
-            if(prepared!=null) NativeChatSettings.openConversation(service,prepared.url)
-            else NativeChatSettings.launch(service)
+            if(prepared!=null) {
+                NativeChatSettings.openConversation(service,prepared.url)
+                NativeRuntimeSnapshot.save(service,token,"preparation","phase=native_open_dispatched route=conversation_id")
+            } else NativeChatSettings.launch(service)
             DiagnosticLog.record(service, DiagnosticLog.Event.NATIVE_SHORTCUT_OPENED, token)
         }
     }
@@ -226,6 +229,13 @@ internal class NativeVoiceController(private val service: VoiceAccessibilityServ
                 val contentMatches=if(prepared.linkOnly) start!=null else
                     PreparedChatPolicy.matches(prepared.hash,prepared.proofLength,texts)
                 if(projectListing || !empty || !contentMatches) {
+                    val reason=when {projectListing -> "project_list";!empty -> "composer";
+                        prepared.linkOnly -> "voice_control";else -> "content"}
+                    val probe="phase=native_ui_pending reason=$reason projectList=$projectListing"+
+                        " fields=${fields.size.coerceAtMost(1000)} empty=$empty starts=${starts.size.coerceAtMost(1000)}"
+                    if(preparedProbe!=probe) {
+                        preparedProbe=probe;NativeRuntimeSnapshot.save(service,token,"preparation",probe)
+                    }
                     captureControls(nodes,"prepared_chat_pending")
                     status("ATTENDO LA CHAT PREPARATA — NESSUN NUOVO MESSAGGIO")
                     return

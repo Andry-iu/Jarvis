@@ -1,4 +1,4 @@
-# Preparazione della prossima chat — 0.5.102 / 124
+# Preparazione della prossima chat — 0.5.103 / 125
 
 Una seconda WebView senza finestre carica il progetto, invia una sola volta
 «leggi le istruzioni del progetto», cattura il link privato e viene distrutta.
@@ -7,7 +7,7 @@ non istruzioni elaborate o generazione completata lato server.
 
 ## Configurazione
 
-Installare l’APK telefono .102 sopra la versione precedente. In Configurazione →
+Installare l’APK telefono .103 sopra la versione precedente. In Configurazione →
 ChatGPT e progetto, modalità nativa, usare Accesso WebView per preparazione con
 lo stesso account/spazio di lavoro e progetto dell’app ChatGPT. Salvare URL progetto
 per preparazione e abilitare Prepara la prossima chat in background (default OFF).
@@ -102,3 +102,28 @@ nessuna necessità di rifare accesso se account/progetto corretti.
 Ulteriori fonti primarie consultate: [URI Java17](https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/net/URI.html)
 per componenti raw/decodificati, oltre a Intent Android per il dispatch nel pacchetto.
 Non documentano né provano il formato specifico del link osservato sul Galaxy.
+
+## Correzione apertura nativa .103 dopo ZIP _14_
+
+Riscontro Galaxy .102:4link_saved e2claimed; nelle aperture ChatGPT è visibile
+ma resta prepared_chat_pending e nessun comando Voice. L’utente conferma elenco
+chat progetto sotto la cover. La validazione/salvataggio .102 è dunque osservata,
+ma la conversazione non viene mostrata nei due richiami riportati.
+
+L’handoff valida prima integralmente l’URL originale (origine/progetto/UUID/query),
+poi ricava lo stesso UUID e passa ACTION_VIEW https://chatgpt.com/c/UUID al solo
+pacchetto ChatGPT. Non passa più /g/progetto/c/UUID al client. Lo slot conserva
+l’URL catturato per stato/copia; nessun nuovo messaggio o cambio ID. La chat pronta
+già salvata può essere usata dopo aggiornamento senza reset/login/ripreparazione.
+
+Non si aggiungono secondi tentativi di Intent, browser, shortcut o selezioni chat
+per titolo. La lista progetto continua a impedire Voice; il nuovo log distingue
+native_open_dispatched route=conversation_id da native_ui_pending con motivi
+project_list/composer/voice_control/content, conteggi campi/Voice e flag vuoto.
+Mai URL/ID/titoli/testo nei log. Un dispatch è solo richiesta: il client potrebbe
+ancora non gestire la destinazione come atteso, da collaudare sul Galaxy.
+
+Fonti consultate: [Deep link Android](https://developer.android.com/training/app-links/create-deeplinks)
+e Intent/setPackage citato sopra: il destinatario deve gestire il percorso;
+la risoluzione dell’Activity non certifica quale conversazione il client mostri.
+Non documentano il routing effettivo dell’app ChatGPT installata sul Galaxy.

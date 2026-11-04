@@ -44,6 +44,15 @@ class PreparedChatPolicyTest {
         assertEquals(PreparationPhase.STARTED,storage.record!!.phase)
         assertNull(l.captureLinkResult(a.attempt,url,130))
     }
+    @Test fun nativeRouteUsesOnlyTheConversationIdAfterFullCapturedLinkValidation() {
+        val nested=url.replace("/c/","/g/g-p-abc123/c/")
+        assertEquals(url,PreparedChatPolicy.nativeConversationUrl(nested,project))
+        assertEquals(url,PreparedChatPolicy.nativeConversationUrl("$nested?model=example-model",project))
+        assertEquals(url,PreparedChatPolicy.nativeConversationUrl(url,project))
+        for(bad in listOf(nested.replace("abc123","other"),url.replace("/c/","/share/"),
+            "$url?token=private",url.replace("chatgpt.com","other.example"),project))
+            assertNull(PreparedChatPolicy.nativeConversationUrl(bad,project))
+    }
     @Test fun claimIsPersistedBeforeReturningAndCannotBeReusedByAnotherCycle() {
         var persisted:PreparedConversation?=null
         val ledger=PreparedChatLedger(null) {persisted=it}

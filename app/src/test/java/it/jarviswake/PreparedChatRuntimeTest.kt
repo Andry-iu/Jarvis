@@ -223,6 +223,28 @@ class PreparedChatRuntimeTest {
         assertEquals(NativeChatSettings.PACKAGE,actual.`package`)
         assertNotEquals(0,actual.flags and Intent.FLAG_ACTIVITY_NEW_TASK)
     }
+    @Test fun projectConversationIntentUsesTheDirectConversationRouteAndPreservesTheStoredLink() {
+        val id="0123456789abcdef0123456789abcdef"
+        val configured="https://chatgpt.com/g/g-p-$id/project"
+        assertTrue(ChatGptProjectSettings.save(app,configured))
+        val captured=url.replace("/c/","/g/g-p-$id-project-name/c/")
+        val now=System.currentTimeMillis();val a=ledger.begin(configured,NativeChatSettings.project(app),now)!!
+        assertTrue(ledger.markSubmitted(a.attempt,now));assertTrue(ledger.captureLink(a.attempt,captured,now))
+        val expected=Intent(Intent.ACTION_VIEW,Uri.parse(url)).setPackage(NativeChatSettings.PACKAGE)
+        shadowOf(app.packageManager).addResolveInfoForIntent(expected,ResolveInfo().apply {activityInfo=ActivityInfo().apply {
+            packageName=NativeChatSettings.PACKAGE;name="ChatActivity"
+        }})
+        NativeChatSettings.openConversation(app,captured+"?model=example-model")
+        val actual=shadowOf(app).nextStartedActivity
+        assertEquals(Intent.ACTION_VIEW,actual.action);assertEquals(url,actual.data.toString())
+        assertEquals(NativeChatSettings.PACKAGE,actual.`package`)
+        assertNotEquals(0,actual.flags and Intent.FLAG_ACTIVITY_NEW_TASK)
+        assertEquals(captured,PreparedChat.savedLink(app));assertEquals(PreparationPhase.READY,ledger.record!!.phase)
+        assertThrows(IllegalStateException::class.java) {
+            NativeChatSettings.openConversation(app,captured.replace(id,"1123456789abcdef0123456789abcdef"))
+        }
+        assertNull(shadowOf(app).nextStartedActivity)
+    }
     @Test fun unsupportedOrInvalidNativeLinksNeverFallBackToBrowserOrProjectShortcut() {
         assertThrows(IllegalStateException::class.java) {NativeChatSettings.openConversation(app,url)}
         assertThrows(IllegalStateException::class.java) {NativeChatSettings.openConversation(app,"https://example.com/c/other")}

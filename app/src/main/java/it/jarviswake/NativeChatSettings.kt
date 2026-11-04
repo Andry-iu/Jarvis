@@ -27,8 +27,9 @@ internal object NativeChatSettings {
         return launcher.getShortcuts(query, Process.myUserHandle()).orEmpty().filter { it.isEnabled }
     }
     fun openConversation(context: Context, url: String) {
-        check(PreparedChatPolicy.conversationUrl(url,ChatGptProjectSettings.getUrl(context))!=null) { "Link conversazione non valido." }
-        val intent=android.content.Intent(android.content.Intent.ACTION_VIEW,android.net.Uri.parse(url))
+        val destination=PreparedChatPolicy.nativeConversationUrl(url,ChatGptProjectSettings.getUrl(context))
+        check(destination!=null) { "Link conversazione non valido." }
+        val intent=android.content.Intent(android.content.Intent.ACTION_VIEW,android.net.Uri.parse(destination))
             .setPackage(PACKAGE).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
         check(intent.resolveActivity(context.packageManager)!=null) { "L’app ChatGPT non espone l’apertura di questo link." }
         context.startActivity(intent)
