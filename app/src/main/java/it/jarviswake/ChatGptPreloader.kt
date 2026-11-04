@@ -171,6 +171,7 @@ internal object ChatGptPreloader {
     /** Clears the app-wide WebView cache, cookies, JavaScript storage and saved WebView form/auth data. */
     fun clearChatGptData(context: Context, container: FrameLayout, onComplete: (Boolean) -> Unit): Boolean {
         if (VoiceCycle.active) return false
+        PreparedChat.resetForLogin(context)
         return runCatching {
             val current = web.get()
             if (current != null) {

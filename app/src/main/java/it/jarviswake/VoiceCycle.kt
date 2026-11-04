@@ -154,7 +154,9 @@ internal object VoiceCycle {
 
     fun cancel(context: Context, token: String, message: String) {
         if (matches(token) && VoiceAccessibilityService.endNative(context, token, message)) return
+        val preparedVoiceObserved=VoiceAccessibilityService.nativeVoiceObserved(context,token)
         if (!state.cancel(token)) return
+        PreparedChat.cycleEnded(context,token,preparedVoiceObserved)
         WatchProbeReturn.cycleEnded(context,token)
         WaitingAudio.stop()
         if (hideStopInFlightToken == token) hideStopInFlightToken = null

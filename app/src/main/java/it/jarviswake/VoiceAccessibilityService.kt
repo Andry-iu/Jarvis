@@ -331,6 +331,16 @@ class VoiceAccessibilityService : AccessibilityService() {
     private fun messageKey(beforeVoice: Boolean, suffix: String) =
         "native_${if (beforeVoice) "opening" else "greeting"}_$suffix"
 
+    internal fun confirmPreparedOpening(token:String) {
+        if(!VoiceCycle.matches(token)) return
+        // The observed web reply settled for >=3s after submission; the original300ms minimum has elapsed.
+        preferences.edit().putLong("native_opening_completed_at",(SystemClock.elapsedRealtime()-OpeningMessagePolicy.MIN_DELAY_MS).coerceAtLeast(0L))
+            .putBoolean("native_opening_confirmed",true).putBoolean("native_opening_prepared",true).apply()
+    }
+
+    internal fun nativeOpeningPrepared(token:String):Boolean =
+        VoiceCycle.matches(token) && preferences.getBoolean("native_opening_prepared",false)
+
     internal fun nativeOpeningCompletedAt(token: String): Long =
         if (VoiceCycle.matches(token)) preferences.getLong("native_opening_completed_at", -1L) else -1L
 

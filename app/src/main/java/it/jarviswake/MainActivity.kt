@@ -228,6 +228,32 @@ class MainActivity : Activity() {
             text("Progetto confermato: "+NativeChatSettings.project(this))
             text(if(NativeChatSettings.id(this)==null) "Shortcut da selezionare" else "Shortcut salvato")
             button("Seleziona collegamento e nome progetto") { selectNativeShortcut() }
+            text(PreparedChat.status(this))
+            menu.toggle("Prepara la prossima chat in background",PreparedChat.enabled(this),
+                "Prima accedi nel WebView con lo stesso account dell’app ChatGPT e verifica l’URL del progetto. La preparazione invia «leggi le istruzioni del progetto» in una nuova chat, senza Voice o finestre sopra il telefono. Può essere rallentata o fermata da Android.") {
+                if(!VoiceCycle.active) PreparedChat.enable(this,it)
+                else Toast.makeText(this,"Termina prima il ciclo attivo.",Toast.LENGTH_SHORT).show()
+                renderMenu(false)
+            }
+            button("Accesso WebView per preparazione") {
+                if(!VoiceCycle.active) {
+                    PreparedChat.resetForLogin(this);ChatGptPreloader.discard()
+                    startActivity(Intent(this,WebChatActivity::class.java).putExtra(WebChatActivity.EXTRA_TEXT_ONLY,true))
+                }
+            }
+            projectUrlInput=menu.field("URL progetto per preparazione",projectDraft ?: ChatGptProjectSettings.getUrl(this),
+                "Deve essere lo stesso progetto selezionato nell’app nativa. Non inserire il link di una vecchia conversazione.")
+            button("Salva progetto per preparazione") {saveChatGptProjectUrl();projectDraft=projectUrlInput.text.toString()}
+            button("Aggiorna stato preparazione") {renderMenu(false)}
+            button("Riprova preparazione") {if(!VoiceCycle.active) {PreparedChat.retry(this);renderMenu(false)}}
+            button("Copia link chat preparata") {
+                PreparedChat.savedLink(this)?.let {url ->
+                    getSystemService(android.content.ClipboardManager::class.java)
+                        .setPrimaryClip(android.content.ClipData.newPlainText("Chat preparata",url))
+                    Toast.makeText(this,"Link privato copiato.",Toast.LENGTH_SHORT).show()
+                } ?: Toast.makeText(this,"Nessuna chat pronta.",Toast.LENGTH_SHORT).show()
+            }
+
             button("Prova collegamento senza Voice") {
                 if(VoiceCycle.active) Toast.makeText(this,"Termina prima il ciclo attivo.",Toast.LENGTH_SHORT).show()
                 else runCatching { NativeChatSettings.launch(this) }.onFailure { Toast.makeText(this,it.message ?: "Collegamento non disponibile.",Toast.LENGTH_LONG).show() }
@@ -393,7 +419,7 @@ class MainActivity : Activity() {
     }
 
     private fun prepareChatGpt() {
-        if (NativeChatSettings.enabled(this)) return
+        if (NativeChatSettings.enabled(this)) { runCatching {PreparedChat.maintain(this)};return }
         if (::contentRoot.isInitialized) ChatGptPreloader.prepare(this, contentRoot)
     }
 

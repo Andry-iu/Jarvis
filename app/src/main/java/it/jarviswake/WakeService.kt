@@ -106,6 +106,7 @@ class WakeService : Service() {
     private var lastRecoveryStatus: String?=null
     private val recovery = object : Runnable {
         override fun run() {
+            runCatching { PreparedChat.maintain(this@WakeService) }
             if (stopping) return
             runCatching {
                 BridgeCallHold.tick(this@WakeService)
@@ -559,6 +560,7 @@ class WakeService : Service() {
     }
 
     override fun onDestroy() {
+        runCatching { PreparedChat.stop(this) }
         runCatching { BridgeCallHold.disconnect() }
         runCatching { BridgeLink.owner(this,"wake_service",false) }
         if (instance === this) instance = null

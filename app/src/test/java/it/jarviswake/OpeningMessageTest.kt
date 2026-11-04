@@ -90,6 +90,37 @@ class OpeningMessageTest {
         gesture.callback().onCompleted(gesture.description())
         if (clear) editor.text=""
     }
+    private fun withPreparedClaim(action:()->Unit) {
+        val ledgerField=PreparedChat::class.java.getDeclaredField("ledger").apply {isAccessible=true}
+        val previous=ledgerField.get(null)
+        val ledger=PreparedChatLedger(null) {}
+        val project=ChatGptProjectSettings.getUrl(service)
+        val attempt=ledger.begin(project,NativeChatSettings.project(service),System.currentTimeMillis())!!
+        assertTrue(ledger.complete(attempt.attempt,"https://chatgpt.com/c/12345678-1234-4234-8234-123456789abc",
+            "Ho letto le istruzioni del progetto e sono pronto a continuare questa conversazione.",System.currentTimeMillis()))
+        assertNotNull(ledger.claim(token,project,NativeChatSettings.project(service),System.currentTimeMillis()))
+        ledgerField.set(null,ledger)
+        service.getSharedPreferences("prepared_chat_settings",0).edit().putBoolean("enabled",true).apply()
+        try {action()} finally {
+            ledgerField.set(null,previous)
+            service.getSharedPreferences("prepared_chat_settings",0).edit().putBoolean("enabled",false).apply()
+        }
+    }
+    @Test fun preparedNativeContentStartsVoiceWithoutReinsertingTheOpeningMessage() = withPreparedClaim {
+        shadowOf(root).addChild(node("Ho letto le istruzioni del progetto e sono pronto a continuare questa conversazione."))
+        controller.poll();assertEquals(0,writes);assertEquals(1,starts)
+        assertTrue(service.nativeOpeningConfirmed(token));controller.poll();assertEquals(1,starts)
+    }
+    @Test fun projectListingPreviewCannotBeMistakenForThePreparedConversation() = withPreparedClaim {
+        shadowOf(root).addChild(node("Chat"));shadowOf(root).addChild(node("Fonti"))
+        shadowOf(root).addChild(node("Ho letto le istruzioni del progetto e sono pronto a continuare questa conversazione."))
+        controller.poll();assertEquals(0,writes);assertEquals(0,starts)
+    }
+    @Test fun missingPreparedContentOrUserDraftNeverTriggersVoiceOrDuplicateInstructions() = withPreparedClaim {
+        controller.poll();assertEquals(0,writes);assertEquals(0,starts)
+        shadowOf(root).addChild(node("Ho letto le istruzioni del progetto e sono pronto a continuare questa conversazione."))
+        editor.text="una bozza dell’utente";controller.poll();assertEquals(0,writes);assertEquals(0,starts)
+    }
     @Test fun observed097OverlappingComposerSendsOnceAndStillWaits300msBeforeVoice() {
         // Sanitized ZIP _10_ geometry, scaled to this test display's density.
         val scale=service.resources.displayMetrics.density/3.5f

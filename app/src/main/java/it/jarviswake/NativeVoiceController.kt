@@ -53,7 +53,9 @@ internal class NativeVoiceController(private val service: VoiceAccessibilityServ
             if(playWaitingAudio) WaitingAudio.coverShown(service, token)
         }
         if (openShortcut) {
-            NativeChatSettings.launch(service)
+            val prepared=PreparedChat.claim(service,token)
+            if(prepared!=null) NativeChatSettings.openConversation(service,prepared.url)
+            else NativeChatSettings.launch(service)
             DiagnosticLog.record(service, DiagnosticLog.Event.NATIVE_SHORTCUT_OPENED, token)
         }
     }
@@ -208,6 +210,23 @@ internal class NativeVoiceController(private val service: VoiceAccessibilityServ
         if (startSent) captureControls(nodes, "after_voice_command")
         if (!startSent) {
             if (active) { VoiceCycle.cancel(service, token, "Voice era già attiva: nessun nuovo comando inviato."); return }
+            val prepared=PreparedChat.forCycle(service,token)
+            if(prepared!=null && !service.nativeOpeningConfirmed(token)) {
+                val fields=nodes.filter {it.isEditable && !it.isPassword && it.isEnabled &&
+                    it.packageName?.toString()==NativeChatSettings.PACKAGE}
+                val empty=fields.singleOrNull()?.let {it.isShowingHintText || it.text.isNullOrBlank()}==true
+                val texts=nodes.filter {!it.isEditable && !it.isPassword && it.packageName?.toString()==NativeChatSettings.PACKAGE}
+                    .mapNotNull {it.text?.toString()}
+                val projectListing=nodes.any {labels(it).contains("chat")} &&
+                    nodes.any {labels(it).any {label -> label=="fonti" || label=="sources"}}
+                if(projectListing || !empty || !PreparedChatPolicy.matches(prepared.hash,prepared.proofLength,texts)) {
+                    captureControls(nodes,"prepared_chat_pending")
+                    status("ATTENDO LA CHAT PREPARATA — NESSUN NUOVO MESSAGGIO")
+                    return
+                }
+                service.confirmPreparedOpening(token)
+                NativeRuntimeSnapshot.save(service,token,"preparation","phase=native_content_observed")
+            }
             // Submission may replace the project header with the conversation title.
             // The completed send was revalidated in the project; keep observing its same-window composer.
             if (!projectVisible(nodes) && service.nativeOpeningCompletedAt(token) < 0L) {
@@ -282,6 +301,7 @@ internal class NativeVoiceController(private val service: VoiceAccessibilityServ
             NativeRuntimeSnapshot.save(service, token, "opening", "send_observed=true")
         }
         if (service.nativeOpeningConfirmed(token)) {
+            if(service.nativeOpeningPrepared(token)) return true
             val ready = OpeningMessagePolicy.canStart(completedAt, SystemClock.elapsedRealtime(), true)
             if (!ready) status("MESSAGGIO INVIATO — ATTENDO 0,3 SECONDI")
             return ready

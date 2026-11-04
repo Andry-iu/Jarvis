@@ -36,6 +36,7 @@ import org.json.JSONTokener
 class WebChatActivity : Activity() {
     companion object {
         const val EXTRA_AUTOMATION = "automation"
+        const val EXTRA_TEXT_ONLY = "text_only_preparation_login"
         private const val MICROPHONE_REQUEST_CODE = 41
         private val FILL_GREETING_SCRIPT = """
             (() => {
@@ -811,7 +812,7 @@ class WebChatActivity : Activity() {
 
                 override fun onPermissionRequest(request: PermissionRequest) {
                     runOnUiThread {
-                        if (isFinishing || isDestroyed || webDestroyed ||
+                        if (intent.getBooleanExtra(EXTRA_TEXT_ONLY,false) || isFinishing || isDestroyed || webDestroyed ||
                             (cycleToken != null && !isValidCycle())) {
                             request.deny()
                             return@runOnUiThread
