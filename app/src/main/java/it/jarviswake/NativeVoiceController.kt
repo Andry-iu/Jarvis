@@ -39,10 +39,10 @@ internal class NativeVoiceController(private val service: VoiceAccessibilityServ
             view.setCoverActions(
                 singleTap = { toggleMute() },
                 belowTap = { CoverSettings.setOpaque(service, !CoverSettings.isOpaque(service)) },
-                close = { dismissForExit(); service.requestNativeExit(token, returnHome = false, emergency = true) },
+                close = { userClosedCover(); service.requestNativeExit(token, returnHome = false, emergency = true) },
                 export = { exportControls() },
-                hide = { dismissForExit(); service.requestNativeExit(token, returnHome = true) },
-                revealChat = { dismissForExit(); service.revealNativeChat(token) }
+                hide = { userClosedCover(); service.requestNativeExit(token, returnHome = true) },
+                revealChat = { userClosedCover(); service.revealNativeChat(token) }
             )
             val params = WindowManager.LayoutParams(-1, -1, WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
                 WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
@@ -75,6 +75,10 @@ internal class NativeVoiceController(private val service: VoiceAccessibilityServ
         if (!VoiceCycle.matches(token)) return
         exporting = false
         hud?.visibility = if (service.nativeCoverDismissed(token)) android.view.View.GONE else android.view.View.VISIBLE
+    }
+    private fun userClosedCover() {
+        dismissForExit()
+        PreparedChat.coverClosed(service,token)
     }
     fun dismissForExit() {
         val hadHud = hud != null
@@ -219,13 +223,19 @@ internal class NativeVoiceController(private val service: VoiceAccessibilityServ
                     .mapNotNull {it.text?.toString()}
                 val projectListing=nodes.any {labels(it).contains("chat")} &&
                     nodes.any {labels(it).any {label -> label=="fonti" || label=="sources"}}
-                if(projectListing || !empty || !PreparedChatPolicy.matches(prepared.hash,prepared.proofLength,texts)) {
+                val contentMatches=if(prepared.linkOnly) start!=null else
+                    PreparedChatPolicy.matches(prepared.hash,prepared.proofLength,texts)
+                if(projectListing || !empty || !contentMatches) {
                     captureControls(nodes,"prepared_chat_pending")
                     status("ATTENDO LA CHAT PREPARATA — NESSUN NUOVO MESSAGGIO")
                     return
                 }
+                if(prepared.linkOnly && System.currentTimeMillis()-prepared.submittedAt<OpeningMessagePolicy.MIN_DELAY_MS) {
+                    status("ATTENDO IL MINIMO DOPO L’INVIO");return
+                }
                 service.confirmPreparedOpening(token)
-                NativeRuntimeSnapshot.save(service,token,"preparation","phase=native_content_observed")
+                NativeRuntimeSnapshot.save(service,token,"preparation",if(prepared.linkOnly)
+                    "phase=native_link_ui_observed" else "phase=native_content_observed")
             }
             // Submission may replace the project header with the conversation title.
             // The completed send was revalidated in the project; keep observing its same-window composer.

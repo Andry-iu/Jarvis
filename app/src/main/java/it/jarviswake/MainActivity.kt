@@ -246,7 +246,7 @@ class MainActivity : Activity() {
             button("Salva progetto per preparazione") {saveChatGptProjectUrl();projectDraft=projectUrlInput.text.toString()}
             button("Aggiorna stato preparazione") {renderMenu(false)}
             button("Riprova preparazione") {if(!VoiceCycle.active) {PreparedChat.retry(this);renderMenu(false)}}
-            button("Copia link chat preparata") {
+            button("Copia link della chat") {
                 PreparedChat.savedLink(this)?.let {url ->
                     getSystemService(android.content.ClipboardManager::class.java)
                         .setPrimaryClip(android.content.ClipData.newPlainText("Chat preparata",url))

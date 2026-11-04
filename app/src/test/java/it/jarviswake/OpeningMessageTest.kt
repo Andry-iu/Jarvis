@@ -106,6 +106,20 @@ class OpeningMessageTest {
             service.getSharedPreferences("prepared_chat_settings",0).edit().putBoolean("enabled",false).apply()
         }
     }
+    @Test fun linkOnlyPreparationStartsVoiceWithoutRequiringOrReinsertingAResponse() {
+        val f=PreparedChat::class.java.getDeclaredField("ledger").apply {isAccessible=true};val previous=f.get(null)
+        val l=PreparedChatLedger(null) {};val project=ChatGptProjectSettings.getUrl(service)
+        val now=System.currentTimeMillis();val a=l.begin(project,NativeChatSettings.project(service),now-1000)!!
+        assertTrue(l.markSubmitted(a.attempt,now-500))
+        assertTrue(l.captureLink(a.attempt,"https://chatgpt.com/c/12345678-1234-4234-8234-123456789abc",now))
+        assertNotNull(l.claim(token,project,NativeChatSettings.project(service),now));f.set(null,l)
+        service.getSharedPreferences("prepared_chat_settings",0).edit().putBoolean("enabled",true).apply()
+        try {
+            controller.poll();assertEquals(0,writes);assertEquals(1,starts)
+        } finally {
+            f.set(null,previous);service.getSharedPreferences("prepared_chat_settings",0).edit().putBoolean("enabled",false).apply()
+        }
+    }
     @Test fun preparedNativeContentStartsVoiceWithoutReinsertingTheOpeningMessage() = withPreparedClaim {
         shadowOf(root).addChild(node("Ho letto le istruzioni del progetto e sono pronto a continuare questa conversazione."))
         controller.poll();assertEquals(0,writes);assertEquals(1,starts)

@@ -43,7 +43,7 @@ internal enum class PreparationPhase { STARTED, READY, CLAIMED, FAILED }
 internal data class PreparedConversation(
     val attempt: String, val project: String, val projectName: String, val createdAt: Long,
     val phase: PreparationPhase = PreparationPhase.STARTED, val url: String = "", val hash: String = "",
-    val proofLength: Int = 0, val readyAt: Long = 0, val cycle: String = "", val error: String = ""
+    val proofLength: Int = 0, val readyAt: Long = 0, val cycle: String = "", val error: String = "", val linkOnly: Boolean = false, val submittedAt: Long = -1L
 )
 
 /** Persistent consumption precedes opening another app; uncertain preparation is never replayed. */
@@ -65,6 +65,20 @@ internal class PreparedChatLedger(initial: PreparedConversation?, private val pe
             set(it.copy(phase=PreparationPhase.FAILED,error=reason))
         }
     }
+    fun markSubmitted(attempt:String,now:Long):Boolean {
+        val current=record?.takeIf {it.attempt==attempt && it.phase==PreparationPhase.STARTED} ?: return false
+        if(now-current.createdAt !in 0..PreparedChatPolicy.PREPARE_TIMEOUT_MS) return false
+        if(current.submittedAt>=0L) return true
+        set(current.copy(submittedAt=now));return true
+    }
+    fun captureLink(attempt:String,url:String,now:Long):Boolean {
+        val current=record?.takeIf {it.attempt==attempt && it.phase==PreparationPhase.STARTED} ?: return false
+        if(current.submittedAt<current.createdAt || current.submittedAt>now ||
+            now-current.createdAt !in 0..PreparedChatPolicy.PREPARE_TIMEOUT_MS) return false
+        val destination=PreparedChatPolicy.conversationUrl(url,current.project) ?: return false
+        set(current.copy(phase=PreparationPhase.READY,url=destination,hash="",proofLength=0,readyAt=now,linkOnly=true))
+        return true
+    }
     fun complete(attempt: String, url: String, reply: String, now: Long): Boolean {
         val current=record?.takeIf {it.attempt==attempt && it.phase==PreparationPhase.STARTED} ?: return false
         if (now-current.createdAt !in 0..PreparedChatPolicy.PREPARE_TIMEOUT_MS) return false
@@ -75,8 +89,10 @@ internal class PreparedChatLedger(initial: PreparedConversation?, private val pe
     }
     fun claim(cycle: String, project: String, name: String, now: Long): PreparedConversation? {
         val current=record?.takeIf {it.phase==PreparationPhase.READY && it.project==project && it.projectName==name} ?: return null
+        val linkCapture=current.linkOnly && current.submittedAt>=current.createdAt && current.readyAt>=current.submittedAt
+        val oldProof=!current.linkOnly && current.proofLength in 24..64 && current.hash.matches(Regex("[a-f0-9]{64}"))
         if (now-current.readyAt !in 0..PreparedChatPolicy.READY_TTL_MS ||
-            PreparedChatPolicy.conversationUrl(current.url,project)==null || current.proofLength !in 24..64 || !current.hash.matches(Regex("[a-f0-9]{64}"))) return null
+            PreparedChatPolicy.conversationUrl(current.url,project)==null || !(linkCapture || oldProof)) return null
         val claimed=current.copy(phase=PreparationPhase.CLAIMED,cycle=cycle)
         set(claimed);return claimed
     }

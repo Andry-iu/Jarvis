@@ -29,6 +29,8 @@ internal object PreparedChat {
     private var script: String?=null
     private var lastPhase=""
     private var lastProgress=""
+    private var closedCycle:String?=null
+    private var preparationPermit:String?=null
     private const val NAMESPACE="prepared_chat_private"
     private fun prefs(c:Context)=c.getSharedPreferences("prepared_chat_settings",Context.MODE_PRIVATE)
     // Enabling is also the user's confirmation that the WebView has the same account/project.
@@ -40,12 +42,12 @@ internal object PreparedChat {
     private fun encode(r:PreparedConversation?)=if(r==null) JSONObject() else JSONObject()
         .put("attempt",r.attempt).put("project",r.project).put("name",r.projectName).put("created",r.createdAt)
         .put("phase",r.phase.name).put("url",r.url).put("hash",r.hash).put("length",r.proofLength)
-        .put("ready",r.readyAt).put("cycle",r.cycle).put("error",r.error)
+        .put("ready",r.readyAt).put("cycle",r.cycle).put("error",r.error).put("linkOnly",r.linkOnly).put("submitted",r.submittedAt)
     private fun decode(j:JSONObject):PreparedConversation? {
         if (!j.has("attempt")) return null
         return PreparedConversation(j.getString("attempt"),j.getString("project"),j.getString("name"),j.getLong("created"),
             PreparationPhase.valueOf(j.getString("phase")),j.optString("url"),j.optString("hash"),j.optInt("length"),
-            j.optLong("ready"),j.optString("cycle"),j.optString("error"))
+            j.optLong("ready"),j.optString("cycle"),j.optString("error"),j.optBoolean("linkOnly"),j.optLong("submitted",-1L))
     }
     private fun repository(c:Context):PreparedChatLedger {
         ledger?.let {return it}
@@ -68,7 +70,7 @@ internal object PreparedChat {
                     else -> "Preparazione testuale in corso; puoi usare il telefono."
                 }
                 PreparationPhase.READY -> if(System.currentTimeMillis()-repository(c).record!!.readyAt in 0..PreparedChatPolicy.READY_TTL_MS)
-                    "Chat preparata e link salvato. Verrà usata una sola volta al prossimo avvio Voice."
+                    "Link della nuova chat salvato dopo l’invio. La risposta non è stata attesa; lo riapro al prossimo avvio Voice."
                     else "Preparazione scaduta; usa Riprova preparazione."
                 PreparationPhase.CLAIMED -> "Chat preparata già assegnata a un ciclo; nessuna seconda apertura automatica."
                 PreparationPhase.FAILED -> if(repository(c).record?.error=="handoff_unconfirmed")
@@ -124,6 +126,12 @@ internal object PreparedChat {
         // Only bounded counts, booleans and fixed codes; never URL, ID, title or response.
         NativeRuntimeSnapshot.save(c,attempt,"preparation","phase=$phase$details")
     }
+    fun coverClosed(c:Context,cycle:String) {
+        if(!enabled(c) || !NativeChatSettings.enabled(c) || closedCycle==cycle) return
+        closedCycle=cycle;preparationPermit=cycle
+        // The HUD is already detached. Creation/storage happen in the next main-loop turn.
+        main.post {maintain(c)}
+    }
     fun maintain(c:Context) {
         if (!enabled(c) || !NativeChatSettings.enabled(c)) {if(view!=null) stop(c,"disabled");return}
         runCatching {
@@ -132,10 +140,17 @@ internal object PreparedChat {
             if (current!=null && (current.project!=project(c) || current.projectName!=NativeChatSettings.project(c))) {
                 destroyView();repo.reset()
             }
-            if (view!=null) return
-            if (VoiceCycle.active) return
-            if (repo.record?.phase==PreparationPhase.STARTED) return // Never reconstruct/replay an uncertain document.
-            if (repo.record?.phase==PreparationPhase.READY || repo.record?.phase==PreparationPhase.FAILED) return
+            val permit=preparationPermit
+            val mayPrepareDuringCycle=permit!=null && VoiceCycle.id==permit
+            if (view!=null) {preparationPermit=null;return}
+            if (VoiceCycle.active && !mayPrepareDuringCycle) return
+            preparationPermit=null // One close authorizes at most one new attempt, including failures.
+            if (repo.record?.phase==PreparationPhase.STARTED) return
+            if (repo.record?.phase==PreparationPhase.READY) return
+            if (repo.record?.phase==PreparationPhase.FAILED) {
+                if(permit==null) return
+                repo.reset()
+            }
             val attempt=repo.begin(project(c),NativeChatSettings.project(c),System.currentTimeMillis()) ?: return
             start(c.applicationContext,attempt)
         }.onFailure {
@@ -166,10 +181,17 @@ internal object PreparedChat {
                     val phase=outcome?.optString("phase").orEmpty()
                     record(c,attempt.attempt,phase.takeIf {it in phases} ?: "invalid_result",progressDetails(outcome))
                     when {
+                        phase=="submitted" -> {
+                            if(runCatching {ledger?.markSubmitted(attempt.attempt,System.currentTimeMillis())==true}.getOrDefault(false))
+                                main.postDelayed(this,500L)
+                            else fail(attempt,"storage_error")
+                        }
                         phase=="ready" -> {
-                            if (outcome?.optBoolean("echoObserved")==true && outcome.optBoolean("urlObserved") &&
-                                ledger?.complete(attempt.attempt,outcome.optString("url"),outcome.optString("reply"),System.currentTimeMillis())==true) {
-                                destroyView();record(c,attempt.attempt,"ready")
+                            val captured=outcome?.optBoolean("submitted")==true && runCatching {
+                                ledger?.captureLink(attempt.attempt,outcome.optString("url"),System.currentTimeMillis())==true
+                            }.getOrDefault(false)
+                            if (captured) {
+                                destroyView();record(c,attempt.attempt,"link_saved")
                             } else fail(attempt,"invalid_result")
                         }
                         phase !in waiting -> fail(attempt,phase.takeIf {it in phases} ?: "invalid_result")
@@ -239,6 +261,7 @@ internal object PreparedChat {
         web.loadUrl(attempt.project)
     }
     fun stop(c:Context,reason:String="service_stopped") {
+        preparationPermit=null
         ledger?.record?.takeIf {it.phase==PreparationPhase.STARTED}?.let {fail(it,reason)}
         destroyView()
     }

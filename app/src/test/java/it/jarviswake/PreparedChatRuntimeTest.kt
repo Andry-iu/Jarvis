@@ -52,7 +52,11 @@ class PreparedChatRuntimeTest {
         shadowOf(web).webViewClient.onPageFinished(web,project)
         shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(500))
     }
-    private fun ready()=JSONObject.quote(JSONObject().put("phase","ready").put("url",url).put("reply",reply).put("echoObserved",true).put("urlObserved",true).toString())
+    private fun ready():String {
+        ledger.record?.let {ledger.markSubmitted(it.attempt,System.currentTimeMillis())}
+        return JSONObject.quote(JSONObject().put("phase","ready").put("url",url).put("submitted",true).toString())
+    }
+
     @Test fun rendererIsDetachedWithConfiguredViewportNeverOpensActivityAndDeniesBothMediaResources() {
         val web=start()
         assertNull(web.parent);assertFalse(web.isAttachedToWindow);// Robolectric's WebView provider has no setFrame delegate; real renderer sizing needs a device.
@@ -126,7 +130,7 @@ class PreparedChatRuntimeTest {
         callback.onReceiveValue(ready());PreparedChat.maintain(app)
         assertNull(PreparedChat.savedLink(app));assertNull(viewField.get(null));assertNull(shadowOf(app).nextStartedActivity)
     }
-    @Test fun readyWithoutOwnedMessageEchoIsRejectedDespiteAValidUrlAndReply() {
+    @Test fun readyWithoutObservedSubmissionIsRejectedDespiteAValidUrl() {
         val web=start();probe(web)
         val outcome=JSONObject().put("phase","ready").put("url",url).put("reply",reply)
             .put("echoObserved",false).put("urlObserved",true)
@@ -146,6 +150,31 @@ class PreparedChatRuntimeTest {
         assertTrue(log.contains("phase=waiting_user users=1000 rawUsers=-1 source=none"))
         assertFalse(log.contains(url));assertFalse(log.contains("PRIVATE_RESPONSE"))
         assertEquals(PreparationPhase.STARTED,ledger.record!!.phase)
+    }
+    @Test fun submittedCallbackThenUrlCaptureClosesTheRendererWithoutAnyResponseEvidence() {
+        val web=start();probe(web)
+        shadowOf(web).lastEvaluatedJavascriptCallback.onReceiveValue(JSONObject.quote(JSONObject().put("phase","submitted").toString()))
+        assertTrue(ledger.record!!.submittedAt>=ledger.record!!.createdAt)
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(500))
+        val outcome=JSONObject().put("phase","ready").put("url",url).put("submitted",true)
+        shadowOf(web).lastEvaluatedJavascriptCallback.onReceiveValue(JSONObject.quote(outcome.toString()))
+        assertEquals(PreparationPhase.READY,ledger.record!!.phase);assertTrue(ledger.record!!.linkOnly)
+        assertEquals(url,PreparedChat.savedLink(app));assertNull(viewField.get(null));assertNull(shadowOf(app).nextStartedActivity)
+    }
+    @Test fun closingCoverQueuesOnePreparationDuringTheSameVoiceCycleWithoutOpeningActivity() {
+        val a=ledger.begin(project,NativeChatSettings.project(app),System.currentTimeMillis())!!
+        assertTrue(ledger.complete(a.attempt,url,reply,System.currentTimeMillis()))
+        assertNotNull(ledger.claim("active",project,NativeChatSettings.project(app),System.currentTimeMillis()))
+        cycleField.set(null,VoiceCycleState().apply {restoreNativeExit("active")})
+        PreparedChat.coverClosed(app,"active");assertNull(viewField.get(null))
+        shadowOf(Looper.getMainLooper()).idle()
+        val attempt=ledger.record!!.attempt
+        assertNotEquals(a.attempt,attempt);assertNotNull(viewField.get(null))
+        assertTrue(VoiceCycle.active);assertFalse(VoiceCycle.touchGate.canDispatch);assertNull(shadowOf(app).nextStartedActivity)
+        PreparedChat.coverClosed(app,"active");shadowOf(Looper.getMainLooper()).idle()
+        assertEquals(attempt,ledger.record!!.attempt)
+        PreparedChat.stop(app);PreparedChat.maintain(app)
+        assertNull(viewField.get(null));assertEquals(PreparationPhase.FAILED,ledger.record!!.phase)
     }
     @Test fun nativeLinkIntentTargetsOnlyChatGptAndKeepsTheCapturedConversationUri() {
         val expected=Intent(Intent.ACTION_VIEW,Uri.parse(url)).setPackage(NativeChatSettings.PACKAGE)

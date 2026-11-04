@@ -48,6 +48,22 @@ class PreparedChatPolicyTest {
         assertNull(l.claim("c",project,"Jarvis",201+PreparedChatPolicy.READY_TTL_MS))
         assertNotNull(l.claim("c",project,"Jarvis",300))
     }
+    @Test fun linkCanBeCapturedWithoutReplyButOnlyAfterObservedSubmissionAndOnlyOnce() {
+        var saved:PreparedConversation?=null
+        val l=PreparedChatLedger(null) {saved=it};val a=l.begin(project,"Jarvis",100)!!
+        assertFalse(l.captureLink(a.attempt,url,110));assertNull(l.claim("c",project,"Jarvis",110))
+        assertTrue(l.markSubmitted(a.attempt,120));assertTrue(l.captureLink(a.attempt,url,130))
+        assertTrue(saved!!.linkOnly);assertEquals("",saved!!.hash);assertEquals(0,saved!!.proofLength)
+        assertFalse(l.captureLink(a.attempt,url,140))
+        assertNotNull(l.claim("c",project,"Jarvis",150));assertNull(l.claim("other",project,"Jarvis",160))
+    }
+    @Test fun invalidOrUnownedLinksNeverBecomeReadyEvenWithoutResponseWaiting() {
+        val l=PreparedChatLedger(null) {};val a=l.begin(project,"Jarvis",100)!!
+        assertTrue(l.markSubmitted(a.attempt,110))
+        assertFalse(l.captureLink("other",url,120));assertFalse(l.captureLink(a.attempt,project,120))
+        assertFalse(l.captureLink(a.attempt,url.replace("/c/","/share/"),120))
+        assertFalse(l.captureLink(a.attempt,url,109));assertEquals(PreparationPhase.STARTED,l.record!!.phase)
+    }
     @Test fun failedNativeHandoffCannotCreateNewPreparationsUntilAnExplicitRetry() {
         val l=PreparedChatLedger(null) {};val a=l.begin(project,"Jarvis",0)!!
         assertTrue(l.complete(a.attempt,url,reply,100));assertNotNull(l.claim("c",project,"Jarvis",200))
