@@ -16,7 +16,6 @@ internal class GoogleVoiceSettingsActivity : Activity() {
     private lateinit var tts: EditText
     private lateinit var minutes: EditText
     private lateinit var project: EditText
-    private lateinit var conversation: EditText
     private lateinit var language: EditText
     private lateinit var voice: EditText
     private lateinit var silence: EditText
@@ -51,17 +50,11 @@ internal class GoogleVoiceSettingsActivity : Activity() {
         tts = secret("Token manuale accesso Text-to-Speech")
         minutes = field("Validità residua dei nuovi token in minuti (1–60)", "30")
         menu.text(if (saved == null) "Nessuna credenziale salvata." else "Credenziali protette presenti. Lascia entrambi i token vuoti per conservarli con la scadenza originale. Per rinnovarli sostituiscili entrambi. Modalità salvata: ${if(saved!!.authMode == "backend") "rinnovo backend" else "token manuali, scadenza ${java.util.Date(saved!!.expiresAt)}"}. La scadenza effettiva può essere precedente.")
-        project = field("Progetto Google per quota", saved?.quotaProject ?: "")
-        conversation = field("Link della conversazione esistente nel progetto ChatGPT", saved?.conversation ?: "")
-        menu.button("Usa conversazione WebView o link già preparato") {
-            val observed=ChatGptPreloader.currentUrl()?.takeIf {GoogleConversation.valid(it)}
-                ?: PreparedChat.savedLink(this)?.takeIf {GoogleConversation.valid(it)}
-            if(observed==null) feedback("Nessun link privato di conversazione nel progetto osservato. Apri e verifica la chat nell’accesso WebView esistente, oppure incolla qui il suo link privato.")
-            else { conversation.setText(observed);feedback("Link osservato inserito nella configurazione; verifica account, spazio e progetto, poi salva.") }
-        }
-        menu.text("Usa il link privato /g/g-p-…/c/UUID della conversazione corrente, nello stesso progetto. Verifica nella WebView account e spazio già configurati. Nessuna nuova chat o selezione dell’ultima conversazione automatica; una bozza presente blocca l’invio.")
+        menu.text("Questo ID riguarda i servizi vocali Google. Il progetto ChatGPT resta JarvisRuntime già configurato nell’app.")
+        project = field("ID progetto Google · credenziali e quota", saved?.quotaProject ?: "")
+        menu.text("Nuova chat automatica a ogni wake o avvio manuale nel progetto ChatGPT già configurato, JarvisRuntime. Usa i messaggi prima e dopo l’attivazione già salvati in Voce e saluto; ciascuno vuoto viene saltato. Nessun link da inserire e nessuna preparazione per un avvio successivo. La nuova chat nasce al primo messaggio previsto, senza ChatGPT Voice; tutti i turni dello stesso ciclo restano lì. Bozze e invii incerti bloccano il percorso, senza aprire altre chat.")
         language = field("Lingua", saved?.language ?: "it-IT")
-        voice = field("Voce", saved?.voice ?: "it-IT-Chirp3-HD-Enceladus")
+        voice = field("Voce", saved?.voice ?: GoogleVoiceSettings.DEFAULT_VOICE)
         silence = field("Pausa di fine frase, ms (400–3000)", (saved?.silenceMs ?: 1200).toString())
         maximum = field("Durata massima frase, ms (5000–50000)", (saved?.maximumMs ?: 50000).toString())
         threshold = field("Soglia locale RMS PCM (100–10000)", (saved?.threshold ?: 600).toString())
@@ -74,11 +67,11 @@ internal class GoogleVoiceSettingsActivity : Activity() {
                 val old=saved
                 val expiry=if (a.isEmpty()) old?.expiresAt ?: 0 else System.currentTimeMillis()+minutes.text.toString().toLong().also { require(it in 1..60) }*60000
                 val c=GoogleVoiceConfig(a.ifEmpty { old?.sttToken ?: "" }, b.ifEmpty { old?.ttsToken ?: "" }, expiry,
-                    project.text.toString().trim(), conversation.text.toString().trim(), language.text.toString().trim(), voice.text.toString().trim(),
+                    project.text.toString().trim(), saved?.conversation ?: "", language.text.toString().trim(), voice.text.toString().trim(),
                     silence.text.toString().toInt(), maximum.text.toString().toInt(), threshold.text.toString().toInt(), if(automatic) "backend" else "manual")
                 GoogleVoiceSettings.save(this,c); saved=c; stt.text.clear(); tts.text.clear()
             }.onSuccess { feedback("Configurazione protetta salvata. Nessuna chiamata Google eseguita.") }
-                .onFailure { feedback("Dati non validi o archivio non disponibile. Verifica token, scadenza, progetto, link e intervalli; nulla viene inviato.") }
+                .onFailure { feedback("Dati non validi o archivio non disponibile. Verifica token, scadenza, progetto Google e intervalli; nulla viene inviato.") }
         }
         menu.button("Verifica voce salvata · solo catalogo Google") {
             val c=saved

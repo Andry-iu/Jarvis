@@ -1,10 +1,26 @@
 (() => {
   const cfg = __JW_CONFIG__;
-  const result = phase => JSON.stringify({phase});
-  const url = new URL(location.href), expected = new URL(cfg.url);
-  if (url.origin !== 'https://chatgpt.com' || url.origin !== expected.origin ||
-      url.pathname.replace(/\/$/, '') !== expected.pathname.replace(/\/$/, '') || url.search || url.hash)
-    return result('wrong_conversation');
+  const project = new URL(cfg.project);
+  const url = new URL(location.href);
+  const key = name => /^g-p-([a-f0-9]{32})(?:-[a-z0-9-]+)?$/i.exec(name)?.[1].toLowerCase() || name;
+  const expectedProject = /^\/g\/(g-p-[a-z0-9_-]+)\/project\/?$/i.exec(project.pathname)?.[1];
+  const clean = u => u.origin + u.pathname.replace(/\/$/, '');
+  const projectRoute = /^\/g\/(g-p-[a-z0-9_-]+)\/project\/?$/i.exec(url.pathname);
+  const chatRoute = /^\/(?:g\/(g-p-[a-z0-9_-]+)\/)?c\/([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})\/?$/i.exec(url.pathname);
+  const routeSafe = url.origin === 'https://chatgpt.com' && project.origin === url.origin && expectedProject &&
+    !url.hash && !url.username && !url.password && !/%/i.test(url.pathname) &&
+    [...url.searchParams].every(([k,v]) => k==='model' && /^[A-Za-z0-9_.-]{1,128}$/.test(v));
+  const inProject = projectRoute && key(projectRoute[1])===key(expectedProject);
+  const ownedChat = chatRoute && chatRoute[1] && key(chatRoute[1])===key(expectedProject);
+  const previous = window.__jarvisGoogleBinding;
+  const previousDirect = chatRoute && previous?.project===key(expectedProject) && previous.url===clean(url);
+  let ledger = window.__jarvisGoogleText;
+  const result = phase => JSON.stringify({phase, ...((ownedChat || previousDirect || ledger?.url===clean(url)) && chatRoute
+    ? {conversation:clean(url),directVerified:!chatRoute[1]} : {})});
+  if (!routeSafe || (!inProject && !ownedChat && !previousDirect && !(chatRoute && !chatRoute[1] && ledger?.turns &&
+      [...ledger.turns.values()].some(t=>t.dispatched)))) return result('wrong_conversation');
+  if (ledger && ledger.session!==cfg.session) return result('old_session');
+  if (ledger?.url && ledger.url!==clean(url)) return result('wrong_conversation');
   const enabled = e => !e.disabled && !e.readOnly && e.getAttribute('aria-disabled') !== 'true';
   const visible = e => { const r=e.getBoundingClientRect(),s=getComputedStyle(e);
     return r.width>8 && r.height>8 && s.display!=='none' && s.visibility!=='hidden' && s.opacity!=='0'; };
@@ -16,20 +32,26 @@
   const editor=editors[0], value=e => (e.value || e.innerText || e.textContent || '').trim();
   // Bind to the observed composer form, never any unrelated button in the document.
   const form=editor.closest('form');
-  if (!form || !document.querySelector('[data-message-author-role]')) return result('unverified_conversation');
-  if (cfg.action==='probe') {
+  const hasMessages=!!document.querySelector('[data-message-author-role]');
+  if (!form || (!inProject && !hasMessages)) return result('unverified_conversation');
+  if (inProject && hasMessages) return result('project_has_messages');
+  if (cfg.action==='probe' || cfg.action==='restart') {
   // No action when Voice, generation or an approval is in progress.
   if ([...document.querySelectorAll('button,[role="button"]')].some(e => visible(e) &&
       (['stop-button','voice-stop-button'].includes(e.getAttribute('data-testid')) ||
        /^(stop generating|interrompi generazione|end voice|termina|end conversation|termina conversazione)$/i.test(e.getAttribute('aria-label') || ''))))
     return result('busy');
-    return result(value(editor) ? 'draft' : enabled(editor) ? 'ready' : 'busy');
+    if(value(editor)) return result('draft');
+    if(!enabled(editor)) return result('busy');
+    if(cfg.action==='restart') return result('restart_ready');
+    if(ownedChat || previousDirect) window.__jarvisGoogleBinding={project:key(expectedProject),url:clean(url)};
+    return result('ready');
   }
   if (!cfg.turn || !cfg.text.trim()) return result('invalid');
-  let ledger=window.__jarvisGoogleText;
-  if (ledger && ledger.session!==cfg.session) return result('old_session');
-  if (!ledger) ledger=window.__jarvisGoogleText={session:cfg.session,turns:new Map()};
+  if (!ledger && cfg.fresh && !inProject) return result('wrong_conversation');
+  if (!ledger) ledger=window.__jarvisGoogleText={session:cfg.session,turns:new Map(),url:ownedChat || previousDirect ? clean(url) : ''};
   let state=ledger.turns.get(cfg.turn);
+  if(cfg.resume && !state) return result('ledger_lost');
   const userBodies=() => [...document.querySelectorAll('[data-message-author-role="user"]')].map(e =>
     (e.querySelector('[data-message-content],.whitespace-pre-wrap') || e).innerText || e.textContent || '');
   const normalize=s => s.replace(/\s+/g,' ').trim();
@@ -63,8 +85,14 @@
     } catch (_) { state.failed=true; return result('write_uncertain'); }
   }
   if (state.dispatched) {
-    return result(!value(editor) && userBodies().filter(t=>normalize(t)===normalize(cfg.text)).length>state.before
-      ? 'observed' : 'waiting_observation');
+    const observed=!value(editor) && userBodies().filter(t=>normalize(t)===normalize(cfg.text)).length>state.before;
+    if(observed && chatRoute) {
+      if(chatRoute[1] && !ownedChat) return result('wrong_conversation');
+      ledger.url=clean(url);
+      window.__jarvisGoogleBinding={project:key(expectedProject),url:ledger.url};
+      return result('observed');
+    }
+    return result('waiting_observation');
   }
   // No action when Voice, generation or an approval is in progress.
   if ([...document.querySelectorAll('button,[role="button"]')].some(e => visible(e) &&

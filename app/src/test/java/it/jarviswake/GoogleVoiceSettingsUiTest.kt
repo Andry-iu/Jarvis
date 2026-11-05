@@ -34,4 +34,25 @@ class GoogleVoiceSettingsUiTest {
         assertThrows(IllegalArgumentException::class.java){c.validate()}
         assertFalse(c.toString().contains("PRIVATE_VALUE"))
     }
+    @Test fun configurationDoesNotRequireOrExposeManualConversationLink() {
+        val config=GoogleVoiceConfig("","",0,"test-project","",authMode="backend")
+        config.validate();assertEquals("",config.conversation)
+        val controller=Robolectric.buildActivity(GoogleVoiceSettingsActivity::class.java).setup()
+        val labels=mutableListOf<String>()
+        fun visit(v:View) {if(v is android.widget.TextView)labels.add(v.text.toString());if(v is android.view.ViewGroup)for(i in 0 until v.childCount)visit(v.getChildAt(i))}
+        visit(controller.get().window.decorView)
+        assertFalse(labels.any{it=="Link della conversazione esistente nel progetto ChatGPT" || it=="Usa conversazione WebView o link già preparato"})
+        assertTrue(labels.any{it.contains("Nuova chat automatica a ogni wake")})
+        controller.pause().stop().destroy()
+    }
+
+    @Test fun economicalMaleIsDefaultAndMigrationPreservesLaterExplicitChoices() {
+        assertEquals("it-IT-Wavenet-F",GoogleVoiceConfig("","",0,"test-project","",authMode="backend").voice)
+        val old=org.json.JSONObject().put("voice","it-IT-Chirp3-HD-Enceladus")
+        assertEquals("it-IT-Wavenet-F",GoogleVoiceSettings.selectedVoice(old))
+        old.put("voiceChoiceVersion",1)
+        assertEquals("it-IT-Chirp3-HD-Enceladus",GoogleVoiceSettings.selectedVoice(old))
+        assertEquals("it-IT-Neural2-F",GoogleVoiceSettings.selectedVoice(org.json.JSONObject().put("voice","it-IT-Neural2-F")))
+    }
+
 }

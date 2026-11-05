@@ -69,15 +69,31 @@ class GoogleVoiceRuntimeTest {
         override fun cancel(){cancelled=true;synthGate?.countDown();sttEnd?.invoke()}
     }
     private class FakeWeb(c:Context,val target:String):WebView(c) {
+        var currentUrl=target.substringBefore("/c/")+"/project"
+        var loads=0
+        val submittedScripts=mutableListOf<String>()
+        var observedNewUrl=target
+        override fun loadUrl(url:String) {loads++;currentUrl=url;post {webViewClient.onPageFinished(this,url)}}
         var sends=0;var writes=0;var probes=0;var draft=false
+        var sendChecks=0
+        var writeReadyAfterCalls=1
+        var holdWrite=false
+        var held:ValueCallback<String>?=null
         var readyAfterProbes=1
         private var stage=0
-        override fun getUrl():String=target
+        override fun getUrl():String=currentUrl
         override fun evaluateJavascript(script:String,callback:ValueCallback<String>?) {
             if(script.startsWith("delete window.")) {callback?.onReceiveValue("null");return}
+            if(script.contains("\"action\":\"restart\"")) {
+                callback?.onReceiveValue(JSONObject.quote(JSONObject().put("phase",if(draft) "draft" else "restart_ready").toString()));return
+            }
+            if(!script.contains("\"action\":\"probe\"") && ++sendChecks<writeReadyAfterCalls) {
+                callback?.onReceiveValue(JSONObject.quote(JSONObject().put("phase","ambiguous_editor").toString()));return
+            }
             val phase=if(script.contains("\"action\":\"probe\"")){probes++;if(draft) "draft" else if(probes<readyAfterProbes) "ambiguous_editor" else "ready"}
-            else when(stage++){0->{writes++;"written"};1->{sends++;"dispatched"};else->"observed"}
-            callback?.onReceiveValue(JSONObject.quote(JSONObject().put("phase",phase).toString()))
+            else when(stage++ % 3){0->{writes++;submittedScripts.add(script);"written"};1->{sends++;currentUrl=observedNewUrl;"dispatched"};else->"observed"}
+            if(holdWrite && phase=="written") {held=callback;return}
+            callback?.onReceiveValue(JSONObject.quote(JSONObject().put("phase",phase).apply {if(phase=="observed") put("conversation",currentUrl)}.toString()))
         }
     }
     @Before fun setup() {
@@ -88,6 +104,8 @@ class GoogleVoiceRuntimeTest {
         GoogleVoiceSettings.enable(app,true)
         shadowOf(app).grantPermissions(Manifest.permission.RECORD_AUDIO)
         capture=FakeCapture();api=FakeApi()
+        GoogleVoiceDependencies.project={"https://chatgpt.com/g/g-p-test/project"}
+        GoogleVoiceDependencies.opening={""};GoogleVoiceDependencies.greeting={""}
         GoogleVoiceDependencies.configuration={config};GoogleVoiceDependencies.capture={capture};GoogleVoiceDependencies.api={api}
         GoogleVoiceDependencies.playback={object:GooglePlayback {
             override var released=true
@@ -314,6 +332,78 @@ class GoogleVoiceRuntimeTest {
         Thread({outcome.set(GoogleVoiceActivity.speak(command,SystemClock.elapsedRealtime()+25000,{true}){})}).apply{isDaemon=true;start()}
         pump{outcome.get()!=null};assertEquals("authentication_failed",outcome.get().getString("code"));assertEquals(0,api.syntheses)
         assertEquals(before,app.getSharedPreferences("google_voice_usage",0).getLong("tts_characters",0));assertFalse(outcome.get().getBoolean("synthesized"))
+    }
+
+    @Test fun eachWakeUsesConfiguredProjectAndBothSavedStartupMessagesExactlyOnce() {
+        GoogleVoiceDependencies.opening={"PRE_CONFIGURATO"};GoogleVoiceDependencies.greeting={"POST_CONFIGURATO"}
+        // Start from the preceding chat as on a real subsequent wake: inspect before navigating.
+        GoogleVoiceDependencies.web={FakeWeb(it,url).also{w->w.currentUrl=url;web=w}}
+        launch();pump{web.sends==2}
+        assertEquals(1,web.loads);assertEquals(0,capture.starts)
+        assertTrue(web.submittedScripts[0].contains("PRE_CONFIGURATO"));assertFalse(web.submittedScripts[0].contains("Rispondi con jarviswake_speak"))
+        assertTrue(web.submittedScripts[1].contains("POST_CONFIGURATO"));assertTrue(web.submittedScripts[1].contains("Rispondi con jarviswake_speak"))
+        assertEquals(url,web.currentUrl);assertEquals(0,api.streams)
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(3));assertEquals(2,web.sends)
+    }
+    @Test fun emptyBeforeStillSendsAfterInNewChatAndEmptyAfterStartsCaptureAfterBefore() {
+        GoogleVoiceDependencies.opening={"PRE_SOLO"};launch();pump{capture.starts==1}
+        assertEquals(1,web.sends);assertEquals(1,web.writes);assertTrue(web.submittedScripts.single().contains("PRE_SOLO"))
+    }
+    @Test fun emptyBeforeAndConfiguredAfterCreatesOneStartupTurnWithoutOpeningMessage() {
+        GoogleVoiceDependencies.greeting={"POST_SOLO"};launch();pump{web.sends==1}
+        assertEquals(1,web.writes);assertEquals(0,capture.starts);assertTrue(web.submittedScripts.single().contains("POST_SOLO"))
+    }
+    @Test fun preAndPostAreFrozenWhenCycleStartsAndNoFuturePreparationIsRequired() {
+        var pre="PRE_FISSATO";var post="POST_FISSATO"
+        GoogleVoiceDependencies.opening={pre};GoogleVoiceDependencies.greeting={post}
+        GoogleVoiceDependencies.web={FakeWeb(it,url).also{w->w.readyAfterProbes=3;web=w}}
+        launch();pre="PRE_CAMBIATO";post="POST_CAMBIATO";pump{web.sends==2}
+        assertTrue(web.submittedScripts[0].contains("PRE_FISSATO"));assertTrue(web.submittedScripts[1].contains("POST_FISSATO"))
+        assertFalse(web.submittedScripts.any{it.contains("CAMBIATO")});assertEquals(0,capture.starts)
+    }
+    @Test fun draftOnPreviousChatPreventsNavigationAndAllStartupMessages() {
+        GoogleVoiceDependencies.opening={"PRE"};GoogleVoiceDependencies.greeting={"POST"}
+        GoogleVoiceDependencies.web={FakeWeb(it,url).also{w->w.currentUrl=url;w.draft=true;web=w}}
+        launch();assertEquals(0,web.loads);assertEquals(url,web.currentUrl);assertEquals(0,web.writes);assertEquals(0,web.sends);assertEquals(0,capture.starts)
+    }
+    @Test fun handoffUsesExistingAuthenticatedWebViewAndStartsNewChatWithoutReplacingItsDraft() {
+        val page=FakeWeb(app,url).also{it.currentUrl=url}
+        val parent=android.widget.FrameLayout(app).apply{addView(page)}
+        val field=ChatGptPreloader::class.java.getDeclaredField("web").apply{isAccessible=true}
+        val previous=field.get(null);field.set(null,java.lang.ref.WeakReference(page))
+        GoogleVoiceDependencies.web={error("Must reuse the live WebView")}
+        try {web=page;launch();pump{capture.starts==1};assertEquals(1,page.loads);assertEquals(0,parent.childCount);assertTrue(page.parent!=null)}
+        finally {field.set(null,previous)}
+    }
+
+    @Test fun closingDuringOpeningInvalidatesLateWriteCallbackWithoutSendOrCoverReturn() {
+        GoogleVoiceDependencies.opening={"PRE_DA_ANNULLARE"}
+        GoogleVoiceDependencies.web={FakeWeb(it,url).also{w->w.holdWrite=true;web=w}}
+        launch();assertEquals(1,web.writes);assertEquals(0,web.sends)
+        val late=web.held!!;val hud=view<HolographicOverlayView>("hud")
+        GoogleVoiceActivity.closeForCycle(token);assertNull(hud.parent)
+        late.onReceiveValue(JSONObject.quote(JSONObject().put("phase","written").toString()))
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(5))
+        assertEquals(0,web.sends);assertEquals(0,capture.starts);assertNull(hud.parent)
+    }
+    @Test fun nextWakeReopensProjectAsNewChatAndDoesNotReusePreviousConversation() {
+        launch();capture.phrase();pump{web.sends==1};shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(1))
+        val firstPage=web;assertEquals(url,web.currentUrl)
+        GoogleVoiceActivity.closeForCycle(token);controller!!.pause().stop().destroy()
+        val nextToken=UUID.randomUUID().toString()
+        cycleField.set(null,VoiceCycleState().apply{begin(nextToken,SystemClock.elapsedRealtime());openWeb(nextToken,SystemClock.elapsedRealtime(),true,true,false,false)})
+        googleField.setBoolean(null,true);GoogleVoiceDependencies.web={error("Must reuse authenticated profile page")}
+        controller=Robolectric.buildActivity(GoogleVoiceActivity::class.java,Intent(app,GoogleVoiceActivity::class.java).putExtra(VoiceCycle.EXTRA_ID,nextToken)).setup()
+        activity=controller!!.get();pump{capture.starts==2}
+        assertSame(firstPage,web);assertEquals("https://chatgpt.com/g/g-p-test/project",web.currentUrl);assertEquals(1,web.loads);assertEquals(1,web.sends)
+        GoogleVoiceActivity.closeForCycle(nextToken)
+    }
+
+    @Test fun startupWaitsForComposerBeforeFirstWriteAndNeverRetriesAMutatedMessage() {
+        GoogleVoiceDependencies.opening={"PRE_DOPO_REACT"}
+        GoogleVoiceDependencies.web={FakeWeb(it,url).also{w->w.writeReadyAfterCalls=3;web=w}}
+        launch();pump{capture.starts==1};assertEquals(1,web.writes);assertEquals(1,web.sends)
+        assertTrue(web.sendChecks>=5)
     }
 
 }

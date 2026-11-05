@@ -57,6 +57,34 @@ internal object GoogleConversation {
     }.getOrDefault(false)
 }
 
+/** Destination comes from the live page of this session, never a saved "next chat" slot. */
+internal object GoogleSessionRoute {
+    fun projectKey(project: String): String? = runCatching {
+        if (!ChatGptProjectSettings.isValidProjectUrl(project)) return null
+        val name = URI(project).path.split('/')[2]
+        Regex("g-p-([a-fA-F0-9]{32})(?:-[A-Za-z0-9-]+)?").matchEntire(name)?.groupValues?.get(1)?.lowercase() ?: name
+    }.getOrNull()
+    fun clean(raw: String): String? = runCatching {
+        val u=URI(raw)
+        if(u.scheme!="https" || u.host!="chatgpt.com" || u.port!=-1 || u.rawUserInfo!=null || u.rawFragment!=null || u.rawPath!=u.path) return null
+        if(u.rawQuery!=null && !u.rawQuery!!.matches(Regex("model=[A-Za-z0-9_.-]{1,128}"))) return null
+        "https://chatgpt.com"+u.path.trimEnd('/')
+    }.getOrNull()
+    fun projectPage(raw: String, project: String): Boolean {
+        val url=clean(raw) ?: return false
+        return projectKey(url)==projectKey(project) && projectKey(project)!=null
+    }
+    fun conversation(raw: String, project: String, allowDirect: Boolean=false): String? {
+        val url=clean(raw) ?: return null
+        val u=URI(url)
+        val match=Regex("/(?:g/(g-p-[A-Za-z0-9_-]+)/)?c/([0-9a-fA-F-]{36})").matchEntire(u.path) ?: return null
+        if(runCatching { java.util.UUID.fromString(match.groupValues[2]).toString().equals(match.groupValues[2],true) }.getOrDefault(false)!=true) return null
+        val name=match.groupValues[1]
+        if(name.isEmpty()) return url.takeIf {allowDirect}
+        return url.takeIf {projectKey("https://chatgpt.com/g/$name/project")==projectKey(project) && projectKey(project)!=null}
+    }
+}
+
 /** A turn is consumed before submission and before accepting speech. No retry after uncertainty. */
 internal class GoogleTurnState(val session: String) {
     var turn: String? = null

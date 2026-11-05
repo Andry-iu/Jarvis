@@ -81,6 +81,17 @@ internal class GoogleVoiceActivity : Activity() {
     private lateinit var transcriptView: CoverTranscriptView
     private lateinit var textToggle: Button
     private lateinit var web: WebView
+    private lateinit var project: String
+    private var conversation = ""
+    private var projectOpened = false
+    private var preSending = false
+    private var preComplete = false
+    private var startupComplete = false
+    private var preDispatchedAt = -1L
+    private lateinit var openingText: String
+    private lateinit var greetingText: String
+    private val writtenTurns = mutableSetOf<String>()
+    private val openingTurn = UUID.randomUUID().toString()
     private lateinit var config: GoogleVoiceConfig
     private var resolvedConfig: GoogleVoiceConfig? = null
     private var credentials: GoogleCredentialSession? = null
@@ -130,11 +141,15 @@ internal class GoogleVoiceActivity : Activity() {
             VoiceCycle.cancel(this, token, "Configura credenziali Google valide, microfono e collegamento plugin; nessun consumo avviato."); finish(); return
         }
         config = selected
+        project = GoogleVoiceDependencies.project(this)
+        if (!ChatGptProjectSettings.isValidProjectUrl(project)) { VoiceCycle.cancel(this, token, "Progetto ChatGPT non valido."); finish(); return }
         if (config.authMode == "backend") {
             credentials = runCatching { GoogleVoiceDependencies.credentials(this) }.getOrNull()
             if (credentials == null) { VoiceCycle.cancel(this, token, "Abbinamento backend non disponibile."); finish(); return }
         }
-        readyDeadline=SystemClock.elapsedRealtime()+35000
+        openingText = GoogleVoiceDependencies.opening(this)
+        greetingText = GoogleVoiceDependencies.greeting(this)
+        readyDeadline=SystemClock.elapsedRealtime()+120000
         window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
         setShowWhenLocked(true); setTurnScreenOn(true)
         root = FrameLayout(this)
@@ -156,8 +171,8 @@ internal class GoogleVoiceActivity : Activity() {
             val bars=insets.getInsets(android.view.WindowInsets.Type.systemBars())
             v.setPadding(bars.left,bars.top,bars.right,bars.bottom);insets
         }
-        // Use the same authenticated WebView profile without moving/reloading a legacy draft.
-        web = retainedWeb?.also { retainedWeb=null } ?: GoogleVoiceDependencies.web(this)
+        // Keep the actual live page. Handoff never navigates away from a user draft.
+        web = retainedWeb?.also { retainedWeb=null } ?: ChatGptPreloader.handoff(token)?.webView ?: GoogleVoiceDependencies.web(this)
         (web.context as? android.content.MutableContextWrapper)?.baseContext=this
         web.alpha = 1f; web.isClickable = true; web.isFocusable = true
         web.importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_YES
@@ -171,7 +186,10 @@ internal class GoogleVoiceActivity : Activity() {
         web.webViewClient = object : WebViewClient() {
             override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
                 if (!request.isForMainFrame) return request.url.scheme !in setOf("https", "about")
-                if (request.url.toString().trimEnd('/') == config.conversation.trimEnd('/')) return false
+                val target=GoogleSessionRoute.clean(request.url.toString())
+                if (conversation.isNotEmpty() && target==conversation) return false
+                if (conversation.isEmpty() && (GoogleSessionRoute.projectPage(request.url.toString(),project) ||
+                    GoogleSessionRoute.conversation(request.url.toString(),project,(preSending || state.phase in setOf("submitting","send_dispatched")))!=null)) return false
                 error("DESTINAZIONE CAMBIATA — CHIUDI O RICONFIGURA"); return true
             }
             override fun onPageFinished(view: WebView, url: String) { if (alive()) verifyReady() }
@@ -203,34 +221,103 @@ internal class GoogleVoiceActivity : Activity() {
         setContentView(root)
         if (android.os.Build.VERSION.SDK_INT >= 33) onBackInvokedDispatcher.registerOnBackInvokedCallback(android.window.OnBackInvokedDispatcher.PRIORITY_DEFAULT) { closeLocal(false) }
         BridgeLink.owner(this, "google_voice", true)
-        WaitingAudio.stop()
-        if (web.url?.trimEnd('/') == config.conversation.trimEnd('/')) verifyReady() else web.loadUrl(config.conversation)
-        main.postDelayed({ if (alive() && VoiceCycle.phase != VoiceCycleState.Phase.VOICE) error("CHAT NON PRONTA — NESSUN INVIO") }, 35000)
+        if (web.url.isNullOrBlank() || web.url == "about:blank") { projectOpened=true; web.loadUrl(project) }
+        else { projectOpened=GoogleSessionRoute.projectPage(web.url.orEmpty(),project); verifyReady() }
+        main.postDelayed({ if (alive() && !startupComplete) error("AVVIO CHAT NON COMPLETATO — NESSUN REINVIO") }, 120000)
     }
     private fun verifyReady() {
         if (!alive() || state.phase != "ready" || capture != null || readyProbePending) return
+        if(projectOpened && !preComplete && openingText.isNotBlank()) { sendOpening(); return }
+        if(projectOpened) preComplete=true
         val epoch=captureEpoch;readyProbeEpoch=epoch;readyProbePending=true
-        web.evaluateJavascript(scriptFor("probe", "", "")) { raw ->
+        web.evaluateJavascript(scriptFor(if(projectOpened) "probe" else "restart", "", "")) { raw ->
             if(readyProbeEpoch==epoch) readyProbePending=false
             if (!alive() || epoch!=captureEpoch || state.phase != "ready" || capture != null) return@evaluateJavascript
+            if(projectOpened) observeConversation(raw)
             when(parse(raw)) {
-                "ready" -> {VoiceCycle.voiceDispatched(token);startListening()}
+                "restart_ready" -> {
+                    // A new wake explicitly requests a new project chat. Never navigate away from a draft.
+                    projectOpened=true;conversation=""
+                    web.evaluateJavascript("delete window.__jarvisGoogleText; delete window.__jarvisGoogleBinding;", null)
+                    web.loadUrl(project)
+                }
+                "ready" -> {
+                    if(!projectOpened) {error("NUOVA CHAT NON CONFERMATA — NESSUN INVIO");return@evaluateJavascript}
+                    if(preDispatchedAt>=0 && SystemClock.elapsedRealtime()-preDispatchedAt<300) {
+                        main.postDelayed({verifyReady()},300-(SystemClock.elapsedRealtime()-preDispatchedAt));return@evaluateJavascript
+                    }
+                    if(!startupComplete) {
+                        startupComplete=true;VoiceCycle.voiceDispatched(token);WaitingAudio.stop()
+                        if(greetingText.isNotBlank()) {
+                            val turn=UUID.randomUUID().toString();check(state.begin(turn));check(state.submitting())
+                            transcriptView.append("Avvio",greetingText)
+                            submit(turn,greetingText);return@evaluateJavascript
+                        }
+                    }
+                    startListening()
+                }
                 "draft" -> error("BOZZA PRESENTE — NESSUNA SCRITTURA O INVIO")
-                "wrong_conversation" -> error("CONVERSAZIONE DIVERSA — NESSUN INVIO")
+                "wrong_conversation", "old_session", "project_has_messages" -> error("PAGINA FUORI DAL PROGETTO DI AVVIO — NESSUN INVIO")
                 else -> {
-                    status("ATTESA COMPOSITORE DELLA CHAT ASSOCIATA…")
+                    status("ATTESA COMPOSITORE JARVISRUNTIME…")
                     if(SystemClock.elapsedRealtime()<readyDeadline) main.postDelayed({verifyReady()},250)
                     else error("COMPOSITORE NON PRONTO — NESSUN INVIO")
                 }
             }
         }
     }
+    private fun sendOpening() {
+        if(preSending || !alive()) return
+        preSending=true
+        val epoch=dispatchEpoch
+        fun step() {
+            if(!alive() || epoch!=dispatchEpoch || preComplete) return
+            web.evaluateJavascript(scriptFor("send",openingTurn,openingText)) { raw ->
+                if(!alive() || epoch!=dispatchEpoch || preComplete) return@evaluateJavascript
+                when(parse(raw)) {
+                    "ambiguous_editor", "unverified_conversation", "busy" -> {
+                        // These phases guarantee no write/click. Never retry after any mutation.
+                        if(!writtenTurns.contains(openingTurn) && SystemClock.elapsedRealtime()<readyDeadline) main.postDelayed({step()},250)
+                        else error("COMPOSITORE DI AVVIO NON PRONTO — NESSUN REINVIO")
+                    }
+                    "written", "waiting_send" -> {
+                        writtenTurns.add(openingTurn)
+                        if(SystemClock.elapsedRealtime()<readyDeadline) main.postDelayed({step()},150)
+                        else error("MESSAGGIO PRIMA NON INVIATO — NESSUN REINVIO")
+                    }
+                    "dispatched", "waiting_observation" -> {
+                        writtenTurns.add(openingTurn)
+                        if(preDispatchedAt<0) preDispatchedAt=SystemClock.elapsedRealtime()
+                        status("MESSAGGIO PRIMA INVIATO — ATTESA NUOVA CHAT…")
+                        if(SystemClock.elapsedRealtime()<readyDeadline) main.postDelayed({step()},200)
+                        else error("NUOVA CHAT NON OSSERVATA — NESSUN REINVIO")
+                    }
+                    "observed" -> {
+                        observeConversation(raw)
+                        if(conversation.isEmpty()) {error("DESTINAZIONE NON CONFERMATA — NESSUN REINVIO");return@evaluateJavascript}
+                        transcriptView.append("Avvio",openingText)
+                        preComplete=true;preSending=false;verifyReady()
+                    }
+                    else -> error("MESSAGGIO PRIMA BLOCCATO O INCERTO — NESSUN REINVIO")
+                }
+            }
+        }
+        step()
+    }
+    private fun observeConversation(raw: String) {
+        val reply=runCatching {JSONObject(JSONTokener(raw).nextValue() as String)}.getOrNull() ?: return
+        if(reply.optString("phase") !in setOf("ready","observed")) return
+        val candidate=reply.optString("conversation")
+        if(candidate.isEmpty()) return
+        val valid=GoogleSessionRoute.conversation(candidate,project,reply.optBoolean("directVerified")) ?: return
+        if(conversation.isEmpty()) conversation=valid
+    }
     private fun parse(raw: String): String = runCatching {
         JSONObject(JSONTokener(raw).nextValue() as String).getString("phase")
     }.getOrDefault("uncertain")
     private fun scriptFor(action: String, turn: String, text: String) = script
-        .replace("__JW_CONFIG__", JSONObject().put("url", config.conversation).put("session", token)
-            .put("turn", turn).put("action", action).put("text", text).toString())
+        .replace("__JW_CONFIG__", JSONObject().put("project", project).put("session", token)
+            .put("turn", turn).put("action", action).put("text", text).put("resume",writtenTurns.contains(turn)).put("fresh",conversation.isEmpty()).toString())
     private fun startListening() {
         if (!alive() || muted || state.phase != "ready") return
         val broker = credentials
@@ -315,10 +402,11 @@ internal class GoogleVoiceActivity : Activity() {
             if (!alive() || state.turn != turn || epoch != dispatchEpoch || state.phase !in setOf("submitting", "send_dispatched")) return
             web.evaluateJavascript(scriptFor("send", turn, text)) { raw ->
                 if (!alive() || state.turn != turn || epoch != dispatchEpoch) return@evaluateJavascript
+                observeConversation(raw)
                 when (parse(raw)) {
-                    "written", "waiting_send" -> if (SystemClock.elapsedRealtime() < until) main.postDelayed({ step() }, 150) else error("INVIO NON DISPONIBILE — NESSUN REINVIO")
+                    "written", "waiting_send" -> { writtenTurns.add(turn); if (SystemClock.elapsedRealtime() < until) main.postDelayed({ step() }, 150) else error("INVIO NON DISPONIBILE — NESSUN REINVIO") }
                     "dispatched", "waiting_observation" -> {
-                        state.dispatched(); status("INVIO ESEGUITO — ATTESA RISCONTRO CHAT")
+                        writtenTurns.add(turn); state.dispatched(); status("INVIO ESEGUITO — ATTESA RISCONTRO CHAT")
                         if (SystemClock.elapsedRealtime() < until) main.postDelayed({ step() }, 200) else waitReply(turn, false)
                     }
                     "observed" -> { state.dispatched(); state.observed(); waitReply(turn, true) }
@@ -395,6 +483,7 @@ internal class GoogleVoiceActivity : Activity() {
     }
     private fun error(message: String) {
         if (!alive()) return
+        WaitingAudio.stop()
         captureEpoch++; dispatchEpoch++; capture?.stop(); api?.cancel(); playback?.stop()
         state.fail(); status(message)
         if (completion != null) finishSpeech("cancelled", false)
@@ -412,6 +501,7 @@ internal class GoogleVoiceActivity : Activity() {
     }
     private fun newDictation() {
         if (!alive()) return
+        if (!startupComplete) { error("AVVIO ANNULLATO — CHIUDI IL CICLO; NESSUN REINVIO"); return }
         captureEpoch++; dispatchEpoch++; capture?.stop(); api?.cancel(); playback?.stop()
         if (completion != null) finishSpeech("cancelled", false)
         state.close(); state = GoogleTurnState(token)
@@ -513,6 +603,9 @@ internal class GoogleVoiceActivity : Activity() {
 /** Test seams use simulated providers only; production defaults never run without an explicit cycle. */
 internal object GoogleVoiceDependencies {
     var credentials: (android.content.Context) -> GoogleCredentialSession = { GoogleTokenBroker(requireNotNull(BridgeSettings.read(it))) }
+    var opening: (android.content.Context) -> String = { OpeningMessageSettings.get(it) }
+    var greeting: (android.content.Context) -> String = { VoiceGreetingSettings.get(it) }
+    var project: (android.content.Context) -> String = { ChatGptProjectSettings.getUrl(it) }
     var configuration: (android.content.Context) -> GoogleVoiceConfig? = { GoogleVoiceSettings.read(it) }
     var api: (GoogleVoiceConfig) -> GoogleSpeechApi = { GoogleSpeechClient(it) }
     var capture: (GoogleVoiceConfig) -> GoogleCapture = { GoogleAudioCapture(it) }
@@ -520,6 +613,8 @@ internal object GoogleVoiceDependencies {
     var web: (android.content.Context) -> WebView = { WebView(android.content.MutableContextWrapper(it.applicationContext)) }
     fun reset() {
         credentials = { GoogleTokenBroker(requireNotNull(BridgeSettings.read(it))) }
+        opening = { OpeningMessageSettings.get(it) }; greeting = { VoiceGreetingSettings.get(it) }
+        project = { ChatGptProjectSettings.getUrl(it) }
         configuration = { GoogleVoiceSettings.read(it) }; api = { GoogleSpeechClient(it) }
         capture = { GoogleAudioCapture(it) }; playback = { GoogleAudioPlayback() }; web = { WebView(android.content.MutableContextWrapper(it.applicationContext)) }
     }

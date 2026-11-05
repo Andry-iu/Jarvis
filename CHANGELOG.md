@@ -1,3 +1,11 @@
+## 0.5.109 / 131 — nuova chat corrente, messaggi di avvio e voce economica
+
+- Ogni wake/avvio manuale apre il compositore del progetto già configurato JarvisRuntime. Invio singolo del messaggio prima, attivazione locale Google e messaggio dopo con risposta plugin; ciascun campo vuoto resta disattivato.
+- Eliminato il campo manuale del link: destinazione ricavata dall’invio corrente osservato. Nessuna preparazione per avvii successivi, riuso di vecchie chat o ChatGPT Voice nel ramo Google.
+- Controllo bozze prima della navigazione, binding progetto/chat e blocco dei reinvii dopo perdita del ledger/risultato incerto. Cover libera immediatamente anche durante avvio.
+- Voce iniziale maschile economica it-IT-Wavenet-F, configurabile; migrazione del precedente default Enceladus preservando scelte personalizzate e successive modifiche. Credenziali e rinnovo .108 conservati.
+- Test simulati e anti-regressione, firma permanente e prove Galaxy in VERIFICATION.md. Nessuna API Google reale consumata, Watch/Windows invariati.
+
 ## 0.5.108 / 130 — rinnovo automatico Google
 
 - Aggiunta autenticazione opzionale con account di servizio custodito e cifrato nel backend esistente; pagina privata per configurare/rimuovere la chiave del telefono abbinato.

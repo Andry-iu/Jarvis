@@ -63,4 +63,14 @@ class GoogleVoicePolicyTest {
         assertThrows(IllegalArgumentException::class.java){GoogleStreamingWire.finals(byteArrayOf(18,16,1))}
         assertThrows(IllegalArgumentException::class.java){GoogleStreamingWire.finals(GoogleStreamingWire.bytes(1,byteArrayOf(8,7)))}
     }
+    @Test fun currentCycleRouteBindsOnlyConfiguredProjectAndValidatesDirectChatProofSeparately() {
+        val project="https://chatgpt.com/g/g-p-1234567890abcdef1234567890abcdef-jarvisruntime/project"
+        val chat="https://chatgpt.com/g/g-p-1234567890abcdef1234567890abcdef/c/12345678-1234-4234-8234-123456789abc"
+        assertTrue(GoogleSessionRoute.projectPage(project,project));assertEquals(chat,GoogleSessionRoute.conversation(chat,project))
+        assertNull(GoogleSessionRoute.conversation(chat.replace("90abcdef/c","90abcdee/c"),project))
+        val direct="https://chatgpt.com/c/12345678-1234-4234-8234-123456789abc"
+        assertNull(GoogleSessionRoute.conversation(direct,project));assertEquals(direct,GoogleSessionRoute.conversation(direct,project,true))
+        for(raw in listOf(chat+"#wrong",chat+"?share=true",chat.replace("chatgpt.com","chatgpt.com.evil"),chat.replace("/c/","/%63/")))assertNull(GoogleSessionRoute.conversation(raw,project,true))
+    }
+
 }

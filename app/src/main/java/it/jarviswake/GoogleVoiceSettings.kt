@@ -5,7 +5,7 @@ import org.json.JSONObject
 
 internal data class GoogleVoiceConfig(
     val sttToken: String, val ttsToken: String, val expiresAt: Long, val quotaProject: String,
-    val conversation: String, val language: String = "it-IT", val voice: String = "it-IT-Chirp3-HD-Enceladus",
+    val conversation: String, val language: String = "it-IT", val voice: String = GoogleVoiceSettings.DEFAULT_VOICE,
     val silenceMs: Int = 1200, val maximumMs: Int = 50000, val threshold: Int = 600, val authMode: String = "manual"
 ) {
     fun validate() {
@@ -13,17 +13,21 @@ internal data class GoogleVoiceConfig(
         require(listOf(sttToken, ttsToken).all { (authMode == "backend" && it.isEmpty()) || it.matches(Regex("[A-Za-z0-9._~+/-]{20,4096}={0,2}")) })
         require(authMode == "backend" || expiresAt > System.currentTimeMillis() && expiresAt <= System.currentTimeMillis() + 3600000L)
         require(quotaProject.matches(Regex("[a-z][a-z0-9-]{4,61}[a-z0-9]")))
-        require(GoogleConversation.valid(conversation) && language.matches(Regex("[a-z]{2}-[A-Z]{2}")))
+        require((conversation.isEmpty() || GoogleConversation.valid(conversation)) && language.matches(Regex("[a-z]{2}-[A-Z]{2}")))
         require(voice.startsWith("$language-") && voice.matches(Regex("[A-Za-z0-9-]{5,100}")))
         require(silenceMs in 400..3000 && maximumMs in 5000..50000 && threshold in 100..10000)
     }
     fun json() = JSONObject().put("stt", sttToken).put("tts", ttsToken).put("expiry", expiresAt)
         .put("project", quotaProject).put("conversation", conversation).put("language", language).put("voice", voice)
-        .put("authMode", authMode).put("silence", silenceMs).put("maximum", maximumMs).put("threshold", threshold)
+        .put("voiceChoiceVersion", 1).put("authMode", authMode).put("silence", silenceMs).put("maximum", maximumMs).put("threshold", threshold)
     override fun toString() = "GoogleVoiceConfig(redacted)"
 }
 
 internal object GoogleVoiceSettings {
+    const val DEFAULT_VOICE = "it-IT-Wavenet-F"
+    fun selectedVoice(j: JSONObject): String = j.optString("voice", DEFAULT_VOICE).let {
+        if(j.optInt("voiceChoiceVersion",0)==0 && it=="it-IT-Chirp3-HD-Enceladus") DEFAULT_VOICE else it
+    }
     private fun prefs(c: Context) = c.getSharedPreferences("google_voice_mode", Context.MODE_PRIVATE)
     fun enabled(c: Context) = prefs(c).getBoolean("enabled", false)
     /** The preference is for the next cycle. An active cycle keeps its immutable mode/config. */
@@ -32,7 +36,7 @@ internal object GoogleVoiceSettings {
         val j = BridgeSettings.readPrivate(c, "configuration", "google_voice_private")
         if (!j.has("stt")) return null
         return GoogleVoiceConfig(j.getString("stt"), j.getString("tts"), j.getLong("expiry"), j.getString("project"),
-            j.getString("conversation"), j.getString("language"), j.getString("voice"), j.getInt("silence"), j.getInt("maximum"), j.getInt("threshold"), j.optString("authMode", "manual"))
+            j.getString("conversation"), j.getString("language"), selectedVoice(j), j.getInt("silence"), j.getInt("maximum"), j.getInt("threshold"), j.optString("authMode", "manual"))
     }
     fun save(c: Context, value: GoogleVoiceConfig) {
         check(!VoiceCycle.active); value.validate()

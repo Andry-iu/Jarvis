@@ -37,7 +37,7 @@ internal class CoverTranscriptView(context: Context) : View(context) {
         return shown
     }
     fun append(role: String, text: String) {
-        require(role in setOf("Dettato", "Jarvis"))
+        require(role in setOf("Dettato", "Jarvis", "Avvio"))
         lines.addLast("$role\n${text.take(8000)}")
         while (lines.size > 20 || lines.sumOf { it.length } > 24000) lines.removeFirst()
         rebuild(); invalidate()
