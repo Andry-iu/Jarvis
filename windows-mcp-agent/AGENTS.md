@@ -4,6 +4,16 @@ Questo sottoprogetto e l'agente Windows Jarvis MCP / Jarvis-Desktop1, distinto d
 
 Prima di intervenire leggere README.md, CONTINUITY.md, CHANGELOG.md e ../docs/mcp-agent/{STATUS,RELEASE_POLICY,OPERATING-RULES,VALIDATION-0.7.0-20261101,SELF-UPDATE}.md. Verificare identita e versione correnti con machine_info; non assumere che gli ID dei verbali siano ancora il bersaglio corretto. Consultare coda, job, ricevute e sessioni del progetto esatto prima di nuove mutazioni.
 
+Compilazione Windows: prima di scegliere un SDK leggere VALIDATION-0.7.3-20261103.md.
+Il metodo gia riuscito su Desktop2 usa Go ufficiale 1.27.0 verificato, SDK e cache
+isolati, GOMAXPROCS=1, GOGC=25 e -p 1 per test/vet/build. Non ricominciare con il
+Go 1.27.3 rilevato da machine_info: ha gia fallito. Usare scripts/build-runtime.ps1,
+che riprende questo profilo e la gestione stderr del precedente build-runtime-059.ps1.
+Nessun cambio al SDK permanente. Errori "package ... not in std" non dimostrano da
+soli file assenti: in questa sessione le directory esistevano e il tentativo con
+cache nuova ha restituito un arresto del compilatore 0xc0000005. Causa non isolata.
+
+
 - Branch di riferimento: reconcile-windows-mcp-agent-20261031. Dal 3 novembre 2026 l utente autorizza permanentemente creazione/uso di ulteriori branch di Andry-iu/Jarvis, con commit/push per i lavori approvati, senza nuova conferma per il solo nome del branch. Non anticipare il via allo sviluppo. Verificare il remoto attuale e le modifiche locali; nessun merge implicito su main, force push o modifica Android.
 - Sorgenti operativi D:\Jarvis\MCP-Source\windows-mcp-agent; root Git D:\Jarvis\MCP-Source. Checkout sparse: includere windows-mcp-agent e docs/mcp-agent. I documenti remoti sono la fonte se non presenti localmente.
 - Ogni rilascio richiede sorgenti/test/documenti/versione/checksum su Git remoto, test/vet/build Windows, backup verificato, rollback isolato, installazione e collaudo MCP. Distinguere ciascun esito. Non sostituire l'agente funzionante prima di queste protezioni.

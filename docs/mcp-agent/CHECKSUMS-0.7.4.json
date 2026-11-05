@@ -1,0 +1,22 @@
+{
+  "version": "0.7.4",
+  "runtime_source_commit": "c662fae247d5edf5e9c99248d00ddc358823e391",
+  "branch": "feature/development-token-meter-20261105",
+  "published": false,
+  "installed": false,
+  "candidates": {
+    "Desktop1": {
+      "sha256": "58d19dbec644f996debda0b8b8aff7833e7f04db5bf9ab031952a03d2b4c23bf",
+      "size_bytes": 12353024,
+      "go": "1.27.0 windows/amd64",
+      "tests": "suite/vet/build + isolated MCP PASS"
+    },
+    "Desktop2": {
+      "sha256": "b3099b8a3f6dd8e9a435296242366afcd44f3c9faa9418a1da4f34f4422bd9d6",
+      "size_bytes": 12404736,
+      "go": "1.27.0 windows/amd64",
+      "profile": "isolated SDK/cache; GOMAXPROCS=1; GOGC=25; -p 1",
+      "tests": "suite/vet/build + isolated MCP PASS"
+    }
+  }
+}

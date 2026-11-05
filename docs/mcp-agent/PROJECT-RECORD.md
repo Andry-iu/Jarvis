@@ -1,3 +1,12 @@
+## 2026-11-05 — Metodo di compilazione ripreso dagli appunti
+
+Su richiamo dell'utente, riusato il profilo Desktop2 gia riuscito il 3 novembre:
+Go 1.27.0 verificato, SDK/cache isolati, GOMAXPROCS=1, GOGC=25, -p 1. Test/vet/build
+e MCP isolato PASS. Metodo riportato in testa ad AGENTS.md e reso ripetibile in
+scripts/build-runtime.ps1. Abbandonati i tentativi non necessari con Go 1.27.3;
+nessuna causa unica dimostrata per i suoi errori. Pubblicazione 0.7.4 bloccata dalla
+revisione automatica, nessuna installazione. Dettagli VALIDATION-0.7.4-20261105.md.
+
 ## 2026-11-05 — Token dello sviluppo, conservando i dialoghi
 
 Richiesta: distinguere il consumo del lavoro sui progetti dai dialoghi, senza

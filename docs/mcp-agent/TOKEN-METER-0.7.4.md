@@ -29,6 +29,12 @@ Lettura senza inferenza, anche quando Codex e disabilitato o le guardie bloccano
 ```
 
 Usare task_start con il payload sopra se il catalogo client e precedente.
+Se il catalogo client di codex_turn non espone usage_category, usare anche per
+il dispatch la compatibilita task_start/runtime, con request completa
+(operation=codex_turn, machine_id, project, thread_id, text, request_id univoco e
+usage_category=development). Il vecchio comando diretto senza categoria produce
+unclassified e non un consumo di sviluppo inventato.
+
 usage_category accetta anche all nel solo report. thread_id e facoltativo;
 limit 1..200, offset >=0. Riepiloghi sull'intero insieme filtrato, dettagli
 paginati. Ogni computer conserva il proprio registro; nessuna somma implicita
@@ -77,3 +83,23 @@ baseline ignota, evento mancante, confine esterno, evento tardivo, reset, snapsh
 malformati, null, corruzione preservata, overflow e nessun replay. Integrazione
 reader con processo figlio RPC simulato; nessun modello o rete. Verbale con esiti
 Windows, pubblicazione e installazione: VALIDATION-0.7.4-20261105.md.
+
+## Compilazione e ripresa: procedura esistente
+
+Seguire il profilo Windows gia riuscito per 0.7.3 e documentato nel relativo
+verbale: SDK ufficiale Go 1.27.0 verificato, cache nuova per ogni esecuzione,
+GOMAXPROCS=1, GOGC=25 e -p 1. scripts/build-runtime.ps1 raccoglie gli stessi
+comandi test/vet/build, con gestione stderr gia presente in build-runtime-059.ps1.
+Non usare nuovamente Go 1.27.3 come primo tentativo su Desktop2.
+Il SDK resta temporaneo; non modificare toolchain permanente o agent.env.
+
+```powershell
+powershell.exe -NoProfile -File scripts\build-runtime.ps1 -GoExe <SDK1270> -GitExe <git> -SourceCommit <sha> -Candidate <exe-separato> -Log <log>
+powershell.exe -NoProfile -File scripts\test-token-meter-mcp.ps1 -Candidate <exe-separato> -TestHome <cartella-nuova> -Log <log>
+```
+
+La prima procedura impone Go 1.27.0 e crea/rimuove solo la propria cache unica;
+la seconda usa un agente isolato con Codex disabilitato, non un'installazione.
+Distribuzione sempre scripts/update-agent.ps1 via update_prepare/update_execute,
+con sorgenti gia pubblicati, hash/identita, backup e rehearsal prima dello stop.
+Non introdurre percorsi di aggiornamento diversi fra PC.

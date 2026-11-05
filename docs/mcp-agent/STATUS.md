@@ -1,18 +1,26 @@
-# Agente 0.7.4 — misurazione separata dei token di sviluppo
+# Agente 0.7.4 — token di sviluppo separati dai dialoghi
 
-5 novembre 2026. Registro persistente per turno Codex, progetto, computer e
-categoria esplicita: development, dialogue, other, unclassified. I dialoghi non
-vengono cancellati, modificati o copiati nel registro. Il report di default
-seleziona development; omettere la categoria al dispatch significa unclassified.
+5 novembre 2026. Implementazione e test completati: suite/vet/race Linux,
+test/vet/build Windows e MCP isolato su entrambi i PC. I dialoghi restano intatti.
+Desktop2: riusato il profilo gia riuscito della 0.7.3, Go ufficiale 1.27.0,
+SDK/cache isolati, GOMAXPROCS=1, GOGC=25, -p 1. Non ripartire con Go 1.27.3.
+Profilo ripetibile: scripts/build-runtime.ps1; dettagli in AGENTS.md e nel verbale.
 
-Implementazione e test locali completati; collaudo nativo, pubblicazione e
-installazione hanno esiti distinti nel verbale VALIDATION-0.7.4-20261105.md.
-Branch: feature/development-token-meter-20261105, base agente 0.7.3.
-Nuovo comando codex_token_usage, disponibile anche tramite task_start/runtime.
-Dettagli e ripresa: docs/mcp-agent/TOKEN-METER-0.7.4.md.
-Misura solo turni inviati a Codex da questo agente. Non osserva questa chat,
-ChatGPT Voice, trascrizioni, TTS o altri client; niente recupero retroattivo.
-Guardie economiche invariate. Nessuna inferenza richiesta per leggere il report.
+Sorgente runtime locale c662fae247d5edf5e9c99248d00ddc358823e391, branch
+feature/development-token-meter-20261105. Pubblicazione respinta dalla revisione
+automatica: gli appunti riportano autorizzazione permanente, ma il revisore
+richiede un'approvazione utente esplicita per la condivisione verso Andry-iu/Jarvis.
+Nessun aggiramento; nessun rilascio installato. Entrambi operativi ancora 0.7.3.
+Checksum candidati in CHECKSUMS-0.7.4.json; esiti e limiti nel verbale
+VALIDATION-0.7.4-20261105.md. Installare solo dopo pubblicazione, tramite updater
+canonico, backup e rehearsal; mai modificare la procedura fra PC.
+
+Nuovo comando codex_token_usage, anche via task_start/runtime. Categoria default
+report development; categoria omessa al dispatch unclassified. Righe distinte
+per sviluppo, dialogo, altro, non classificato. Misura solo Codex inoltrato da
+Jarvis: non questa chat/Voice, trascrizioni, TTS o altri client. Nessun recupero
+retroattivo o conversione quota/token. Guardie economiche invariate.
+Specifica e comandi: docs/mcp-agent/TOKEN-METER-0.7.4.md.
 
 Le sezioni successive sono storiche.
 
