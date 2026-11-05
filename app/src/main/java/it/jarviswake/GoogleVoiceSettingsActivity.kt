@@ -22,12 +22,14 @@ internal class GoogleVoiceSettingsActivity : Activity() {
     private lateinit var silence: EditText
     private lateinit var maximum: EditText
     private lateinit var threshold: EditText
+    private var automatic = false
     private var saved: GoogleVoiceConfig? = null
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         window.setDecorFitsSystemWindows(false)
         window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
         saved = runCatching { GoogleVoiceSettings.read(this) }.getOrNull()
+        automatic = saved?.authMode == "backend"
         menu = SplitMenuScreen(this, "Voce Google · ChatGPT testuale", "Google ha costi propri. Nessuna prova di sintesi o trascrizione automatica. Conserva l’account ChatGPT nella WebView; non apre Voice.") { finish() }
         menu.text("Modalità predefinita: ChatGPT Voice. L’interruttore si applica solo alla prossima sessione, dopo il rilascio audio. Le configurazioni restano separate.")
         menu.toggle("Google STT/TTS e ChatGPT testuale", GoogleVoiceSettings.enabled(this), "Cambio reversibile; non interrompe la sessione in corso.") { enabled ->
@@ -35,11 +37,20 @@ internal class GoogleVoiceSettingsActivity : Activity() {
             PreparedChat.stop(this, "voice_mode_changed")
             menu.feedback("Modalità salvata", if (VoiceCycle.active || GoogleVoiceActivity.audioBusy()) "Si applicherà dopo chiusura e rilascio audio." else "Disponibile al prossimo avvio.")
         }
-        menu.text("Autenticazione: OAuth 2.0 utente, scope cloud-platform. Importa token a breve durata ottenuti nel tuo ambiente Google fidato; nessun JSON di service account, refresh token o API key. Nessun segreto va inviato in chat. I token non si rinnovano automaticamente. Progetto/API e relativi permessi devono essere già disponibili; l’app non attiva servizi o fatturazione.")
-        stt = secret("Token accesso Speech-to-Text")
-        tts = secret("Token accesso Text-to-Speech")
+        menu.toggle("Rinnovo automatico dal backend", automatic, "Salva a sessione chiusa. La chiave JSON resta sul backend; i token manuali vengono conservati.") { automatic = it }
+        menu.button("Configura chiave Google nel backend privato") {
+            val pairing = runCatching { BridgeSettings.read(this) }.getOrNull()
+            if (pairing == null || !BridgeProtocol.validOrigin(pairing.origin)) feedback("Configura prima il collegamento JarvisWake Link esistente.")
+            else runCatching { startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(pairing.origin + "/google"))) }
+                .onFailure { feedback("Browser non disponibile. Apri la pagina /google del collegamento privato già abbinato.") }
+        }
+        runCatching { BridgeSettings.read(this) }.getOrNull()?.let { menu.text("ID del telefono abbinato: ${it.deviceId}") }
+        menu.text("Rinnovo automatico: nella pagina privata carica una volta la chiave JSON per il telefono già abbinato. Il backend la cifra e restituisce soltanto token brevi al telefono. Usa qui lo stesso ID progetto del JSON. Nessuna chiave privata nell’APK o nella conversazione. Il file originale resta dove lo hai scaricato: custodiscilo privatamente. Con l’opzione disattivata rimane l’importazione manuale.")
+        menu.text("Autenticazione manuale: OAuth 2.0 utente, scope cloud-platform. Importa token a breve durata ottenuti nel tuo ambiente Google fidato; nessun JSON di service account, refresh token o API key. Nessun segreto va inviato in chat. Nella sola modalità manuale i token non si rinnovano automaticamente. Progetto/API e relativi permessi devono essere già disponibili; l’app non attiva servizi o fatturazione.")
+        stt = secret("Token manuale accesso Speech-to-Text")
+        tts = secret("Token manuale accesso Text-to-Speech")
         minutes = field("Validità residua dei nuovi token in minuti (1–60)", "30")
-        menu.text(if (saved == null) "Nessuna credenziale salvata." else "Credenziali protette presenti. Lascia entrambi i token vuoti per conservarli con la scadenza originale. Per rinnovarli sostituiscili entrambi. Scadenza locale: ${java.util.Date(saved!!.expiresAt)}. La scadenza effettiva può essere precedente.")
+        menu.text(if (saved == null) "Nessuna credenziale salvata." else "Credenziali protette presenti. Lascia entrambi i token vuoti per conservarli con la scadenza originale. Per rinnovarli sostituiscili entrambi. Modalità salvata: ${if(saved!!.authMode == "backend") "rinnovo backend" else "token manuali, scadenza ${java.util.Date(saved!!.expiresAt)}"}. La scadenza effettiva può essere precedente.")
         project = field("Progetto Google per quota", saved?.quotaProject ?: "")
         conversation = field("Link della conversazione esistente nel progetto ChatGPT", saved?.conversation ?: "")
         menu.button("Usa conversazione WebView o link già preparato") {
@@ -59,11 +70,12 @@ internal class GoogleVoiceSettingsActivity : Activity() {
             runCatching {
                 val a=stt.text.toString().trim(); val b=tts.text.toString().trim()
                 require(a.isEmpty()==b.isEmpty())
+                if(automatic) require(BridgeSettings.enabled(this) && BridgeSettings.configured(this))
                 val old=saved
                 val expiry=if (a.isEmpty()) old?.expiresAt ?: 0 else System.currentTimeMillis()+minutes.text.toString().toLong().also { require(it in 1..60) }*60000
                 val c=GoogleVoiceConfig(a.ifEmpty { old?.sttToken ?: "" }, b.ifEmpty { old?.ttsToken ?: "" }, expiry,
                     project.text.toString().trim(), conversation.text.toString().trim(), language.text.toString().trim(), voice.text.toString().trim(),
-                    silence.text.toString().toInt(), maximum.text.toString().toInt(), threshold.text.toString().toInt())
+                    silence.text.toString().toInt(), maximum.text.toString().toInt(), threshold.text.toString().toInt(), if(automatic) "backend" else "manual")
                 GoogleVoiceSettings.save(this,c); saved=c; stt.text.clear(); tts.text.clear()
             }.onSuccess { feedback("Configurazione protetta salvata. Nessuna chiamata Google eseguita.") }
                 .onFailure { feedback("Dati non validi o archivio non disponibile. Verifica token, scadenza, progetto, link e intervalli; nulla viene inviato.") }
@@ -73,7 +85,9 @@ internal class GoogleVoiceSettingsActivity : Activity() {
             if(c==null || VoiceCycle.active) { feedback("Salva prima la configurazione a ciclo chiuso."); return@button }
             feedback("Consultazione esplicita catalogo; nessuna sintesi o trascrizione.")
             Thread({
-                val present=runCatching { GoogleSpeechClient(c).voiceAvailable() }
+                val broker = if(c.authMode == "backend") runCatching { GoogleTokenBroker(requireNotNull(BridgeSettings.read(this))) }.getOrNull() else null
+                val present=runCatching { GoogleSpeechClient(if(c.authMode == "backend") requireNotNull(broker).resolve(c) else c).voiceAvailable() }
+                broker?.cancel()
                 runOnUiThread { if(!isFinishing && !isDestroyed) feedback(when {
                     present.isFailure -> "Catalogo non disponibile: verifica credenziali, permessi, quota e rete. Disponibilità voce non confermata."
                     present.getOrDefault(false) -> "Voce presente nel catalogo Google. Sintesi/riproduzione ancora da collaudare."
@@ -87,9 +101,9 @@ internal class GoogleVoiceSettingsActivity : Activity() {
         }
         menu.button("Elimina credenziali Google") {
             if(VoiceCycle.active || GoogleVoiceActivity.audioBusy()) feedback("Termina prima la sessione.")
-            else { GoogleVoiceSettings.clear(this); saved=null; stt.text.clear(); tts.text.clear(); feedback("Credenziali Google eliminate; modalità e altre configurazioni conservate.") }
+            else { GoogleVoiceSettings.clear(this); saved=null; stt.text.clear(); tts.text.clear(); feedback("Credenziali locali Google eliminate. La chiave sul backend va eliminata dalla pagina privata; modalità e altre configurazioni conservate.") }
         }
-        menu.text("Durante la sintesi microfono e wake sono sospesi: interruzione parlando non attiva. Doppio tocco/basso/Indietro chiudono e fermano l’audio locale; sinistro nasconde soltanto la cover, mantenendo stessa chat e sessione/audio. I lavori desktop già avviati proseguono. Testi in basso a destra mostra dettato definitivo e risposta plugin su tutta la cover, piccoli e semitrasparenti; scorrimento automatico, due dita per la cronologia. Solo RAM della sessione, cancellati alla chiusura. Se il modello omette il comando, attesa visibile e avviso dopo90s; puoi ancora attendere lavori lunghi fino alla scadenza delle credenziali o annullare l’attesa. Nessuna lettura indiscriminata della chat.")
+        menu.text("Durante la sintesi microfono e wake sono sospesi: interruzione parlando non attiva. Doppio tocco/basso/Indietro chiudono e fermano l’audio locale; sinistro nasconde soltanto la cover, mantenendo stessa chat e sessione/audio. I lavori desktop già avviati proseguono. Testi in basso a destra mostra dettato definitivo e risposta plugin su tutta la cover, piccoli e semitrasparenti; scorrimento automatico, due dita per la cronologia. Solo RAM della sessione, cancellati alla chiusura. Se il modello omette il comando, attesa visibile e avviso dopo90s; puoi ancora attendere lavori lunghi in modalità manuale fino alla scadenza delle credenziali o annullare l’attesa. In modalità backend il token viene rinnovato prima della risposta. Nessuna lettura indiscriminata della chat.")
         menu.text(GoogleVoiceUsage.summary(this))
         setContentView(menu)
     }

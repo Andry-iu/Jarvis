@@ -234,7 +234,7 @@ test('Status remains compatible with old snapshots and reports only the notes co
 
 test('The complete guide is available without pairing or a running phone',async()=>{
  const e=env();const r=value(await tool(e,'jarviswake_guide',{topic:'indice',query:''}));
- assert.equal(r.guide_version,'0.5.107');assert.equal(r.version_code,129);assert.equal(r.phone_required,false);assert.ok(r.topics.length>=19);
+ assert.equal(r.guide_version,'0.5.108');assert.equal(r.version_code,130);assert.equal(r.phone_required,false);assert.ok(r.topics.length>=19);
  assert.equal(e.BUCKET.data.size,0);
  for(const topic of ['wake','cover','audio','chatgpt','collegamento','appunti','plugin','maps','chiamate','whatsapp','diagnostica']) assert.ok(r.topics.some(t=>t.topic===topic));
 });
@@ -394,4 +394,72 @@ test('Speech progress is claim-bound, monotonic and never a playback completion'
  const pending=value(await tool(e,'jarviswake_status_result',{device_id:c.deviceId,request_id:args.request_id}));
  assert.equal(pending.state,'pending');assert.equal(pending.progress.stage,'playback_started');assert.equal(pending.result,undefined);
  assert.equal((await send('completed')).status,400);
+});
+
+// Generated test-only RSA key; all token endpoint responses are simulated.
+const googleTestKeys=await crypto.subtle.generateKey({name:'RSASSA-PKCS1-v1_5',modulusLength:2048,publicExponent:new Uint8Array([1,0,1]),hash:'SHA-256'},true,['sign','verify']);
+const googleTestPem='-----BEGIN PRIVATE KEY-----\n'+Buffer.from(await crypto.subtle.exportKey('pkcs8',googleTestKeys.privateKey)).toString('base64')+'\n-----END PRIVATE KEY-----\n';
+const googleTestAccount={type:'service_account',project_id:'voice-test-project',client_email:'jarvis@voice-test-project.iam.gserviceaccount.com',private_key:googleTestPem,private_key_id:'a'.repeat(40),token_uri:'https://oauth2.googleapis.com/token'};
+const googleTestEnv=()=>({...env(),GOOGLE_CREDENTIAL_WRAP_KEY:Buffer.alloc(32,42).toString('base64url')});
+const googleConfigure=(e,c,account=googleTestAccount,headers={...user,Origin:origin,'X-Jarvis-Link':'google'})=>worker.fetch(request('/api/google/configure',{deviceId:c.deviceId,account},headers),e);
+const googleGet=(e,c,extra={})=>worker.fetch(request('/device/google-token',{deviceId:c.deviceId,project:googleTestAccount.project_id,...extra},{Authorization:'Bearer '+c.deviceToken}),e);
+const fakeGoogleToken=()=>new Response(JSON.stringify({access_token:'simulated-private-google-token-value',token_type:'Bearer',expires_in:3600}),{headers:{'content-type':'application/json'}});
+test('Google key configuration requires owner and same-origin; storage is encrypted and bound to device',async()=>{
+ const e=googleTestEnv(),c=await pair(e);
+ for(const h of [{},user,{...user,Origin:'https://evil.example','X-Jarvis-Link':'google'},{...user,Origin:origin}]) assert.ok([401,403].includes((await googleConfigure(e,c,googleTestAccount,h)).status));
+ assert.equal((await googleConfigure(e,c,googleTestAccount,{...user,'oai-authenticated-user-id':'other',Origin:origin,'X-Jarvis-Link':'google'})).status,404);
+ const realFetch=globalThis.fetch;globalThis.fetch=()=>{throw Error('No Google request during configuration');};
+ try {const r=await googleConfigure(e,c);assert.equal(r.status,200);assert.deepEqual(await r.json(),{state:'configured'});}finally{globalThis.fetch=realFetch;}
+ const stored=e.BUCKET.data.get(`google-credentials/${c.deviceId}.json`);assert.ok(stored);assert.ok(!stored.includes('PRIVATE KEY'));assert.ok(!stored.includes(googleTestAccount.client_email));
+ const r=await worker.fetch(new Request(origin+'/api/google/devices',{headers:user}),e);const j=await r.json();assert.deepEqual(j,{devices:[{id:c.deviceId,configured:true}]});assert.ok(!JSON.stringify(j).includes('private_key'));
+ const other=await pair(e);e.BUCKET.data.set(`google-credentials/${other.deviceId}.json`,stored);assert.equal((await googleGet(e,other)).status,500);
+});
+test('Google JSON rejects endpoint overrides, weak/malformed keys and missing runtime wrapping secret',async()=>{
+ const e=googleTestEnv(),c=await pair(e);
+ for(const value of [{...googleTestAccount,token_uri:'https://attacker.example/token'},{...googleTestAccount,type:'authorized_user'},{...googleTestAccount,private_key:'PRIVATE'},{...googleTestAccount,project_id:'../other'}]) assert.equal((await googleConfigure(e,c,value)).status,400);
+ delete e.GOOGLE_CREDENTIAL_WRAP_KEY;assert.equal((await googleConfigure(e,c)).status,503);
+});
+test('Google token exchange verifies JWT, caches single-flight, refreshes near expiry, and never exposes secrets via MCP',async()=>{
+ const e=googleTestEnv(),c=await pair(e);assert.equal((await googleConfigure(e,c)).status,200);
+ const realFetch=globalThis.fetch,realNow=Date.now;let calls=0,clock=realNow();Date.now=()=>clock;
+ globalThis.fetch=async(url,options)=>{
+  calls++;assert.equal(url,'https://oauth2.googleapis.com/token');assert.equal(options.redirect,'error');
+  const p=new URLSearchParams(options.body);assert.equal(p.get('grant_type'),'urn:ietf:params:oauth:grant-type:jwt-bearer');
+  const jwt=p.get('assertion').split('.');const claims=JSON.parse(Buffer.from(jwt[1],'base64url'));assert.equal(claims.aud,url);assert.equal(claims.iss,googleTestAccount.client_email);assert.equal(claims.scope,'https://www.googleapis.com/auth/cloud-platform');assert.equal(claims.exp-claims.iat,3600);assert.equal(claims.sub,undefined);
+  assert.equal(await crypto.subtle.verify('RSASSA-PKCS1-v1_5',googleTestKeys.publicKey,Buffer.from(jwt[2],'base64url'),new TextEncoder().encode(jwt[0]+'.'+jwt[1])),true);return fakeGoogleToken();
+ };
+ try {
+  const replies=await Promise.all([googleGet(e,c),googleGet(e,c),googleGet(e,c)]);assert.ok(replies.every(r=>r.status===200));assert.equal(calls,1);
+  const j=await replies[0].json();assert.equal(j.accessToken,'simulated-private-google-token-value');assert.deepEqual(Object.keys(j).sort(),['accessToken','expiresIn','project']);assert.ok(j.expiresIn<=3600);
+  assert.equal((await googleGet(e,c,{scope:'administrator'})).status,400);assert.equal((await googleGet(e,c,{project:'different-project'})).status,409);assert.equal(calls,1);
+  clock+=3500*1000;assert.equal((await googleGet(e,c)).status,200);assert.equal(calls,2);
+  const result=await tool(e,'jarviswake_google_token',{device_id:c.deviceId});assert.equal(result.isError,true);assert.ok(!JSON.stringify(result).includes(j.accessToken));
+ }finally{globalThis.fetch=realFetch;Date.now=realNow;}
+});
+test('Google broker rejects unpaired clients, raw Google errors and malformed/oversized grants without retries',async()=>{
+ const e=googleTestEnv(),c=await pair(e);
+ assert.equal((await googleGet(e,c)).status,409);
+ assert.equal((await worker.fetch(request('/device/google-token',{deviceId:c.deviceId,project:googleTestAccount.project_id},user),e)).status,401);
+ await googleConfigure(e,c);const realFetch=globalThis.fetch;let calls=0;
+ try {
+  for(const reply of [()=>new Response('SECRET_PROVIDER_ERROR',{status:403}),()=>new Response('not json'),()=>new Response('x'.repeat(17000)),()=>new Response(JSON.stringify({access_token:'short',expires_in:3600,token_type:'Bearer'}))]) {
+   globalThis.fetch=async()=>{calls++;return reply();};const r=await googleGet(e,c);assert.equal(r.status,502);assert.ok(!(await r.text()).includes('SECRET_PROVIDER_ERROR'));
+  }
+  assert.equal(calls,4);
+ }finally{globalThis.fetch=realFetch;}
+});
+test('Google key removal, replacement and pairing revocation invalidate in-flight exchanges and cached grants',async()=>{
+ const e=googleTestEnv(),c=await pair(e);await googleConfigure(e,c);const realFetch=globalThis.fetch;
+ try {
+  let release,started;const gate=new Promise(r=>started=r);globalThis.fetch=async()=>{started();return new Promise(r=>release=r);};
+  const pending=googleGet(e,c);await gate;assert.equal((await googleConfigure(e,c,null)).status,200);release(fakeGoogleToken());assert.equal((await pending).status,409);assert.equal((await googleGet(e,c)).status,409);
+  await googleConfigure(e,c);globalThis.fetch=async()=>fakeGoogleToken();assert.equal((await googleGet(e,c)).status,200);
+  await googleConfigure(e,c);globalThis.fetch=async()=>new Response('',{status:403});assert.equal((await googleGet(e,c)).status,502);
+  await worker.fetch(request('/api/revoke',{}, {...user,Origin:origin,'X-Jarvis-Link':'pair'}),e);assert.equal((await googleGet(e,c)).status,401);assert.equal(e.BUCKET.data.has(`google-credentials/${c.deviceId}.json`),false);
+ }finally{globalThis.fetch=realFetch;}
+});
+test('Google credential page is private, uncached, uses same-origin upload and exposes no key or token',async()=>{
+ const e=googleTestEnv();assert.equal((await worker.fetch(new Request(origin+'/google'),e)).status,401);
+ const r=await worker.fetch(new Request(origin+'/google',{headers:user}),e);assert.equal(r.headers.get('Cache-Control'),'no-store');assert.match(r.headers.get('Content-Security-Policy'),/frame-ancestors 'none'/);
+ const html=await r.text();assert.match(html,/type="file"/);assert.match(html,/\/api\/google\/configure/);assert.ok(!html.includes('localStorage'));assert.ok(!html.includes(googleTestPem));
 });

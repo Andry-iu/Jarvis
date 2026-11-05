@@ -254,4 +254,66 @@ class GoogleVoiceRuntimeTest {
         assertEquals(LaunchActivity::class.java.name,shadowOf(app).nextStartedActivity.component!!.className)
         VoiceCycle.cancel(app,VoiceCycle.id!!,"test cleanup")
     }
+    private fun backendSession(gate: java.util.concurrent.CountDownLatch? = null, fail: Boolean = false): java.util.concurrent.atomic.AtomicInteger {
+        val calls = java.util.concurrent.atomic.AtomicInteger()
+        GoogleVoiceDependencies.configuration = { config.copy(sttToken="",ttsToken="",expiresAt=0,authMode="backend") }
+        GoogleVoiceDependencies.credentials = { object : GoogleCredentialSession {
+            override fun resolve(config:GoogleVoiceConfig,minimumMs:Long):GoogleVoiceConfig {
+                calls.incrementAndGet(); gate?.await(3,java.util.concurrent.TimeUnit.SECONDS)
+                if(fail) error("simulated broker unavailable")
+                return config.copy(sttToken="renewed-fake-stt-access-token",ttsToken="renewed-fake-tts-access-token",expiresAt=System.currentTimeMillis()+3600000)
+            }
+            override fun cancel() {gate?.countDown()}
+        } }
+        return calls
+    }
+    @Test fun backendRenewalCompletesBeforeCaptureAndLongWorkCanReceiveSpeechAfterOriginalExpiry() {
+        val calls=backendSession();launch();pump{capture.starts==1}
+        assertEquals(1,calls.get());capture.phrase();pump{web.sends==1}
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(3700))
+        val state=GoogleVoiceActivity::class.java.getDeclaredField("state").apply{isAccessible=true}.get(activity) as GoogleTurnState
+        assertEquals("waiting_reply",state.phase);assertEquals(1,web.sends)
+        val command=JSONObject().put("params",JSONObject().put("session_id",token).put("turn_id",state.turn).put("text","Risposta dopo lavoro lungo"))
+        val outcome=java.util.concurrent.atomic.AtomicReference<JSONObject>()
+        Thread({outcome.set(GoogleVoiceActivity.speak(command,SystemClock.elapsedRealtime()+25000,{true}){})}).apply{isDaemon=true;start()}
+        pump{outcome.get()!=null};assertTrue(outcome.get().getBoolean("completed"));assertTrue(calls.get()>=2);assertEquals(1,api.syntheses)
+    }
+    @Test fun failedBackendRenewalNeverStartsCaptureOrSendsChatMessages() {
+        val calls=backendSession(fail=true);launch();pump{calls.get()==1}
+        pump{State.getAttempt(app).contains("AUTENTICAZIONE GOOGLE NON DISPONIBILE")}
+        assertEquals(0,capture.starts);assertEquals(0,api.streams);assertEquals(0,web.sends)
+    }
+    @Test fun closeDuringBackendRenewalRemovesCoverAndLateGrantCannotOpenAudioOrRestoreIt() {
+        val gate=java.util.concurrent.CountDownLatch(1);val calls=backendSession(gate)
+        launch();pump{calls.get()==1};assertEquals(0,capture.starts)
+        val hud=view<HolographicOverlayView>("hud");GoogleVoiceActivity.closeForCycle(token)
+        assertNull(hud.parent);gate.countDown();Thread.sleep(30)
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(4))
+        assertEquals(0,capture.starts);assertEquals(0,api.streams);assertEquals(0,web.sends);assertNull(hud.parent);assertFalse(VoiceCycle.active)
+    }
+
+    @Test fun backendAuthFailureBeforeReplyDoesNotCountAnyTtsCharactersOrAttemptSynthesis() {
+        val calls=backendSession()
+        val original=GoogleVoiceDependencies.credentials
+        GoogleVoiceDependencies.credentials={ context ->
+            val delegate=original(context)
+            object:GoogleCredentialSession {
+                override fun resolve(config:GoogleVoiceConfig,minimumMs:Long):GoogleVoiceConfig {
+                    if(minimumMs==90000L) error("simulated revoked credential")
+                    return delegate.resolve(config,minimumMs)
+                }
+                override fun cancel()=delegate.cancel()
+            }
+        }
+        launch();pump{capture.starts==1};assertEquals(1,calls.get())
+        capture.phrase();pump{web.sends==1};shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(1))
+        val before=app.getSharedPreferences("google_voice_usage",0).getLong("tts_characters",0)
+        val state=GoogleVoiceActivity::class.java.getDeclaredField("state").apply{isAccessible=true}.get(activity) as GoogleTurnState
+        val command=JSONObject().put("params",JSONObject().put("session_id",token).put("turn_id",state.turn).put("text","Risposta con credenziale revocata"))
+        val outcome=java.util.concurrent.atomic.AtomicReference<JSONObject>()
+        Thread({outcome.set(GoogleVoiceActivity.speak(command,SystemClock.elapsedRealtime()+25000,{true}){})}).apply{isDaemon=true;start()}
+        pump{outcome.get()!=null};assertEquals("authentication_failed",outcome.get().getString("code"));assertEquals(0,api.syntheses)
+        assertEquals(before,app.getSharedPreferences("google_voice_usage",0).getLong("tts_characters",0));assertFalse(outcome.get().getBoolean("synthesized"))
+    }
+
 }

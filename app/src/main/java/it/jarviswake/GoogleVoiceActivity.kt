@@ -82,6 +82,8 @@ internal class GoogleVoiceActivity : Activity() {
     private lateinit var textToggle: Button
     private lateinit var web: WebView
     private lateinit var config: GoogleVoiceConfig
+    private var resolvedConfig: GoogleVoiceConfig? = null
+    private var credentials: GoogleCredentialSession? = null
     @Volatile private lateinit var state: GoogleTurnState
     private var token = ""
     @Volatile private var closed = false
@@ -128,6 +130,10 @@ internal class GoogleVoiceActivity : Activity() {
             VoiceCycle.cancel(this, token, "Configura credenziali Google valide, microfono e collegamento plugin; nessun consumo avviato."); finish(); return
         }
         config = selected
+        if (config.authMode == "backend") {
+            credentials = runCatching { GoogleVoiceDependencies.credentials(this) }.getOrNull()
+            if (credentials == null) { VoiceCycle.cancel(this, token, "Abbinamento backend non disponibile."); finish(); return }
+        }
         readyDeadline=SystemClock.elapsedRealtime()+35000
         window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
         setShowWhenLocked(true); setTurnScreenOn(true)
@@ -227,6 +233,21 @@ internal class GoogleVoiceActivity : Activity() {
             .put("turn", turn).put("action", action).put("text", text).toString())
     private fun startListening() {
         if (!alive() || muted || state.phase != "ready") return
+        val broker = credentials
+        if (broker == null) { resolvedConfig = config; startCapture(); return }
+        val epoch = ++captureEpoch
+        status("AUTENTICAZIONE GOOGLE — RINNOVO AUTOMATICO…")
+        Thread({
+            val result = runCatching { broker.resolve(config) }
+            main.post {
+                if (!alive() || epoch != captureEpoch || muted || state.phase != "ready") return@post
+                result.onSuccess { resolvedConfig = it; startCapture() }
+                    .onFailure { error("AUTENTICAZIONE GOOGLE NON DISPONIBILE — VERIFICA CHIAVE, PROGETTO E RETE") }
+            }
+        }, "Jarvis-google-auth").apply { isDaemon = true; start() }
+    }
+    private fun startCapture() {
+        if (!alive() || muted || state.phase != "ready") return
         val epoch = ++captureEpoch
         val gate = NativeAudioReleaseGate()
         val until = SystemClock.elapsedRealtime() + 8000
@@ -269,7 +290,7 @@ internal class GoogleVoiceActivity : Activity() {
         val turn = UUID.randomUUID().toString()
         if (!alive() || !state.begin(turn)) { initial.fill(0); return }
         status("DETTATURA GOOGLE — PAUSA PER INVIARE")
-        val client = GoogleVoiceDependencies.api(config); api = client
+        val client = GoogleVoiceDependencies.api(resolvedConfig ?: config); api = client
         try {
             recognition=client.openRecognition { text, samples ->
                 GoogleVoiceUsage.add(applicationContext,"stt_ms",samples/16L,!text.isNullOrBlank())
@@ -313,14 +334,14 @@ internal class GoogleVoiceActivity : Activity() {
             if (alive() && state.turn == turn && state.phase in setOf("send_dispatched", "waiting_reply"))
                 status("NESSUNA VOCE DAL PLUGIN — ATTENDO ANCORA; NUOVA DETTATURA ANNULLA L’ATTESA, NON I LAVORI")
         }, 90000)
-        main.postDelayed({
+        if (config.authMode == "manual") main.postDelayed({
             if(alive() && state.turn==turn && state.phase in setOf("send_dispatched","waiting_reply"))
                 error("CREDENZIALI GOOGLE SCADUTE — CHIUDI LA SESSIONE E RINNOVA SUL TELEFONO; LAVORI CONSERVATI")
         },(config.expiresAt-System.currentTimeMillis()).coerceAtLeast(0))
     }
     private fun acceptSpeech(p: JSONObject, permitted: () -> Boolean, progress: (String) -> Unit, done: (JSONObject) -> Unit): Boolean {
         val text = p.optString("text")
-        if(alive() && System.currentTimeMillis()>=config.expiresAt) {
+        if(alive() && config.authMode == "manual" && System.currentTimeMillis()>=config.expiresAt) {
             error("CREDENZIALI GOOGLE SCADUTE — NESSUNA SINTESI AVVIATA");return false
         }
         if (!alive() || !permitted() || text.isBlank() || text.toByteArray(Charsets.UTF_8).size > 4500 ||
@@ -331,7 +352,6 @@ internal class GoogleVoiceActivity : Activity() {
         dispatchEpoch++ // A late DOM callback must not change the accepted reply phase.
         status("RISPOSTA ACCETTATA — SINTESI GOOGLE…")
         val turn = state.turn
-        val client = GoogleVoiceDependencies.api(config); api = client
         val player = GoogleVoiceDependencies.playback(); playback = player; playbackOwner = player
         val manager = getSystemService(AudioManager::class.java)
         val focusRequest = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT)
@@ -341,7 +361,15 @@ internal class GoogleVoiceActivity : Activity() {
         if (manager.requestAudioFocus(focusRequest) != AudioManager.AUDIOFOCUS_REQUEST_GRANTED) { finishSpeech("audio_focus_denied", false); return true }
         Thread({
             var ok = false
+            var synthesisRequested = false
+            var authenticated = false
             try {
+                val fresh = credentials?.resolve(config, 90000) ?: config
+                authenticated = true
+                check(alive() && state.turn == turn && permitted())
+                val client = GoogleVoiceDependencies.api(fresh); api = client
+                if (!alive() || state.turn != turn || !permitted()) { client.cancel(); error("cancelled") }
+                synthesisRequested = true
                 val pcm = client.synthesize(text); attempt.synthesized = true; progress("synthesized")
                 GoogleVoiceUsage.add(applicationContext, "tts_characters", text.codePointCount(0, text.length).toLong(), true)
                 ok = player.play(pcm, { alive() && state.turn == turn && permitted() }) {
@@ -351,8 +379,8 @@ internal class GoogleVoiceActivity : Activity() {
                 }
                 main.post { if (alive() && state.turn == turn) finishSpeech(if (ok) "speech_completed" else "playback_failed", ok) }
             } catch (_: Exception) {
-                if (!attempt.synthesized) GoogleVoiceUsage.add(applicationContext, "tts_characters", text.codePointCount(0, text.length).toLong(), false)
-                main.post { if (alive() && state.turn == turn) finishSpeech(if (attempt.synthesized) "playback_failed" else "synthesis_failed", false) }
+                if (synthesisRequested && !attempt.synthesized) GoogleVoiceUsage.add(applicationContext, "tts_characters", text.codePointCount(0, text.length).toLong(), false)
+                main.post { if (alive() && state.turn == turn) finishSpeech(if (!authenticated) "authentication_failed" else if (attempt.synthesized) "playback_failed" else "synthesis_failed", false) }
             }
         }, "Jarvis-google-tts").apply { isDaemon = true; start() }
         return true
@@ -363,7 +391,7 @@ internal class GoogleVoiceActivity : Activity() {
             .put("playback_started", playbackStarted).put("completed", ok))
         focus?.let { getSystemService(AudioManager::class.java).abandonAudioFocusRequest(it) }; focus = null
         if (ok) { state.ready(); status("RISPOSTA COMPLETATA — RIPRESA ASCOLTO…"); main.postDelayed({ if (alive()) startListening() }, 700) }
-        else error("RIPRODUZIONE FALLITA — NUOVA DETTATURA O CHIUDI")
+        else error(if (code == "authentication_failed") "RINNOVO GOOGLE FALLITO — NESSUNA SINTESI AVVIATA; VERIFICA BACKEND" else "RIPRODUZIONE FALLITA — NUOVA DETTATURA O CHIUDI")
     }
     private fun error(message: String) {
         if (!alive()) return
@@ -452,6 +480,7 @@ internal class GoogleVoiceActivity : Activity() {
         removeCover()
         if (closed) return
         closed = true
+        credentials?.cancel(); credentials = null; resolvedConfig = null
         if (::transcriptView.isInitialized) transcriptView.clearText()
         if (::web.isInitialized) runCatching { web.evaluateJavascript("delete window.__jarvisGoogleText;", null) }
         if (::state.isInitialized) state.close()
@@ -483,12 +512,14 @@ internal class GoogleVoiceActivity : Activity() {
 
 /** Test seams use simulated providers only; production defaults never run without an explicit cycle. */
 internal object GoogleVoiceDependencies {
+    var credentials: (android.content.Context) -> GoogleCredentialSession = { GoogleTokenBroker(requireNotNull(BridgeSettings.read(it))) }
     var configuration: (android.content.Context) -> GoogleVoiceConfig? = { GoogleVoiceSettings.read(it) }
     var api: (GoogleVoiceConfig) -> GoogleSpeechApi = { GoogleSpeechClient(it) }
     var capture: (GoogleVoiceConfig) -> GoogleCapture = { GoogleAudioCapture(it) }
     var playback: () -> GooglePlayback = { GoogleAudioPlayback() }
     var web: (android.content.Context) -> WebView = { WebView(android.content.MutableContextWrapper(it.applicationContext)) }
     fun reset() {
+        credentials = { GoogleTokenBroker(requireNotNull(BridgeSettings.read(it))) }
         configuration = { GoogleVoiceSettings.read(it) }; api = { GoogleSpeechClient(it) }
         capture = { GoogleAudioCapture(it) }; playback = { GoogleAudioPlayback() }; web = { WebView(android.content.MutableContextWrapper(it.applicationContext)) }
     }

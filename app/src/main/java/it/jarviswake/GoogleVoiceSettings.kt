@@ -6,11 +6,12 @@ import org.json.JSONObject
 internal data class GoogleVoiceConfig(
     val sttToken: String, val ttsToken: String, val expiresAt: Long, val quotaProject: String,
     val conversation: String, val language: String = "it-IT", val voice: String = "it-IT-Chirp3-HD-Enceladus",
-    val silenceMs: Int = 1200, val maximumMs: Int = 50000, val threshold: Int = 600
+    val silenceMs: Int = 1200, val maximumMs: Int = 50000, val threshold: Int = 600, val authMode: String = "manual"
 ) {
     fun validate() {
-        require(listOf(sttToken, ttsToken).all { it.matches(Regex("[A-Za-z0-9._~+/-]{20,4096}={0,2}")) })
-        require(expiresAt > System.currentTimeMillis() && expiresAt <= System.currentTimeMillis() + 3600000L)
+        require(authMode in setOf("manual", "backend"))
+        require(listOf(sttToken, ttsToken).all { (authMode == "backend" && it.isEmpty()) || it.matches(Regex("[A-Za-z0-9._~+/-]{20,4096}={0,2}")) })
+        require(authMode == "backend" || expiresAt > System.currentTimeMillis() && expiresAt <= System.currentTimeMillis() + 3600000L)
         require(quotaProject.matches(Regex("[a-z][a-z0-9-]{4,61}[a-z0-9]")))
         require(GoogleConversation.valid(conversation) && language.matches(Regex("[a-z]{2}-[A-Z]{2}")))
         require(voice.startsWith("$language-") && voice.matches(Regex("[A-Za-z0-9-]{5,100}")))
@@ -18,7 +19,7 @@ internal data class GoogleVoiceConfig(
     }
     fun json() = JSONObject().put("stt", sttToken).put("tts", ttsToken).put("expiry", expiresAt)
         .put("project", quotaProject).put("conversation", conversation).put("language", language).put("voice", voice)
-        .put("silence", silenceMs).put("maximum", maximumMs).put("threshold", threshold)
+        .put("authMode", authMode).put("silence", silenceMs).put("maximum", maximumMs).put("threshold", threshold)
     override fun toString() = "GoogleVoiceConfig(redacted)"
 }
 
@@ -31,7 +32,7 @@ internal object GoogleVoiceSettings {
         val j = BridgeSettings.readPrivate(c, "configuration", "google_voice_private")
         if (!j.has("stt")) return null
         return GoogleVoiceConfig(j.getString("stt"), j.getString("tts"), j.getLong("expiry"), j.getString("project"),
-            j.getString("conversation"), j.getString("language"), j.getString("voice"), j.getInt("silence"), j.getInt("maximum"), j.getInt("threshold"))
+            j.getString("conversation"), j.getString("language"), j.getString("voice"), j.getInt("silence"), j.getInt("maximum"), j.getInt("threshold"), j.optString("authMode", "manual"))
     }
     fun save(c: Context, value: GoogleVoiceConfig) {
         check(!VoiceCycle.active); value.validate()
