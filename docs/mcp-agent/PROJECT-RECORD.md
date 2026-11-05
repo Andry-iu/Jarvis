@@ -1,3 +1,11 @@
+## 2026-11-05 — Token dello sviluppo, conservando i dialoghi
+
+Richiesta: distinguere il consumo del lavoro sui progetti dai dialoghi, senza
+eliminare conversazioni. Modifica agente Windows 0.7.4 sul branch
+feature/development-token-meter-20261105. Contratto TOKEN-METER-0.7.4.md;
+esiti effettivi VALIDATION-0.7.4-20261105.md. Nessuna modifica Android/NestingOpt,
+nessuna API key, inferenza o modifica delle prove economiche.
+
 # Registro di progetto su Git
 
 Regola approvata il 31 ottobre 2026: archivio tecnico sul computer; registro significativo nel repository di ciascun progetto.

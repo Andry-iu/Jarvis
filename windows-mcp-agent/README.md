@@ -1,3 +1,21 @@
+# Agente 0.7.4 — misurazione separata dei token di sviluppo
+
+5 novembre 2026. Registro persistente per turno Codex, progetto, computer e
+categoria esplicita: development, dialogue, other, unclassified. I dialoghi non
+vengono cancellati, modificati o copiati nel registro. Il report di default
+seleziona development; omettere la categoria al dispatch significa unclassified.
+
+Implementazione e test locali completati; collaudo nativo, pubblicazione e
+installazione hanno esiti distinti nel verbale VALIDATION-0.7.4-20261105.md.
+Branch: feature/development-token-meter-20261105, base agente 0.7.3.
+Nuovo comando codex_token_usage, disponibile anche tramite task_start/runtime.
+Dettagli e ripresa: docs/mcp-agent/TOKEN-METER-0.7.4.md.
+Misura solo turni inviati a Codex da questo agente. Non osserva questa chat,
+ChatGPT Voice, trascrizioni, TTS o altri client; niente recupero retroattivo.
+Guardie economiche invariate. Nessuna inferenza richiesta per leggere il report.
+
+Le sezioni successive sono storiche.
+
 # Agente 0.7.3 - installato e collaudato sui due desktop
 
 3 novembre 2026. Desktop1 e Desktop2 aggiornati alla 0.7.3. Letture live di

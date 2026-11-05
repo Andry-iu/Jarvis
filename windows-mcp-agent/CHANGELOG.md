@@ -1,3 +1,11 @@
+## 0.7.4 — 2026-11-05
+
+- Registro privato dei token Codex per incarico/progetto/categoria, senza testo dei dialoghi.
+- Report codex_token_usage: filtro development predefinito, riepiloghi sull'intero insieme filtrato e paginazione dei dettagli; contatori assenti null.
+- Snapshot cumulativi sostituiti, non sommati; cache e ragionamento sono sottoinsiemi, senza doppio conteggio. Confini incerti, riprese, turni esterni e reset espliciti.
+- Raccolta prima del dispatch, esiti falliti/interrotti inclusi se osservati; persistenza atomica e nessun replay. Telemetria incoerente impedisce nuovi dispatch, non cancella stato.
+- Suite senza modelli/API: contatori, categorie, persistenza, privacy, errori e integrazione reader con processo RPC simulato.
+
 # Agente 0.7.3 - stato amministratore e riavvio elevato
 
 3 novembre 2026. Implementati privileges in machine_info/agent_status e nuovi

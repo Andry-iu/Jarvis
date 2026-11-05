@@ -186,6 +186,21 @@ func TestQueueIndependentProjectsCanDispatchTogether(t *testing.T) {
 			t.Fatal("independent project blocked by global job gate")
 		}
 	})
+	// Both real git processes must finish before TempDir cleanup removes their
+	// job directory. Runtime.Close cancels them but does not join command workers.
+	deadline := time.Now().Add(5 * time.Second)
+	for time.Now().Before(deadline) {
+		finished := false
+		withQueue(r, func() {
+			ja, jb := r.Jobs[r.queueFindLocked(a).JobID], r.Jobs[r.queueFindLocked(b).JobID]
+			finished = ja != nil && jb != nil && ja.Status != "running" && jb.Status != "running"
+		})
+		if finished {
+			return
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	t.Fatal("independent git commands did not finish")
 }
 
 func TestQueuePreservesCodexFinalStatus(t *testing.T) {
@@ -212,4 +227,3 @@ func TestQueuePreservesCodexFinalStatus(t *testing.T) {
 		})
 	}
 }
-

@@ -15,6 +15,7 @@ import (
 )
 
 type runtimeRequest struct {
+	UsageCategory    string   `json:"usage_category,omitempty"`
 	WindowID         string   `json:"window_id,omitempty"`
 	SnapshotID       string   `json:"snapshot_id,omitempty"`
 	ElementID        string   `json:"element_id,omitempty"`
@@ -75,6 +76,7 @@ type runtimeTool struct {
 }
 
 var runtimeCatalog = []runtimeTool{
+	{"codex_token_usage", "Read measured per-turn tokens for one project's Jarvis-dispatched Codex work. Default category development; dialogue, other and unclassified are separate. No external ChatGPT/audio visibility, quota conversion or inference.", []string{"project", "thread_id", "usage_category", "offset", "limit"}, []string{"project"}, true},
 	{"agent_restart_admin", "Request an idle agent restart with Windows administrator privileges. Already elevated is a no-op. UAC may require local approval; original remains active on pre-handoff cancellation/failure. Read agent_restart_status and verify new process privileges.", []string{"request_id"}, []string{"request_id"}, false},
 	{"agent_restart_status", "Read durable status of an administrator restart by request_id; acknowledgement is not completion.", []string{"request_id"}, []string{"request_id"}, true},
 	{"tool_usage", "Read persistent per-tool invocation counts, sorted by total; query optionally selects an exact tool name. Counts immediate responses, not completion of queued work; no quota measurement.", []string{"query"}, nil, true},
@@ -104,7 +106,7 @@ var runtimeCatalog = []runtimeTool{
 	{"codex_read", "Read a local session only when its canonical working directory equals this project.", []string{"project", "thread_id"}, []string{"project", "thread_id"}, true},
 	{"codex_start", "Create and save a Jarvis-owned Codex session in this project. ChatGPT-only, normal tier, sandbox and approval policies fixed; no inference until codex_turn.", []string{"project", "request_id"}, []string{"project", "request_id"}, false},
 	{"codex_resume", "Attach an existing idle local session to this project; verifies cwd and active state, never steals an active turn.", []string{"project", "thread_id", "request_id"}, []string{"project", "thread_id", "request_id"}, false},
-	{"codex_turn", "Queue a turn in an attached session; returns queue_id. Use queue_list for turn_id after dispatch, then codex_events. Fresh quota/cost checks at actual start; no paid fallback or automatic replay.", []string{"project", "thread_id", "text", "resources", "request_id"}, []string{"project", "thread_id", "text", "request_id"}, false},
+	{"codex_turn", "Queue a turn in an attached session; returns queue_id. Set usage_category=development for development measurements; omitted means unclassified. Use queue_list then codex_events. Fresh quota/cost checks; no paid fallback or automatic replay.", []string{"project", "thread_id", "text", "resources", "usage_category", "request_id"}, []string{"project", "thread_id", "text", "request_id"}, false},
 	{"codex_steer", "Append instructions to the exact active turn, guarded by turn_id.", []string{"project", "thread_id", "turn_id", "text", "request_id"}, []string{"project", "thread_id", "turn_id", "text", "request_id"}, false},
 	{"codex_interrupt", "Interrupt the specified Codex turn; verify final event before claiming stopped.", []string{"project", "thread_id", "turn_id", "request_id"}, []string{"project", "thread_id", "turn_id", "request_id"}, false},
 	{"codex_events", "Read durable bounded Codex events and pending approvals using the sequence cursor. After turn/completed, wait for jarvis/usage for that turn: final account-wide quota/credits snapshot or explicit unavailability.", []string{"project", "thread_id", "after", "limit"}, []string{"project", "thread_id"}, true},
@@ -150,6 +152,14 @@ func toolsList() any {
 			}
 			if f == "elevated" || f == "overwrite" {
 				s["default"] = false
+			}
+			if f == "usage_category" {
+				s["enum"] = []string{"development", "dialogue", "other", "unclassified"}
+				s["default"] = "unclassified"
+				if t.Name == "codex_token_usage" {
+					s["enum"] = []string{"development", "dialogue", "other", "unclassified", "all"}
+					s["default"] = "development"
+				}
 			}
 			if f == "action" {
 				s["enum"] = []string{"invoke", "set_text", "type_text", "focus", "toggle", "select"}
@@ -316,6 +326,8 @@ func (a *Agent) invokeRuntime(name string, raw json.RawMessage) any {
 }
 func (r *Runtime) call(p runtimeRequest) (any, error) {
 	switch p.Operation {
+	case "codex_token_usage":
+		return r.tokenUsageReport(p)
 	case "maintenance_status":
 		return maintenanceStatus(), nil
 	case "known_folder":

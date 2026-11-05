@@ -49,11 +49,12 @@ func (c *codexClient) recordTurnUsage(thread, turn, status string) error {
 		report["error"] = "quota_read_failed"
 		report["next_step"] = "request codex_status when the service is available"
 	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	report["token_usage"] = c.tokenRunView(thread, turn)
 	b, err := json.Marshal(report)
 	if err != nil {
 		return err
 	}
-	c.mu.Lock()
-	defer c.mu.Unlock()
 	return c.appendEventLocked(thread, "jarvis/usage", b, "")
 }

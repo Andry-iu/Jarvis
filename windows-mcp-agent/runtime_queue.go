@@ -170,6 +170,9 @@ func (r *Runtime) enqueueLocked(p runtimeRequest, label string, deps []string) (
 			return nil, err
 		}
 	} else if p.Operation == "codex_turn" {
+		if !validUsageCategory(p.UsageCategory) {
+			return nil, errors.New("invalid usage_category")
+		}
 		if len(p.Text) == 0 || len(p.Text) > 32768 {
 			return nil, errors.New("text must contain 1-32768 bytes")
 		}

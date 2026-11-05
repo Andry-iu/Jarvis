@@ -27,3 +27,14 @@ Leggere e applicare `../docs/mcp-agent/OPERATING-RULES.md`: raccoglie le decisio
 Per applicazioni usare strumenti diretti MCP e salvataggio nell'app, non batch sostitutivi. Processi non amministratore per default; elevazione solo esplicita. Manutenzione log/batch 30 giorni, avvio/24 ore, proteggendo batch attivi e stato. Installer 1.3.0 contiene agente 0.7.0 e updater canonico, identita/credenziali nuove per ogni PC; agente completo precedente prima aggiornato tramite il proprio batch.
 
 Git: tutto il sorgente dell'installer, test, risorse e documentazione; nessun ZIP o binario generato, neppure come sostituto dei sorgenti. Pubblicazione autorizzata sul branch concordato senza nuova conferma; verificare HEAD remoto e distinguere prove effettive da limiti aperti. Le regole Android restano nel loro ambito.
+
+## Misurazione token dalla 0.7.4
+
+Per lavori di sviluppo inviati tramite codex_turn usare usage_category=development.
+Dialoghi: dialogue; altri impieghi: other. Se l'intento non e noto omettere o usare
+unclassified, senza dedurlo retroattivamente da testo o quota. Lo steering mantiene
+la categoria del turno: per cambiare categoria aprire un altro turno. Leggere
+codex_token_usage per progetto; default development. Report e ledger misurano solo
+Codex inoltrato dall'agente, mai questa chat/Voice/API esterne. Nessun dialogo da
+eliminare. Input include cache; output include ragionamento. Non sommare i
+sottoinsiemi; conservare unknown/null e stato incompleto. Vedere TOKEN-METER-0.7.4.md.

@@ -256,6 +256,9 @@ func (c *codexClient) readLoop(out io.Reader) {
 				}
 			}
 		}
+		if err := c.captureTokenEvent(scope.ThreadID, m.Method, m.Params); err != nil {
+			_ = c.appendEventLocked(scope.ThreadID, "jarvis/token_meter_error", json.RawMessage(`{"available":false,"reason":"token_ledger_unavailable","conversation_preserved":true}`), "")
+		}
 		e := c.appendEventLocked(scope.ThreadID, m.Method, m.Params, approval)
 		c.mu.Unlock()
 		if e != nil {
@@ -636,9 +639,10 @@ func (r *Runtime) codexCallLocked(p runtimeRequest) (any, error) {
 			return nil, e
 		}
 		c.mu.Lock()
+		meterErr := c.initTokenMeter(id, p.Project, p.Operation == "codex_start")
 		c.loaded[id] = true
 		c.mu.Unlock()
-		return map[string]any{"thread_id": id, "project": p.Project, "machine_id": r.MachineID, "model": result.Model, "inference_started": false}, nil
+		return map[string]any{"thread_id": id, "project": p.Project, "machine_id": r.MachineID, "model": result.Model, "inference_started": false, "token_meter_available": meterErr == nil}, nil
 	}
 	link, e := r.codexLink(p, dir)
 	if e != nil {
@@ -674,7 +678,7 @@ func (r *Runtime) codexCallLocked(p runtimeRequest) (any, error) {
 			if active != "" {
 				return nil, errors.New("turn already active")
 			}
-			t, e := readCodexThread(c, p.ThreadID, false)
+			t, e := readCodexThread(c, p.ThreadID, true)
 			if e != nil || !sameCodexDirectory(t, dir) || !codexThreadIdle(t) {
 				return nil, errors.New("session no longer idle or project changed")
 			}
@@ -684,6 +688,12 @@ func (r *Runtime) codexCallLocked(p runtimeRequest) (any, error) {
 			params["approvalsReviewer"] = "user"
 			params["serviceTier"] = "default"
 			params["sandboxPolicy"] = map[string]any{"type": "workspaceWrite", "writableRoots": []string{dir}, "networkAccess": false, "excludeTmpdirEnvVar": true, "excludeSlashTmp": true}
+			c.mu.Lock()
+			meterErr := c.beginTokenRun(p, link.Model, t)
+			c.mu.Unlock()
+			if meterErr != nil {
+				return nil, fmt.Errorf("token meter unavailable; inference not dispatched: %w", meterErr)
+			}
 		}
 		b, e := c.rpc(method, params)
 		if e != nil {
@@ -697,6 +707,10 @@ func (r *Runtime) codexCallLocked(p runtimeRequest) (any, error) {
 			if turn, ok := v["turn"].(map[string]any); ok {
 				id, _ := turn["id"].(string)
 				c.mu.Lock()
+				if l, err := loadTokenLedger(c.dir, c.machineID, p.ThreadID); err == nil {
+					c.bindTokenRun(l, id)
+					_ = c.saveTokenLedger(l)
+				}
 				if c.finished[p.ThreadID] != id && turn["status"] == "inProgress" {
 					c.active[p.ThreadID] = id
 				}
@@ -768,7 +782,7 @@ func (c *codexClient) events(p runtimeRequest) (any, error) {
 	}
 	usagePending := c.finished[p.ThreadID] != "" && finalUsage == nil && !c.closed
 	gap := len(events) > 0 && p.After < events[0].Sequence-1
-	return map[string]any{"events": out, "next_after": next, "history_gap": gap, "pending": pending, "active_turn_id": c.active[p.ThreadID], "broker_connected": !c.closed, "final_usage": finalUsage, "usage_pending": usagePending}, nil
+	return map[string]any{"events": out, "next_after": next, "history_gap": gap, "pending": pending, "active_turn_id": c.active[p.ThreadID], "broker_connected": !c.closed, "final_usage": finalUsage, "usage_pending": usagePending, "token_usage": c.tokenRunView(p.ThreadID, c.finished[p.ThreadID])}, nil
 }
 func (c *codexClient) respond(p runtimeRequest) (any, error) {
 	c.mu.Lock()
