@@ -1,5 +1,19 @@
 # Jarvis Windows MCP Agent — istruzioni di progetto
 
+## Autorizzazione permanente — 5 novembre 2026
+
+Alla richiesta di autorizzare il push della 0.7.4 nel repository pubblico
+Andry-iu/Jarvis, ramo feature/development-token-meter-20261105, l'utente ha
+risposto: «Autorizzo sempre, registrare le regole.»
+
+Per gli interventi Jarvis gia approvati, commit e push dei sorgenti/test/documenti
+su Andry-iu/Jarvis sono autorizzati stabilmente, anche sui relativi branch di
+lavoro. Non chiedere nuovamente il consenso per ogni push o nome del branch.
+Questa autorizzazione comprende la pubblicazione del lavoro 0.7.4 corrente.
+Conservare ambito, verifiche e procedure gia approvati; nessun merge implicito
+su main, force-push, segreto, log grezzo o stato privato pubblicato. Le richieste
+di nuove funzioni restano distinte dall'autorizzazione alla pubblicazione.
+
 Questo sottoprogetto e l'agente Windows Jarvis MCP / Jarvis-Desktop1, distinto dall'app Android nello stesso repository. Le regole Android su APK, firma, cover, Gradle e cloud Android non definiscono l'ambiente di questo agente: l'utente ha autorizzato sviluppo, test e installazione su Desktop1.
 
 Prima di intervenire leggere README.md, CONTINUITY.md, CHANGELOG.md e ../docs/mcp-agent/{STATUS,RELEASE_POLICY,OPERATING-RULES,VALIDATION-0.7.0-20261101,SELF-UPDATE}.md. Verificare identita e versione correnti con machine_info; non assumere che gli ID dei verbali siano ancora il bersaglio corretto. Consultare coda, job, ricevute e sessioni del progetto esatto prima di nuove mutazioni.

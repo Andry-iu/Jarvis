@@ -1,3 +1,11 @@
+## 2026-11-05 — Autorizzazione permanente alla pubblicazione
+
+L'utente conferma esplicitamente «Autorizzo sempre, registrare le regole.» dopo
+la richiesta di push nel repository pubblico Andry-iu/Jarvis per la 0.7.4.
+Registrato consenso stabile a commit/push degli interventi approvati e relativi
+branch; niente nuova domanda a ogni rilascio. Protezioni e ambito invariati.
+Ripreso il rilascio sul branch feature/development-token-meter-20261105.
+
 ## 2026-11-05 — Metodo di compilazione ripreso dagli appunti
 
 Su richiamo dell'utente, riusato il profilo Desktop2 gia riuscito il 3 novembre:

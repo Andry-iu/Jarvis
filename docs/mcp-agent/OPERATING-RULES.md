@@ -1,5 +1,19 @@
 # Regole operative consolidate — 1 novembre 2026
 
+## Autorizzazione permanente — 5 novembre 2026
+
+Alla richiesta di autorizzare il push della 0.7.4 nel repository pubblico
+Andry-iu/Jarvis, ramo feature/development-token-meter-20261105, l'utente ha
+risposto: «Autorizzo sempre, registrare le regole.»
+
+Per gli interventi Jarvis gia approvati, commit e push dei sorgenti/test/documenti
+su Andry-iu/Jarvis sono autorizzati stabilmente, anche sui relativi branch di
+lavoro. Non chiedere nuovamente il consenso per ogni push o nome del branch.
+Questa autorizzazione comprende la pubblicazione del lavoro 0.7.4 corrente.
+Conservare ambito, verifiche e procedure gia approvati; nessun merge implicito
+su main, force-push, segreto, log grezzo o stato privato pubblicato. Le richieste
+di nuove funzioni restano distinte dall'autorizzazione alla pubblicazione.
+
 Ambito: Jarvis Windows MCP Agent e installer. Questo documento raccoglie le decisioni dell'utente; i verbali storici descrivono lo stato alla loro data. Non estende l'autorizzazione ad Android o ad altri progetti.
 
 ## Sviluppo, autorizzazioni e diagnosi

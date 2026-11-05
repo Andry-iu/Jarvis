@@ -86,3 +86,11 @@ conservati per la ripresa. Log token-meter-final-preflight.log su ciascun PC.
 machine_info riletta: agenti operativi ancora 0.7.3, identita preservate.
 ls-remote non restituisce il nuovo branch: sorgente non pubblicato.
 Nessuna sostituzione di binario, riavvio operativo o inferenza Codex eseguiti.
+
+## Autorizzazione esplicita e ripresa — 5 novembre 2026
+
+Dopo la richiesta per il repository pubblico Andry-iu/Jarvis e il branch corrente,
+l'utente: «Autorizzo sempre, registrare le regole.» Autorizzazione permanente
+registrata in AGENTS.md, OPERATING-RULES.md e RELEASE_POLICY.md. Il precedente
+blocco e documentato come fatto storico; push e distribuzione ripresi dopo
+questa conferma esplicita, senza aggirare i rifiuti precedenti.

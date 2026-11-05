@@ -6,14 +6,13 @@ Desktop2: riusato il profilo gia riuscito della 0.7.3, Go ufficiale 1.27.0,
 SDK/cache isolati, GOMAXPROCS=1, GOGC=25, -p 1. Non ripartire con Go 1.27.3.
 Profilo ripetibile: scripts/build-runtime.ps1; dettagli in AGENTS.md e nel verbale.
 
-Sorgente runtime locale c662fae247d5edf5e9c99248d00ddc358823e391, branch
-feature/development-token-meter-20261105. Pubblicazione respinta dalla revisione
-automatica: gli appunti riportano autorizzazione permanente, ma il revisore
-richiede un'approvazione utente esplicita per la condivisione verso Andry-iu/Jarvis.
-Nessun aggiramento; nessun rilascio installato. Entrambi operativi ancora 0.7.3.
-Checksum candidati in CHECKSUMS-0.7.4.json; esiti e limiti nel verbale
-VALIDATION-0.7.4-20261105.md. Installare solo dopo pubblicazione, tramite updater
-canonico, backup e rehearsal; mai modificare la procedura fra PC.
+Sorgente runtime c662fae247d5edf5e9c99248d00ddc358823e391, branch
+feature/development-token-meter-20261105. Il 5 novembre l'utente ha rinnovato
+esplicitamente l'autorizzazione permanente a commit/push nel repository pubblico
+Andry-iu/Jarvis: regola registrata in AGENTS.md, OPERATING-RULES.md e RELEASE_POLICY.md.
+Pubblicazione e distribuzione riprese; nessuna installazione 0.7.4 ancora dichiarata.
+Checksum in CHECKSUMS-0.7.4.json; esiti nel verbale VALIDATION-0.7.4-20261105.md.
+Aggiornamento solo tramite updater canonico, backup e rehearsal.
 
 Nuovo comando codex_token_usage, anche via task_start/runtime. Categoria default
 report development; categoria omessa al dispatch unclassified. Righe distinte
