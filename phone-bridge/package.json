@@ -1,1 +1,1 @@
-{"name":"jarviswake-link","private":true,"type":"module","scripts":{"test":"node --test test/*.test.mjs","build":"bash scripts/build.sh && node scripts/validate-artifact.mjs"}}
+{"name":"jarviswake-link","private":true,"type":"module","scripts":{"test":"node --test --test-isolation=none test/*.test.mjs","build":"bash scripts/build.sh && node scripts/validate-artifact.mjs"}}

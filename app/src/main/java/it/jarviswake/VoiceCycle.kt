@@ -16,6 +16,8 @@ import java.util.UUID
 internal object VoiceCycle {
     const val EXTRA_ID = "it.jarviswake.CYCLE_ID"
     private var state = VoiceCycleState()
+    var googleMode = false
+        private set
     private var hideStopInFlightToken: String? = null
     var microphoneMuted = false
         private set
@@ -55,6 +57,7 @@ internal object VoiceCycle {
 
     fun restoreNativeExit(context: Context,token: String): Boolean {
         if (!state.restoreNativeExit(token)) return false
+        googleMode = false
         app=context.applicationContext as Application
         val filter=IntentFilter(Intent.ACTION_SCREEN_OFF)
         runCatching {
@@ -66,7 +69,8 @@ internal object VoiceCycle {
     }
 
     fun start(context: Context, existingCycleId: String? = null) {
-        if (active) return
+        if (active || GoogleVoiceActivity.audioBusy()) return
+        googleMode = GoogleVoiceSettings.enabled(context)
         state = VoiceCycleState()
         microphoneMuted = false
         hideStopInFlightToken = null
@@ -153,9 +157,10 @@ internal object VoiceCycle {
     }
 
     fun cancel(context: Context, token: String, message: String) {
-        if (matches(token) && VoiceAccessibilityService.endNative(context, token, message)) return
+        if (!googleMode && matches(token) && VoiceAccessibilityService.endNative(context, token, message)) return
         val preparedVoiceObserved=VoiceAccessibilityService.nativeVoiceObserved(context,token)
         if (!state.cancel(token)) return
+        if (googleMode) GoogleVoiceActivity.closeForCycle(token)
         PreparedChat.cycleEnded(context,token,preparedVoiceObserved)
         WatchProbeReturn.cycleEnded(context,token)
         WaitingAudio.stop()

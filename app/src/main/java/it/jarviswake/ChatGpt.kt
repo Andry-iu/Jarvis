@@ -6,6 +6,11 @@ import android.content.Intent
 object ChatGpt {
     fun attempt(context: Context, token: String) {
         if (!VoiceCycle.matches(token)) return
+        if (VoiceCycle.googleMode) {
+            context.startActivity(Intent(context, GoogleVoiceActivity::class.java)
+                .putExtra(VoiceCycle.EXTRA_ID, token).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP))
+            return
+        }
         val armed = VoiceAccessibilityService.armWeb(context, token)
         if (!armed) {
             VoiceCycle.cancel(context, token, "Abilita JarvisWake in Accessibilità per avviare il ciclo Voice.")

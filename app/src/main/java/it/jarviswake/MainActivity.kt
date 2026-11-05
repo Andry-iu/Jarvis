@@ -151,6 +151,7 @@ class MainActivity : Activity() {
                 button("Guida completa") { startActivity(Intent(this,GuideActivity::class.java)) }
             }
             MenuPage.CONFIGURATION -> {
+                button("Voce Google · ChatGPT testuale") { startActivity(Intent(this,GoogleVoiceSettingsActivity::class.java)) }
                 button(getString(R.string.menu_guide)) { captureDrafts();navigation.begin();renderMenu(false) }
                 for(category in MenuNavigation.STEPS.dropLast(1)) button(title(category)) { openPage(category) }
             }
@@ -549,6 +550,11 @@ class MainActivity : Activity() {
     private fun startVoiceCycle() {
         actionFeedback=true
         DiagnosticLog.record(this,DiagnosticLog.Event.MANUAL_ACTION_REQUESTED,monitorStatus="voice")
+        if (GoogleVoiceSettings.enabled(this)) {
+            if (VoiceCycle.active || GoogleVoiceActivity.audioBusy()) reportManualBlock("voice_active","Termina la sessione e attendi il rilascio audio.")
+            else { VoiceCycle.start(this); refreshActionFeedback() }
+            return
+        }
         val blocked=when {
             VoiceCycle.active -> "voice_active" to "Un ciclo Voice è già attivo o sta terminando. Attendi il rilascio del microfono prima di avviarne un altro."
             !VoiceAccessibilityService.isEnabled(this) -> "access_disabled" to "Automazione Voice non abilitata. Apri Configurazione → Permessi e assistente → Abilita automazione Voice."

@@ -27,8 +27,12 @@ internal object BridgeActions {
         failure?.let { throw it }
         @Suppress("UNCHECKED_CAST") return value as T
     }
-    fun execute(c:Context,deviceId:String,command:JSONObject,deadline:Long,permitted:()->Boolean):JSONObject {
+    fun execute(c:Context,deviceId:String,command:JSONObject,deadline:Long,progress:(String)->Unit = {},permitted:()->Boolean):JSONObject {
         val operation=command.getString("operation")
+        if (operation == "speak") {
+            if (!BridgeSettings.enabled(c) || !permitted()) return result("cancelled")
+            return GoogleVoiceActivity.speak(command, deadline, permitted, progress)
+        }
         if(operation in BridgeProtocol.FAVORITE_OPERATIONS) {
             fun favoritesAllowed()=permitted() && BridgeSettings.enabled(c) && BridgeContactFavorites.remoteEnabled(c) &&
                 SystemClock.elapsedRealtime()<deadline && !c.getSystemService(KeyguardManager::class.java).isKeyguardLocked
@@ -57,7 +61,7 @@ internal object BridgeActions {
                     if(!BridgeProtocol.validText(destination,300)) throw BridgeFailure("unavailable")
                     onMain(::allowed) {
                         unlocked(c)
-                        if(VoiceCycle.active && (!NativeChatSettings.enabled(c) || VoiceCycle.phase!=VoiceCycleState.Phase.VOICE)) throw BridgeFailure("unsupported")
+                        if(VoiceCycle.active && (VoiceCycle.phase!=VoiceCycleState.Phase.VOICE || (!VoiceCycle.googleMode && !NativeChatSettings.enabled(c)))) throw BridgeFailure("unsupported")
                         launch(c,Intent(Intent.ACTION_VIEW,Uri.parse("google.navigation:q="+Uri.encode(destination)+"&mode=d"))
                             .setPackage("com.google.android.apps.maps"),keepCover=BridgeCarConnection.keepMapsCover())
                     }
@@ -80,7 +84,7 @@ internal object BridgeActions {
                     if(!BridgeProtocol.validText(text,2000)) throw BridgeFailure("unavailable")
                     val original=onMain(::allowed) {
                         unlocked(c)
-                        if(VoiceCycle.active && NativeChatSettings.enabled(c) && !VoiceAccessibilityService.showBridgeVoiceCover()) throw BridgeFailure("cancelled")
+                        if(VoiceCycle.active && !VoiceCycle.googleMode && NativeChatSettings.enabled(c) && !VoiceAccessibilityService.showBridgeVoiceCover()) throw BridgeFailure("cancelled")
                         VoiceCycle.id
                     }
                     PhoneWhatsApp.send(c,phone,text,command.getString("requestId"),deadline) {
@@ -101,7 +105,8 @@ internal object BridgeActions {
         if(intent.resolveActivity(c.packageManager)==null) throw BridgeFailure("unavailable")
         // The already-bound accessibility service has Android's supported background-launch role.
         val service=VoiceAccessibilityService.bridgeService()
-        if(!keepCover) VoiceAccessibilityService.releaseBridgeCover()
+        if(VoiceCycle.active && VoiceCycle.googleMode) GoogleVoiceActivity.prepareAppLaunch(keepCover)
+        else if(!keepCover) VoiceAccessibilityService.releaseBridgeCover()
         (service ?: c).startActivity(intent)
     }
     internal fun chatGptResumeIntent(c:Context):Intent {
@@ -117,20 +122,23 @@ internal object BridgeActions {
         val contact=BridgeContacts.resolve(c,deviceId,ref)
         timing.stage("contact_validated")
         var original:String?=null
+        var localGoogle=false
         var dispatched=false
         try {
             onMain(allowed) {
                 unlocked(c)
-                if(VoiceCycle.active && !NativeChatSettings.enabled(c)) throw BridgeFailure("unsupported")
+                localGoogle=VoiceCycle.active && VoiceCycle.googleMode
+                if(VoiceCycle.active && !localGoogle && !NativeChatSettings.enabled(c)) throw BridgeFailure("unsupported")
                 original=VoiceCycle.id
                 BridgeCallHold.acquire(c,id)
+                if(localGoogle) GoogleVoiceActivity.stopForTelephone(c)
                 BridgeCallPreparation.begin(c,id)
-                if(VoiceCycle.active) {
+                if(VoiceCycle.active && !localGoogle) {
                     val service=VoiceAccessibilityService.bridgeService() ?: throw BridgeFailure("voice_stop_unconfirmed")
                     service.startActivity(chatGptResumeIntent(c))
                     timing.stage("foreground_requested")
                 }
-                if(!VoiceAccessibilityService.stopBridgeVoice(c)) throw BridgeFailure("voice_stop_unconfirmed")
+                if(!localGoogle && !VoiceAccessibilityService.stopBridgeVoice(c)) throw BridgeFailure("voice_stop_unconfirmed")
                 timing.stage("stop_requested")
             }
             val release=NativeAudioReleaseGate()
@@ -138,9 +146,9 @@ internal object BridgeActions {
             var ready=false
             while(allowed() && BridgeCallPreparation.allowed(id) && SystemClock.elapsedRealtime()<stopDeadline) {
                 ready=onMain(allowed) {
-                    if(VoiceCycle.active) false else {
+                    if(VoiceCycle.active || GoogleVoiceActivity.audioBusy()) false else {
                         timing.stage("cycle_closed")
-                        val reused=original?.let {NativeAudioRelease.freshProof(c,it)}==true
+                        val reused=!localGoogle && original?.let {NativeAudioRelease.freshProof(c,it)}==true
                         if(reused) timing.stage("audio_proof_reused")
                         reused || release.observe(id,SystemClock.elapsedRealtime(),NativeAudioState.read(c).free)
                     }
@@ -154,7 +162,7 @@ internal object BridgeActions {
                 unlocked(c)
                 val current=BridgeContacts.resolve(c,deviceId,ref)
                 if(current.number!=contact.number) throw BridgeFailure("contact_changed")
-                if(!NativeAudioState.read(c).free) throw BridgeFailure("audio_busy")
+                if(GoogleVoiceActivity.audioBusy() || !NativeAudioState.read(c).free) throw BridgeFailure("audio_busy")
                 BridgeCallPreparation.finish(id)
                 launch(c,Intent(Intent.ACTION_CALL,Uri.fromParts("tel",current.number,null)))
                 dispatched=true

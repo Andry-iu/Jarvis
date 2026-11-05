@@ -138,13 +138,13 @@ internal object PreparedChat {
         NativeRuntimeSnapshot.save(c,attempt,"preparation","phase=$phase$details")
     }
     fun coverClosed(c:Context,cycle:String) {
-        if(!enabled(c) || !NativeChatSettings.enabled(c) || closedCycle==cycle) return
+        if(GoogleVoiceSettings.enabled(c) || (VoiceCycle.active && VoiceCycle.googleMode) || !enabled(c) || !NativeChatSettings.enabled(c) || closedCycle==cycle) return
         closedCycle=cycle;preparationPermit=cycle
         // The HUD is already detached. Creation/storage happen in the next main-loop turn.
         main.post {maintain(c)}
     }
     fun maintain(c:Context) {
-        if (!enabled(c) || !NativeChatSettings.enabled(c)) {if(view!=null) stop(c,"disabled");return}
+        if (GoogleVoiceSettings.enabled(c) || (VoiceCycle.active && VoiceCycle.googleMode) || !enabled(c) || !NativeChatSettings.enabled(c)) {if(view!=null) stop(c,"disabled");return}
         runCatching {
             val repo=repository(c)
             val current=repo.record
@@ -173,7 +173,7 @@ internal object PreparedChat {
     private val poll=object:Runnable {
         override fun run() {
             val c=app ?: return
-            if(!enabled(c) || !NativeChatSettings.enabled(c)) {stop(c,"disabled");return}
+            if(GoogleVoiceSettings.enabled(c) || (VoiceCycle.active && VoiceCycle.googleMode) || !enabled(c) || !NativeChatSettings.enabled(c)) {stop(c,"disabled");return}
             val attempt=ledger?.record ?: return
             val current=view ?: return
             if (attempt.phase!=PreparationPhase.STARTED) return

@@ -28,7 +28,7 @@ const snap={app:{version:'0.5.80',versionCode:102},wake:{serviceRunning:true,cap
 test('Discovery exposes bounded status and action tools without fabricated phone data',async()=>{
   const r=await worker.fetch(request('/mcp',{jsonrpc:'2.0',id:1,method:'tools/list'}),env());
   const names=(await r.json()).result.tools.map(t=>t.name);
-  assert.deepEqual(names,['jarviswake_devices','jarviswake_request_status','jarviswake_status_result','jarviswake_find_contacts','jarviswake_navigate','jarviswake_call_by_name','jarviswake_call_contact','jarviswake_whatsapp','jarviswake_list_favorites','jarviswake_add_favorite','jarviswake_create_favorite','jarviswake_rename_favorite','jarviswake_change_favorite_number','jarviswake_delete_favorite','jarviswake_list_notes','jarviswake_read_note','jarviswake_save_note','jarviswake_guide']);
+  assert.deepEqual(names,['jarviswake_devices','jarviswake_request_status','jarviswake_status_result','jarviswake_speak','jarviswake_find_contacts','jarviswake_navigate','jarviswake_call_by_name','jarviswake_call_contact','jarviswake_whatsapp','jarviswake_list_favorites','jarviswake_add_favorite','jarviswake_create_favorite','jarviswake_rename_favorite','jarviswake_change_favorite_number','jarviswake_delete_favorite','jarviswake_list_notes','jarviswake_read_note','jarviswake_save_note','jarviswake_guide']);
 });
 test('Pairing requires authenticated same-origin browser action',async()=>{
   for(const h of [{},user,{...user,Origin:'https://attacker.example','X-Jarvis-Link':'pair'}]) {
@@ -234,7 +234,7 @@ test('Status remains compatible with old snapshots and reports only the notes co
 
 test('The complete guide is available without pairing or a running phone',async()=>{
  const e=env();const r=value(await tool(e,'jarviswake_guide',{topic:'indice',query:''}));
- assert.equal(r.guide_version,'0.5.106');assert.equal(r.version_code,128);assert.equal(r.phone_required,false);assert.ok(r.topics.length>=19);
+ assert.equal(r.guide_version,'0.5.107');assert.equal(r.version_code,129);assert.equal(r.phone_required,false);assert.ok(r.topics.length>=19);
  assert.equal(e.BUCKET.data.size,0);
  for(const topic of ['wake','cover','audio','chatgpt','collegamento','appunti','plugin','maps','chiamate','whatsapp','diagnostica']) assert.ok(r.topics.some(t=>t.topic===topic));
 });
@@ -343,4 +343,55 @@ test('Favorite exchanges expire privately and cannot be replayed after payload c
  const key=`requests/${c.deviceId}/${id}.json`,command=await (await e.BUCKET.get(key)).json();command.createdAt=Date.now()-120001;command.expiresAt=Date.now()-95001;await e.BUCKET.put(key,JSON.stringify(command));
  assert.equal(value(await tool(e,'jarviswake_status_result',{device_id:c.deviceId,request_id:id})).state,'response_expired');assert.equal(await e.BUCKET.get(key),null);
  assert.equal(value(await tool(e,'jarviswake_create_favorite',params)).state,'outcome_uncertain');
+});
+
+test('Google speech reuses pairing, claims once and reports completed playback without text in results',async()=>{
+ const e=env(),c=await pair(e),auth={Authorization:'Bearer '+c.deviceToken};
+ await worker.fetch(request('/device/poll',{deviceId:c.deviceId,versionCode:129,operations:['status','speak']},auth),e);
+ const args={device_id:c.deviceId,session_id:crypto.randomUUID(),turn_id:crypto.randomUUID(),text:'Risposta simulata privata',request_id:crypto.randomUUID()};
+ assert.equal(value(await tool(e,'jarviswake_speak',args)).state,'pending');
+ assert.equal(value(await tool(e,'jarviswake_speak',args)).request_id,args.request_id);
+ assert.equal((await tool(e,'jarviswake_speak',{...args,text:'Altro testo'})).isError,true);
+ assert.equal((await (await claim(e,c,args.request_id)).json()).state,'claimed');
+ assert.equal((await (await claim(e,c,args.request_id)).json()).state,'already_claimed');
+ const result={code:'speech_completed',accepted:true,synthesized:true,playback_started:true,completed:true};
+ assert.equal((await worker.fetch(request('/device/respond',{deviceId:c.deviceId,requestId:args.request_id,result:{...result,text:'private'}},auth),e)).status,400);
+ assert.equal((await worker.fetch(request('/device/respond',{deviceId:c.deviceId,requestId:args.request_id,result},auth),e)).status,200);
+ const reply=value(await tool(e,'jarviswake_status_result',{device_id:c.deviceId,request_id:args.request_id}));assert.deepEqual(reply.result,result);
+ assert.equal((await (await e.BUCKET.get(`requests/${c.deviceId}/${args.request_id}.json`)).json()).params,undefined);
+ // Reconnection may replay the result, never replace the first terminal answer.
+ await worker.fetch(request('/device/respond',{deviceId:c.deviceId,requestId:args.request_id,result:{code:'cancelled'}},auth),e);
+ assert.deepEqual(value(await tool(e,'jarviswake_status_result',{device_id:c.deviceId,request_id:args.request_id})).result,result);
+});
+test('Google speech validates UTF-8 bytes/session ids and keeps old APKs incapable',async()=>{
+ const e=env(),c=await pair(e),auth={Authorization:'Bearer '+c.deviceToken};
+ const args={device_id:c.deviceId,session_id:crypto.randomUUID(),turn_id:crypto.randomUUID(),text:'Ciao',request_id:crypto.randomUUID()};
+ await worker.fetch(request('/device/poll',{deviceId:c.deviceId,versionCode:128,operations:['speak']},auth),e);
+ assert.equal((await tool(e,'jarviswake_speak',args)).isError,true);
+ await worker.fetch(request('/device/poll',{deviceId:c.deviceId,versionCode:129,operations:['speak']},auth),e);
+ for(const delta of [{session_id:'old'},{turn_id:'none'},{text:'è'.repeat(2300)}]) assert.equal((await tool(e,'jarviswake_speak',{...args,...delta})).isError,true);
+ assert.equal((await tool(e,'jarviswake_speak',args,{'oai-authenticated-user-id':'other'})).isError,true);
+});
+test('Expired speech is not delivered and impossible playback success is rejected',async()=>{
+ const e=env(),c=await pair(e),auth={Authorization:'Bearer '+c.deviceToken};
+ await worker.fetch(request('/device/poll',{deviceId:c.deviceId,versionCode:129,operations:['speak']},auth),e);
+ const args={device_id:c.deviceId,session_id:crypto.randomUUID(),turn_id:crypto.randomUUID(),text:'Ciao',request_id:crypto.randomUUID()};
+ await tool(e,'jarviswake_speak',args);await claim(e,c,args.request_id);
+ const bad={code:'speech_completed',accepted:true,synthesized:false,playback_started:false,completed:true};
+ assert.equal((await worker.fetch(request('/device/respond',{deviceId:c.deviceId,requestId:args.request_id,result:bad},auth),e)).status,400);
+ const key=`requests/${c.deviceId}/${args.request_id}.json`,cmd=await (await e.BUCKET.get(key)).json();cmd.expiresAt=1;await e.BUCKET.put(key,JSON.stringify(cmd));
+ assert.equal(value(await tool(e,'jarviswake_status_result',{device_id:c.deviceId,request_id:args.request_id})).state,'outcome_uncertain');
+ assert.equal((await (await worker.fetch(request('/device/poll',{deviceId:c.deviceId,versionCode:129,operations:['speak']},auth),e)).json()).request,null);
+});
+test('Speech progress is claim-bound, monotonic and never a playback completion',async()=>{
+ const e=env(),c=await pair(e),auth={Authorization:'Bearer '+c.deviceToken};
+ await worker.fetch(request('/device/poll',{deviceId:c.deviceId,versionCode:129,operations:['speak']},auth),e);
+ const args={device_id:c.deviceId,session_id:crypto.randomUUID(),turn_id:crypto.randomUUID(),text:'Ciao',request_id:crypto.randomUUID()};
+ await tool(e,'jarviswake_speak',args);
+ const send=stage=>worker.fetch(request('/device/progress',{deviceId:c.deviceId,requestId:args.request_id,stage},auth),e);
+ assert.equal((await send('accepted')).status,400);await claim(e,c,args.request_id);
+ for(const stage of ['accepted','synthesized','playback_started','accepted']) assert.equal((await send(stage)).status,200);
+ const pending=value(await tool(e,'jarviswake_status_result',{device_id:c.deviceId,request_id:args.request_id}));
+ assert.equal(pending.state,'pending');assert.equal(pending.progress.stage,'playback_started');assert.equal(pending.result,undefined);
+ assert.equal((await send('completed')).status,400);
 });

@@ -107,7 +107,9 @@ internal object BridgeLink {
             val claim=post(auth,"/device/claim",JSONObject().put("deviceId",auth.deviceId).put("requestId",id),epoch)
             if(command.optString("operation") in setOf("call_contact","call_by_name")) NativeRuntimeSnapshot.save(c,id,"bridge_transport","stage=claim roundtrip_ms=${SystemClock.elapsedRealtime()-claimAt}")
             if(claim.optString("state")!="claimed") result("outcome_uncertain")
-            else BridgeActions.execute(c,auth.deviceId,command,deadline) { epoch==generation }
+            else BridgeActions.execute(c,auth.deviceId,command,deadline,progress={ stage ->
+                post(auth,"/device/progress",JSONObject().put("deviceId",auth.deviceId).put("requestId",id).put("stage",stage),epoch)
+            }) { epoch==generation }
         } catch(_:Exception) { result("outcome_uncertain") }
         record.put("result",outcome);ledger.put(key,record);BridgeSettings.writePrivate(c,"commands",ledger)
     }

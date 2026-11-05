@@ -226,6 +226,8 @@ internal object ChatGptPreloader {
     }
 
     /** Detaches the warmed page for the cycle; no duplicate WebView or page reload is created. */
+    fun currentUrl(): String? = web.get()?.url
+
     fun handoff(cycleId: String): PreparedChatPage? {
         val view = web.get() ?: return null
         stopped = true

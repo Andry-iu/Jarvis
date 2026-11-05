@@ -8,8 +8,8 @@ android {
         applicationId = "it.jarviswake"
         minSdk = 31
         targetSdk = 36
-        versionCode = 128
-        versionName = "0.5.106"
+        versionCode = 129
+        versionName = "0.5.107"
         ndk { abiFilters += listOf("arm64-v8a") }
     }
     val ciKeystore = System.getenv("JARVIS_KEYSTORE_PATH")
@@ -61,6 +61,7 @@ val whatsappNative by tasks.registering(Exec::class) {
 tasks.named("preBuild").configure { dependsOn(whatsappNative) }
 
 dependencies {
+    implementation("io.grpc:grpc-okhttp:1.76.0")
     implementation("com.google.android.gms:play-services-wearable:20.0.1")
     implementation(files("build/whatsapp-native/wabridge.aar").builtBy(whatsappNative))
     implementation("com.google.zxing:core:3.5.3")

@@ -256,6 +256,7 @@ class WakeService : Service() {
 
     private fun resumeListening() {
         if (stopping || instance!==this) return
+        if (GoogleVoiceActivity.audioBusy()) { setCaptureRequested(false); reportRecovery("audio_unavailable"); return }
         if(BridgeCallHold.holding) { setCaptureRequested(false);reportRecovery("telephone_call");return }
         if (checkSelfPermission(android.Manifest.permission.RECORD_AUDIO)!=android.content.pm.PackageManager.PERMISSION_GRANTED) {
             reportRecovery("permission_required")
@@ -339,7 +340,7 @@ class WakeService : Service() {
     }
 
     private fun pauseForVoice() {
-        notifications.notify(1, serviceNotification("In pausa mentre ChatGPT usa il microfono."))
+        notifications.notify(1, serviceNotification(if(VoiceCycle.googleMode) "Voce Google: wake sospesa durante la sessione." else "In pausa mentre ChatGPT usa il microfono."))
         State.running = true
     }
 

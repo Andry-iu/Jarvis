@@ -58,7 +58,7 @@ class LaunchActivity : Activity() {
         setShowWhenLocked(true)
         setTurnScreenOn(true)
         hud = HolographicOverlayView(this).apply {
-            setStatus("AVVIO CHATGPT")
+            setStatus(if(VoiceCycle.googleMode) "AVVIO VOCE GOOGLE · CHAT TESTUALE" else "AVVIO CHATGPT")
             setCoverActions(
                 singleTap = { /* The microphone is available only after Voice starts. */ },
                 belowTap = { CoverSettings.setOpaque(this@LaunchActivity, !CoverSettings.isOpaque(this@LaunchActivity)) },
@@ -84,7 +84,7 @@ class LaunchActivity : Activity() {
         }
         setContentView(root)
         hud.post { WaitingAudio.coverShown(this, token) }
-        State.setAttempt(this, "Schermata Jarvis pronta; avvio Voice senza richiedere lo sblocco.")
+        State.setAttempt(this, if(VoiceCycle.googleMode) "Schermata Jarvis pronta; preparo ChatGPT testuale e voce Google." else "Schermata Jarvis pronta; avvio Voice senza richiedere lo sblocco.")
     }
 
     override fun onResume() {
@@ -108,7 +108,7 @@ class LaunchActivity : Activity() {
     private fun advance() {
         if (!VoiceCycle.matches(token)) { finish(); return }
         if (handedOff || !resumed || !hasWindowFocus()) return
-        if (NativeChatSettings.enabled(this) && getSystemService(KeyguardManager::class.java).isKeyguardLocked) {
+        if (!VoiceCycle.googleMode && NativeChatSettings.enabled(this) && getSystemService(KeyguardManager::class.java).isKeyguardLocked) {
             hud.setStatus("SBLOCCA IL TELEFONO PER CHATGPT APP")
             return
         }
