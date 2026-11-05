@@ -75,3 +75,14 @@ dopo queste prove. Commit successivo solo istruzioni, script e verbali/checksum.
 L'agente operativo 0.7.3 non e stato sostituito; dati di prova esclusivamente in
 istanze isolate con Codex disabilitato. Nessuna prova di inferenza reale,
 nessun token reale di sviluppo attribuito da questi collaudi simulati.
+
+## Chiusura del collaudo prima della pubblicazione
+
+Entrambi: processi isolati terminati, porta 8767 libera, directory Probe/SDK/cache
+dei collaudi rimosse e candidate hash/dimensioni ricontrollati PASS. Rimossi anche
+SDK/cache temporanei dei tentativi falliti con Go 1.27.3, senza toccare il SDK
+installato o lo stato dell'agente. Sorgente privato e candidati di staging
+conservati per la ripresa. Log token-meter-final-preflight.log su ciascun PC.
+machine_info riletta: agenti operativi ancora 0.7.3, identita preservate.
+ls-remote non restituisce il nuovo branch: sorgente non pubblicato.
+Nessuna sostituzione di binario, riavvio operativo o inferenza Codex eseguiti.
