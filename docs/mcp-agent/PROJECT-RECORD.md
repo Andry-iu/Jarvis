@@ -1,3 +1,17 @@
+## 2026-11-05 — 0.7.4 pubblicata, installata e collaudata
+
+Contatori token per progetto/incarico/categoria, dialoghi conservati. Sorgente
+runtime pubblico 6a04718e1eb5330179c6a3e621749e1b63fe22e7, identico nell'albero al
+locale c662fae collaudato. Collegamento GitHub gia attivo usato dopo conferma
+esplicita; regola permanente commit/push registrata. Branch
+feature/development-token-meter-20261105; nessun merge su main.
+
+Desktop1 e Desktop2 ora 0.7.4: suite native e MCP isolato PASS; updater canonico,
+backup/rehearsal e MCP operativo PASS. Report development/dialogue funzionanti,
+ancora privi di misure reali: nessun consumo storico inventato. Ambito limitato a
+Codex inoltrato dall'agente; non questa chat/Voice. Nessuna inferenza o modifica
+alle guardie. Dettagli e checksum nel verbale VALIDATION-0.7.4-20261105.md.
+
 ## 2026-11-05 — Autorizzazione permanente alla pubblicazione
 
 L'utente conferma esplicitamente «Autorizzo sempre, registrare le regole.» dopo

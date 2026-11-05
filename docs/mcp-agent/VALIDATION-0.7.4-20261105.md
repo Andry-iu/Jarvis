@@ -1,5 +1,13 @@
 # Validazione 0.7.4 — 5 novembre 2026
 
+## Stato finale
+
+Implementato, testato, pubblicato, installato e collaudato via MCP su Desktop1 e
+Desktop2. Regola permanente a commit/push registrata dopo esplicita conferma
+utente in questa chat. Sorgente runtime remoto 6a04718e1eb5330179c6a3e621749e1b63fe22e7,
+albero identico al locale c662fae collaudato; mapping e prove sotto. Le sezioni
+sui blocchi e tentativi intermedi descrivono la cronologia, non lo stato finale.
+
 Implementato: contatori Codex separati per progetto/incarico/categoria, conservando
 i dialoghi; contratto TOKEN-METER-0.7.4.md. Branch feature/development-token-meter-20261105,
 base 7a2947945137d39b49392c9fe05157696956d78d.
@@ -11,7 +19,7 @@ l'esito dei due job prima della rimozione dei temporanei, mantenendo l'asserzion
 del dispatch contemporaneo. Nessuna modifica al runtime dei comandi.
 Test nuovi e processo RPC simulato senza modelli/API. Compilazione incrociata
 Windows amd64 PASS. Test nativi e MCP isolati completati come sotto;
-pubblicazione/installazione ancora bloccate e non dichiarate completate.
+pubblicazione/installazione poi completate come riportato nello stato finale.
 
 Preflight remoto: entrambi agenti 0.7.3, coda vuota e sana, sorgenti canonici HEAD
 7a2947945137d39b49392c9fe05157696956d78d. Desktop1 conserva update.go.bak non tracciato;
@@ -94,3 +102,65 @@ l'utente: «Autorizzo sempre, registrare le regole.» Autorizzazione permanente
 registrata in AGENTS.md, OPERATING-RULES.md e RELEASE_POLICY.md. Il precedente
 blocco e documentato come fatto storico; push e distribuzione ripresi dopo
 questa conferma esplicita, senza aggirare i rifiuti precedenti.
+
+## Pubblicazione riuscita dopo autorizzazione esplicita
+
+Il Git CLI della sessione non dispone di credenziali per la scrittura (errore
+could not read Username); pubblicazione mediante collegamento GitHub gia attivo,
+come per la 0.7.3. Nessuna nuova autenticazione, configurazione di credenziali o
+forzatura. Per ciascun commit creato via API, albero confrontato con l'originale
+locale: identico. Differenze SHA riguardano metadata di commit.
+
+| Locale collaudato/registrato | Remoto | Albero identico |
+|---|---|---|
+| c662fae247d5edf5e9c99248d00ddc358823e391 | 6a04718e1eb5330179c6a3e621749e1b63fe22e7 | b7477a0177c6c6354504771dda3dce185faf6d31 |
+| 7b1fa1837aad3f1a0490243d008d9cd07904cb37 | 93774301bff1d994bc4baf9c35cafbd64c0c32a3 | 83c97f38503e5cef1660abe14e3281af5d26a64e |
+| 4d84b4b977d6c1423db6bb21d3f6d2deace39fba | 7fe596ceef208482e635972cc5d7e62731bb0d2a | 8dedccb458a62947e6b06840f3ed7d7da5b6962d |
+| a6fa7adc8dccf9882d3d5dd30010dc18f84ce202 | a6baa21e9f6e0e43731479de292a8302a21d47ab | bd5a4498ffac1926f347df94ff7417749acf6b07 |
+
+Branch remoto feature/development-token-meter-20261105 creato e riletto via API;
+fetch in lettura riuscito. Copia cloud allineata con reset soft soltanto dopo
+confronto alberi, backup branch backup/token-meter-local-a6fa7ad e indice pulito.
+Nessun reset hard, clean, force push o merge su main.
+
+Entrambi i checkout canonici Windows aggiornati al branch pubblicato: sorgenti
+Go/go.mod identici al commit runtime remoto e preservati update.go.bak e storico
+non tracciato. Candidati copiati e verificati in Releases/0.7.4. Updater canonico
+identico dopo normalizzazione LF, SHA-256
+b958224f6fdb629ee791e057034e7aa3c35f352aeb596a6b4cfbf10804ec3366.
+Gli aggiornamenti usano il commit sorgente pubblico 6a04718; i candidati mantengono
+nei metadata VCS il locale c662fae dal medesimo albero collaudato.
+
+## Installazione e collaudo operativo — completati
+
+Stesso updater canonico scripts/update-agent.ps1, invocato da batch CMD separati
+tramite update_prepare/update_execute, sequenziale Desktop1 poi Desktop2.
+SourceCommit pubblico 6a04718; nessun replay o task di aggiornamento alternativo.
+
+| Esito | Desktop1 | Desktop2 |
+|---|---|---|
+| Versione machine_info da ChatGPT | 0.7.4 | 0.7.4 |
+| Machine ID preservato | 1b927a030fa3b7dfa15c40cfccb4ff60 | d41455adf8721c205183224d3c69a1a5 |
+| PID dopo riavvio, istantanea | 452104 | 12796 |
+| Token processo | elevated=true | elevated=true |
+| Binario attivo | D:\Jarvis\jarvis-mcp.exe | D:\Jarvis\Agent\jarvis-mcp.exe |
+| Backup in D:\Jarvis\Backups | self-update-61cc70c9835446cc8a6232acc06ee3c8 | self-update-617b5474484d4fdbad4014b40959563a |
+| Backup e rollback rehearsal | PASS | PASS |
+| Hash/configurazione/identita/manutenzione | PASS | PASS |
+| Nuova capability codex_token_usage | presente | presente |
+| Report development e dialogue via task_start/runtime | PASS | PASS |
+| Contatore invocazioni codex_token_usage | 2 riuscite, nessun doppione | 2 riuscite, nessun doppione |
+| tool_usage.started_at preservato | 2026-11-03T17:53:58.4575006Z | 2026-11-03T18:12:52.4840496Z |
+
+Entrambi self-update.log terminano PASS common_batch_update_identity_config_maintenance.
+I report reali risultano records=[] e observed_tokens=null, con scope esplicito,
+historical_backfill=false e categoria corretta. Nessuna inferenza di collaudo o
+iniezione di consumi simulati nello stato operativo. Test di contatori positivi,
+duplicati e categorie svolti nelle suite isolate/native sopra.
+
+La lettura finale codex_status su Desktop1 segnala eseguibile Codex configurato
+non disponibile. Su Desktop2 quota corrente residua 90%, crediti/saldo null
+(sconosciuti), inference_allowed=false; guardie invariate. Nessuna conversione
+in token e nessun confronto con vecchie letture. Dati account privati esclusi.
+Il catalogo diretto client non risulta aggiornato; compatibilita runtime verificata.
+Nessuna prova di reboot fisico, durata reale di 24 ore o inferenza reale Codex.

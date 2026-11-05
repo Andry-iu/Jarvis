@@ -1,25 +1,30 @@
-# Agente 0.7.4 — token di sviluppo separati dai dialoghi
+# Agente 0.7.4 — installato e collaudato su entrambi i desktop
 
-5 novembre 2026. Implementazione e test completati: suite/vet/race Linux,
-test/vet/build Windows e MCP isolato su entrambi i PC. I dialoghi restano intatti.
-Desktop2: riusato il profilo gia riuscito della 0.7.3, Go ufficiale 1.27.0,
-SDK/cache isolati, GOMAXPROCS=1, GOGC=25, -p 1. Non ripartire con Go 1.27.3.
-Profilo ripetibile: scripts/build-runtime.ps1; dettagli in AGENTS.md e nel verbale.
+5 novembre 2026. Contatori token separati per progetto/incarico/categoria,
+conservando i dialoghi. Implementazione, test/vet/race Linux, test/vet/build
+Windows, MCP isolato, pubblicazione e installazione completati. machine_info e
+letture codex_token_usage live tramite task_start/runtime PASS su entrambi.
+Regola permanente a commit/push degli interventi approvati registrata in
+AGENTS.md, OPERATING-RULES.md e RELEASE_POLICY.md su esplicita conferma utente.
 
-Sorgente runtime c662fae247d5edf5e9c99248d00ddc358823e391, branch
-feature/development-token-meter-20261105. Il 5 novembre l'utente ha rinnovato
-esplicitamente l'autorizzazione permanente a commit/push nel repository pubblico
-Andry-iu/Jarvis: regola registrata in AGENTS.md, OPERATING-RULES.md e RELEASE_POLICY.md.
-Pubblicazione e distribuzione riprese; nessuna installazione 0.7.4 ancora dichiarata.
-Checksum in CHECKSUMS-0.7.4.json; esiti nel verbale VALIDATION-0.7.4-20261105.md.
-Aggiornamento solo tramite updater canonico, backup e rehearsal.
+Sorgente runtime pubblico 6a04718e1eb5330179c6a3e621749e1b63fe22e7, branch
+feature/development-token-meter-20261105. Albero b7477a0177c6c6354504771dda3dce185faf6d31
+identico al locale c662fae collaudato; differenze SHA nei metadata, nessuna modifica
+Go dopo i test. CHECKSUMS-0.7.4.json e VALIDATION-0.7.4-20261105.md riportano gli esiti.
+Updater canonico: backup verificati, rollback rehearsal, sostituzione/riavvio,
+identita/configurazioni/hash/manutenzione PASS su entrambi. Avvio diretto Desktop1,
+supervisore Desktop2 preservati; nessuna migrazione di percorsi o SDK permanente.
+Desktop2 compilato con il metodo gia riuscito: Go 1.27.0 ufficiale, SDK/cache
+isolati, GOMAXPROCS=1, GOGC=25 e -p 1. Usare scripts/build-runtime.ps1.
 
-Nuovo comando codex_token_usage, anche via task_start/runtime. Categoria default
-report development; categoria omessa al dispatch unclassified. Righe distinte
-per sviluppo, dialogo, altro, non classificato. Misura solo Codex inoltrato da
-Jarvis: non questa chat/Voice, trascrizioni, TTS o altri client. Nessun recupero
-retroattivo o conversione quota/token. Guardie economiche invariate.
-Specifica e comandi: docs/mcp-agent/TOKEN-METER-0.7.4.md.
+codex_turn: usage_category=development per sviluppo; dialogue/other/unclassified
+restano separati. Categoria omessa: unclassified. codex_token_usage legge il
+progetto, default development; usare task_start/runtime se il catalogo e vecchio.
+I report live sono vuoti con observed_tokens=null: nessun consumo reale inventato.
+Misura solo Codex inoltrato dall'agente, non questa chat/Voice, trascrizioni, TTS o
+altri client. Nessun recupero retroattivo o conversione quota/token. Nessuna
+inferenza reale di collaudo; guardie economiche invariate. Reboot fisico e ciclo
+24 ore non certificati. Specifica: docs/mcp-agent/TOKEN-METER-0.7.4.md.
 
 Le sezioni successive sono storiche.
 
