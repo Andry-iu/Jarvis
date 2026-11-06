@@ -15,7 +15,8 @@
   const previous = window.__jarvisGoogleBinding;
   const previousDirect = chatRoute && previous?.project===key(expectedProject) && previous.url===clean(url);
   let ledger = window.__jarvisGoogleText;
-  const result = phase => JSON.stringify({phase, ...((ownedChat || previousDirect || ledger?.url===clean(url)) && chatRoute
+  const metrics={};
+  const result = phase => JSON.stringify({phase,diagnostics:{...metrics,ledger:!!ledger,sendDispatched:!!ledger?.turns.get(cfg.turn)?.dispatched}, ...((ownedChat || previousDirect || ledger?.url===clean(url)) && chatRoute
     ? {conversation:clean(url),directVerified:!chatRoute[1]} : {})});
   if (!routeSafe || (!inProject && !ownedChat && !previousDirect && !(chatRoute && !chatRoute[1] && ledger?.turns &&
       [...ledger.turns.values()].some(t=>t.dispatched)))) return result('wrong_conversation');
@@ -28,8 +29,11 @@
     return result('approval_or_dialog');
   const editors=[...document.querySelectorAll('textarea,input[type="text"],[contenteditable="true"],[role="textbox"]')]
     .filter(e => visible(e));
+  metrics.editors=editors.length;
   if (editors.length!==1) return result('ambiguous_editor');
   const editor=editors[0], value=e => (e.value || e.innerText || e.textContent || '').trim();
+  metrics.draftChars=value(editor).length;metrics.hasDraft=!!value(editor);metrics.editorEnabled=enabled(editor);
+  metrics.draftOwned=!!ledger?.turns && [...ledger.turns.values()].some(s=>s.editor===editor && s.text===value(editor));
   // Bind to the observed composer form, never any unrelated button in the document.
   const form=editor.closest('form');
   const hasMessages=!!document.querySelector('[data-message-author-role]');

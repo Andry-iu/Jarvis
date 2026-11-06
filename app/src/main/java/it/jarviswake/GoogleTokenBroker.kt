@@ -21,7 +21,7 @@ internal class GoogleTokenBroker(
     @Volatile private var cancelled = false
     @Synchronized override fun resolve(config: GoogleVoiceConfig, minimumMs: Long): GoogleVoiceConfig {
         check(!cancelled)
-        require(config.authMode == "backend" && minimumMs in 0..180000)
+        require(config.authMode == "backend" && minimumMs in 0..300000)
         if (project != config.quotaProject || elapsed() + minimumMs >= validUntil) {
             val started = elapsed()
             val reply = transport.post(pairing, JSONObject().put("deviceId", pairing.deviceId).put("project", config.quotaProject))
@@ -44,6 +44,7 @@ internal interface GoogleBrokerTransport {
     fun post(pairing: BridgeCredentials, body: JSONObject): JSONObject
     fun cancel()
 }
+internal class GoogleBrokerHttpFailure(val status:Int):Exception()
 internal class GoogleBrokerHttp : GoogleBrokerTransport {
     @Volatile private var connection: HttpURLConnection? = null
     @Volatile private var cancelled = false
@@ -60,7 +61,7 @@ internal class GoogleBrokerHttp : GoogleBrokerTransport {
             conn.setRequestProperty("Authorization", "Bearer ${pairing.deviceToken}")
             conn.setRequestProperty("OAI-Sites-Authorization", "Bearer ${pairing.siteAccess}")
             conn.outputStream.use { it.write(body.toString().toByteArray(Charsets.UTF_8)) }
-            check(conn.responseCode == 200) { "google_broker_unavailable" }
+            if(conn.responseCode!=200) throw GoogleBrokerHttpFailure(conn.responseCode)
             val result = conn.inputStream.use { input ->
                 val out = java.io.ByteArrayOutputStream(); val buffer = ByteArray(2048)
                 while (true) {

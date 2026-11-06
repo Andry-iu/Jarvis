@@ -1,3 +1,12 @@
+## 0.5.110 / 132 — dialogo continuo, screenshot in Galleria e diagnostica Google
+
+- Doppio tocco alto-destra cattura la cover prima di nasconderla e salva in Pictures/JarvisWake, poi apre l’esportazione dei log. PNG esclusi dallo ZIP; schermate credenziali protette.
+- Log tecnici Google e snapshot separati, con fasi DOM/bozze/invii/OAuth/STT/TTS/audio e codici pubblici HTTP/gRPC, senza testo/audio/credenziali/URL.
+- Chat in sovrimpressione alternata con tocco invisibile in basso-destra. Nessun pulsante visibile Testi o Nuova dettatura.
+- Si può parlare di nuovo durante l’attesa della risposta; nuovo turno nella stessa chat, senza cancellare lavori desktop.
+- Interruzione parlando con AEC e route compatibili controllati; fallback esplicito alla ripresa automatica dopo risposta se AEC/routing non sono disponibili. Gestione cambi uscita/Android Auto senza forzare Bluetooth, SCO o AudioManager.mode. Disponibilità reale da collaudare su Galaxy/auto.
+- Nuovo risultato plugin interrupted, stesso pairing/UUID/tombstone. Voice nativa precedente confermata dall’utente; funzioni esistenti conservate. Nessuna API Google reale consumata nei test.
+
 ## 0.5.109 / 131 — nuova chat corrente, messaggi di avvio e voce economica
 
 - Ogni wake/avvio manuale apre il compositore del progetto già configurato JarvisRuntime. Invio singolo del messaggio prima, attivazione locale Google e messaggio dopo con risposta plugin; ciascun campo vuoto resta disattivato.

@@ -71,6 +71,7 @@ internal object VoiceCycle {
     fun start(context: Context, existingCycleId: String? = null) {
         if (active || GoogleVoiceActivity.audioBusy()) return
         googleMode = GoogleVoiceSettings.enabled(context)
+        DiagnosticLog.record(context,DiagnosticLog.Event.VOICE_MODE_SELECTED,monitorStatus=if(googleMode) "google" else "chatgpt_voice")
         state = VoiceCycleState()
         microphoneMuted = false
         hideStopInFlightToken = null

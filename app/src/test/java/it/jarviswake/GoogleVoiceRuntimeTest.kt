@@ -41,17 +41,20 @@ class GoogleVoiceRuntimeTest {
         override var released=true
         var deferRelease=false
         var starts=0;var stops=0
+        var autoSpeech=true
+        var onset:((ShortArray)->Unit)?=null
         var end:((ShortArray?,String?)->Unit)?=null
         var chunk:((ShortArray,Int)->Unit)?=null
         override fun start(onSpeech:(ShortArray)->Unit,onEnd:(ShortArray?,String?)->Unit,onChunk:(ShortArray,Int)->Unit) {
-            starts++;released=false;end=onEnd;chunk=onChunk;onSpeech(ShortArray(320){1000})
+            starts++;released=false;end=onEnd;chunk=onChunk;onset=onSpeech;if(starts==1 && autoSpeech)onSpeech(ShortArray(320){1000})
         }
         override fun stop() {stops++;if(!deferRelease)released=true;end?.invoke(null,null);end=null}
+        fun speak() {onset?.invoke(ShortArray(320){2000})}
         fun phrase() {repeat(49){chunk?.invoke(ShortArray(320){1000},320)};released=true;val done=end;end=null;done?.invoke(ShortArray(16000){1000},null)}
     }
     private class FakeApi:GoogleSpeechApi {
         var transcriptions=0;var syntheses=0;var failStt=false;var failTts=false;var cancelled=false
-        var streams=0;var audioQueued=0
+        var streams=0;var audioQueued=0;var transcript="TESTO_PRIVATO_DETTATO"
         var synthGate:java.util.concurrent.CountDownLatch?=null
         private var sttEnd:(()->Unit)?=null
         override fun openRecognition(onResult:(String?,Int)->Unit):GoogleRecognitionStream {
@@ -61,7 +64,7 @@ class GoogleVoiceRuntimeTest {
             sttEnd={complete(null)}
             return object:GoogleRecognitionStream {
                 override fun audio(samples:ShortArray,size:Int){if(!finished){queued+=size;audioQueued=queued}}
-                override fun finish(){transcriptions++;complete(if(failStt)null else "TESTO_PRIVATO_DETTATO")}
+                override fun finish(){transcriptions++;complete(if(failStt)null else transcript)}
                 override fun cancel(){complete(null)}
             }
         }
@@ -106,7 +109,12 @@ class GoogleVoiceRuntimeTest {
         capture=FakeCapture();api=FakeApi()
         GoogleVoiceDependencies.project={"https://chatgpt.com/g/g-p-test/project"}
         GoogleVoiceDependencies.opening={""};GoogleVoiceDependencies.greeting={""}
-        GoogleVoiceDependencies.configuration={config};GoogleVoiceDependencies.capture={capture};GoogleVoiceDependencies.api={api}
+        GoogleVoiceDependencies.configuration={config};GoogleVoiceDependencies.capture={capture.apply {autoSpeech=web.submittedScripts.none {it.contains("Rispondi con jarviswake_speak")}}};GoogleVoiceDependencies.api={api}
+        GoogleVoiceDependencies.echoCapture={object:GoogleCapture {
+            override val released=true
+            override fun stop(){}
+            override fun start(onSpeech:(ShortArray)->Unit,onEnd:(ShortArray?,String?)->Unit,onChunk:(ShortArray,Int)->Unit) {onEnd(null,"echo_non_disponibile")}
+        }}
         GoogleVoiceDependencies.playback={object:GooglePlayback {
             override var released=true
             override fun stop(){released=true}
@@ -132,7 +140,7 @@ class GoogleVoiceRuntimeTest {
     @After fun cleanup() {
         if(::capture.isInitialized) {capture.deferRelease=false;capture.released=true}
         if(::activity.isInitialized) GoogleVoiceActivity.closeForCycle(token)
-        controller?.pause()?.stop()?.destroy();GoogleVoiceDependencies.reset()
+        controller?.pause()?.stop()?.destroy();GoogleVoiceDependencies.reset();DiagnosticScreenshots.reset()
         cycleField.set(null,oldCycle);googleField.setBoolean(null,false);GoogleVoiceSettings.enable(app,false)
         app.getSharedPreferences("bridge_link",0).edit().clear().commit()
         shadowOf(Looper.getMainLooper()).idle()
@@ -339,7 +347,7 @@ class GoogleVoiceRuntimeTest {
         // Start from the preceding chat as on a real subsequent wake: inspect before navigating.
         GoogleVoiceDependencies.web={FakeWeb(it,url).also{w->w.currentUrl=url;web=w}}
         launch();pump{web.sends==2}
-        assertEquals(1,web.loads);assertEquals(0,capture.starts)
+        assertEquals(1,web.loads)
         assertTrue(web.submittedScripts[0].contains("PRE_CONFIGURATO"));assertFalse(web.submittedScripts[0].contains("Rispondi con jarviswake_speak"))
         assertTrue(web.submittedScripts[1].contains("POST_CONFIGURATO"));assertTrue(web.submittedScripts[1].contains("Rispondi con jarviswake_speak"))
         assertEquals(url,web.currentUrl);assertEquals(0,api.streams)
@@ -351,7 +359,7 @@ class GoogleVoiceRuntimeTest {
     }
     @Test fun emptyBeforeAndConfiguredAfterCreatesOneStartupTurnWithoutOpeningMessage() {
         GoogleVoiceDependencies.greeting={"POST_SOLO"};launch();pump{web.sends==1}
-        assertEquals(1,web.writes);assertEquals(0,capture.starts);assertTrue(web.submittedScripts.single().contains("POST_SOLO"))
+        assertEquals(1,web.writes);assertTrue(web.submittedScripts.single().contains("POST_SOLO"))
     }
     @Test fun preAndPostAreFrozenWhenCycleStartsAndNoFuturePreparationIsRequired() {
         var pre="PRE_FISSATO";var post="POST_FISSATO"
@@ -359,7 +367,7 @@ class GoogleVoiceRuntimeTest {
         GoogleVoiceDependencies.web={FakeWeb(it,url).also{w->w.readyAfterProbes=3;web=w}}
         launch();pre="PRE_CAMBIATO";post="POST_CAMBIATO";pump{web.sends==2}
         assertTrue(web.submittedScripts[0].contains("PRE_FISSATO"));assertTrue(web.submittedScripts[1].contains("POST_FISSATO"))
-        assertFalse(web.submittedScripts.any{it.contains("CAMBIATO")});assertEquals(0,capture.starts)
+        assertFalse(web.submittedScripts.any{it.contains("CAMBIATO")})
     }
     @Test fun draftOnPreviousChatPreventsNavigationAndAllStartupMessages() {
         GoogleVoiceDependencies.opening={"PRE"};GoogleVoiceDependencies.greeting={"POST"}
@@ -404,6 +412,112 @@ class GoogleVoiceRuntimeTest {
         GoogleVoiceDependencies.web={FakeWeb(it,url).also{w->w.writeReadyAfterCalls=3;web=w}}
         launch();pump{capture.starts==1};assertEquals(1,web.writes);assertEquals(1,web.sends)
         assertTrue(web.sendChecks>=5)
+    }
+
+    @Test fun newSpeechWhileWaitingCreatesNewTurnInSameChatAndRejectsOldReplyWithoutAButton() {
+        launch();capture.phrase();pump{web.sends==1}
+        val stateField=GoogleVoiceActivity::class.java.getDeclaredField("state").apply{isAccessible=true}
+        val oldTurn=(stateField.get(activity) as GoogleTurnState).turn
+        pump{capture.starts>=2};capture.speak();shadowOf(Looper.getMainLooper()).idle();capture.phrase();pump{web.sends==2}
+        val newState=stateField.get(activity) as GoogleTurnState
+        assertNotEquals(oldTurn,newState.turn);assertEquals(url,web.currentUrl);assertEquals(0,web.loads)
+        assertFalse(newState.acceptReply(token,oldTurn!!));assertEquals(2,web.writes)
+    }
+    @Test fun screenshotCapturesBeforeCoverRemovalAndDoesNotOpenExportAfterLateClosure() {
+        launch();val cover=view<android.widget.FrameLayout>("cover")
+        assertEquals(0,activity.window.attributes.flags and android.view.WindowManager.LayoutParams.FLAG_SECURE)
+        var callback:((android.graphics.Bitmap?,String)->Unit)?=null
+        DiagnosticScreenshots.windowCapture={_,done -> assertEquals(View.VISIBLE,cover.visibility);callback=done}
+        GoogleVoiceActivity::class.java.getDeclaredMethod("exportDiagnostics").apply{isAccessible=true}.invoke(activity)
+        assertNotNull(callback);GoogleVoiceActivity.closeForCycle(token)
+        callback!!(android.graphics.Bitmap.createBitmap(4,4,android.graphics.Bitmap.Config.ARGB_8888),"captured")
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(3))
+        assertNull(view<HolographicOverlayView>("hud").parent)
+        val started=shadowOf(app).nextStartedActivity
+        assertTrue(started==null || started.component?.className!=DiagnosticExportActivity::class.java.name)
+    }
+    @Test fun chatToggleIsAnInvisibleCoverTargetAndNoDictationButtonIsRendered() {
+        launch();val target=view<View>("textToggle");assertFalse(target is android.widget.Button)
+        assertNull(target.background);val before=view<CoverTranscriptView>("transcriptView").shown
+        target.performClick();assertEquals(!before,view<CoverTranscriptView>("transcriptView").shown)
+        fun buttons(v:View):List<android.widget.Button> = (if(v is android.widget.Button)listOf(v) else emptyList())+
+            (if(v is android.view.ViewGroup)(0 until v.childCount).flatMap{buttons(v.getChildAt(it))} else emptyList())
+        assertTrue(buttons(view("cover")).isEmpty())
+    }
+
+    private class EchoRecorder:GoogleCapture {
+        override var released=true
+        override val echoState get()=if(released) "unavailable" else "ready"
+        override val routeType=android.media.AudioDeviceInfo.TYPE_BUILTIN_MIC
+        var enabled=false;var onset:((ShortArray)->Unit)?=null;var end:((ShortArray?,String?)->Unit)?=null
+        override fun allowEchoSpeech(allowed:Boolean){enabled=allowed}
+        override fun stop(){released=true;end?.invoke(null,null);end=null}
+        override fun start(onSpeech:(ShortArray)->Unit,onEnd:(ShortArray?,String?)->Unit,onChunk:(ShortArray,Int)->Unit){released=false;onset=onSpeech;end=onEnd}
+        fun speak(){assertTrue(enabled);onset!!(ShortArray(320){2000})}
+        fun phrase(){released=true;val done=end;end=null;done!!(ShortArray(320){2000},null)}
+    }
+    private class BlockingPlayback:GooglePlayback {
+        @Volatile override var released=true
+        @Volatile var stopped=false
+        override var routeType:Int?=android.media.AudioDeviceInfo.TYPE_BUILTIN_SPEAKER
+        val complete=java.util.concurrent.CountDownLatch(1)
+        override fun stop(){stopped=true;complete.countDown()}
+        override fun play(pcm:ByteArray,allowed:()->Boolean,started:()->Unit):Boolean {
+            released=false
+            return try {started();val end=System.nanoTime()+4_000_000_000;while(!stopped && allowed() && System.nanoTime()<end && !complete.await(20,java.util.concurrent.TimeUnit.MILLISECONDS)){};!stopped && allowed()}
+            finally {released=true;pcm.fill(0)}
+        }
+    }
+    @Test fun speakingInterruptsCompatiblePlaybackAndStartsExactlyOneNewTurn() {
+        val echo=EchoRecorder();val player=BlockingPlayback();GoogleVoiceDependencies.echoCapture={echo};GoogleVoiceDependencies.playback={player}
+        launch();capture.phrase();pump{web.sends==1};pump{capture.starts>=2}
+        val stateField=GoogleVoiceActivity::class.java.getDeclaredField("state").apply{isAccessible=true}
+        val oldTurn=(stateField.get(activity) as GoogleTurnState).turn
+        val command=JSONObject().put("params",JSONObject().put("session_id",token).put("turn_id",oldTurn).put("text","Risposta da interrompere"))
+        val outcome=java.util.concurrent.atomic.AtomicReference<JSONObject>()
+        Thread({outcome.set(GoogleVoiceActivity.speak(command,SystemClock.elapsedRealtime()+25000,{true}){})}).apply{isDaemon=true;start()}
+        pump{echo.enabled};assertFalse(player.stopped);echo.speak();shadowOf(Looper.getMainLooper()).idle();echo.phrase()
+        pump{outcome.get()!=null};assertEquals("interrupted",outcome.get().getString("code"));assertTrue(outcome.get().getBoolean("playback_started"));assertFalse(outcome.get().getBoolean("completed"))
+        assertTrue(player.stopped);pump{web.sends==2};assertNotEquals(oldTurn,(stateField.get(activity) as GoogleTurnState).turn)
+        assertEquals(2,api.transcriptions);assertEquals(url,web.currentUrl)
+    }
+    @Test fun suspectedPlaybackEchoIsDiscardedAndNextRealSpeechCanSendWithoutATap() {
+        val echo=EchoRecorder();val player=BlockingPlayback();GoogleVoiceDependencies.echoCapture={echo};GoogleVoiceDependencies.playback={player}
+        launch();capture.phrase();pump{web.sends==1};pump{capture.starts>=2}
+        val state=GoogleVoiceActivity::class.java.getDeclaredField("state").apply{isAccessible=true}.get(activity) as GoogleTurnState
+        val spoken="La risposta pronunciata dal telefono"
+        val command=JSONObject().put("params",JSONObject().put("session_id",token).put("turn_id",state.turn).put("text",spoken))
+        val outcome=java.util.concurrent.atomic.AtomicReference<JSONObject>()
+        Thread({outcome.set(GoogleVoiceActivity.speak(command,SystemClock.elapsedRealtime()+25000,{true}){})}).apply{isDaemon=true;start()}
+        pump{echo.enabled};api.transcript=spoken;echo.speak();shadowOf(Looper.getMainLooper()).idle();echo.phrase()
+        pump{outcome.get()!=null};pump{capture.starts>=3};assertEquals(1,web.sends);assertTrue(player.stopped)
+        api.transcript="Questa è una nuova richiesta diversa";capture.speak();shadowOf(Looper.getMainLooper()).idle();capture.phrase()
+        pump{web.sends==2};assertEquals(3,api.transcriptions);assertEquals(url,web.currentUrl)
+    }
+    @Test fun changingOutputToUnverifiedCarBusStopsBargeCaptureAndResumesAfterPlayback() {
+        val echo=EchoRecorder();val player=BlockingPlayback();GoogleVoiceDependencies.echoCapture={echo};GoogleVoiceDependencies.playback={player}
+        launch();capture.phrase();pump{web.sends==1};pump{capture.starts>=2}
+        val state=GoogleVoiceActivity::class.java.getDeclaredField("state").apply{isAccessible=true}.get(activity) as GoogleTurnState
+        val command=JSONObject().put("params",JSONObject().put("session_id",token).put("turn_id",state.turn).put("text","Risposta con cambio uscita auto"))
+        val outcome=java.util.concurrent.atomic.AtomicReference<JSONObject>()
+        Thread({outcome.set(GoogleVoiceActivity.speak(command,SystemClock.elapsedRealtime()+25000,{true}){})}).apply{isDaemon=true;start()}
+        pump{echo.enabled};player.routeType=android.media.AudioDeviceInfo.TYPE_BUS
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(500));assertFalse(echo.enabled);assertTrue(echo.released);assertFalse(player.stopped)
+        player.complete.countDown();pump{outcome.get()!=null};assertTrue(outcome.get().getBoolean("completed"));pump{capture.starts>=3};assertEquals(1,web.sends)
+    }
+
+    @Test fun gallerySaveHappensWithVisibleCoverAndUnchangedTransparencyBeforeZipPicker() {
+        launch();val cover=view<android.widget.FrameLayout>("cover")
+        val opacity=CoverSettings.isOpaque(app);var photographed=false;var saved=false
+        DiagnosticScreenshots.windowCapture={_,done ->
+            photographed=true;assertEquals(View.VISIBLE,cover.visibility);assertNotNull(cover.parent);assertEquals(opacity,CoverSettings.isOpaque(app))
+            done(android.graphics.Bitmap.createBitmap(4,4,android.graphics.Bitmap.Config.ARGB_8888),"captured")
+        }
+        DiagnosticScreenshots.galleryWrite={_,_,allowed -> assertTrue(allowed());assertEquals(View.VISIBLE,cover.visibility);saved=true;"saved"}
+        GoogleVoiceActivity::class.java.getDeclaredMethod("exportDiagnostics").apply{isAccessible=true}.invoke(activity)
+        pump{saved};pump{cover.parent==null}
+        assertTrue(photographed);assertEquals(opacity,CoverSettings.isOpaque(app))
+        assertEquals(DiagnosticExportActivity::class.java.name,shadowOf(app).nextStartedActivity.component!!.className)
     }
 
 }

@@ -14,6 +14,9 @@ class DiagnosticExportActivity : Activity() {
     companion object {
         private const val REQUEST_EXPORT = 901
         private const val NATIVE_TOKEN = "native_export_token"
+        internal fun filesForExport(context:Context)=java.io.File(context.filesDir,"diagnostics").listFiles()
+            ?.filter {it.isFile && (it.name.matches(Regex("events-[0-9]+\\.log")) || it.name in setOf(NativeControlSnapshot.FILE_NAME,NativeRuntimeSnapshot.FILE_NAME,NativeButtonSnapshot.FILE_NAME,GoogleVoiceDiagnostics.SNAPSHOT) || it.name.matches(Regex("google-voice-[01]\\.log")))}
+            ?.sortedBy {it.name}.orEmpty()
         fun open(context: Context, nativeToken: String? = null) {
             context.startActivity(Intent(context, DiagnosticExportActivity::class.java)
                 .putExtra(NATIVE_TOKEN, nativeToken)
@@ -47,11 +50,10 @@ class DiagnosticExportActivity : Activity() {
     }
 
     private fun export(uri: Uri) {
+        GoogleVoiceDiagnostics.exportSnapshot(this)
         DiagnosticLog.afterPendingWrites {
             val success = runCatching {
-                val logs = java.io.File(filesDir, "diagnostics").listFiles()
-                    ?.filter { it.isFile && (it.name.matches(Regex("events-[0-9]+\\.log")) || it.name == NativeControlSnapshot.FILE_NAME || it.name == NativeRuntimeSnapshot.FILE_NAME || it.name == NativeButtonSnapshot.FILE_NAME) }
-                    ?.sortedBy { it.name }.orEmpty()
+                val logs = filesForExport(this)
                 contentResolver.openOutputStream(uri, "w")?.use { output ->
                     ZipOutputStream(output).use { zip ->
                         logs.forEach { file ->

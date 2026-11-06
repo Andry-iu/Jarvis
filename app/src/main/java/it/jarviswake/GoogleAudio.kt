@@ -10,17 +10,26 @@ import android.media.MediaRecorder
 /** Single owner. stop() invalidates first; release is acknowledged only by the worker's finally. */
 internal interface GoogleCapture {
     val released: Boolean
+    val echoState: String get() = "unavailable"
+    val routeType: Int? get() = null
+    fun allowEchoSpeech(allowed:Boolean) {}
     fun stop()
     fun start(onSpeech: (ShortArray) -> Unit, onEnd: (ShortArray?, String?) -> Unit, onChunk: (ShortArray, Int) -> Unit = {_,_->})
 }
 internal interface GooglePlayback {
     val released: Boolean
+    val routeType: Int? get() = null
     fun stop()
     fun play(pcm: ByteArray, allowed: () -> Boolean, started: () -> Unit): Boolean
 }
-internal class GoogleAudioCapture(private val config: GoogleVoiceConfig) : GoogleCapture {
+internal class GoogleAudioCapture(private val config: GoogleVoiceConfig, private val echo:Boolean=false) : GoogleCapture {
     @Volatile private var stopped = false
     @Volatile private var recorder: AudioRecord? = null
+    @Volatile override var echoState=if(echo) "pending" else "unavailable"
+        private set
+    @Volatile private var echoSpeechAllowed=!echo
+    override val routeType get()=recorder?.routedDevice?.type
+    override fun allowEchoSpeech(allowed:Boolean) {echoSpeechAllowed=allowed}
     @Volatile override var released = true
         private set
     override fun stop() { stopped = true; runCatching { recorder?.stop() } }
@@ -28,23 +37,36 @@ internal class GoogleAudioCapture(private val config: GoogleVoiceConfig) : Googl
     override fun start(onSpeech: (ShortArray) -> Unit, onEnd: (ShortArray?, String?) -> Unit, onChunk: (ShortArray, Int) -> Unit) {
         check(released); released = false
         Thread({
-            val vad = LocalSpeechBuffer(config.silenceMs, config.maximumMs, config.threshold)
+            val vad = LocalSpeechBuffer(config.silenceMs, config.maximumMs, if(echo) (config.threshold*2).coerceIn(1200,10000) else config.threshold, onsetMs=if(echo) 180 else 60)
             val frame = ShortArray(320)
             var output: ShortArray? = null; var failure: String? = null
+            var cancellation:android.media.audiofx.AcousticEchoCanceler?=null
             try {
                 val size = AudioRecord.getMinBufferSize(16000, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT)
                 check(size > 0)
-                val audio = AudioRecord(MediaRecorder.AudioSource.VOICE_RECOGNITION, 16000, AudioFormat.CHANNEL_IN_MONO,
+                val audio = AudioRecord(if(echo) MediaRecorder.AudioSource.VOICE_COMMUNICATION else MediaRecorder.AudioSource.VOICE_RECOGNITION, 16000, AudioFormat.CHANNEL_IN_MONO,
                     AudioFormat.ENCODING_PCM_16BIT, size.coerceAtLeast(6400))
                 recorder = audio
                 check(audio.state == AudioRecord.STATE_INITIALIZED && !stopped)
+                if(echo) {
+                    if(!android.media.audiofx.AcousticEchoCanceler.isAvailable()) {failure="echo_non_disponibile";error("echo_unavailable")}
+                    cancellation=android.media.audiofx.AcousticEchoCanceler.create(audio.audioSessionId)
+                    val effect=cancellation
+                    if(effect==null || !effect.hasControl() || effect.setEnabled(true)!=android.media.audiofx.AudioEffect.SUCCESS || !effect.enabled) {failure="echo_non_disponibile";error("echo_unavailable")}
+                }
                 audio.startRecording(); check(audio.recordingState == AudioRecord.RECORDSTATE_RECORDING)
                 var total = 0
                 var streamed = 0
-                while (!stopped && total < 16000 * 110) { // at most 60 s waiting for onset + 50 s utterance
+                while (!stopped && total < 16000 * (if(echo) 230 else 110)) { // at most 60 s waiting for onset + 50 s utterance
                     val n = audio.read(frame, 0, frame.size)
+                    if(audio.activeRecordingConfiguration?.isClientSilenced==true)failure="microfono_silenziato"
                     check(n > 0 && audio.activeRecordingConfiguration?.isClientSilenced == false) // Android silencing is an error, never successful capture.
                     total += n
+                    if(echo) {
+                        check(cancellation?.hasControl()==true && cancellation?.enabled==true)
+                        echoState="ready"
+                        if(!echoSpeechAllowed) continue
+                    }
                     val wasSpeaking = vad.speaking
                     output = vad.accept(frame, n)
                     if (!wasSpeaking && vad.speaking) {
@@ -54,11 +76,12 @@ internal class GoogleAudioCapture(private val config: GoogleVoiceConfig) : Googl
                         if(take>0) {onChunk(frame,take);streamed+=take}
                     }
                     if (output != null) break
-                    if (!vad.speaking && total >= 16000 * 60) break
+                    if (!vad.speaking && total >= 16000 * (if(echo) 180 else 60)) break
                 }
                 if (!stopped && output == null) failure = "nessun_parlato"
-            } catch (_: Exception) { if (!stopped) failure = "microfono_non_disponibile" }
+            } catch (_: Exception) { if (!stopped && failure==null) failure = if(echo) "echo_non_disponibile" else "microfono_non_disponibile" }
             finally {
+                echoState="unavailable";runCatching {cancellation?.release()}
                 vad.clear(); frame.fill(0)
                 runCatching { recorder?.stop() }; runCatching { recorder?.release() }; recorder = null; released = true
                 if (stopped) { output?.fill(0); onEnd(null, null) } else onEnd(output, failure)
@@ -70,6 +93,7 @@ internal class GoogleAudioCapture(private val config: GoogleVoiceConfig) : Googl
 internal class GoogleAudioPlayback : GooglePlayback {
     @Volatile private var stopped = false
     @Volatile private var track: AudioTrack? = null
+    override val routeType get()=track?.routedDevice?.type
     @Volatile override var released = true
         private set
     override fun stop() { stopped = true; runCatching { track?.pause() }; runCatching { track?.flush() } }

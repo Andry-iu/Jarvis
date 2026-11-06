@@ -14,5 +14,6 @@ internal object BridgeCarConnection {
         runCatching { CarConnection(c.applicationContext).also { connection=it;it.type.observeForever(observer) } }
             .onFailure { type=null;connection=null }
     }
+    fun observed()=type!=null
     fun keepMapsCover()=type==CarConnection.CONNECTION_TYPE_PROJECTION
 }

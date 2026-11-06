@@ -26,7 +26,7 @@ internal class NativeVoiceController(private val service: VoiceAccessibilityServ
     private val tapHandler = android.os.Handler(android.os.Looper.getMainLooper())
     private val buttonPhases = HashSet<String>()
     private var pendingButtonPhase: String? = null
-    private var exporting = false
+    @Volatile private var exporting = false
     private var snapshotPhase = ""
     private var snapshotCount = 0
     private var snapshotAt = 0L
@@ -71,8 +71,11 @@ internal class NativeVoiceController(private val service: VoiceAccessibilityServ
             "phase=manual_export startSent=$startSent stopping=${ending != null}\n" + NativeControlSnapshot.describe(current))
         captureButtons(current, "manual_export", force = true)
         exporting = true
-        hud?.visibility = android.view.View.GONE
-        runCatching { DiagnosticExportActivity.open(service, token) }.onFailure { restoreAfterExport() }
+        DiagnosticScreenshots.display(service,{exporting && VoiceCycle.matches(token) && bridgeCoverVisible() && !service.nativeCoverDismissed(token)}) { code ->
+            DiagnosticScreenshots.notify(service,code)
+            hud?.visibility = android.view.View.GONE
+            runCatching { DiagnosticExportActivity.open(service, token) }.onFailure { restoreAfterExport() }
+        }
     }
     fun restoreAfterExport() {
         if (!VoiceCycle.matches(token)) return
@@ -84,6 +87,7 @@ internal class NativeVoiceController(private val service: VoiceAccessibilityServ
         PreparedChat.coverClosed(service,token)
     }
     fun dismissForExit() {
+        exporting=false // Closing while a screenshot is pending must not stall native stop/recovery.
         val hadHud = hud != null
         detachHud()
         if (hadHud) DiagnosticLog.record(service, DiagnosticLog.Event.NATIVE_COVER_DISMISSED, token)

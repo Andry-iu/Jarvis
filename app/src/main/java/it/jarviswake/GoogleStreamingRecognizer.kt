@@ -30,7 +30,7 @@ private class GoogleGrpcTransport:GoogleStreamTransport {
 
 /** Public v1 StreamingRecognize, TLS + user OAuth. Only final results are delivered once, on close. */
 internal class GoogleStreamingRecognizer(config: GoogleVoiceConfig, private val result: (String?, Int) -> Unit,
-    private val transport:GoogleStreamTransport=GoogleGrpcTransport()) : GoogleRecognitionStream {
+    private val transport:GoogleStreamTransport=GoogleGrpcTransport(),private val reportStatus:(Int)->Unit={}) : GoogleRecognitionStream {
     private val done = AtomicBoolean(false)
     @Volatile private var halfClosed = false
     private var samples = 0
@@ -70,6 +70,7 @@ internal class GoogleStreamingRecognizer(config: GoogleVoiceConfig, private val 
                     finally {message.fill(0)}
                 }
                 override fun onClose(status:Status,trailers:Metadata) {
+                    if(!done.get())reportStatus(status.code.value())
                     complete(if(status.isOk && halfClosed) synchronized(this@GoogleStreamingRecognizer) {transcript.toString().trim()} else null)
                 }
             },headers)

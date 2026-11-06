@@ -6,7 +6,7 @@ import org.json.JSONObject
 internal data class GoogleVoiceConfig(
     val sttToken: String, val ttsToken: String, val expiresAt: Long, val quotaProject: String,
     val conversation: String, val language: String = "it-IT", val voice: String = GoogleVoiceSettings.DEFAULT_VOICE,
-    val silenceMs: Int = 1200, val maximumMs: Int = 50000, val threshold: Int = 600, val authMode: String = "manual"
+    val silenceMs: Int = 1200, val maximumMs: Int = 50000, val threshold: Int = 600, val authMode: String = "manual", val bargeIn: Boolean = true
 ) {
     fun validate() {
         require(authMode in setOf("manual", "backend"))
@@ -19,7 +19,7 @@ internal data class GoogleVoiceConfig(
     }
     fun json() = JSONObject().put("stt", sttToken).put("tts", ttsToken).put("expiry", expiresAt)
         .put("project", quotaProject).put("conversation", conversation).put("language", language).put("voice", voice)
-        .put("voiceChoiceVersion", 1).put("authMode", authMode).put("silence", silenceMs).put("maximum", maximumMs).put("threshold", threshold)
+        .put("bargeIn",bargeIn).put("voiceChoiceVersion", 1).put("authMode", authMode).put("silence", silenceMs).put("maximum", maximumMs).put("threshold", threshold)
     override fun toString() = "GoogleVoiceConfig(redacted)"
 }
 
@@ -36,7 +36,7 @@ internal object GoogleVoiceSettings {
         val j = BridgeSettings.readPrivate(c, "configuration", "google_voice_private")
         if (!j.has("stt")) return null
         return GoogleVoiceConfig(j.getString("stt"), j.getString("tts"), j.getLong("expiry"), j.getString("project"),
-            j.getString("conversation"), j.getString("language"), selectedVoice(j), j.getInt("silence"), j.getInt("maximum"), j.getInt("threshold"), j.optString("authMode", "manual"))
+            j.getString("conversation"), j.getString("language"), selectedVoice(j), j.getInt("silence"), j.getInt("maximum"), j.getInt("threshold"), j.optString("authMode", "manual"),j.optBoolean("bargeIn",true))
     }
     fun save(c: Context, value: GoogleVoiceConfig) {
         check(!VoiceCycle.active); value.validate()

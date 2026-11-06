@@ -73,4 +73,26 @@ class GoogleVoicePolicyTest {
         for(raw in listOf(chat+"#wrong",chat+"?share=true",chat.replace("chatgpt.com","chatgpt.com.evil"),chat.replace("/c/","/%63/")))assertNull(GoogleSessionRoute.conversation(raw,project,true))
     }
 
+    @Test fun echoRouteRequiresKnownMatchingRoutesAndRejectsCarMediaBusAndUnknownDevices() {
+        val d=android.media.AudioDeviceInfo.TYPE_BUILTIN_MIC
+        assertTrue(GoogleEchoRoutePolicy.compatible(d,android.media.AudioDeviceInfo.TYPE_BUILTIN_SPEAKER))
+        assertTrue(GoogleEchoRoutePolicy.compatible(android.media.AudioDeviceInfo.TYPE_BLUETOOTH_SCO,android.media.AudioDeviceInfo.TYPE_BLUETOOTH_SCO))
+        assertFalse(GoogleEchoRoutePolicy.compatible(d,android.media.AudioDeviceInfo.TYPE_BLUETOOTH_A2DP))
+        assertFalse(GoogleEchoRoutePolicy.compatible(d,android.media.AudioDeviceInfo.TYPE_BUS))
+        assertFalse(GoogleEchoRoutePolicy.compatible(null,null))
+    }
+    @Test fun echoVadUsesLongerLocalOnsetButKeepsInitialSpeechInPreroll() {
+        val vad=LocalSpeechBuffer(threshold=1200,onsetMs=180)
+        repeat(8){vad.accept(ShortArray(320){2000},320);assertFalse(vad.speaking)}
+        vad.accept(ShortArray(320){2000},320);assertTrue(vad.speaking);assertEquals(2880,vad.preRoll().size)
+    }
+
+    @Test fun suspectedEchoCannotBecomeANewTextRequestButDifferentUserSpeechIsAccepted() {
+        assertTrue(GoogleEchoTextGuard.matches("La richiesta è completata.","La richiesta è completata!"))
+        assertTrue(GoogleEchoTextGuard.matches("richiesta è completata","Bene, la richiesta è completata."))
+        assertTrue(GoogleEchoTextGuard.matches("Sì","Sì."))
+        assertFalse(GoogleEchoTextGuard.matches("Fermati, cambia destinazione","La richiesta è completata"))
+        assertFalse(GoogleEchoTextGuard.matches("", "Risposta"))
+    }
+
 }

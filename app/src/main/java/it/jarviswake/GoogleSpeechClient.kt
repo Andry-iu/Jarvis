@@ -11,11 +11,14 @@ internal interface GoogleSpeechApi {
     fun openRecognition(onResult: (String?, Int) -> Unit): GoogleRecognitionStream
     fun synthesize(text: String): ByteArray
     fun cancel()
+    fun reportTo(listener:(String,Int)->Unit) {}
 }
 
 /** Public Google v1 APIs: streaming STT and REST TTS. Never redirects, logs or returns raw provider errors. */
 internal class GoogleSpeechClient(private val config: GoogleVoiceConfig) : GoogleSpeechApi {
     @Volatile private var connection: HttpURLConnection? = null
+    private var report:(String,Int)->Unit={_,_->}
+    override fun reportTo(listener:(String,Int)->Unit) {report=listener}
     @Volatile private var cancelled = false
     @Volatile private var recognition: GoogleRecognitionStream? = null
     override fun cancel() { cancelled = true; connection?.disconnect(); recognition?.cancel() }
@@ -34,7 +37,8 @@ internal class GoogleSpeechClient(private val config: GoogleVoiceConfig) : Googl
                 conn.setRequestProperty("Content-Type", "application/json; charset=utf-8")
                 conn.outputStream.use { it.write(payload.toString().toByteArray(Charsets.UTF_8)) }
             }
-            check(conn.responseCode == 200) { "google_http_${conn.responseCode}" }
+            report("http",conn.responseCode)
+            check(conn.responseCode == 200) { "google_http_error" }
             val bytes = conn.inputStream.use { input ->
                 val out = java.io.ByteArrayOutputStream(); val buffer = ByteArray(4096)
                 while (true) {
@@ -49,7 +53,7 @@ internal class GoogleSpeechClient(private val config: GoogleVoiceConfig) : Googl
     }
     override fun openRecognition(onResult: (String?, Int) -> Unit): GoogleRecognitionStream {
         check(!cancelled && System.currentTimeMillis()<config.expiresAt)
-        return GoogleStreamingRecognizer(config,onResult).also { recognition=it; if(cancelled) it.cancel() }
+        return GoogleStreamingRecognizer(config,onResult,reportStatus={report("grpc",it)}).also { recognition=it; if(cancelled) it.cancel() }
     }
     override fun synthesize(text: String): ByteArray {
         require(text.toByteArray(Charsets.UTF_8).size in 1..4500)

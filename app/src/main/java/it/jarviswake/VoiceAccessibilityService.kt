@@ -173,8 +173,12 @@ class VoiceAccessibilityService : AccessibilityService() {
 
         fun openDiagnosticsExport() {
             val service = instance.get() ?: return
-            service.hideOverlay()
-            DiagnosticExportActivity.open(service)
+            val token=VoiceCycle.id ?: return
+            DiagnosticScreenshots.display(service,{VoiceCycle.matches(token) && service.overlay?.isShown==true}) { code ->
+                DiagnosticScreenshots.notify(service,code)
+                service.hideOverlay()
+                DiagnosticExportActivity.open(service)
+            }
         }
     }
 

@@ -77,9 +77,8 @@ internal class GoogleVoiceActivity : Activity() {
     private lateinit var cover: FrameLayout
     private var overlayManager: android.view.WindowManager? = null
     private lateinit var hud: HolographicOverlayView
-    private lateinit var next: Button
     private lateinit var transcriptView: CoverTranscriptView
-    private lateinit var textToggle: Button
+    private lateinit var textToggle: View
     private lateinit var web: WebView
     private lateinit var project: String
     private var conversation = ""
@@ -106,7 +105,8 @@ internal class GoogleVoiceActivity : Activity() {
     private var muted = false
     private var focus: AudioFocusRequest? = null
     private var completion: ((JSONObject) -> Unit)? = null
-    private class SpeechAttempt {
+    private var echoCandidate:String?=null
+    private class SpeechAttempt(val text:String) {
         val accepted = true
         @Volatile var synthesized = false
         @Volatile var playbackStarted = false
@@ -115,7 +115,11 @@ internal class GoogleVoiceActivity : Activity() {
     private val speechAccepted get() = speech?.accepted == true
     private val synthesized get() = speech?.synthesized == true
     private val playbackStarted get() = speech?.playbackStarted == true
-    private var coverHidden = false
+    private var waitingListening=false
+    private var echoCapture:GoogleCapture?=null
+    private var exportBusy = false
+    @Volatile private var exportGeneration = 0
+    @Volatile private var coverHidden = false
     private var resumed = false
     private var dispatchEpoch = 0
     private var readyDeadline = 0L
@@ -123,7 +127,18 @@ internal class GoogleVoiceActivity : Activity() {
     private var readyProbeEpoch = 0
     private val script by lazy { assets.open("google-text.js").bufferedReader().use { it.readText() } }
     private fun alive() = !closed && VoiceCycle.matches(token)
-    private fun status(text: String) { if (alive()) { hud.setStatus(text); State.setAttempt(this, text) } }
+    private fun status(text: String) { if (alive()) {
+        hud.setStatus(text); State.setAttempt(this,text)
+        GoogleVoiceDiagnostics.record(this,token,"status",if(text.startsWith("BOZZA PRESENTE")) "draft_present" else state.phase)
+    } }
+    private fun diagnosticSnapshot()=JSONObject().put("project_opened",projectOpened).put("conversation_bound",conversation.isNotEmpty())
+        .put("pre_sending",preSending).put("pre_complete",preComplete).put("startup_complete",startupComplete)
+        .put("capture_present",capture!=null).put("capture_released",captureOwner?.released!=false)
+        .put("playback_present",playback!=null).put("playback_released",playbackOwner?.released!=false)
+        .put("muted",muted).put("cover_hidden",coverHidden).put("echo_ready",echoCapture?.echoState=="ready")
+        .put("record_route",capture?.routeType ?: 0).put("play_route",playback?.routeType ?: 0)
+        .put("car_projection",BridgeCarConnection.keepMapsCover()).put("projection_known",BridgeCarConnection.observed())
+
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -135,9 +150,16 @@ internal class GoogleVoiceActivity : Activity() {
         }
         current = java.lang.ref.WeakReference(this)
         state = GoogleTurnState(token)
+        GoogleVoiceDiagnostics.record(this,token,"session","entry")
         val selected = runCatching { GoogleVoiceDependencies.configuration(this) }.getOrNull()
         if (selected == null || runCatching { selected.validate() }.isFailure ||
             checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED || !BridgeSettings.enabled(this)) {
+            GoogleVoiceDiagnostics.record(this,token,"configuration",when {
+                selected==null -> "config_missing"
+                runCatching {selected.validate()}.isFailure -> "config_invalid"
+                !BridgeSettings.enabled(this) -> "bridge_disabled"
+                else -> "microphone_denied"
+            })
             VoiceCycle.cancel(this, token, "Configura credenziali Google valide, microfono e collegamento plugin; nessun consumo avviato."); finish(); return
         }
         config = selected
@@ -150,7 +172,6 @@ internal class GoogleVoiceActivity : Activity() {
         openingText = GoogleVoiceDependencies.opening(this)
         greetingText = GoogleVoiceDependencies.greeting(this)
         readyDeadline=SystemClock.elapsedRealtime()+120000
-        window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
         setShowWhenLocked(true); setTurnScreenOn(true)
         root = FrameLayout(this)
         cover = object : FrameLayout(this) {
@@ -200,23 +221,21 @@ internal class GoogleVoiceActivity : Activity() {
         root.addView(web, FrameLayout.LayoutParams(-1, -1))
         hud = HolographicOverlayView(this).apply {
             setCoverActions(singleTap = { toggleMute() }, belowTap = { CoverSettings.setOpaque(this@GoogleVoiceActivity, !CoverSettings.isOpaque(this@GoogleVoiceActivity)) },
-                close = { closeLocal(false) }, export = { hideCoverForApp(); DiagnosticExportActivity.open(this@GoogleVoiceActivity) },
+                close = { closeLocal(false) }, export = { exportDiagnostics() },
                 hide = { closeLocal(true) }, revealChat = { revealChat() })
         }
         cover.addView(hud, FrameLayout.LayoutParams(-1, -1))
         transcriptView=CoverTranscriptView(this)
         cover.addView(transcriptView,FrameLayout.LayoutParams(-1,-1))
-        textToggle=Button(this).apply {
-            text=if(transcriptView.shown) "Testi ✓" else "Testi"
-            textSize=11f;contentDescription="Mostra o nascondi testi sulla cover; due dita scorrono la cronologia"
-            setOnClickListener { text=if(transcriptView.toggle()) "Testi ✓" else "Testi" }
+        textToggle=View(this).apply {
+            isClickable=true;isFocusable=true
+            contentDescription="Mostra o nascondi chat sulla cover; due dita scorrono la cronologia"
+            setOnClickListener {transcriptView.toggle()}
         }
-        cover.addView(textToggle,FrameLayout.LayoutParams(-2,-2,Gravity.BOTTOM or Gravity.END).apply {
+        cover.addView(textToggle,FrameLayout.LayoutParams((96*resources.displayMetrics.density).toInt(),(56*resources.displayMetrics.density).toInt(),Gravity.BOTTOM or Gravity.END).apply {
             rightMargin=(12*resources.displayMetrics.density).toInt();bottomMargin=(8*resources.displayMetrics.density).toInt()
         })
-        next = Button(this).apply { text = "Nuova dettatura / annulla attesa"; setOnClickListener { newDictation() } }
-        cover.addView(next, FrameLayout.LayoutParams(-2, -2, Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL).apply { bottomMargin = (64*resources.displayMetrics.density).toInt() })
-        hud.setOpacityBottomAnchor(next)
+        hud.setOpacityBottomAnchor(textToggle)
         root.addView(cover,FrameLayout.LayoutParams(-1,-1))
         setContentView(root)
         if (android.os.Build.VERSION.SDK_INT >= 33) onBackInvokedDispatcher.registerOnBackInvokedCallback(android.window.OnBackInvokedDispatcher.PRIORITY_DEFAULT) { closeLocal(false) }
@@ -233,6 +252,7 @@ internal class GoogleVoiceActivity : Activity() {
         web.evaluateJavascript(scriptFor(if(projectOpened) "probe" else "restart", "", "")) { raw ->
             if(readyProbeEpoch==epoch) readyProbePending=false
             if (!alive() || epoch!=captureEpoch || state.phase != "ready" || capture != null) return@evaluateJavascript
+            GoogleVoiceDiagnostics.dom(this,token,"page",raw)
             if(projectOpened) observeConversation(raw)
             when(parse(raw)) {
                 "restart_ready" -> {
@@ -274,6 +294,7 @@ internal class GoogleVoiceActivity : Activity() {
             if(!alive() || epoch!=dispatchEpoch || preComplete) return
             web.evaluateJavascript(scriptFor("send",openingTurn,openingText)) { raw ->
                 if(!alive() || epoch!=dispatchEpoch || preComplete) return@evaluateJavascript
+                GoogleVoiceDiagnostics.dom(this,token,"pre",raw)
                 when(parse(raw)) {
                     "ambiguous_editor", "unverified_conversation", "busy" -> {
                         // These phases guarantee no write/click. Never retry after any mutation.
@@ -318,74 +339,152 @@ internal class GoogleVoiceActivity : Activity() {
     private fun scriptFor(action: String, turn: String, text: String) = script
         .replace("__JW_CONFIG__", JSONObject().put("project", project).put("session", token)
             .put("turn", turn).put("action", action).put("text", text).put("resume",writtenTurns.contains(turn)).put("fresh",conversation.isEmpty()).toString())
+    private fun ensureAudioFocus():Boolean {
+        if(focus!=null) return true
+        val request=AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT)
+            .setAudioAttributes(AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_ASSISTANT).setContentType(AudioAttributes.CONTENT_TYPE_SPEECH).build())
+            .setOnAudioFocusChangeListener({ change -> if(change<0 && alive()) error("FOCUS AUDIO PERSO — MICROFONO E RIPRODUZIONE FERMATI") },main).build()
+        if(getSystemService(AudioManager::class.java).requestAudioFocus(request)!=AudioManager.AUDIOFOCUS_REQUEST_GRANTED) return false
+        focus=request;return true
+    }
+    private fun canListen() = state.phase=="ready" || (waitingListening && state.phase=="waiting_reply")
     private fun startListening() {
-        if (!alive() || muted || state.phase != "ready") return
+        if (!alive() || muted || !canListen() || capture?.released==false) return
+        if(!ensureAudioFocus()) {error("FOCUS AUDIO NON DISPONIBILE — NESSUN ASCOLTO");return}
         val broker = credentials
         if (broker == null) { resolvedConfig = config; startCapture(); return }
         val epoch = ++captureEpoch
-        status("AUTENTICAZIONE GOOGLE — RINNOVO AUTOMATICO…")
         Thread({
+            GoogleVoiceDiagnostics.record(this,token,"auth","started")
             val result = runCatching { broker.resolve(config) }
+            GoogleVoiceDiagnostics.record(this,token,"auth",if(result.isSuccess) "completed" else "failed",JSONObject().put("http",(result.exceptionOrNull() as? GoogleBrokerHttpFailure)?.status ?: 0))
             main.post {
-                if (!alive() || epoch != captureEpoch || muted || state.phase != "ready") return@post
+                if (!alive() || epoch != captureEpoch || muted || !canListen()) return@post
                 result.onSuccess { resolvedConfig = it; startCapture() }
                     .onFailure { error("AUTENTICAZIONE GOOGLE NON DISPONIBILE — VERIFICA CHIAVE, PROGETTO E RETE") }
             }
         }, "Jarvis-google-auth").apply { isDaemon = true; start() }
     }
     private fun startCapture() {
-        if (!alive() || muted || state.phase != "ready") return
-        val epoch = ++captureEpoch
-        val gate = NativeAudioReleaseGate()
-        val until = SystemClock.elapsedRealtime() + 8000
+        if (!alive() || muted || !canListen() || capture?.released==false) return
+        val epoch=++captureEpoch;val gate=NativeAudioReleaseGate();val until=SystemClock.elapsedRealtime()+8000
         fun waitForAudio() {
-            if (!alive() || epoch != captureEpoch || muted || state.phase != "ready") return
-            if (audioBusy() || !WakeService.isMicrophoneReleased() ||
-                !gate.observe(token, SystemClock.elapsedRealtime(), NativeAudioState.read(this).free)) {
-                if (SystemClock.elapsedRealtime() >= until) error("MICROFONO OCCUPATO — RIPROVA ESPLICITAMENTE")
-                else main.postDelayed({ waitForAudio() }, 100)
+            if(!alive() || epoch!=captureEpoch || muted || !canListen()) return
+            if(audioBusy() || !WakeService.isMicrophoneReleased() || !gate.observe(token,SystemClock.elapsedRealtime(),NativeAudioState.read(this).free)) {
+                if(SystemClock.elapsedRealtime()>=until) error("MICROFONO OCCUPATO — RIPROVA ESPLICITAMENTE") else main.postDelayed({waitForAudio()},100)
                 return
             }
-            val recorder = GoogleVoiceDependencies.capture(config); capture = recorder; captureOwner = recorder
-            status("ASCOLTO GOOGLE — TOCCA PER MUTE")
-            recorder.start(onSpeech = { initial ->
-                main.post {
-                    if (alive() && epoch == captureEpoch) beginRecognition(initial) else initial.fill(0)
-                }
-            }, onChunk = { frame, size ->
-                val copy=frame.copyOf(size)
-                main.post {
-                    try {if(alive() && epoch==captureEpoch && state.phase=="transcribing") recognition?.audio(copy)}
-                    catch(_:Exception) {if(alive() && epoch==captureEpoch) error("ERRORE STREAM GOOGLE — NESSUN REINVIO")}
-                    finally {copy.fill(0)}
-                }
-            }, onEnd = { audio, failure ->
-                main.post {
-                    if (capture === recorder) capture = null
-                    if (!alive() || epoch != captureEpoch) { audio?.fill(0); return@post }
-                    if (audio == null) { if (failure != null) error("MICROFONO: $failure"); return@post }
-                    audio.fill(0)
-                    status("TRASCRIZIONE GOOGLE — ATTESA DEFINITIVO…")
-                    try {recognition?.finish() ?: error("STREAM NON DISPONIBILE — NESSUN INVIO")}
-                    catch(_:Exception) {error("ERRORE CHIUSURA STREAM GOOGLE — NESSUN REINVIO")}
-                }
-            })
+            val recorder=GoogleVoiceDependencies.capture(config);capture=recorder;captureOwner=recorder;echoCapture=null
+            status(if(waitingListening) "ATTENDO RISPOSTA — PUOI PARLARE DI NUOVO" else "ASCOLTO GOOGLE — TOCCO CENTRALE PER MUTE")
+            launchCapture(recorder,epoch,false)
         }
         waitForAudio()
     }
+    private fun launchCapture(recorder:GoogleCapture,epoch:Int,echo:Boolean) {
+        GoogleVoiceDiagnostics.record(this,token,"capture","started")
+        recorder.start(onSpeech={initial -> main.post {
+            if(alive() && epoch==captureEpoch && !muted) beginRecognition(initial) else initial.fill(0)
+        }},onChunk={frame,size ->
+            val copy=frame.copyOf(size)
+            main.post {try {if(alive() && epoch==captureEpoch && state.phase=="transcribing") recognition?.audio(copy)}
+                catch(_:Exception) {if(alive() && epoch==captureEpoch) error("ERRORE STREAM GOOGLE — NESSUN REINVIO")}
+                finally {copy.fill(0)}}
+        },onEnd={audio,failure -> main.post {
+            if(capture===recorder) capture=null
+            GoogleVoiceDiagnostics.record(this,token,"capture","capture_released",JSONObject().put("capture_released",recorder.released))
+            if(!alive() || epoch!=captureEpoch) {audio?.fill(0);return@post}
+            if(audio==null) {
+                if(failure!=null)GoogleVoiceDiagnostics.record(this,token,"capture",when(failure){"nessun_parlato"->"no_speech";"echo_non_disponibile"->"echo_unavailable";"microfono_silenziato"->"microphone_silenced";else->"microphone_unavailable"})
+                if(echo && state.phase=="synthesizing") {
+                    echoCapture=null;GoogleVoiceDiagnostics.record(this,token,"barge","echo_unavailable")
+                    status("RISPOSTA VOCALE — ASCOLTO AUTOMATICO AL TERMINE")
+                } else if(failure=="nessun_parlato" && canListen()) {main.postDelayed({startListening()},150)}
+                else if(failure!=null) error("MICROFONO NON DISPONIBILE — VERIFICA AUDIO E PERMESSI")
+                return@post
+            }
+            audio.fill(0);status("TRASCRIZIONE GOOGLE — ATTESA DEFINITIVO…")
+            try {recognition?.finish() ?: error("STREAM NON DISPONIBILE — NESSUN INVIO")}
+            catch(_:Exception) {error("ERRORE CHIUSURA STREAM GOOGLE — NESSUN REINVIO")}
+        }})
+    }
+    /** Runs on the TTS worker: no main-thread waits, and no capture competing with an old recorder. */
+    private fun prepareEcho(turn:String?):GoogleCapture? {
+        val allowed={alive() && state.turn==turn && state.phase=="synthesizing" && !muted}
+        val old=BridgeActions.onMain({alive() && state.turn==turn}) {captureEpoch++;val previous=capture;previous?.stop();capture=null;echoCapture=null;previous}
+        val until=SystemClock.elapsedRealtime()+2000
+        while(old?.released==false && allowed() && SystemClock.elapsedRealtime()<until) Thread.sleep(20)
+        check(old?.released!=false && alive() && state.turn==turn)
+        if(!config.bargeIn || !allowed()) return null
+        val fresh=credentials?.resolve(config,240000) ?: config
+        if(fresh.expiresAt-System.currentTimeMillis()<240000) return null
+        val recorder=BridgeActions.onMain(allowed) {
+            resolvedConfig=fresh
+            GoogleVoiceDependencies.echoCapture(config).also {capture=it;captureOwner=it;echoCapture=it;launchCapture(it,++captureEpoch,true)}
+        } ?: return null
+        val deadline=SystemClock.elapsedRealtime()+1600
+        while(recorder.echoState=="pending" && allowed() && SystemClock.elapsedRealtime()<deadline) Thread.sleep(20)
+        if(!allowed() || recorder.echoState!="ready") {
+            BridgeActions.onMain({alive() && state.turn==turn}) {if(capture===recorder){captureEpoch++;capture=null;echoCapture=null};recorder.stop()}
+            GoogleVoiceDiagnostics.record(this,token,"barge","echo_unavailable");return null
+        }
+        return recorder
+    }
+    private fun monitorEcho(recorder:GoogleCapture,player:GooglePlayback,turn:String?) {
+        val until=SystemClock.elapsedRealtime()+700
+        var original:Pair<Int?,Int?>?=null
+        fun inspect() {
+            if(!alive() || state.turn!=turn || echoCapture!==recorder || recorder.released || state.phase!="synthesizing") return
+            val pair=recorder.routeType to player.routeType
+            if(pair.first==null || pair.second==null) {
+                if(SystemClock.elapsedRealtime()<until) {main.postDelayed({inspect()},50);return}
+            }
+            val valid=recorder.echoState=="ready" && GoogleEchoRoutePolicy.compatible(pair.first,pair.second) && (original==null || original==pair)
+            GoogleVoiceDiagnostics.record(this,token,"barge",if(valid) "echo_ready" else "route_changed",JSONObject().put("record_route",pair.first ?: 0).put("play_route",pair.second ?: 0))
+            if(!valid) {
+                recorder.allowEchoSpeech(false);captureEpoch++;recorder.stop();if(capture===recorder)capture=null;echoCapture=null
+                status("USCITA AUDIO CAMBIATA O NON VERIFICATA — ASCOLTO AL TERMINE");return
+            }
+            if(original==null)status("RISPOSTA GOOGLE — PUOI INTERROMPERE PARLANDO")
+            original=pair;recorder.allowEchoSpeech(true)
+            main.postDelayed({inspect()},400)
+        }
+        inspect()
+    }
+    private fun interruptReply() {
+        waitingListening=false;dispatchEpoch++
+        api?.cancel();playback?.stop()
+        echoCandidate=if(playbackStarted) speech?.text else null
+        val done=completion;completion=null
+        done?.invoke(JSONObject().put("code","interrupted").put("accepted",speechAccepted).put("synthesized",synthesized)
+            .put("playback_started",playbackStarted).put("completed",false))
+        state.close();state=GoogleTurnState(token);speech=null
+        GoogleVoiceDiagnostics.record(this,token,"barge","interrupted")
+    }
     private fun beginRecognition(initial: ShortArray) {
+        if(alive() && state.phase in setOf("waiting_reply","synthesizing")) interruptReply()
+        waitingListening=false
         val turn = UUID.randomUUID().toString()
         if (!alive() || !state.begin(turn)) { initial.fill(0); return }
+        GoogleVoiceDiagnostics.record(this,token,"stt","started")
         status("DETTATURA GOOGLE — PAUSA PER INVIARE")
         val client = GoogleVoiceDependencies.api(resolvedConfig ?: config); api = client
+        client.reportTo {kind,code -> GoogleVoiceDiagnostics.record(this,token,"stt","provider_status",JSONObject().put(kind,code))}
         try {
             recognition=client.openRecognition { text, samples ->
                 GoogleVoiceUsage.add(applicationContext,"stt_ms",samples/16L,!text.isNullOrBlank())
+                GoogleVoiceDiagnostics.record(this,token,"stt",if(text.isNullOrBlank()) "failed" else "completed",JSONObject().put("samples",samples))
                 main.post {
                     if (!alive() || state.turn != turn || state.phase != "transcribing") return@post
                     if(capture!=null) {error("STREAM GOOGLE TERMINATO PRIMA DELLA DETTATURA — NESSUN INVIO");return@post}
                     if (text==null) {error("ERRORE GOOGLE STT — CREDENZIALI, QUOTA O RETE; NESSUN REINVIO");return@post}
                     if (text.isBlank()) {error("NESSUNA TRASCRIZIONE — NUOVA DETTATURA");return@post}
+                    val spoken=echoCandidate;echoCandidate=null
+                    if(spoken!=null && GoogleEchoTextGuard.matches(text,spoken)) {
+                        GoogleVoiceDiagnostics.record(this,token,"barge","echo_rejected")
+                        state.close();state=GoogleTurnState(token);waitingListening=false
+                        status("POSSIBILE ECO SCARTATA — RIPRENDO ASCOLTO, PARLA DI NUOVO")
+                        main.postDelayed({if(alive())startListening()},700);return@post
+                    }
                     transcriptView.append("Dettato",text)
                     if (state.submitting()) submit(turn,text)
                 }
@@ -397,13 +496,20 @@ internal class GoogleVoiceActivity : Activity() {
     private fun submit(turn: String, transcript: String) {
         val epoch = ++dispatchEpoch
         val text = transcript + "\n\n[JarvisWake: session_id=$token; turn_id=$turn. Rispondi con jarviswake_speak per la voce, senza ChatGPT Voice.]"
-        val until = SystemClock.elapsedRealtime() + 12000
+        val until = SystemClock.elapsedRealtime() + 120000
         fun step() {
             if (!alive() || state.turn != turn || epoch != dispatchEpoch || state.phase !in setOf("submitting", "send_dispatched")) return
             web.evaluateJavascript(scriptFor("send", turn, text)) { raw ->
                 if (!alive() || state.turn != turn || epoch != dispatchEpoch) return@evaluateJavascript
+                GoogleVoiceDiagnostics.dom(this,token,"send",raw)
                 observeConversation(raw)
                 when (parse(raw)) {
+                    "busy", "ambiguous_editor" -> {
+                        if(!writtenTurns.contains(turn) && SystemClock.elapsedRealtime()<until) {
+                            status("CHAT OCCUPATA — DETTATO PRONTO, ATTENDO INVIO")
+                            main.postDelayed({step()},300)
+                        } else error("CHAT NON DISPONIBILE — NESSUN REINVIO")
+                    }
                     "written", "waiting_send" -> { writtenTurns.add(turn); if (SystemClock.elapsedRealtime() < until) main.postDelayed({ step() }, 150) else error("INVIO NON DISPONIBILE — NESSUN REINVIO") }
                     "dispatched", "waiting_observation" -> {
                         writtenTurns.add(turn); state.dispatched(); status("INVIO ESEGUITO — ATTESA RISCONTRO CHAT")
@@ -417,10 +523,12 @@ internal class GoogleVoiceActivity : Activity() {
         step()
     }
     private fun waitReply(turn: String, observed: Boolean) {
+        waitingListening=observed && conversation.isNotEmpty()
+        if(waitingListening) main.postDelayed({if(alive() && state.turn==turn)startListening()},150)
         status(if (observed) "MESSAGGIO OSSERVATO — ATTESA VOCE DAL PLUGIN" else "INVIO DISPATCHED, NON OSSERVATO — ATTESA PLUGIN")
         main.postDelayed({
             if (alive() && state.turn == turn && state.phase in setOf("send_dispatched", "waiting_reply"))
-                status("NESSUNA VOCE DAL PLUGIN — ATTENDO ANCORA; NUOVA DETTATURA ANNULLA L’ATTESA, NON I LAVORI")
+                status("NESSUNA VOCE DAL PLUGIN — ATTENDO ANCORA; PARLA PER UN NUOVO TURNO; I LAVORI PROSEGUONO")
         }, 90000)
         if (config.authMode == "manual") main.postDelayed({
             if(alive() && state.turn==turn && state.phase in setOf("send_dispatched","waiting_reply"))
@@ -434,56 +542,66 @@ internal class GoogleVoiceActivity : Activity() {
         }
         if (!alive() || !permitted() || text.isBlank() || text.toByteArray(Charsets.UTF_8).size > 4500 ||
             !state.acceptReply(p.optString("session_id"), p.optString("turn_id"))) return false
-        val attempt=SpeechAttempt(); speech=attempt; completion = done
+        val attempt=SpeechAttempt(text); speech=attempt; completion = done
+        GoogleVoiceDiagnostics.record(this,token,"reply","accepted")
         progress("accepted")
         transcriptView.append("Jarvis",text)
         dispatchEpoch++ // A late DOM callback must not change the accepted reply phase.
         status("RISPOSTA ACCETTATA — SINTESI GOOGLE…")
         val turn = state.turn
         val player = GoogleVoiceDependencies.playback(); playback = player; playbackOwner = player
-        val manager = getSystemService(AudioManager::class.java)
-        val focusRequest = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT)
-            .setAudioAttributes(AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_ASSISTANT).setContentType(AudioAttributes.CONTENT_TYPE_SPEECH).build())
-            .setOnAudioFocusChangeListener({ change -> if (change < 0 && alive()) error("FOCUS AUDIO PERSO — RIPRODUZIONE FERMATA") }, main).build()
-        focus = focusRequest
-        if (manager.requestAudioFocus(focusRequest) != AudioManager.AUDIOFOCUS_REQUEST_GRANTED) { finishSpeech("audio_focus_denied", false); return true }
+        if(!ensureAudioFocus()) {finishSpeech("audio_focus_denied",false);return true}
         Thread({
             var ok = false
             var synthesisRequested = false
             var authenticated = false
+            var retainedPcm:ByteArray?=null
             try {
                 val fresh = credentials?.resolve(config, 90000) ?: config
                 authenticated = true
                 check(alive() && state.turn == turn && permitted())
                 val client = GoogleVoiceDependencies.api(fresh); api = client
-                if (!alive() || state.turn != turn || !permitted()) { client.cancel(); error("cancelled") }
+                client.reportTo {kind,code -> GoogleVoiceDiagnostics.record(this,token,"tts","provider_status",JSONObject().put(kind,code))}
+                if (!alive() || state.turn != turn || !permitted()) { client.cancel(); throw InterruptedException() }
                 synthesisRequested = true
-                val pcm = client.synthesize(text); attempt.synthesized = true; progress("synthesized")
+                GoogleVoiceDiagnostics.record(this,token,"tts","started",JSONObject().put("characters",text.codePointCount(0,text.length)))
+                val pcm = client.synthesize(text);retainedPcm=pcm; attempt.synthesized = true; progress("synthesized");GoogleVoiceDiagnostics.record(this,token,"tts","synthesized")
                 GoogleVoiceUsage.add(applicationContext, "tts_characters", text.codePointCount(0, text.length).toLong(), true)
+                val echo=try {prepareEcho(turn)} catch(_:Exception) {null}
+                if(!alive() || state.turn!=turn || !permitted()) {pcm.fill(0);player.stop();return@Thread}
+                check(echo!=null || captureOwner?.released!=false) {"audio_release_unconfirmed"}
                 ok = player.play(pcm, { alive() && state.turn == turn && permitted() }) {
                     attempt.playbackStarted = true
-                    progress("playback_started")
-                    main.post { if (alive() && state.turn == turn) status("RIPRODUZIONE GOOGLE — MICROFONO SOSPESO") }
+                    progress("playback_started");GoogleVoiceDiagnostics.record(this,token,"playback","playback_started")
+                    main.post { if (alive() && state.turn == turn) {
+                        if(echo!=null) monitorEcho(echo,player,turn) else status("RISPOSTA GOOGLE — ASCOLTO AUTOMATICO AL TERMINE")
+                    } }
                 }
                 main.post { if (alive() && state.turn == turn) finishSpeech(if (ok) "speech_completed" else "playback_failed", ok) }
             } catch (_: Exception) {
                 if (synthesisRequested && !attempt.synthesized) GoogleVoiceUsage.add(applicationContext, "tts_characters", text.codePointCount(0, text.length).toLong(), false)
                 main.post { if (alive() && state.turn == turn) finishSpeech(if (!authenticated) "authentication_failed" else if (attempt.synthesized) "playback_failed" else "synthesis_failed", false) }
-            }
+            } finally {retainedPcm?.fill(0)}
         }, "Jarvis-google-tts").apply { isDaemon = true; start() }
         return true
     }
     private fun finishSpeech(code: String, ok: Boolean) {
+        GoogleVoiceDiagnostics.record(this,token,"playback",code)
         val done = completion; completion = null
         done?.invoke(JSONObject().put("code", code).put("accepted", speechAccepted).put("synthesized", synthesized)
             .put("playback_started", playbackStarted).put("completed", ok))
-        focus?.let { getSystemService(AudioManager::class.java).abandonAudioFocusRequest(it) }; focus = null
-        if (ok) { state.ready(); status("RISPOSTA COMPLETATA — RIPRESA ASCOLTO…"); main.postDelayed({ if (alive()) startListening() }, 700) }
+        if (ok) {
+            waitingListening=false;state.ready()
+            if(capture?.released==false && echoCapture===capture && capture?.echoState=="ready") {
+                capture?.allowEchoSpeech(true);status("ASCOLTO GOOGLE — PARLA QUANDO VUOI")
+            } else {status("RISPOSTA COMPLETATA — RIPRESA ASCOLTO…");main.postDelayed({if(alive())startListening()},700)}
+        }
         else error(if (code == "authentication_failed") "RINNOVO GOOGLE FALLITO — NESSUNA SINTESI AVVIATA; VERIFICA BACKEND" else "RIPRODUZIONE FALLITA — NUOVA DETTATURA O CHIUDI")
     }
     private fun error(message: String) {
         if (!alive()) return
         WaitingAudio.stop()
+        focus?.let {getSystemService(AudioManager::class.java).abandonAudioFocusRequest(it)};focus=null
         captureEpoch++; dispatchEpoch++; capture?.stop(); api?.cancel(); playback?.stop()
         state.fail(); status(message)
         if (completion != null) finishSpeech("cancelled", false)
@@ -496,23 +614,8 @@ internal class GoogleVoiceActivity : Activity() {
             if(state.phase=="transcribing") {state.close();api?.cancel();recognition=null;state=GoogleTurnState(token)}
             status("MICROFONO MUTO")
         }
-        else { status("MICROFONO RIATTIVATO"); if (state.phase == "ready") startListening() }
+        else { status("MICROFONO RIATTIVATO"); if (canListen()) startListening() }
         hud.setMicrophoneMuted(muted); VoiceCycle.confirmMicrophoneMuted(token, muted)
-    }
-    private fun newDictation() {
-        if (!alive()) return
-        if (!startupComplete) { error("AVVIO ANNULLATO — CHIUDI IL CICLO; NESSUN REINVIO"); return }
-        captureEpoch++; dispatchEpoch++; capture?.stop(); api?.cancel(); playback?.stop()
-        if (completion != null) finishSpeech("cancelled", false)
-        state.close(); state = GoogleTurnState(token)
-        readyProbePending=false;readyDeadline=SystemClock.elapsedRealtime()+35000
-        muted = false; hud.setMicrophoneMuted(false)
-        fun afterRelease() {
-            if (!alive()) return
-            if (capture != null || audioBusy()) main.postDelayed({ afterRelease() }, 100)
-            else verifyReady()
-        }
-        afterRelease()
     }
     private fun keepCoverOverMaps() {
         if(coverHidden || overlayManager!=null) return
@@ -520,8 +623,7 @@ internal class GoogleVoiceActivity : Activity() {
         val manager=service.getSystemService(android.view.WindowManager::class.java)
         (cover.parent as? android.view.ViewGroup)?.removeView(cover)
         val params=android.view.WindowManager.LayoutParams(-1,-1,android.view.WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
-            android.view.WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or android.view.WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
-                android.view.WindowManager.LayoutParams.FLAG_SECURE,android.graphics.PixelFormat.TRANSLUCENT)
+            android.view.WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or android.view.WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,android.graphics.PixelFormat.TRANSLUCENT)
             .apply {gravity=Gravity.TOP or Gravity.START}
         overlayManager=manager
         try {manager.addView(cover,params)} catch(_:Exception) {
@@ -530,8 +632,27 @@ internal class GoogleVoiceActivity : Activity() {
             throw BridgeFailure("unavailable")
         }
     }
+    private fun exportDiagnostics() {
+        if(exportBusy || !alive() || coverHidden) return
+        exportBusy=true
+        val generation=++exportGeneration
+        GoogleVoiceDiagnostics.snapshot(this,token,diagnosticSnapshot())
+        val allowed={alive() && !coverHidden && generation==exportGeneration}
+        val done: (String)->Unit = { code ->
+            if(allowed()) {
+                exportBusy=false
+                GoogleVoiceDiagnostics.record(this,token,"screenshot",code)
+                DiagnosticScreenshots.notify(this,code)
+                hideCoverForApp()
+                DiagnosticExportActivity.open(this)
+            }
+        }
+        if(overlayManager==null) DiagnosticScreenshots.window(this,allowed,done)
+        else VoiceAccessibilityService.bridgeService()?.let {DiagnosticScreenshots.display(it,allowed,done)} ?: done("accessibility_missing")
+    }
     private fun removeCover() {
         // Remove interception before token guards/audio cleanup, including an Android Auto overlay.
+        exportGeneration++;exportBusy=false
         coverHidden=true
         if(::cover.isInitialized) {
             cover.visibility=View.GONE
@@ -544,7 +665,6 @@ internal class GoogleVoiceActivity : Activity() {
             };overlayManager=null
             (cover.parent as? android.view.ViewGroup)?.removeView(cover)
             if(::hud.isInitialized) cover.removeView(hud)
-            if(::next.isInitialized) cover.removeView(next)
             if(::transcriptView.isInitialized) cover.removeView(transcriptView)
             if(::textToggle.isInitialized) cover.removeView(textToggle)
         }
@@ -569,11 +689,13 @@ internal class GoogleVoiceActivity : Activity() {
     private fun terminate() {
         removeCover()
         if (closed) return
-        closed = true
+        closed = true;echoCandidate=null
         credentials?.cancel(); credentials = null; resolvedConfig = null
         if (::transcriptView.isInitialized) transcriptView.clearText()
         if (::web.isInitialized) runCatching { web.evaluateJavascript("delete window.__jarvisGoogleText;", null) }
         if (::state.isInitialized) state.close()
+        GoogleVoiceDiagnostics.record(this,token,"session","closed")
+        GoogleVoiceDiagnostics.snapshot(this,token,diagnosticSnapshot())
         main.removeCallbacksAndMessages(null)
         captureEpoch++; dispatchEpoch++; capture?.stop(); api?.cancel(); playback?.stop()
         completion?.invoke(JSONObject().put("code", "cancelled").put("accepted", speechAccepted).put("synthesized", synthesized)
@@ -608,6 +730,7 @@ internal object GoogleVoiceDependencies {
     var project: (android.content.Context) -> String = { ChatGptProjectSettings.getUrl(it) }
     var configuration: (android.content.Context) -> GoogleVoiceConfig? = { GoogleVoiceSettings.read(it) }
     var api: (GoogleVoiceConfig) -> GoogleSpeechApi = { GoogleSpeechClient(it) }
+    var echoCapture: (GoogleVoiceConfig) -> GoogleCapture = { GoogleAudioCapture(it,true) }
     var capture: (GoogleVoiceConfig) -> GoogleCapture = { GoogleAudioCapture(it) }
     var playback: () -> GooglePlayback = { GoogleAudioPlayback() }
     var web: (android.content.Context) -> WebView = { WebView(android.content.MutableContextWrapper(it.applicationContext)) }
@@ -616,6 +739,7 @@ internal object GoogleVoiceDependencies {
         opening = { OpeningMessageSettings.get(it) }; greeting = { VoiceGreetingSettings.get(it) }
         project = { ChatGptProjectSettings.getUrl(it) }
         configuration = { GoogleVoiceSettings.read(it) }; api = { GoogleSpeechClient(it) }
+        echoCapture = { GoogleAudioCapture(it,true) }
         capture = { GoogleAudioCapture(it) }; playback = { GoogleAudioPlayback() }; web = { WebView(android.content.MutableContextWrapper(it.applicationContext)) }
     }
 }

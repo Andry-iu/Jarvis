@@ -234,7 +234,7 @@ test('Status remains compatible with old snapshots and reports only the notes co
 
 test('The complete guide is available without pairing or a running phone',async()=>{
  const e=env();const r=value(await tool(e,'jarviswake_guide',{topic:'indice',query:''}));
- assert.equal(r.guide_version,'0.5.109');assert.equal(r.version_code,131);assert.equal(r.phone_required,false);assert.ok(r.topics.length>=19);
+ assert.equal(r.guide_version,'0.5.110');assert.equal(r.version_code,132);assert.equal(r.phone_required,false);assert.ok(r.topics.length>=19);
  assert.equal(e.BUCKET.data.size,0);
  for(const topic of ['wake','cover','audio','chatgpt','collegamento','appunti','plugin','maps','chiamate','whatsapp','diagnostica']) assert.ok(r.topics.some(t=>t.topic===topic));
 });
@@ -462,4 +462,15 @@ test('Google credential page is private, uncached, uses same-origin upload and e
  const e=googleTestEnv();assert.equal((await worker.fetch(new Request(origin+'/google'),e)).status,401);
  const r=await worker.fetch(new Request(origin+'/google',{headers:user}),e);assert.equal(r.headers.get('Cache-Control'),'no-store');assert.match(r.headers.get('Content-Security-Policy'),/frame-ancestors 'none'/);
  const html=await r.text();assert.match(html,/type="file"/);assert.match(html,/\/api\/google\/configure/);assert.ok(!html.includes('localStorage'));assert.ok(!html.includes(googleTestPem));
+});
+test('Interrupted speech is terminal but never claims playback completion or cancels another command',async()=>{
+ const e=env(),c=await pair(e),auth={Authorization:'Bearer '+c.deviceToken};
+ await worker.fetch(request('/device/poll',{deviceId:c.deviceId,versionCode:132,operations:['speak']},auth),e);
+ const args={device_id:c.deviceId,session_id:crypto.randomUUID(),turn_id:crypto.randomUUID(),text:'Risposta interrotta simulata',request_id:crypto.randomUUID()};
+ await tool(e,'jarviswake_speak',args);await claim(e,c,args.request_id);
+ const result={code:'interrupted',accepted:true,synthesized:true,playback_started:true,completed:false};
+ assert.equal((await worker.fetch(request('/device/respond',{deviceId:c.deviceId,requestId:args.request_id,result:{...result,accepted:false,synthesized:false,playback_started:false}},auth),e)).status,400);
+ assert.equal((await worker.fetch(request('/device/respond',{deviceId:c.deviceId,requestId:args.request_id,result},auth),e)).status,200);
+ assert.deepEqual(value(await tool(e,'jarviswake_status_result',{device_id:c.deviceId,request_id:args.request_id})).result,result);
+ assert.equal(value(await tool(e,'jarviswake_speak',args)).request_id,args.request_id);
 });

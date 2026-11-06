@@ -856,7 +856,13 @@ class WebChatActivity : Activity() {
                     singleTap = { cycleToken?.let { toggleMicrophone(it) } },
                     belowTap = { CoverSettings.setOpaque(this@WebChatActivity, !CoverSettings.isOpaque(this@WebChatActivity)) },
                     close = { VoiceCycle.cancel(this@WebChatActivity, cycleToken!!, "Jarvis chiuso. Ascolto Hey Jarvis riattivato.") },
-                    export = { DiagnosticExportActivity.open(this@WebChatActivity) },
+                    export = {
+                        val cycle=cycleToken
+                        DiagnosticScreenshots.window(this@WebChatActivity,{!webDestroyed && cycle!=null && VoiceCycle.matches(cycle) && localHud?.isShown==true}) { code ->
+                            DiagnosticScreenshots.notify(this@WebChatActivity,code)
+                            DiagnosticExportActivity.open(this@WebChatActivity)
+                        }
+                    },
                     hide = { VoiceCycle.hideForWake(this@WebChatActivity, cycleToken!!) },
                     revealChat = {
                         VoiceCycle.revealCover(this@WebChatActivity, cycleToken!!)

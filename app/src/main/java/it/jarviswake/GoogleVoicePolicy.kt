@@ -8,9 +8,9 @@ internal class LocalSpeechBuffer(
     private val silenceMs: Int = 1200,
     private val maximumMs: Int = 50000,
     private val threshold: Int = 600,
-    preRollMs: Int = 400
+    preRollMs: Int = 400, private val onsetMs: Int = 60
 ) {
-    init { require(silenceMs in 400..3000 && maximumMs in 5000..50000 && threshold in 100..10000 && preRollMs in 100..1000) }
+    init { require(silenceMs in 400..3000 && maximumMs in 5000..50000 && threshold in 100..10000 && preRollMs in 100..1000 && onsetMs in 20..400) }
     private val ring = ShortArray(preRollMs * 16)
     private var cursor = 0
     private var filled = 0
@@ -31,7 +31,7 @@ internal class LocalSpeechBuffer(
         if (!speaking) {
             for (i in 0 until size) { ring[cursor] = samples[i]; cursor = (cursor + 1) % ring.size; filled = (filled + 1).coerceAtMost(ring.size) }
             onset = if (voiced) onset + size else 0
-            if (onset < 960) return null // 60 ms avoids single transient triggers.
+            if (onset < onsetMs*16) return null // 60 ms avoids single transient triggers.
             speaking = true
             for (i in 0 until filled) phrase[count++] = ring[(cursor - filled + i + ring.size) % ring.size]
         } else {
@@ -107,4 +107,22 @@ internal class GoogleTurnState(val session: String) {
     fun ready() { if (!closed && phase == "synthesizing") phase = "ready" }
     fun fail() { if (!closed) phase = "error" }
     fun close() { closed = true; phase = "closed" }
+}
+
+/** Conservative known route pairs. Unknown car/USB/projection paths keep playback half duplex. */
+internal object GoogleEchoRoutePolicy {
+    fun compatible(input:Int?,output:Int?):Boolean {
+        if(input==null || output==null) return false
+        return (input==android.media.AudioDeviceInfo.TYPE_BUILTIN_MIC && output in setOf(android.media.AudioDeviceInfo.TYPE_BUILTIN_SPEAKER,android.media.AudioDeviceInfo.TYPE_BUILTIN_EARPIECE,android.media.AudioDeviceInfo.TYPE_BUILTIN_SPEAKER_SAFE)) ||
+            (input==output && input in setOf(android.media.AudioDeviceInfo.TYPE_WIRED_HEADSET,android.media.AudioDeviceInfo.TYPE_BLUETOOTH_SCO,android.media.AudioDeviceInfo.TYPE_BLE_HEADSET,android.media.AudioDeviceInfo.TYPE_USB_HEADSET))
+    }
+}
+
+/** Secondary echo guard after STT; it never feeds a suspected copy of the spoken reply back to ChatGPT. */
+internal object GoogleEchoTextGuard {
+    fun matches(transcript:String,spoken:String):Boolean {
+        fun normalized(s:String)=s.lowercase().replace(Regex("[^\\p{L}\\p{N}]+")," ").trim().replace(Regex("\\s+")," ")
+        val t=normalized(transcript);val s=normalized(spoken)
+        return t.isNotEmpty() && (t==s || (t.length>=8 && s.contains(t)))
+    }
 }
