@@ -1,6 +1,16 @@
 # Handoff cloud Jarvis — .117 / 139
 
-## Ambito approvato e stato
+## Completamento cloud — 6 novembre 2026
+
+La richiesta vocale di scaricare l’ultimo Git, compilare e consegnare l’APK firmato ha avviato il passaggio cloud. Checkout pulito/fetch/fast-forward al main2da97467f74c8e97c644782ac85197f0bc1f4b5f, strumenti/cache/firma Jarvis riusati. Test mirati PhoneContactExportTest e BridgeLinkWorkerIntegrationTest SDK34/36 passati, poi suite completa647test/66suite/0failure/error/skipped, lint55warning/0errori/fatal e assemble riusciti.5suite Node,51test Worker simulati e17test Python passati, guida33argomenti/13540parole coerente. Nessuna correzione ai sorgenti ricevuti necessaria.
+
+Backend aggiornato sullo stesso Site owner-private: source e7bcbc6d724e6172748245dbcec0952ed5f85576, deployment appgdep_6aee3101f47881919e66582d6c7c03b8 succeeded/has_mcp=true/env2; pairing/audience/segreti conservati e guida nativa riletta .117/139. Nuovo tool names-only presente sul server; una chat con catalogo precedente può ancora richiedere aggiornamento del catalogo. Non è prova di una query a contatti reali.
+
+Unico APK Telefono .117/139 firmato permanentemente,90.003.199byte, SHA256 c642189167b412867eb4b1701593f5921f9eee4875281e995b8e4d31bdc9192c. Verificate versione/ABI/CRC ZIP/v2/v3/certificato/zipalign e3ELF16KB; privati temporanei di firma rimossi, checksum in releases/0.5.117/SHA256SUMS e binario/report fuori Git. Nessuna API Google reale, importazione reale, modifica Watch/Windows/Voice/cover eseguita per compilare.
+
+Restano i collaudi Galaxy e le attività pendenti descritte sotto, compresa la diagnosi puntuale contacts_export_changed nel percorso completo. Le sezioni successive conservano lo stato storico della preparazione, ora seguito dalla verifica cloud qui registrata. Non dichiarare indice o numeri reali importati dai soli test.
+
+## Ambito approvato e stato iniziale
 
 Il 6 novembre 2026 l’utente ha dato il via a: importazione del JSON dei soli nomi, ricerca locale dei nomi simili alla dettatura, interrogazione del telefono con il nome esatto scelto e salvataggio anche di un singolo numero nella rubrica locale. Ha poi chiesto commit completo di sorgenti, documentazione e stato; avvierà personalmente la compilazione nel cloud Jarvis.
 

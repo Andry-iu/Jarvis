@@ -1,6 +1,4 @@
-0.5.117 / 139 — SORGENTI PREPARATI, COMPILAZIONE CLOUD DA ESEGUIRE (6 novembre 2026).
-Richiesta e via esplicito utente: importare JSON dei soli nomi in locale, cercare nomi simili alla dettatura, interrogare il telefono con il nome esatto scelto e salvare anche un singolo numero. Nuovo tool names-only, una query Contacts senza Phone/Email; identità tecniche e omonimi conservati. Indice cifrato separato, ricerca locale con candidati/score, nessuna scelta automatica in caso di ambiguità. Esportazione della singola voce e aggiornamento incrementale già esistenti riusati e verificati. Nessuna modifica dei contatti Android.
-Verifiche in questo ambiente:17test Python e51test backend simulati superati; guida generata e controllata. Aggiunti test Android SDK34/36 ma NON eseguiti qui; nessuna compilazione/firma/deploy/importazione reale. L’utente avvia personalmente il prossimo passaggio nel cloud Jarvis. Handoff completo: docs/HANDOFF_NAMES_INDEX_20261106.md. Restano test/lint/build cloud, firma permanente, pubblicazione aggiornamento dello stesso backend/plugin, checksum e collaudo Galaxy; conservare anche le attività pendenti .115/.116 e roadmap.
+0.5.117 / 139 — VERIFICA CLOUD COMPLETATA, APK FIRMATO E BACKEND PUBBLICATO (6 novembre 2026). Main2da9746 scaricato nel cloud Jarvis;647test Android/66suite SDK34/36, lint55warning/0errori,5suite Node,51test backend simulati e17test Python rubrica passati. Indice cifrato dei soli nomi separato dai numeri, candidati per somiglianza senza selezione automatica e verifica live del nome esatto; salvataggio singolo numero preserva il resto. Nuovo tool pubblicato sullo stesso Site/plugin privato, stesso pairing/segreti, guida online .117/139 riletta. Firma permanente/ZIP/ABI/16KB verificati, checksum in releases/0.5.117/SHA256SUMS. Nessuna importazione reale durante la compilazione, API Google reale, modifica Watch/Windows/Voice/cover. Restano collaudo Galaxy, diagnosi puntuale contacts_export_changed del vecchio export completo, prove fisiche .115/.116, appunto regole non confermato e altri sviluppi della roadmap. Handoff docs/HANDOFF_NAMES_INDEX_20261106.md e verbale VERIFICATION.md.
 
 STORICO DEGLI STATI PRECEDENTI
 
@@ -134,7 +132,7 @@ La 0.5.59 mantiene la modalità desktop della 0.5.58 e corregge la navigazione d
 
 Stato 0.5.58: build/test locali superati; APK firmato con il certificato permanente e verificato, consegnato su Google Drive il 28 ottobre 2026. Collaudo Galaxy aperto; vedere VERIFICATION.md.
 
-# JarvisWake 0.5.116 — importazione rubrica asincrona
+# JarvisWake 0.5.117 — indice nomi e singolo numero
 
 La 0.5.58 / versionCode 80 richiede ChatGPT desktop sia nel preloader sia nella schermata Voice/login: user agent Linux desktop derivato dalla versione Chromium installata, wide viewport e overview, meta viewport di 980 CSS px a pagina caricata. La policy condivisa evita di riscrivere un UA identico durante handoff. URL progetto, cookie, wake, cover, saluto e singolo comando Voice restano invariati. Nessun percorso dot aggiunto. User-Agent Client Hints restano gestiti dal runtime: non si dichiara equivalenza con Chrome desktop. Layout, login e Voice reali richiedono collaudo sul Galaxy; nessuna correzione garantita per il precedente HTTP 404 remoto.
 

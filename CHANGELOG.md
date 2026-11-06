@@ -1,3 +1,9 @@
+## 0.5.117 / 139 — indice dei soli nomi e ricerca guidata
+
+- Un solo cursore Contacts per id/lookup_key/name, nessuna query Phone/Email nel percorso names-only. Tool dedicato APK139 minimo senza fallback completo, stessi job asincroni/heartbeat/pagine/hash.
+- Indice locale cifrato separato, ricerca grafica con candidati/score e verifica live del nome esatto. Singolo numero aggiunto/aggiornato conservando altre voci e indice. Nessuna scrittura Android o selezione implicita degli omonimi.
+- Cloud Jarvis:647test Android/66suite SDK34/36, lint senza errori,5suite Node,51test backend e17test Python passati. APK Telefono firmato permanentemente, stesso backend privato aggiornato e guida riletta .117/139. Importazione e collaudo Galaxy ancora da verificare; altri residui della roadmap conservati.
+
 ## 0.5.116 / 138 — importazione rubrica asincrona
 
 - Raccolta dopo claim su thread dedicato, heartbeat e stati running/awaiting_device senza timeout di durata totale. Rinnovo snapshot30min a ogni pagina valida; permessi/revoca/sblocco/deduplicazione conservati.
