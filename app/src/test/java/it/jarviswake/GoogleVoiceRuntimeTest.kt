@@ -30,6 +30,7 @@ class GoogleVoiceRuntimeTest {
     private val cycleField=VoiceCycle::class.java.getDeclaredField("state").apply {isAccessible=true}
     private val googleField=VoiceCycle::class.java.getDeclaredField("googleMode").apply {isAccessible=true}
     private lateinit var oldCycle:VoiceCycleState
+    private var oldMicrophoneMuted=false
     private lateinit var capture:FakeCapture
     private lateinit var web:FakeWeb
     private lateinit var api:FakeApi
@@ -113,6 +114,8 @@ class GoogleVoiceRuntimeTest {
     @Before fun setup() {
         oldCycle=cycleField.get(null) as VoiceCycleState
         cycleField.set(null,VoiceCycleState().apply {begin(token,SystemClock.elapsedRealtime());openWeb(token,SystemClock.elapsedRealtime(),true,true,false,false)})
+        oldMicrophoneMuted=VoiceCycle.microphoneMuted
+        VoiceCycle.confirmMicrophoneMuted(token,false)
         googleField.setBoolean(null,true)
         app.getSharedPreferences("bridge_link",0).edit().putBoolean("enabled",true).commit()
         GoogleVoiceSettings.enable(app,true)
@@ -152,6 +155,7 @@ class GoogleVoiceRuntimeTest {
         if(::capture.isInitialized) {capture.deferRelease=false;capture.released=true}
         if(::activity.isInitialized) GoogleVoiceActivity.closeForCycle(token)
         controller?.pause()?.stop()?.destroy();GoogleVoiceDependencies.reset();DiagnosticScreenshots.reset()
+        VoiceCycle.confirmMicrophoneMuted(token,oldMicrophoneMuted)
         cycleField.set(null,oldCycle);googleField.setBoolean(null,false);GoogleVoiceSettings.enable(app,false)
         app.getSharedPreferences("bridge_link",0).edit().clear().commit()
         shadowOf(Looper.getMainLooper()).idle()
@@ -221,6 +225,25 @@ class GoogleVoiceRuntimeTest {
         shadowOf(Looper.getMainLooper()).idle();toggle.invoke(activity)
         shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(1200));assertFalse(VoiceCycle.microphoneMuted);assertEquals(2,capture.starts)
         assertEquals(0,web.sends)
+    }
+    @Test fun heldMicrophoneReleaseFinalizesStreamOnceAndKeepsListeningMuted() {
+        launch()
+        val finish=GoogleVoiceActivity::class.java.getDeclaredMethod("finishMicrophoneHold").apply {isAccessible=true}
+        finish.invoke(activity)
+        pump{web.sends==1}
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(2))
+        assertTrue(VoiceCycle.microphoneMuted);assertTrue(capture.released)
+        assertEquals(1,api.transcriptions);assertEquals(1,web.sends);assertEquals(1,capture.starts)
+    }
+    @Test fun heldMicrophoneDoesNotClaimMuteOrFinishStreamBeforeRecorderRelease() {
+        launch();capture.deferRelease=true
+        VoiceCycle.confirmMicrophoneMuted(token,false)
+        val finish=GoogleVoiceActivity::class.java.getDeclaredMethod("finishMicrophoneHold").apply {isAccessible=true}
+        finish.invoke(activity);shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(300))
+        assertFalse(VoiceCycle.microphoneMuted);assertEquals(0,api.transcriptions);assertEquals(0,web.sends)
+        capture.released=true
+        pump{web.sends==1}
+        assertTrue(VoiceCycle.microphoneMuted);assertEquals(1,api.transcriptions)
     }
     @Test fun modeCannotRestartEitherAudioSystemUntilClosedCaptureAcknowledgesRelease() {
         launch();capture.deferRelease=true;GoogleVoiceActivity.closeForCycle(token)

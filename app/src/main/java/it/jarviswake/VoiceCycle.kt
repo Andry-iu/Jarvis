@@ -21,6 +21,8 @@ internal object VoiceCycle {
     private var hideStopInFlightToken: String? = null
     var microphoneMuted = false
         private set
+    var nativeMicrophoneTarget = ConfirmedMicrophoneTarget()
+        private set
     fun confirmMicrophoneMuted(token: String, muted: Boolean) {
         if (matches(token)) microphoneMuted = muted
     }
@@ -74,6 +76,7 @@ internal object VoiceCycle {
         DiagnosticLog.record(context,DiagnosticLog.Event.VOICE_MODE_SELECTED,monitorStatus=if(googleMode) "google" else "chatgpt_voice")
         state = VoiceCycleState()
         microphoneMuted = false
+        nativeMicrophoneTarget = ConfirmedMicrophoneTarget()
         hideStopInFlightToken = null
         val token = existingCycleId ?: UUID.randomUUID().toString()
         state.begin(token, SystemClock.elapsedRealtime())

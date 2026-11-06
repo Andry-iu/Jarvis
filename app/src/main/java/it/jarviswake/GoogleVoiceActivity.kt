@@ -103,6 +103,8 @@ internal class GoogleVoiceActivity : Activity() {
     private var playback: GooglePlayback? = null
     private var captureEpoch = 0
     private var muted = false
+    private var holdFinishEpoch: Int? = null
+    private var holdFinishStream = false
     private var focus: AudioFocusRequest? = null
     private var completion: ((JSONObject) -> Unit)? = null
     private var echoCandidate:String?=null
@@ -223,7 +225,9 @@ internal class GoogleVoiceActivity : Activity() {
         hud = HolographicOverlayView(this).apply {
             setCoverActions(singleTap = { toggleMute() }, belowTap = { CoverSettings.setOpaque(this@GoogleVoiceActivity, !CoverSettings.isOpaque(this@GoogleVoiceActivity)) },
                 close = { closeLocal(false) }, export = { exportDiagnostics() },
-                hide = { closeLocal(true) }, revealChat = { revealChat() })
+                hide = { closeLocal(true) }, revealChat = { revealChat() },
+                microphoneHoldStart = { setMicrophoneMuted(false) },
+                microphoneHoldEnd = { finishMicrophoneHold() })
         }
         cover.addView(hud, FrameLayout.LayoutParams(-1, -1))
         transcriptView=CoverTranscriptView(this)
@@ -392,6 +396,12 @@ internal class GoogleVoiceActivity : Activity() {
             if(capture===recorder) capture=null
             GoogleVoiceDiagnostics.record(this,token,"capture","capture_released",JSONObject().put("capture_released",recorder.released))
             if(!alive() || epoch!=captureEpoch) {audio?.fill(0);return@post}
+            if(holdFinishEpoch==epoch) {
+                audio?.fill(0)
+                if(failure!=null) {holdFinishEpoch=null;error("MICROFONO NON DISPONIBILE — NESSUN INVIO");return@post}
+                if(recorder.released) completeMicrophoneHold(epoch)
+                return@post
+            }
             if(audio==null) {
                 if(failure!=null)GoogleVoiceDiagnostics.record(this,token,"capture",when(failure){"nessun_parlato"->"no_speech";"echo_non_disponibile"->"echo_unavailable";"microfono_silenziato"->"microphone_silenced";else->"microphone_unavailable"})
                 if(echo && state.phase=="synthesizing") {
@@ -619,8 +629,42 @@ internal class GoogleVoiceActivity : Activity() {
         if (completion != null) finishSpeech("cancelled", false)
     }
     private fun toggleMute() {
-        if (!alive()) return
-        muted = !muted
+        setMicrophoneMuted(!muted)
+    }
+    private fun finishMicrophoneHold() {
+        if (!alive() || muted) return
+        muted = true
+        val recorder = capture
+        val epoch = captureEpoch
+        holdFinishEpoch = epoch
+        holdFinishStream = recorder != null && state.phase == "transcribing"
+        recorder?.stop()
+        fun awaitRelease() {
+            if (!alive() || holdFinishEpoch != epoch || captureEpoch != epoch) return
+            if (recorder == null || recorder.released) {
+                // Audio chunks posted before the release acknowledgement must drain before half-close.
+                main.post {
+                    if (capture === recorder) capture = null
+                    completeMicrophoneHold(epoch)
+                }
+            } else main.postDelayed({awaitRelease()},50L)
+        }
+        awaitRelease()
+    }
+    private fun completeMicrophoneHold(epoch: Int) {
+        if (!alive() || holdFinishEpoch != epoch || captureEpoch != epoch) return
+        holdFinishEpoch = null
+        hud.setMicrophoneMuted(true); VoiceCycle.confirmMicrophoneMuted(token,true)
+        status("MICROFONO MUTO")
+        // Preserve the utterance already streamed while pressed; finish only after capture release.
+        val finishStream = holdFinishStream; holdFinishStream = false
+        if (finishStream && state.phase == "transcribing") runCatching { recognition?.finish() }
+            .onFailure { error("ERRORE CHIUSURA STREAM GOOGLE — NESSUN REINVIO") }
+    }
+    private fun setMicrophoneMuted(value: Boolean) {
+        if (!alive() || muted == value) return
+        holdFinishEpoch = null
+        muted = value
         if (muted) {
             captureEpoch++; capture?.stop()
             if(state.phase=="transcribing") {state.close();api?.cancel();recognition=null;state=GoogleTurnState(token)}
@@ -691,7 +735,7 @@ internal class GoogleVoiceActivity : Activity() {
         }
     }
     override fun onResume() {super.onResume();resumed=true}
-    override fun onPause() {resumed=false;super.onPause()}
+    override fun onPause() {if(::hud.isInitialized) hud.cancelMicrophoneHold();resumed=false;super.onPause()}
     private fun closeLocal(home: Boolean) {
         removeCover()
         terminate()

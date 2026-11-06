@@ -1,3 +1,10 @@
+## 0.5.115 / 137 — preparazione sorgenti, rilascio cloud pendente
+
+- Collegamento opt-in con servizio foreground indipendente dalla pagina e dal microfono wake; notifica/disattivazione, recupero worker e diagnostica bounded. Causa effettiva sul Galaxy da verificare.
+- Mute cover a pressione prolungata da grigio, ripristino al rilascio/cancellazione; tap e doppio tap conservati. Gestione asincrona nativo/WebView, Google finalizza il parlato dopo il rilascio del recorder.
+- Regole: modifiche/commit da qualsiasi chat; compilazione/firma/rilascio soltanto nel cloud Jarvis; ogni commit documenta stato e sviluppi concordati residui.
+- Passati controlli interpretati Node/Worker/guida; JVM/Robolectric, lint, build e firma NON eseguiti. Nessun APK/deploy. Handoff e verifiche residue in `docs/HANDOFF_0.5.115.md`.
+
 ## 0.5.114 / 136 — rubrica locale dal telefono al workspace
 
 - Esportazione esplicita sola lettura di nomi, tutti i numeri ed email accessibili; consenso dedicato OFF, READ_CONTACTS e sblocco. La ricerca mascherata per importare un numero funziona con il solo consenso rubrica, senza abilitare chiamate/Maps/WhatsApp. Nessuna modifica Android, appunto o sync periodica.

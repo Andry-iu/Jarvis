@@ -43,6 +43,9 @@ class HolographicOverlayView(context: Context) : View(context) {
     private var onExport: (() -> Unit)? = null
     private var onHide: (() -> Unit)? = null
     private var onRevealChat: (() -> Unit)? = null
+    private var onMicrophoneHoldStart: (() -> Unit)? = null
+    private var onMicrophoneHoldEnd: (() -> Unit)? = null
+    private var gesturesReady = false
     private val coverListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
         if (key == CoverSettings.KEY_OPAQUE || key == null) updateCoverOpacity()
     }
@@ -59,7 +62,9 @@ class HolographicOverlayView(context: Context) : View(context) {
         close: () -> Unit,
         export: () -> Unit,
         hide: () -> Unit,
-        revealChat: (() -> Unit)? = null
+        revealChat: (() -> Unit)? = null,
+        microphoneHoldStart: (() -> Unit)? = null,
+        microphoneHoldEnd: (() -> Unit)? = null
     ) {
         onSingleTap = singleTap
         onBelowTap = belowTap
@@ -67,6 +72,8 @@ class HolographicOverlayView(context: Context) : View(context) {
         onExport = export
         onHide = hide
         onRevealChat = revealChat
+        onMicrophoneHoldStart = microphoneHoldStart
+        onMicrophoneHoldEnd = microphoneHoldEnd
     }
 
     private val gestureHandler = Handler(Looper.getMainLooper())
@@ -89,16 +96,64 @@ class HolographicOverlayView(context: Context) : View(context) {
     private var downY = 0f
     private var lastTapAt = 0L
     private var lastTapTarget = 0
+    private var holdTriggered = false
+    private var holdActive = false
+    private var pressCancelled = false
+    private var pressStartedMuted = false
+    private var pendingHold: Runnable? = null
+    private val touchSlop = ViewConfiguration.get(context).scaledTouchSlop.toFloat()
+
+    private fun finishMicrophoneHold() {
+        pendingHold?.let(gestureHandler::removeCallbacks)
+        pendingHold = null
+        if (holdActive) {
+            holdActive = false // Consume before invoking callbacks which may remove this view.
+            onMicrophoneHoldEnd?.invoke()
+        }
+    }
+
+    fun cancelMicrophoneHold() {
+        pressCancelled = true
+        finishMicrophoneHold()
+        pendingSingleTap?.let(gestureHandler::removeCallbacks)
+        pendingSingleTap = null
+        lastTapAt = 0L
+        lastTapTarget = 0
+    }
     private val swipeDetector = CoverSwipeDetector(
         density = resources.displayMetrics.density,
         touchSlop = ViewConfiguration.get(context).scaledTouchSlop.toFloat()
     )
+    init { gesturesReady = true }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
         when (event.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
+                finishMicrophoneHold()
+                holdTriggered = false
+                pressCancelled = false
+                pressStartedMuted = microphoneMuted
                 downX = event.x
                 downY = event.y
+                if (CoverTapTarget.at(event.x,event.y,width,height,opacityBottom()) == CoverTapTarget.CENTER &&
+                    onMicrophoneHoldStart != null && onMicrophoneHoldEnd != null) {
+                    // A second finger-down must not allow the previous delayed tap to unmute us.
+                    pendingSingleTap?.let(gestureHandler::removeCallbacks)
+                    pendingSingleTap = null
+                    val pending = Runnable {
+                        pendingHold = null
+                        if (!pressCancelled && isShown) {
+                            holdTriggered = true
+                            lastTapAt = 0L; lastTapTarget = 0
+                            if (pressStartedMuted && microphoneMuted) {
+                                holdActive = true
+                                onMicrophoneHoldStart?.invoke()
+                            }
+                        }
+                    }
+                    pendingHold = pending
+                    gestureHandler.postDelayed(pending,ViewConfiguration.getLongPressTimeout().toLong())
+                }
                 val statusBarInset = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                     rootWindowInsets?.getInsets(android.view.WindowInsets.Type.statusBars())?.top ?: 0
                 } else 0
@@ -111,18 +166,24 @@ class HolographicOverlayView(context: Context) : View(context) {
                 return true
             }
             MotionEvent.ACTION_MOVE -> {
+                if (abs(event.x-downX)>touchSlop || abs(event.y-downY)>touchSlop) {
+                    pressCancelled = true
+                    finishMicrophoneHold()
+                }
                 if (swipeDetector.onMove(event.x, event.y)) {
                     fireSwipeGesture()
                 }
                 return true
             }
             MotionEvent.ACTION_UP -> {
+                finishMicrophoneHold()
                 if (swipeDetector.onMove(event.x, event.y)) {
                     fireSwipeGesture()
                     return true
                 }
                 if (swipeDetector.wasTriggered) return true
                 swipeDetector.reset()
+                if (holdTriggered || pressCancelled) return true
                 val dx = event.x - downX
                 val dy = event.y - downY
                 val slop = 36f * resources.displayMetrics.density
@@ -153,7 +214,8 @@ class HolographicOverlayView(context: Context) : View(context) {
                 }
                 return true
             }
-            MotionEvent.ACTION_CANCEL -> {
+            MotionEvent.ACTION_POINTER_DOWN, MotionEvent.ACTION_CANCEL -> {
+                cancelMicrophoneHold()
                 swipeDetector.reset()
                 pendingSingleTap?.let(gestureHandler::removeCallbacks)
                 pendingSingleTap = null
@@ -166,6 +228,7 @@ class HolographicOverlayView(context: Context) : View(context) {
     }
 
     private fun fireSwipeGesture() {
+        cancelMicrophoneHold()
         pendingSingleTap?.let(gestureHandler::removeCallbacks)
         pendingSingleTap = null
         lastTapAt = 0L
@@ -184,12 +247,23 @@ class HolographicOverlayView(context: Context) : View(context) {
     }
 
     override fun onDetachedFromWindow() {
+        cancelMicrophoneHold()
         pendingSingleTap?.let(gestureHandler::removeCallbacks)
         pendingSingleTap = null
         lastTapAt = 0L
         lastTapTarget = 0
         coverPreferences.unregisterOnSharedPreferenceChangeListener(coverListener)
         super.onDetachedFromWindow()
+    }
+
+    override fun onVisibilityChanged(changedView: View, visibility: Int) {
+        super.onVisibilityChanged(changedView,visibility)
+        if (gesturesReady && visibility != VISIBLE) cancelMicrophoneHold()
+    }
+
+    override fun onWindowVisibilityChanged(visibility: Int) {
+        super.onWindowVisibilityChanged(visibility)
+        if (gesturesReady && visibility != VISIBLE) cancelMicrophoneHold()
     }
 
     private fun updateCoverOpacity() {

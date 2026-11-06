@@ -43,7 +43,9 @@ internal class NativeVoiceController(private val service: VoiceAccessibilityServ
                 close = { userClosedCover(); service.requestNativeExit(token, returnHome = false, emergency = true) },
                 export = { exportControls() },
                 hide = { userClosedCover(); service.requestNativeExit(token, returnHome = true) },
-                revealChat = { userClosedCover(); service.revealNativeChat(token) }
+                revealChat = { userClosedCover(); service.revealNativeChat(token) },
+                microphoneHoldStart = { requestMicrophoneMuted(false) },
+                microphoneHoldEnd = { requestMicrophoneMuted(true) }
             )
             val params = WindowManager.LayoutParams(-1, -1, WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
                 WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
@@ -294,6 +296,13 @@ internal class NativeVoiceController(private val service: VoiceAccessibilityServ
             if(firstObservation) WatchProbeReturn.nativeVoiceObserved(service,token)
             hud?.setVoiceActive()
             hud?.setMicrophoneMuted(unmute != null)
+            VoiceCycle.confirmMicrophoneMuted(token,unmute != null)
+            val microphoneTarget=VoiceCycle.nativeMicrophoneTarget.next(unmute != null)
+            if (microphoneTarget != null) {
+                val button=if(microphoneTarget) mute else unmute
+                val accepted=runCatching { button?.performAction(AccessibilityNodeInfo.ACTION_CLICK)==true }.getOrDefault(false)
+                if(!accepted) { VoiceCycle.nativeMicrophoneTarget.rejected();status("MICROFONO NON DISPONIBILE") }
+            }
 
         } else if (observed && closed) {
             if (service.finishNative(token,"Voice nativa terminata; ripresa wake richiesta."))
@@ -522,12 +531,11 @@ internal class NativeVoiceController(private val service: VoiceAccessibilityServ
     }
 
     private fun toggleMute() {
-        if (!observed || ending != null) return
-        val nodes = nodes()
-        val mute = target(nodes, NativeVoiceLabels.mute)
-        val unmute = target(nodes, NativeVoiceLabels.unmute)
-        val button = if ((mute == null) != (unmute == null)) mute ?: unmute else null
-        button?.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+        if (!VoiceCycle.nativeMicrophoneTarget.busy) requestMicrophoneMuted(!VoiceCycle.microphoneMuted)
+    }
+    private fun requestMicrophoneMuted(muted: Boolean) {
+        if (!VoiceCycle.matches(token) || !observed || ending != null) return
+        VoiceCycle.nativeMicrophoneTarget.request(muted)
     }
     private fun detachHud() {
         val view = hud ?: return

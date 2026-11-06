@@ -1,4 +1,4 @@
-# Guida completa JarvisWake — 0.5.114 / 136
+# Guida completa JarvisWake — 0.5.115 / 137
 
 ## Iniziare e orientarsi
 
@@ -53,6 +53,7 @@ Dalla .106 entrambi i campi possono essere salvati vuoti: il messaggio corrispon
 
 La parte alta della cover resta senza scritte; J.A.R.V.I.S. e versione sono sotto l’animazione. La cover opaca nasconde l’app sottostante; quella semitrasparente permette di vederla.
 • Tocco singolo al centro dell’animazione: richiede mute/riattivazione del microfono Voice. Solo il mute confermato rende l’animazione grigia e completamente ferma; la riattivazione confermata la riporta celeste e in movimento.
+• Dalla .115, pressione prolungata al centro iniziata in mute grigio: richiede il microfono attivo finché tieni premuto e lo rimette in mute al rilascio. Il rilascio non genera un altro tap. Una pressione prolungata iniziata con microfono già attivo non lo inverte. Trascinamento, cancellazione del tocco o scomparsa della cover concludono l’attivazione temporanea. Grigio/fermo e celeste/animato seguono lo stato confermato, quindi un ritardo o un errore del controllo deve restare distinguibile. Nel percorso Google il rilascio chiude la cattura e finalizza il parlato già trasmesso, senza aprire un nuovo ascolto mentre è muto.
 • Tocco nella fascia sotto l’animazione: alterna opaco e semitrasparente. La fascia utile termina prima del pulsante Sblocca telefono; evita la barra di navigazione.
 • Doppio tocco centrale: rimuove subito cover e finestra touch e richiede la fine Voice. Non è il comando Ferma ascolto.
 • Swipe verso sinistra: parti nella metà destra della cover, senza iniziare dal bordo estremo del telefono, e scorri chiaramente verso sinistra. Nasconde soltanto la cover, lasciando Voice attiva e la stessa conversazione visibile. Non invia stop e non riattiva la wake. Un arresto già richiesto prosegue senza essere annullato.
@@ -72,7 +73,7 @@ Durante il ciclo un solo player ripete l’audio in attesa. Si ferma alla confer
 ## Abbinare JarvisWake Link
 
 Configurazione → Collegamento e azioni → Abbinamento e stato. Apri la pagina privata del collegamento già esistente, crea un codice, copialo in Jarvis con Incolla codice e attiva Collegamento ChatGPT. Il codice contiene credenziali private: non incollarlo in una chat, un log o una guida condivisa.
-Usa lo stesso plugin JarvisWake Link collegato al tuo account. L’abbinamento persiste dopo normale riavvio e aggiornamento firmato sopra l’app. La connessione riprende quando il servizio Jarvis è operativo o la schermata Collegamento è aperta. Force-stop, dati cancellati, disinstallazione senza ripristino o revoca richiedono verifiche o un nuovo abbinamento; non crearne duplicati solo perché una chat non vede ancora i nuovi tool.
+Usa lo stesso plugin JarvisWake Link collegato al tuo account. L’abbinamento persiste dopo normale riavvio e aggiornamento firmato sopra l’app. Dalla .115 il collegamento abilitato usa un servizio dedicato con notifica e continua anche uscendo dalla pagina, senza dipendere dall’ascolto wake. Si avvia dalla Home o dalla pagina di abbinamento e tenta la ripresa dopo un normale riavvio/aggiornamento nei limiti Android. La notifica indica che il collegamento è abilitato, non prova che il telefono sia raggiungibile: serve una richiesta con risposta. Disattiva collegamento nella notifica o l’interruttore nella pagina arrestano il collegamento; Ferma ascolto riguarda invece la wake. Se Android rifiuta l’avvio, riapri Abbinamento e stato. Gli errori distinguono servizio locale assente, autorizzazione remota e rete/protocollo; non rifare automaticamente il pairing per un timeout. Force-stop, dati cancellati, disinstallazione senza ripristino o revoca richiedono verifiche o un nuovo abbinamento; non crearne duplicati solo perché una chat non vede ancora i nuovi tool.
 Chiedi «Usa JarvisWake Link e leggi lo stato del telefono». Il plugin elenca i telefoni, richiede una fotografia e legge l’esito correlato. last_seen non prova online; pending/expired non provano risposta. Una risposta indica stati e momento della fotografia, non uno stream continuo. Servizio attivo non significa cattura audio verificata; cover collegata non è uno screenshot.
 Cancella collegamento dal telefono richiede conferma e rimuove i dati di pairing; gli appunti hanno un archivio separato e restano. La revoca nella pagina privata invalida le credenziali del dispositivo. La guida del plugin è statica e non richiede abbinamento: non va confusa con la lettura di uno stato reale del telefono.
 

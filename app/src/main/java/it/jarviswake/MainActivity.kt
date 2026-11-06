@@ -701,6 +701,7 @@ class MainActivity : Activity() {
 
     override fun onResume() {
         super.onResume()
+        BridgeLinkService.sync(this)
         if (::menu.isInitialized && chatSettingsLayer==null) renderMenu()
         runCatching { BridgeLink.owner(this,"main",true) }
         updateCoverButton()

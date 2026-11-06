@@ -455,33 +455,17 @@ class WebChatActivity : Activity() {
 
         fun toggleMicrophone(token: String) {
             val activity = active.get()?.takeIf { it.cycleToken == token } ?: return
+            if (activity.microphoneTogglePending || activity.microphoneDesiredMuted != null) return
+            setMicrophoneMuted(token,!VoiceCycle.microphoneMuted)
+        }
+
+        fun setMicrophoneMuted(token: String, muted: Boolean) {
+            val activity = active.get()?.takeIf { it.cycleToken == token } ?: return
             activity.runOnUiThread {
-                if (!activity.isValidCycle() || activity.webDestroyed || activity.microphoneTogglePending ||
+                if (!activity.isValidCycle() || activity.webDestroyed ||
                     VoiceCycle.phase != VoiceCycleState.Phase.VOICE || VoiceCycle.hiddenForWake) return@runOnUiThread
-                activity.microphoneTogglePending = true
-                val generation = activity.documentGeneration
-                val muted = !VoiceCycle.microphoneMuted
-                activity.webView.evaluateJavascript(
-                    MICROPHONE_CONTROL_SCRIPT.replace("__JARVIS_MIC_MUTED__", muted.toString())
-                ) { raw ->
-                    activity.microphoneTogglePending = false
-                    if (!activity.isValidCycle() || activity.webDestroyed || generation != activity.documentGeneration ||
-                        VoiceCycle.hiddenForWake) return@evaluateJavascript
-                    val confirmed = runCatching {
-                        val encoded = JSONTokener(raw).nextValue() as? String ?: return@runCatching false
-                        val value = JSONObject(encoded)
-                        value.optBoolean("available") && value.optBoolean("muted") == muted
-                    }.getOrDefault(false)
-                    if (confirmed) {
-                        VoiceCycle.confirmMicrophoneMuted(token, muted)
-                        VoiceAccessibilityService.showMicrophoneMuted(token, muted)
-                        VoiceAccessibilityService.showCoverStatus(token, if (muted) "MICROFONO IN MUTE" else "MICROFONO RIATTIVATO")
-                        DiagnosticLog.record(activity, if (muted) DiagnosticLog.Event.MICROPHONE_MUTED
-                            else DiagnosticLog.Event.MICROPHONE_UNMUTED, token)
-                    } else {
-                        VoiceAccessibilityService.showCoverStatus(token, "ERRORE: MICROFONO NON DISPONIBILE")
-                    }
-                }
+                activity.microphoneDesiredMuted = muted
+                activity.applyMicrophoneTarget(token)
             }
         }
 
@@ -635,6 +619,48 @@ class WebChatActivity : Activity() {
     private var pendingMicrophoneRequest: PermissionRequest? = null
     private var challengePage = false
     private var microphoneTogglePending = false
+    private var microphoneDesiredMuted: Boolean? = null
+    private var microphoneRequestSerial = 0
+
+    private fun applyMicrophoneTarget(token: String) {
+        if (microphoneTogglePending || !isValidCycle() || webDestroyed || VoiceCycle.hiddenForWake) return
+        val muted = microphoneDesiredMuted ?: return
+        microphoneDesiredMuted = null
+        microphoneTogglePending = true
+        val serial = ++microphoneRequestSerial
+        val generation = documentGeneration
+        fun finished(confirmed: Boolean) {
+            if (serial != microphoneRequestSerial) return
+            microphoneTogglePending = false
+            if (!isValidCycle() || webDestroyed || generation != documentGeneration || VoiceCycle.hiddenForWake) {
+                microphoneDesiredMuted = null
+                return
+            }
+            if (confirmed) {
+                VoiceCycle.confirmMicrophoneMuted(token,muted)
+                VoiceAccessibilityService.showMicrophoneMuted(token,muted)
+                VoiceAccessibilityService.showCoverStatus(token,if(muted) "MICROFONO IN MUTE" else "MICROFONO RIATTIVATO")
+                DiagnosticLog.record(this,if(muted) DiagnosticLog.Event.MICROPHONE_MUTED else DiagnosticLog.Event.MICROPHONE_UNMUTED,token)
+            } else {
+                VoiceAccessibilityService.showCoverStatus(token,"ERRORE: MICROFONO NON DISPONIBILE")
+                // A failed/late unmute must never discard a release. Restore using a SET, not a toggle.
+                if (!muted) microphoneDesiredMuted = true
+            }
+            if (microphoneDesiredMuted != null) applyMicrophoneTarget(token)
+        }
+        runCatching {
+            webView.evaluateJavascript(MICROPHONE_CONTROL_SCRIPT.replace("__JARVIS_MIC_MUTED__",muted.toString())) { raw ->
+                val confirmed = runCatching {
+                    val value = JSONObject(JSONTokener(raw).nextValue() as? String ?: return@runCatching false)
+                    value.optBoolean("available") && value.optBoolean("muted") == muted
+                }.getOrDefault(false)
+                finished(confirmed)
+            }
+            webView.postDelayed({
+                if (serial == microphoneRequestSerial && microphoneTogglePending) finished(false)
+            },2000L)
+        }.onFailure { finished(false) }
+    }
     private var voiceTapInFlight = false
     private var cycleToken: String? = null
     private var resumed = false
@@ -866,7 +892,9 @@ class WebChatActivity : Activity() {
                     hide = { VoiceCycle.hideForWake(this@WebChatActivity, cycleToken!!) },
                     revealChat = {
                         VoiceCycle.revealCover(this@WebChatActivity, cycleToken!!)
-                    }
+                    },
+                    microphoneHoldStart = { cycleToken?.let { setMicrophoneMuted(it,false) } },
+                    microphoneHoldEnd = { cycleToken?.let { setMicrophoneMuted(it,true) } }
                 )
             }
             root.addView(localHud, FrameLayout.LayoutParams(-1, -1))
@@ -964,6 +992,7 @@ class WebChatActivity : Activity() {
     }
 
     override fun onPause() {
+        localHud?.cancelMicrophoneHold()
         resumed = false
         android.webkit.CookieManager.getInstance().flush()
         super.onPause()

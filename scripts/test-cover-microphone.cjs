@@ -39,6 +39,12 @@ function page(getUserMedia) {
   assert.equal(tracks[0].enabled,true);
   assert.equal(replacement.enabled,true);
   assert.equal(tracks[1].enabled,false,'Do not undo a microphone disabled by the page itself');
+  // The release following a temporary unmute is an explicit SET, never another toggle.
+  assert.deepEqual(p.mute(true),{available:true,muted:true});
+  assert.deepEqual(p.mute(true),{available:true,muted:true});
+  assert.equal(tracks[0].enabled,false,'Repeated release/cleanup cannot invert the mute');
+  assert.equal(replacement.enabled,false,'A replacement input is also muted after a held gesture');
+  assert.equal(p.output.muted,false,'Held microphone gestures preserve playback');
   tracks.forEach(t => t.readyState='ended'); replacement.readyState='ended';
   assert.deepEqual(p.mute(true),{available:false},'Ended microphones cannot claim a successful change');
   console.log('PASS: cover mute/unmute, missing/ended inputs, replacement streams and preserved playback.');

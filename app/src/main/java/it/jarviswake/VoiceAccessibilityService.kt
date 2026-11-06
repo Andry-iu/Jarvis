@@ -635,7 +635,9 @@ class VoiceAccessibilityService : AccessibilityService() {
             close = { VoiceCycle.cancel(this, token, "Jarvis chiuso. Ascolto Hey Jarvis riattivato.") },
             export = { openDiagnosticsExport() },
             hide = { VoiceCycle.hideForWake(this, token, returnHome = true) },
-            revealChat = { VoiceCycle.revealCover(this, token) }
+            revealChat = { VoiceCycle.revealCover(this, token) },
+            microphoneHoldStart = { WebChatActivity.setMicrophoneMuted(token,false) },
+            microphoneHoldEnd = { WebChatActivity.setMicrophoneMuted(token,true) }
         )
         val hudParams = WindowManager.LayoutParams(-1, -1,
             WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,

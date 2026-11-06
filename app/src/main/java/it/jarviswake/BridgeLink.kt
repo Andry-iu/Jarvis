@@ -27,23 +27,30 @@ internal object BridgeLink {
         private set
     fun owner(context:Context,id:String,active:Boolean) {
         check(Looper.myLooper()==Looper.getMainLooper())
-        if(active) owners.add(id) else owners.remove(id)
+        val changed=if(active) owners.add(id) else owners.remove(id)
+        if(changed) NativeRuntimeSnapshot.save(context,"-","bridge_lifecycle",
+            "event=owner_changed owners=${owners.size} dedicated=${"link_service" in owners} active=$active")
         // App switches during a command must not abort its response or repeat its action.
         if(owners.isNotEmpty() && BridgeSettings.enabled(context) && worker?.isAlive==true) return
         refresh(context)
+    }
+    fun serviceUnavailable(context:Context) {
+        if(BridgeSettings.enabled(context)) status="Servizio collegamento non avviato da Android; riapri Abbinamento e stato."
+        NativeRuntimeSnapshot.save(context,"-","bridge_lifecycle","event=service_start_rejected")
     }
     fun refresh(context:Context) {
         check(Looper.myLooper()==Looper.getMainLooper())
         generation++;connection?.disconnect();worker?.interrupt()
         val epoch=generation
         if(owners.isEmpty() || !BridgeSettings.enabled(context)) {
-            status=if(BridgeSettings.enabled(context)) "Collegamento in attesa del servizio Jarvis." else "Collegamento disattivato."
+            status=if(BridgeSettings.enabled(context)) "Collegamento abilitato; servizio collegamento non operativo." else "Collegamento disattivato."
             return
         }
         val app=context.applicationContext
         val credentials=runCatching { BridgeSettings.read(app) }.getOrNull()
         if(credentials==null) { status="Collegamento da configurare.";return }
         status="Connessione al servizio…"
+        NativeRuntimeSnapshot.save(app,"-","bridge_lifecycle","event=worker_started owners=${owners.size} dedicated=${"link_service" in owners}")
         worker=Thread({
             var failures=0
             while(epoch==generation && !Thread.currentThread().isInterrupted) {
@@ -81,12 +88,27 @@ internal object BridgeLink {
                     } else if(epoch==generation && (failures>0 || status=="Connessione al servizio…")) status="Collegamento disponibile; attendo una richiesta."
                     failures=0;Thread.sleep(BridgePollPolicy.delay(VoiceCycle.active,SystemClock.elapsedRealtime()<fastUntil))
                 } catch(_:InterruptedException) { break }
-                catch(_:Exception) {
+                catch(error:Exception) {
                     if(epoch!=generation) break
-                    failures++;status="Servizio non raggiungibile o collegamento da verificare; nuovo tentativo."
+                    val code=when(error) {
+                        is BridgeHttpFailure -> "http_${error.statusCode}"
+                        is java.net.SocketTimeoutException -> "timeout"
+                        is java.net.UnknownHostException -> "dns"
+                        is javax.net.ssl.SSLException -> "tls"
+                        is java.io.IOException -> "network"
+                        else -> "protocol_or_storage"
+                    }
+                    failures++
+                    status=when(code) {
+                        "http_401","http_403" -> "Collegamento non autorizzato dal servizio; verifica l’abbinamento."
+                        "protocol_or_storage" -> "Errore nel protocollo o archivio del collegamento; nuovo tentativo."
+                        else -> "Rete o servizio remoto non disponibili; nuovo tentativo."
+                    }
+                    NativeRuntimeSnapshot.save(app,"-","bridge_transport","stage=retry code=$code failures=$failures")
                     try { Thread.sleep(if(failures<3) 3000 else 10000) } catch(_:InterruptedException) { break }
                 }
             }
+            NativeRuntimeSnapshot.save(app,"-","bridge_lifecycle","event=worker_stopped superseded=${epoch!=generation}")
         },"Jarvis-device-link").apply { isDaemon=true;start() }
     }
     private fun executeOnce(c:Context,auth:BridgeCredentials,command:JSONObject,deadline:Long,epoch:Int) {

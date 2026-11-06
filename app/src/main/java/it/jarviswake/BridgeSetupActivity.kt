@@ -40,7 +40,7 @@ class BridgeSetupActivity:Activity() {
     private fun render() {
         val title=when(section) { "contacts"->"Rubrica verso workspace";"pair"->"Abbinamento e stato";"actions"->"Maps, chiamate e WhatsApp";"notes"->"Appunti e plugin";else->"Collegamento ChatGPT" }
         val help=when(section) {
-            "pair"->"Apri la pagina privata di JarvisWake Link, crea un codice e incollalo soltanto qui. Attiva il collegamento e lascia operativo il servizio Jarvis. L’abbinamento resta dopo aggiornamenti firmati e normali riavvii. Cancellarlo disconnette il telefono ma non elimina gli appunti locali. Il codice contiene credenziali: non condividerlo in chat."
+            "pair"->"Apri la pagina privata di JarvisWake Link, crea un codice e incollalo soltanto qui. Attiva il collegamento: un servizio dedicato con notifica lo mantiene anche quando esci dalla pagina, senza avviare l’ascolto wake. L’abbinamento resta dopo aggiornamenti firmati e normali riavvii. Cancellarlo disconnette il telefono ma non elimina gli appunti locali. Il codice contiene credenziali: non condividerlo in chat."
             "actions"->"Attiva le azioni e autorizza rubrica, chiamate e stato telefonico dal pulsante. In ChatGPT usa JarvisWake Link e chiedi una destinazione, una chiamata o un testo WhatsApp a un contatto preciso. Le ambiguità richiedono una scelta. Il comando inviato non prova una chiamata connessa, un messaggio consegnato o la navigazione su Android Auto. Per parlare con Maps aperto abilita le conversazioni in background in ChatGPT Live."
             "contacts"->"Consenti di trasferire nomi, tutti i numeri e le email accessibili dalla rubrica Android alla copia privata nel workspace tramite lo stesso plugin. Solo telefono → workspace: nessuna scrittura o cancellazione Android. Il comando aggiorna rubrica rinnova la copia completa; una richiesta di importare un numero aggiorna solo quel numero. Il trasferimento passa dal servizio privato e dagli strumenti della conversazione; non è cifratura end-to-end. Disattivare impedisce nuove letture, non ritira copie già ricevute. Nessun invio periodico automatico."
             "notes"->"Il consenso permette al plugin di leggere, creare e aggiornare gli appunti sul telefono sbloccato. Il contenuto richiesto passa nella conversazione. Gli appunti hanno un archivio cifrato separato dall’abbinamento, escluso dalla diagnostica; disinstallazione o cancellazione dati dell’app li elimina. Apri appunti locali funziona anche senza rete o consenso remoto. Google Calendar resta al suo plugin dedicato."
@@ -57,12 +57,12 @@ class BridgeSetupActivity:Activity() {
                 menu.button("Incolla codice di collegamento") { pasteCode() }
                 enabled=menu.toggle(getString(R.string.bridge_enabled),BridgeSettings.enabled(this),help) { value ->
                     if(value && !BridgeSettings.configured(this)) { enabled.isChecked=false;state.setText(R.string.bridge_code_required) }
-                    else { BridgeSettings.enable(this,value);BridgeLink.refresh(this) }
+                    else { BridgeSettings.enable(this,value);BridgeLink.refresh(this);BridgeLinkService.sync(this) }
                 }
                 menu.button("Cancella collegamento dal telefono") {
                     AlertDialog.Builder(this).setTitle("Cancellare il collegamento?")
                         .setMessage("Il codice di collegamento verrà rimosso. Gli appunti locali restano conservati.")
-                        .setNegativeButton("Annulla",null).setPositiveButton("Cancella") { _,_ -> BridgeSettings.clear(this);enabled.isChecked=false;BridgeLink.refresh(this);render() }.showLarge()
+                        .setNegativeButton("Annulla",null).setPositiveButton("Cancella") { _,_ -> BridgeSettings.clear(this);enabled.isChecked=false;BridgeLink.refresh(this);BridgeLinkService.sync(this);render() }.showLarge()
                 }
             }
             "actions" -> {
@@ -111,7 +111,7 @@ class BridgeSetupActivity:Activity() {
     @SuppressLint("GestureBackNavigation") // API31 fallback; API33+ uses OnBackInvokedCallback above.
     override fun onBackPressed() { back() }
     override fun onSaveInstanceState(outState:Bundle) { outState.putString("section",section);super.onSaveInstanceState(outState) }
-    override fun onResume() { super.onResume();BridgeLink.owner(this,"setup",true);handler.post(update) }
+    override fun onResume() { super.onResume();BridgeLink.owner(this,"setup",true);BridgeLinkService.sync(this);handler.post(update) }
     override fun onPause() { handler.removeCallbacks(update);BridgeLink.owner(this,"setup",false);super.onPause() }
     override fun onDestroy() { if(Build.VERSION.SDK_INT>=33) backCallback?.let { onBackInvokedDispatcher.unregisterOnBackInvokedCallback(it) };super.onDestroy() }
 }
