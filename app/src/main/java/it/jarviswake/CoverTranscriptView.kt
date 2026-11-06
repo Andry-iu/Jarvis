@@ -29,15 +29,14 @@ internal class CoverTranscriptView(context: Context) : View(context) {
     init {
         isClickable = false; isFocusable = false; isSaveEnabled = false
         importantForAccessibility = IMPORTANT_FOR_ACCESSIBILITY_NO
-        shown = context.getSharedPreferences("google_voice_mode", Context.MODE_PRIVATE).getBoolean("show_text", false)
+        shown = false // A previous cycle's toggle must never reveal a new conversation automatically.
     }
     fun toggle(): Boolean {
         shown = !shown
-        context.getSharedPreferences("google_voice_mode", Context.MODE_PRIVATE).edit().putBoolean("show_text", shown).apply()
         return shown
     }
     fun append(role: String, text: String) {
-        require(role in setOf("Dettato", "Jarvis", "Avvio"))
+        require(role in setOf("Dettato", "Jarvis"))
         lines.addLast("$role\n${text.take(8000)}")
         while (lines.size > 20 || lines.sumOf { it.length } > 24000) lines.removeFirst()
         rebuild(); invalidate()

@@ -80,18 +80,22 @@ class GoogleVoiceRuntimeTest {
         var sends=0;var writes=0;var probes=0;var draft=false
         var sendChecks=0
         var writeReadyAfterCalls=1
-        var holdWrite=false
+        var holdWrite=false;var changeAfterWrite=false
         var held:ValueCallback<String>?=null
         var readyAfterProbes=1
         private var stage=0
         override fun getUrl():String=currentUrl
         override fun evaluateJavascript(script:String,callback:ValueCallback<String>?) {
-            if(script.startsWith("delete window.")) {callback?.onReceiveValue("null");return}
+            if(script.contains("delete window.")) {callback?.onReceiveValue("null");return}
             if(script.contains("\"action\":\"restart\"")) {
                 callback?.onReceiveValue(JSONObject.quote(JSONObject().put("phase",if(draft) "draft" else "restart_ready").toString()));return
             }
             if(!script.contains("\"action\":\"probe\"") && ++sendChecks<writeReadyAfterCalls) {
                 callback?.onReceiveValue(JSONObject.quote(JSONObject().put("phase","ambiguous_editor").toString()));return
+            }
+            if(changeAfterWrite && writes>0 && !script.contains("\"action\":\"probe\"")) {
+                callback?.onReceiveValue(JSONObject.quote(JSONObject().put("phase","draft_changed").put("diagnostics",JSONObject()
+                    .put("sameEditor",false).put("sameForm",true).put("textMatches",true).put("writeVerified",true)).toString()));return
             }
             val phase=if(script.contains("\"action\":\"probe\"")){probes++;if(draft) "draft" else if(probes<readyAfterProbes) "ambiguous_editor" else "ready"}
             else when(stage++ % 3){0->{writes++;submittedScripts.add(script);"written"};1->{sends++;currentUrl=observedNewUrl;"dispatched"};else->"observed"}
@@ -266,10 +270,13 @@ class GoogleVoiceRuntimeTest {
             assertFalse(VoiceCycle.active);assertTrue(capture.released);assertNull(hud.parent)
         } finally {field.set(null,previous);serviceController.destroy()}
     }
-    @Test fun coverTextToggleIsPersistentButMessagesAreSessionOnlyAndSingleTouchesStayPassive() {
-        val panel=CoverTranscriptView(app);val before=panel.shown
-        assertEquals(!before,panel.toggle());panel.append("Jarvis","TESTO_PRIVATO_RISPOSTA")
-        val another=CoverTranscriptView(app);assertEquals(panel.shown,another.shown);assertEquals(0,another.textCount)
+    @Test fun coverTextsStartHiddenForEveryCycleEvenWithOldPreferenceAndTogglesKeepSessionHistory() {
+        app.getSharedPreferences("google_voice_mode",0).edit().putBoolean("show_text",true).commit()
+        val panel=CoverTranscriptView(app);assertFalse(panel.shown)
+        panel.append("Dettato","TESTO_PRIVATO_DETTATO");assertFalse(panel.shown);assertEquals(1,panel.textCount)
+        assertTrue(panel.toggle());panel.append("Jarvis","TESTO_PRIVATO_RISPOSTA")
+        assertFalse(panel.toggle());assertEquals(2,panel.textCount);assertTrue(panel.toggle())
+        val another=CoverTranscriptView(app);assertFalse(another.shown);assertEquals(0,another.textCount)
         val event=android.view.MotionEvent.obtain(0,1,android.view.MotionEvent.ACTION_DOWN,20f,20f,0)
         assertFalse(panel.scrollText(event));event.recycle();panel.clearText();assertEquals(0,panel.textCount)
     }
@@ -351,7 +358,20 @@ class GoogleVoiceRuntimeTest {
         assertTrue(web.submittedScripts[0].contains("PRE_CONFIGURATO"));assertFalse(web.submittedScripts[0].contains("Rispondi con jarviswake_speak"))
         assertTrue(web.submittedScripts[1].contains("POST_CONFIGURATO"));assertTrue(web.submittedScripts[1].contains("Rispondi con jarviswake_speak"))
         assertEquals(url,web.currentUrl);assertEquals(0,api.streams)
+        assertEquals(0,view<CoverTranscriptView>("transcriptView").textCount);assertFalse(view<CoverTranscriptView>("transcriptView").shown)
         shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(3));assertEquals(2,web.sends)
+    }
+    @Test fun startupComposerChangeLogsPostStageAndStopsBeforeSendWithoutAddingCoverText() {
+        GoogleVoiceDependencies.greeting={"POST_PRIVATO_DIAGNOSTICO"}
+        GoogleVoiceDependencies.web={FakeWeb(it,url).also{w->w.changeAfterWrite=true;web=w}}
+        launch();pump{State.getAttempt(app).contains("EDITOR CAMBIATO")}
+        assertEquals(1,web.writes);assertEquals(0,web.sends);assertEquals(0,api.streams)
+        assertEquals(0,view<CoverTranscriptView>("transcriptView").textCount)
+        val done=java.util.concurrent.CountDownLatch(1);DiagnosticLog.afterPendingWrites{done.countDown()};assertTrue(done.await(3,java.util.concurrent.TimeUnit.SECONDS))
+        val log=java.io.File(app.filesDir,"diagnostics/google-voice-0.log").readText()
+        assertTrue(log.contains("stage=post code=draft_changed"));assertTrue(log.contains("sameEditor"));assertFalse(log.contains("POST_PRIVATO_DIAGNOSTICO"))
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(5));assertEquals(1,web.writes);assertEquals(0,web.sends)
+        GoogleVoiceActivity.closeForCycle(token);assertNull(view<HolographicOverlayView>("hud").parent)
     }
     @Test fun emptyBeforeStillSendsAfterInNewChatAndEmptyAfterStartsCaptureAfterBefore() {
         GoogleVoiceDependencies.opening={"PRE_SOLO"};launch();pump{capture.starts==1}

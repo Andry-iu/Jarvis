@@ -1,4 +1,4 @@
-# Voce Google e ChatGPT testuale — 0.5.110 / 132
+# Voce Google e ChatGPT testuale — 0.5.111 / 133
 
 Modalità facoltativa, inizialmente **OFF**. OFF conserva ChatGPT Voice, destinazione nativa/WebView, saluti, audio e configurazioni esistenti. ON usa wake offline o avvio manuale → microfono JarvisWake/VAD locale → Google Speech-to-Text → un messaggio nella conversazione ChatGPT esistente → lavori del modello/plugin → `jarviswake_speak` → Google Text-to-Speech → audio sul telefono. Nessuna API OpenAI e nessun avvio ChatGPT Voice in questo percorso.
 
@@ -78,7 +78,7 @@ Il backend esistente accoda25s, richiede claim atomico e accetta progressi senza
 - Doppio tocco centrale/Indietro: rimozione immediata della cover e stop/cancellazione locali; basso anche Home. Rilascio audio distinto dalla rimozione visuale.
 - Sinistro: nasconde soltanto la cover e mostra la stessa WebView mantenendo sessione/audio, come il percorso consolidato .96. Nessuna riapertura automatica da callback, errori o riconnessione.
 - Tocco sotto l’animazione: opacità; doppio tocco in alto a destra: screenshot in Galleria e poi ZIP dei soli log. I testi della cover non entrano nei log; possono comparire nella foto richiesta esplicitamente, che resta fuori dallo ZIP.
-- **Tocco invisibile in basso a destra**: toggle chat persistente, inizialmente OFF; nessun pulsante o scritta. Dettato definitivo e testo ricevuto dal plugin, piccoli e semitrasparenti, su tutta la cover; segue i nuovi messaggi. Due dita scorrono la cronologia lasciando liberi i gesti a un dito. Massimo20voci/24000caratteri solo RAM; chiusura cancella la cronologia locale. Non è streaming del ragionamento o conferma dell’invio: la risposta appare alla ricezione plugin prima della sintesi e può poi fallire.
+- **Tocco invisibile in basso a destra**: toggle chat soltanto della sessione, nascosto a OGNI nuovo ciclo; nessun pulsante o scritta. Soltanto dettato definitivo e testo ricevuto dal plugin per la voce, senza i messaggi automatici prima/dopo, piccoli e semitrasparenti, su tutta la cover; segue i nuovi messaggi. Due dita scorrono la cronologia lasciando liberi i gesti a un dito. Massimo20voci/24000caratteri solo RAM; chiusura cancella la cronologia locale. Non è streaming del ragionamento o conferma dell’invio: la risposta appare alla ricezione plugin prima della sintesi e può poi fallire.
 
 ## Maps, telefonate e altre funzioni
 
@@ -114,3 +114,11 @@ Lo ZIP aggiunge **google-state.json**, **google-voice-0.log** e **google-voice-1
 «Bozza presente» non è una diagnosi di chiavi Google errate e non autorizza a cancellare/inviare il contenuto. Il log della .109 non mostrava quale controllo lo rilevasse; la .110 registra la fase e metadati senza testo. Lo ZIP (3) fornito dall’utente conferma .109/131 e un ciclo Voice nativo; l’utente conferma che quel test era volontario e il ramo precedente funziona. L’ultimo avvio Google e la segnalazione visiva di bozza non provano l’origine della bozza. Conservare protezioni e usare foto/nuovi metadati per il prossimo riscontro, senza attribuire una causa non osservata.
 
 Fonti: [PixelCopy](https://developer.android.com/reference/android/view/PixelCopy), [Screenshot Accessibilità](https://developer.android.com/reference/android/accessibilityservice/AccessibilityService), [FLAG_SECURE](https://developer.android.com/security/fraud-prevention/activities), [MediaStore e IS_PENDING/RELATIVE_PATH](https://developer.android.com/training/data-storage/shared/media).
+
+## Diagnosi mirata del compositore (.111)
+
+Lo ZIP(5) della .110 mostra tre tentativi con compositore vuoto, written e poi draft_changed circa165ms dopo; nessun dispatch. Sono scritture del messaggio dopo l’attivazione, con messaggio prima disattivato. La .110 unificava nodo editor diverso, form diverso, nodo scollegato e testo diverso nello stesso errore. Non permette di attribuire il caso reale a React, formattazione o modifica dell’utente.
+
+La .111 distingue questi controlli soltanto nella diagnostica. Non autorizza nuove scritture o invii dopo un cambiamento e non adotta automaticamente un nodo ricreato. Testi pre/post continuano a essere inviati come configurato, senza essere aggiunti al pannello della cover. Il testo grande visibile attraverso la semitrasparenza è la pagina ChatGPT sottostante; il toggle controlla esclusivamente la sovrimpressione di Jarvis.
+
+Per la prova e l’interpretazione dei flag vedere [Diagnostica del compositore Google](DIAGNOSTICA_COMPOSITORE_GOOGLE.md). Serve un nuovo ZIP dal Galaxy con questa versione; il superamento dei test simulati non risolve né dimostra la causa fisica del blocco.

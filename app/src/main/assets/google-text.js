@@ -16,7 +16,30 @@
   const previousDirect = chatRoute && previous?.project===key(expectedProject) && previous.url===clean(url);
   let ledger = window.__jarvisGoogleText;
   const metrics={};
-  const result = phase => JSON.stringify({phase,diagnostics:{...metrics,ledger:!!ledger,sendDispatched:!!ledger?.turns.get(cfg.turn)?.dispatched}, ...((ownedChat || previousDirect || ledger?.url===clean(url)) && chatRoute
+  let currentEditor=null, currentForm=null;
+  const value=e => (e.value || e.innerText || e.textContent || '').trim();
+  const lineEndings=s => s.replace(/\r\n?/g,'\n');
+  const whitespace=s => s.replace(/\s+/g,' ').trim();
+  // Diagnostic comparisons never authorize adoption of a replacement node or a modified draft.
+  const diagnostics=() => {
+    const state=ledger?.turns.get(cfg.turn);
+    const d={...metrics,ledger:!!ledger,sendDispatched:!!state?.dispatched};
+    if(currentEditor) {
+      const actual=value(currentEditor);
+      Object.assign(d,{draftChars:actual.length,hasDraft:!!actual,editorEnabled:enabled(currentEditor),
+        contentEditable:currentEditor.isContentEditable===true,
+        draftOwned:!!ledger?.turns && [...ledger.turns.values()].some(s=>s.editor===currentEditor && s.text===actual)});
+      if(state) Object.assign(d,{sameEditor:state.editor===currentEditor,sameForm:state.form===currentForm,
+        originalEditorConnected:document.contains(state.editor),currentEditorConnected:document.contains(currentEditor),
+        textMatches:actual===state.text,lineEndingsMatch:lineEndings(actual)===lineEndings(state.text),
+        normalizedTextMatches:whitespace(actual)===whitespace(state.text),writeVerified:state.writeVerified===true,
+        trustedInputSeen:ledger.trustedInputSeen===true,inputObservationAvailable:ledger.inputObservationAvailable===true,
+        expectedChars:state.text.length,draftLineBreaks:(actual.match(/\n/g)||[]).length,
+        expectedLineBreaks:(state.text.match(/\n/g)||[]).length});
+    }
+    return d;
+  };
+  const result = phase => JSON.stringify({phase,diagnostics:diagnostics(), ...((ownedChat || previousDirect || ledger?.url===clean(url)) && chatRoute
     ? {conversation:clean(url),directVerified:!chatRoute[1]} : {})});
   if (!routeSafe || (!inProject && !ownedChat && !previousDirect && !(chatRoute && !chatRoute[1] && ledger?.turns &&
       [...ledger.turns.values()].some(t=>t.dispatched)))) return result('wrong_conversation');
@@ -31,11 +54,9 @@
     .filter(e => visible(e));
   metrics.editors=editors.length;
   if (editors.length!==1) return result('ambiguous_editor');
-  const editor=editors[0], value=e => (e.value || e.innerText || e.textContent || '').trim();
-  metrics.draftChars=value(editor).length;metrics.hasDraft=!!value(editor);metrics.editorEnabled=enabled(editor);
-  metrics.draftOwned=!!ledger?.turns && [...ledger.turns.values()].some(s=>s.editor===editor && s.text===value(editor));
+  const editor=editors[0];currentEditor=editor;
   // Bind to the observed composer form, never any unrelated button in the document.
-  const form=editor.closest('form');
+  const form=editor.closest('form');currentForm=form;
   const hasMessages=!!document.querySelector('[data-message-author-role]');
   if (!form || (!inProject && !hasMessages)) return result('unverified_conversation');
   if (inProject && hasMessages) return result('project_has_messages');
@@ -53,7 +74,19 @@
   }
   if (!cfg.turn || !cfg.text.trim()) return result('invalid');
   if (!ledger && cfg.fresh && !inProject) return result('wrong_conversation');
-  if (!ledger) ledger=window.__jarvisGoogleText={session:cfg.session,turns:new Map(),url:ownedChat || previousDirect ? clean(url) : ''};
+  if (!ledger) {
+    ledger=window.__jarvisGoogleText={session:cfg.session,turns:new Map(),url:ownedChat || previousDirect ? clean(url) : ''};
+    // Only a boolean about trusted edit events in this document; no event data or target text.
+    // This is evidence for diagnostics, never proof that the draft was or was not edited by a person.
+    const owner=ledger;
+    const kinds=['beforeinput','input','paste','drop','compositionstart'];
+    const observe=e => {if(e.isTrusted===true) owner.trustedInputSeen=true;};
+    owner.disposeDiagnostics=() => {for(const kind of kinds) document.removeEventListener(kind,observe,true);};
+    try {
+      for(const kind of kinds) document.addEventListener(kind,observe,true);
+      owner.inputObservationAvailable=true;
+    } catch(_) {try {owner.disposeDiagnostics();} catch(_) {} owner.inputObservationAvailable=false;}
+  }
   let state=ledger.turns.get(cfg.turn);
   if(cfg.resume && !state) return result('ledger_lost');
   const userBodies=() => [...document.querySelectorAll('[data-message-author-role="user"]')].map(e =>
@@ -68,8 +101,9 @@
     if (ledger.turns.size>=100) return result('session_limit');
     if (!enabled(editor)) return result('busy');
     if (value(editor)) return result('draft');
-    state={editor,form,text:cfg.text,dispatched:false,failed:false,before:userBodies().filter(t=>normalize(t)===normalize(cfg.text)).length};
+    state={editor,form,text:cfg.text,dispatched:false,failed:false,writeVerified:false,before:userBodies().filter(t=>normalize(t)===normalize(cfg.text)).length};
     ledger.turns.set(cfg.turn,state); // consume before mutation, even if an exception follows
+    ledger.trustedInputSeen=false;
     try {
       if (editor.isContentEditable) {
         if (!editor.dispatchEvent(new InputEvent('beforeinput',{bubbles:true,cancelable:true,inputType:'insertText',data:cfg.text}))) {
@@ -85,6 +119,7 @@
       editor.dispatchEvent(new InputEvent('input',{bubbles:true,inputType:'insertText',data:cfg.text}));
       editor.dispatchEvent(new Event('change',{bubbles:true}));
       if (value(editor)!==cfg.text) { state.failed=true; return result('write_failed'); }
+      state.writeVerified=true;
       return result('written');
     } catch (_) { state.failed=true; return result('write_uncertain'); }
   }

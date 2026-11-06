@@ -6,13 +6,15 @@ function fixture(){
  const state={hasMessages:true,bodies:['messaggio precedente'],buttons:[],editors:[],dialogs:[]};
  class Editor {
   constructor(){this._value='';}get value(){return this._value;}set value(s){writes++;this._value=s;}
-  closest(){return form;}getAttribute(){return null;}getBoundingClientRect(){return {width:500,height:80};}dispatchEvent(){return true;}
+  closest(){return state.form;}getAttribute(){return null;}getBoundingClientRect(){return {width:500,height:80};}dispatchEvent(){return true;}
  }
  const form={querySelectorAll:()=>state.buttons};
+ state.form=form;
  const editor=new Editor();state.editors=[editor];
  const button={getAttribute:k=>k==='data-testid'?'send-button':null,getBoundingClientRect:()=>({width:48,height:48}),click:()=>sends++};state.buttons=[button];
  const location={href:url},window={};
- const document={contains:e=>state.editors.includes(e),querySelector:()=>state.hasMessages?{}:null,querySelectorAll:s=>{
+ const listeners=new Map();
+ const document={addEventListener:(kind,fn)=>listeners.set(kind,fn),removeEventListener:(kind,fn)=>{if(listeners.get(kind)===fn)listeners.delete(kind);},contains:e=>state.editors.includes(e),querySelector:()=>state.hasMessages?{}:null,querySelectorAll:s=>{
   if(s.startsWith('textarea'))return state.editors;
   if(s==='button,[role="button"]')return state.buttons;
   if(s==='[role="dialog"],[aria-modal="true"],dialog[open]')return state.dialogs;
@@ -21,7 +23,15 @@ function fixture(){
  }};
  const context={window,document,location,URL,Map,HTMLInputElement:class{},HTMLTextAreaElement:Editor,InputEvent:class{},Event:class{},getComputedStyle:()=>({display:'block',visibility:'visible',opacity:'1'})};
  const cfg={project:'https://chatgpt.com/g/g-p-abc123/project',session:'session',turn:'turn',text:'Ciao "Jarvis"\n`${literal}` è italiano.',action:'send'};
- return {state,editor,button,location,cfg,run:()=>JSON.parse(vm.runInNewContext(source.replace('__JW_CONFIG__',JSON.stringify(cfg)),context)).phase,counts:()=>({sends,writes})};
+ const editable=(node=editor)=>{
+  node.isContentEditable=true;
+  Object.defineProperty(node,'value',{get:()=>undefined});
+  Object.defineProperty(node,'textContent',{get:()=>node._value,set:text=>{writes++;node._value=text;}});
+  Object.defineProperty(node,'innerText',{get:()=>state.renderedValue ?? node._value});
+  return node;
+ };
+ const details=()=>JSON.parse(vm.runInNewContext(source.replace('__JW_CONFIG__',JSON.stringify(cfg)),context));
+ return {state,editor,button,location,cfg,window,listeners,details,editable,run:()=>details().phase,counts:()=>({sends,writes}),emit:(kind,event)=>listeners.get(kind)?.(event)};
 }
 {
  const f=fixture();assert.equal(f.run(),'written');assert.equal(f.run(),'dispatched');
@@ -98,3 +108,61 @@ console.log('PASS Google text: one send, draft/destination/session/ambiguity gua
  const f=fixture();f.location.href='https://chatgpt.com/c/12345678-1234-4234-8234-123456789abc';assert.equal(f.run(),'wrong_conversation');assert.equal(f.counts().writes,0);
 }
 console.log('PASS Google cycle: explicit new project chat, one first message, observed URL binding, same-chat turns, drafts and lost-ledger guards.');
+
+// Diagnostic builds keep all send guards: a changed editor/form/text still blocks before click.
+{
+ const f=fixture();f.editable();const written=f.details();assert.equal(written.phase,'written');
+ assert.equal(written.diagnostics.writeVerified,true);assert.equal(written.diagnostics.draftOwned,true);
+ assert.equal(written.diagnostics.draftChars,f.cfg.text.length);assert.equal(written.diagnostics.textMatches,true);
+ const next=f.editable(new f.editor.constructor());next._value=f.cfg.text;f.state.editors=[next];
+ const r=f.details();assert.equal(r.phase,'draft_changed');assert.equal(r.diagnostics.sameEditor,false);
+ assert.equal(r.diagnostics.sameForm,true);assert.equal(r.diagnostics.originalEditorConnected,false);
+ assert.equal(r.diagnostics.currentEditorConnected,true);assert.equal(r.diagnostics.textMatches,true);
+ assert.equal(f.run(),'uncertain');assert.deepEqual(f.counts(),{sends:0,writes:1});
+}
+{
+ const f=fixture();assert.equal(f.run(),'written');f.state.form={querySelectorAll:()=>f.state.buttons};
+ const r=f.details();assert.equal(r.phase,'draft_changed');assert.equal(r.diagnostics.sameEditor,true);
+ assert.equal(r.diagnostics.sameForm,false);assert.equal(r.diagnostics.textMatches,true);assert.equal(f.counts().sends,0);
+}
+{
+ const f=fixture();f.cfg.text='Prima riga\nSeconda riga';assert.equal(f.run(),'written');
+ f.editor._value=f.cfg.text.replace('\n','\r\n');const r=f.details();
+ assert.equal(r.phase,'draft_changed');assert.equal(r.diagnostics.sameEditor,true);assert.equal(r.diagnostics.sameForm,true);
+ assert.equal(r.diagnostics.textMatches,false);assert.equal(r.diagnostics.lineEndingsMatch,true);
+ assert.equal(r.diagnostics.normalizedTextMatches,true);assert.equal(f.counts().sends,0);
+}
+{
+ const f=fixture();f.cfg.text='Prima riga\nSeconda riga';assert.equal(f.run(),'written');
+ f.editor._value=f.cfg.text.replace('\n','\n\n');const r=f.details();
+ assert.equal(r.phase,'draft_changed');assert.equal(r.diagnostics.lineEndingsMatch,false);
+ assert.equal(r.diagnostics.normalizedTextMatches,true);assert.equal(r.diagnostics.expectedLineBreaks,1);
+ assert.equal(r.diagnostics.draftLineBreaks,2);assert.equal(f.counts().sends,0);
+}
+{
+ const f=fixture();assert.equal(f.run(),'written');f.editor._value='Una modifica reale e privata';
+ f.emit('input',{isTrusted:false,data:'not logged'});f.emit('beforeinput',{isTrusted:true,data:'not logged'});
+ const r=f.details();assert.equal(r.phase,'draft_changed');assert.equal(r.diagnostics.normalizedTextMatches,false);
+ assert.equal(r.diagnostics.trustedInputSeen,true);assert.equal(r.diagnostics.inputObservationAvailable,true);
+ assert.equal(JSON.stringify(r).includes('privata'),false);assert.equal(JSON.stringify(r).includes('not logged'),false);
+ assert.equal(f.counts().sends,0);f.window.__jarvisGoogleText.disposeDiagnostics();assert.equal(f.listeners.size,0);
+}
+{
+ const f=fixture();assert.equal(f.run(),'written');f.emit('input',{isTrusted:false});
+ const r=f.details();assert.equal(r.phase,'dispatched');assert.equal(r.diagnostics.trustedInputSeen,false);
+ assert.equal(r.diagnostics.sendDispatched,true);assert.deepEqual(f.counts(),{sends:1,writes:1});
+}
+console.log('PASS Google composer diagnostics: replacement editor/form, CRLF/line breaks, changed text and trusted input distinguished without contents or relaxed send guards.');
+
+{
+ const f=fixture();f.editable();assert.equal(f.run(),'written');
+ f.state.renderedValue=f.cfg.text.replace('\n','\n\n');const r=f.details();
+ assert.equal(r.phase,'draft_changed');assert.equal(r.diagnostics.contentEditable,true);
+ assert.equal(r.diagnostics.sameEditor,true);assert.equal(r.diagnostics.normalizedTextMatches,true);
+ assert.equal(r.diagnostics.textMatches,false);assert.deepEqual(f.counts(),{sends:0,writes:1});
+}
+{
+ const f=fixture();f.editable();assert.equal(f.run(),'written');assert.equal(f.run(),'dispatched');
+ f.editor._value='';f.state.bodies.push(f.cfg.text);assert.equal(f.run(),'observed');assert.deepEqual(f.counts(),{sends:1,writes:1});
+}
+console.log('PASS contenteditable simulation: rendered line-break change blocks once; unchanged text sends once and observation remains distinct.');

@@ -1,3 +1,11 @@
+## 0.5.111 / 133 — testi cover solo vocali e verifica del compositore Google
+
+- Sovrimpressione nascosta a ogni nuovo ciclo; tocco invisibile basso-destra per mostrarla/nasconderla, senza ricordare il ciclo precedente.
+- Esclusi i messaggi automatici prima/dopo dall’archivio della cover; invii ChatGPT e risposte vocali del plugin conservati. La chat sottostante resta visibile con cover semitrasparente.
+- Diagnostica Google mirata dopo scrittura: identità editor/form, connettività, confronto esatto/a capo/spazi e conteggi, osservazione booleana input trusted senza testo. Fasi pre/post/send distinte e metriche aggiornate anche dopo la scrittura.
+- Invio bloccato in caso di cambiamento, nessun retry o allargamento delle guardie. Non è ancora una correzione certificata del blocco sul Galaxy: nuovo ZIP necessario per distinguerne la causa.
+- Test simulano editor ricreato, form sostituito, a capo variati e testo modificato; privacy, uscita e Google OFF verificati insieme alle regressioni. Nessuna API Google reale, Watch/Windows invariati.
+
 ## 0.5.110 / 132 — dialogo continuo, screenshot in Galleria e diagnostica Google
 
 - Doppio tocco alto-destra cattura la cover prima di nasconderla e salva in Pictures/JarvisWake, poi apre l’esportazione dei log. PNG esclusi dallo ZIP; schermate credenziali protette.

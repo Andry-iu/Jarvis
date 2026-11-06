@@ -258,7 +258,7 @@ internal class GoogleVoiceActivity : Activity() {
                 "restart_ready" -> {
                     // A new wake explicitly requests a new project chat. Never navigate away from a draft.
                     projectOpened=true;conversation=""
-                    web.evaluateJavascript("delete window.__jarvisGoogleText; delete window.__jarvisGoogleBinding;", null)
+                    web.evaluateJavascript("window.__jarvisGoogleText?.disposeDiagnostics?.(); delete window.__jarvisGoogleText; delete window.__jarvisGoogleBinding;", null)
                     web.loadUrl(project)
                 }
                 "ready" -> {
@@ -270,8 +270,7 @@ internal class GoogleVoiceActivity : Activity() {
                         startupComplete=true;VoiceCycle.voiceDispatched(token);WaitingAudio.stop()
                         if(greetingText.isNotBlank()) {
                             val turn=UUID.randomUUID().toString();check(state.begin(turn));check(state.submitting())
-                            transcriptView.append("Avvio",greetingText)
-                            submit(turn,greetingText);return@evaluateJavascript
+                            submit(turn,greetingText,true);return@evaluateJavascript
                         }
                     }
                     startListening()
@@ -316,7 +315,6 @@ internal class GoogleVoiceActivity : Activity() {
                     "observed" -> {
                         observeConversation(raw)
                         if(conversation.isEmpty()) {error("DESTINAZIONE NON CONFERMATA — NESSUN REINVIO");return@evaluateJavascript}
-                        transcriptView.append("Avvio",openingText)
                         preComplete=true;preSending=false;verifyReady()
                     }
                     else -> error("MESSAGGIO PRIMA BLOCCATO O INCERTO — NESSUN REINVIO")
@@ -493,7 +491,7 @@ internal class GoogleVoiceActivity : Activity() {
         } catch(_:Exception) {error("ERRORE AVVIO GOOGLE STT — NESSUN REINVIO")}
         finally {initial.fill(0)}
     }
-    private fun submit(turn: String, transcript: String) {
+    private fun submit(turn: String, transcript: String, startup: Boolean = false) {
         val epoch = ++dispatchEpoch
         val text = transcript + "\n\n[JarvisWake: session_id=$token; turn_id=$turn. Rispondi con jarviswake_speak per la voce, senza ChatGPT Voice.]"
         val until = SystemClock.elapsedRealtime() + 120000
@@ -501,7 +499,7 @@ internal class GoogleVoiceActivity : Activity() {
             if (!alive() || state.turn != turn || epoch != dispatchEpoch || state.phase !in setOf("submitting", "send_dispatched")) return
             web.evaluateJavascript(scriptFor("send", turn, text)) { raw ->
                 if (!alive() || state.turn != turn || epoch != dispatchEpoch) return@evaluateJavascript
-                GoogleVoiceDiagnostics.dom(this,token,"send",raw)
+                GoogleVoiceDiagnostics.dom(this,token,if(startup) "post" else "send",raw)
                 observeConversation(raw)
                 when (parse(raw)) {
                     "busy", "ambiguous_editor" -> {
@@ -516,6 +514,7 @@ internal class GoogleVoiceActivity : Activity() {
                         if (SystemClock.elapsedRealtime() < until) main.postDelayed({ step() }, 200) else waitReply(turn, false)
                     }
                     "observed" -> { state.dispatched(); state.observed(); waitReply(turn, true) }
+                    "draft_changed" -> error("TESTO O EDITOR CAMBIATO — INVIO BLOCCATO; ESPORTA DIAGNOSTICA")
                     else -> error("INVIO NON CONFERMATO O BOZZA PRESENTE — NESSUN REINVIO")
                 }
             }
@@ -692,7 +691,7 @@ internal class GoogleVoiceActivity : Activity() {
         closed = true;echoCandidate=null
         credentials?.cancel(); credentials = null; resolvedConfig = null
         if (::transcriptView.isInitialized) transcriptView.clearText()
-        if (::web.isInitialized) runCatching { web.evaluateJavascript("delete window.__jarvisGoogleText;", null) }
+        if (::web.isInitialized) runCatching { web.evaluateJavascript("window.__jarvisGoogleText?.disposeDiagnostics?.(); delete window.__jarvisGoogleText;", null) }
         if (::state.isInitialized) state.close()
         GoogleVoiceDiagnostics.record(this,token,"session","closed")
         GoogleVoiceDiagnostics.snapshot(this,token,diagnosticSnapshot())
