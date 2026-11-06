@@ -1,9 +1,9 @@
-## 0.5.115 / 137 — preparazione sorgenti, rilascio cloud pendente
+## 0.5.115 / 137 — collegamento persistente e mute temporaneo
 
 - Collegamento opt-in con servizio foreground indipendente dalla pagina e dal microfono wake; notifica/disattivazione, recupero worker e diagnostica bounded. Causa effettiva sul Galaxy da verificare.
 - Mute cover a pressione prolungata da grigio, ripristino al rilascio/cancellazione; tap e doppio tap conservati. Gestione asincrona nativo/WebView, Google finalizza il parlato dopo il rilascio del recorder.
 - Regole: modifiche/commit da qualsiasi chat; compilazione/firma/rilascio soltanto nel cloud Jarvis; ogni commit documenta stato e sviluppi concordati residui.
-- Passati controlli interpretati Node/Worker/guida; JVM/Robolectric, lint, build e firma NON eseguiti. Nessun APK/deploy. Handoff e verifiche residue in `docs/HANDOFF_0.5.115.md`.
+- Verifica cloud completata:637test JVM/Robolectric SDK34/36, lint senza errori,5script Node,48test Worker simulati e10test utility rubrica. Test aggiuntivi del worker reale con trasporto simulato e callback WebView ritardate/timeout/cambio documento. Unico APK Telefono firmato permanentemente; checksum e verbale aggiornati. Nessun deploy backend o collaudo Galaxy implicito. Residui in `docs/HANDOFF_0.5.115.md`.
 
 ## 0.5.114 / 136 — rubrica locale dal telefono al workspace
 

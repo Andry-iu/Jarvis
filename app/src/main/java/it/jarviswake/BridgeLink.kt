@@ -16,6 +16,9 @@ import java.util.concurrent.TimeUnit
 
 /** Optional fixed-operation connection; waits never run on gesture/audio threads. */
 internal object BridgeLink {
+    // Test transport replaces only the authenticated I/O boundary, never the worker/owner logic.
+    internal var credentialsReader:(Context)->BridgeCredentials?=BridgeSettings::read
+    internal var transport:((BridgeCredentials,String,JSONObject,Int)->JSONObject)?=null
     private val main=Handler(Looper.getMainLooper())
     private val owners=HashSet<String>()
     private val actionLock=Object()
@@ -47,7 +50,7 @@ internal object BridgeLink {
             return
         }
         val app=context.applicationContext
-        val credentials=runCatching { BridgeSettings.read(app) }.getOrNull()
+        val credentials=runCatching { credentialsReader(app) }.getOrNull()
         if(credentials==null) { status="Collegamento da configurare.";return }
         status="Connessione al servizio…"
         NativeRuntimeSnapshot.save(app,"-","bridge_lifecycle","event=worker_started owners=${owners.size} dedicated=${"link_service" in owners}")
@@ -162,6 +165,8 @@ internal object BridgeLink {
     private class BridgeHttpFailure(val statusCode:Int):Exception()
     private fun post(c:BridgeCredentials,path:String,data:JSONObject,epoch:Int):JSONObject {
         check(BridgeProtocol.validOrigin(c.origin))
+        if(epoch!=generation) throw InterruptedException()
+        transport?.let { return it(c,path,data,epoch) }
         val conn=URL(c.origin+path).openConnection() as HttpURLConnection;connection=conn
         try {
             if(epoch!=generation) throw InterruptedException()

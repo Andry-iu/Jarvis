@@ -1,4 +1,12 @@
-# 0.5.115 / 137 — sorgenti preparati, verifica e rilascio cloud da completare
+# 0.5.115 / 137 — preparazione e verifica cloud
+
+## Completamento cloud — 6 novembre 2026
+
+La richiesta «Scarica da Git e compila dammi l’APK firmato» ha autorizzato la conclusione nel cloud Jarvis. Fetch/fast-forward dalla baseline df323bbd303233d3aa2cc70d91818065bbd1458e, strumenti/cache/firma esistenti riusati.637test/66suite JVM SDK34/36 senza failure/error/skipped, lint55warning/0errori,5suite Node,48test backend simulati e10test utility rubrica passati; Gradle test/lint/assemble completati. Aggiunte BridgeLinkWorkerIntegrationTest (worker reale unico, pagina→servizio, heartbeat, status correlato e stop con solo HTTP/credenziali fittizi) e WebMicrophoneCallbackTest (rilascio prima conferma, timeout/risposta tardiva e cambio documento/ciclo chiuso). Le sole seam interne di BridgeLink mantengono i default di credenziali e HTTP di produzione, senza tool/URL o impostazioni aggiuntive.
+
+APK Telefono .115/137 firmato con certificato permanente e verificato per versione/ABI/CRC ZIP/v2/v3/16KB, checksum in releases/0.5.115/SHA256SUMS; dettagli in VERIFICATION.md. Nessun APK Watch o agente Windows modificato. Nessuna API Google reale, lettura rubrica reale o scrittura dell’appunto regole nel collaudo.
+
+Rimangono i collaudi fisici descritti in fondo, l’importazione effettiva della rubrica, la conferma dell’appunto regole e gli altri sviluppi della roadmap. La guida backend .115 è nei sorgenti ma NON è stata pubblicata da questa compilazione (guida online riletta: .114/136, protocollo compatibile). Non ripetere automaticamente la vecchia scrittura scaduta dell’appunto. Le sezioni successive conservano le evidenze e lo stato della preparazione iniziale, ora seguito da questo completamento cloud.
 
 ## Autorizzazioni e regole aggiornate — 6 novembre 2026
 
