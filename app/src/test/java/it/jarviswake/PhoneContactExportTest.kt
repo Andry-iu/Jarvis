@@ -113,6 +113,31 @@ class PhoneContactExportTest {
         clock+=PhoneContactExport.TTL
         failure("contacts_export_expired"){PhoneContactExport.page("device",id,0){true}}
     }
+    @Test fun oneMiBFileUsesOnePageAndLargerFilesUseOneMiBBlocksWithExactHash() {
+        for(target in listOf(163483,PhoneContactExport.CHUNK-1,PhoneContactExport.CHUNK,PhoneContactExport.CHUNK+1,2*PhoneContactExport.CHUNK)) {
+            val rows=JSONArray()
+            for(i in 0 until target/7000) rows.put(JSONObject().put("id","$i").put("lookup_key","k$i").put("name","x".repeat(7000)))
+            val b=JSONObject().put("schema",1).put("mode","names").put("contacts",rows)
+            while(b.toString().toByteArray(Charsets.UTF_8).size>=target) rows.remove(rows.length()-1)
+            val tail=JSONObject().put("id","tail").put("lookup_key","tail").put("name","");rows.put(tail)
+            val padding=target-b.toString().toByteArray(Charsets.UTF_8).size
+            assertTrue(padding in 0..8192);tail.put("name","x".repeat(padding))
+            val manifest=PhoneContactExport.freeze("d",b){true};assertEquals(target,manifest.getInt("bytes"))
+            assertEquals(1048576,manifest.getInt("chunk_bytes"))
+            val out=java.io.ByteArrayOutputStream();var offset=0;var pages=0
+            do {
+                val page=PhoneContactExport.page("d",manifest.getString("snapshot_id"),offset){true}
+                val bytes=android.util.Base64.decode(page.getString("data_base64"),0)
+                assertEquals(minOf(1048576,target-offset),bytes.size);out.write(bytes);pages++
+                offset=if(page.isNull("next_offset")) -1 else page.getInt("next_offset")
+            } while(offset>=0)
+            assertEquals((target+1048575)/1048576,pages)
+            assertArrayEquals(b.toString().toByteArray(Charsets.UTF_8),out.toByteArray())
+            val hash=java.security.MessageDigest.getInstance("SHA-256").digest(out.toByteArray()).joinToString(""){"%02x".format(it)}
+            assertEquals(manifest.getString("sha256"),hash)
+            failure("invalid_export_offset"){PhoneContactExport.page("d",manifest.getString("snapshot_id"),1048577){true}}
+        }
+    }
     @Test fun changedOrUnavailableProviderAndRevokedConsentNeverProducePartialExport() {
         provider.changed=true;failure("contacts_export_changed"){body()}
         provider.unavailable=true;failure("contacts_export_unavailable"){body()}

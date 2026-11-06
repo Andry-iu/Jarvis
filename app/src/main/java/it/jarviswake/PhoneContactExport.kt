@@ -16,7 +16,7 @@ import java.util.UUID
 
 /** Explicit one-way export. Frozen bytes live only in RAM, never in audio/UI/diagnostic storage. */
 internal object PhoneContactExport {
-    const val CHUNK=6144
+    const val CHUNK=1024*1024
     const val MAX_BYTES=8*1024*1024
     const val TTL=30*60*1000L
     private data class Snapshot(val device:String,val id:String,val bytes:ByteArray,var until:Long,var expires:Long)

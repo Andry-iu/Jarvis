@@ -1,3 +1,11 @@
+# Stato corrente: trasferimento rubrica fino a1MiB (.118/140)
+
+0.5.118 / 140 — SORGENTI PREPARATI, VERIFICA E RILASCIO CLOUD PENDENTI (6 novembre 2026).
+Gruppo esplicitamente approvato: file rubrica fino a1MiB (1048576byte UTF-8) in una sola pagina dati; sopra, blocchi da1MiB e ultimo residuo. Manifest iniziale mantenuto, limite totale8MiB, verifica SHA256/schema/contatori e salvataggio atomico. Backend e utility compatibili con manifest6144byte delle app precedenti; app140 annuncia1MiB. Body HTTP ampliato solo per risultati pagina sul percorso device/respond, con margine Base64; limiti ordinari16KB conservati.
+Verifiche interpretate:20test Python e53test backend simulati passati; guida generata/coerente, sintassi JS e diff controllati. Aggiunto test Android SDK34/36 per163483byte,1MiB−1,1MiB,1MiB+1 e2MiB, NON eseguito qui. Nessun APK/build/firma/deploy o trasferimento reale con nuovo formato dichiarato. Handoff: docs/HANDOFF_EXPORT_1MIB_20261106.md. Restano collaudo Galaxy/rete/revoca/trasporto MCP reale, diagnosi contacts_export_changed e tutti gli sviluppi/prove precedenti della roadmap.
+
+## Roadmap precedente conservata integralmente
+
 # Stato corrente: indice nomi e singolo numero (.117/139)
 
 0.5.117 / 139 — VERIFICA CLOUD COMPLETATA, APK FIRMATO E BACKEND PUBBLICATO (6 novembre 2026). Main2da9746 scaricato nel cloud Jarvis;647test Android/66suite SDK34/36, lint55warning/0errori,5suite Node,51test backend simulati e17test Python rubrica passati. Indice cifrato dei soli nomi separato dai numeri, candidati per somiglianza senza selezione automatica e verifica live del nome esatto; salvataggio singolo numero preserva il resto. Nuovo tool pubblicato sullo stesso Site/plugin privato, stesso pairing/segreti, guida online .117/139 riletta. Firma permanente/ZIP/ABI/16KB verificati, checksum in releases/0.5.117/SHA256SUMS. Nessuna importazione reale durante la compilazione, API Google reale, modifica Watch/Windows/Voice/cover. Restano collaudo Galaxy, diagnosi puntuale contacts_export_changed del vecchio export completo, prove fisiche .115/.116, appunto regole non confermato e altri sviluppi della roadmap. Handoff docs/HANDOFF_NAMES_INDEX_20261106.md e verbale VERIFICATION.md.

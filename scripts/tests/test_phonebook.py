@@ -1,4 +1,6 @@
 import base64
+import io
+from types import SimpleNamespace
 import hashlib
 import importlib.util
 import json
@@ -25,18 +27,18 @@ class PhonebookTest(unittest.TestCase):
         p = self.book.state()['pending']
         return {'state': 'responded', 'source': 'paired_device', 'device_id': self.device,
                 'request_id': p['args']['request_id'], 'operation': p['operation'], 'result': result}
-    def start(self, contacts, mode='full', digest=None):
+    def start(self, contacts, mode='full', digest=None, chunk_bytes=m.CHUNK):
         self.book.begin(self.device, str(uuid.uuid4()) if mode=='number' else '', names_only=mode=='names')
         raw = m.encode({'schema': 1, 'mode': mode, 'contacts': contacts})
-        manifest = {'code':'contacts_export_ready','snapshot_id':str(uuid.uuid4()),'bytes':len(raw),'chunk_bytes':m.CHUNK,
+        manifest = {'code':'contacts_export_ready','snapshot_id':str(uuid.uuid4()),'bytes':len(raw),'chunk_bytes':chunk_bytes,
                     'sha256':digest or hashlib.sha256(raw).hexdigest(),'mode':mode,
                     'contacts':len(contacts),'phones':sum(len(c.get('phones', [])) for c in contacts),
                     'emails':sum(len(c.get('emails', [])) for c in contacts),'expires_at':int(time.time()*1000)+100000}
         self.book.accept(self.response(manifest))
         return raw, manifest
     def finish(self, raw, manifest):
-        for offset in range(0,len(raw),m.CHUNK):
-            chunk=raw[offset:offset+m.CHUNK];end=offset+len(chunk)
+        for offset in range(0,len(raw),manifest['chunk_bytes']):
+            chunk=raw[offset:offset+manifest['chunk_bytes']];end=offset+len(chunk)
             self.book.accept(self.response({'code':'contacts_export_page','snapshot_id':manifest['snapshot_id'],
                 'offset':offset,'next_offset':None if end==len(raw) else end,'expires_at':manifest['expires_at'],
                 'data_base64':base64.b64encode(chunk).decode()}))
@@ -155,17 +157,17 @@ class PhonebookTest(unittest.TestCase):
         self.assertEqual(self.book.status()['contacts'],1)
     def test_interrupted_staging_is_encrypted_and_reopens_without_changing_request_id(self):
         a=contact();a['name']='Private Contact '+('à'*8000)
-        raw,meta=self.start([a])
+        raw,meta=self.start([a],chunk_bytes=m.LEGACY_CHUNK)
         response=self.response({'code':'contacts_export_page','snapshot_id':meta['snapshot_id'],
-            'offset':0,'next_offset':m.CHUNK,'expires_at':meta['expires_at'],
-            'data_base64':base64.b64encode(raw[:m.CHUNK]).decode()})
+            'offset':0,'next_offset':meta['chunk_bytes'],'expires_at':meta['expires_at'],
+            'data_base64':base64.b64encode(raw[:meta['chunk_bytes']]).decode()})
         self.book.accept(response)
         self.assertNotIn(b'Private Contact',self.book.root.joinpath('pending.enc').read_bytes())
         plan=self.book.plan();self.book=m.Book(self.book.root)
         self.assertEqual(self.book.plan(),plan)
         with self.assertRaisesRegex(m.BookError,'wrong_response'):self.book.accept(response)
-        for offset in range(m.CHUNK,len(raw),m.CHUNK):
-            chunk=raw[offset:offset+m.CHUNK];end=offset+len(chunk)
+        for offset in range(meta['chunk_bytes'],len(raw),meta['chunk_bytes']):
+            chunk=raw[offset:offset+meta['chunk_bytes']];end=offset+len(chunk)
             self.book.accept(self.response({'code':'contacts_export_page','snapshot_id':meta['snapshot_id'],
                 'offset':offset,'next_offset':None if end==len(raw) else end,'expires_at':meta['expires_at'],
                 'data_base64':base64.b64encode(chunk).decode()}))
@@ -192,11 +194,11 @@ class PhonebookTest(unittest.TestCase):
 
     def test_active_multichunk_transfer_renews_inactivity_lease_beyond_the_original_expiry(self):
         a=contact();a['name']='à'*8000
-        raw,meta=self.start([a]);initial=meta['expires_at']
-        for offset in range(0,len(raw),m.CHUNK):
+        raw,meta=self.start([a],chunk_bytes=m.LEGACY_CHUNK);initial=meta['expires_at']
+        for offset in range(0,len(raw),meta['chunk_bytes']):
             now=initial-1000 if offset==0 else initial+1000
             expiry=now+1800000
-            chunk=raw[offset:offset+m.CHUNK];end=offset+len(chunk)
+            chunk=raw[offset:offset+meta['chunk_bytes']];end=offset+len(chunk)
             with mock.patch.object(m.time,'time',return_value=now/1000):
                 self.book.accept(self.response({'code':'contacts_export_page','snapshot_id':meta['snapshot_id'],
                     'offset':offset,'next_offset':None if end==len(raw) else end,'expires_at':expiry,
@@ -209,6 +211,59 @@ class PhonebookTest(unittest.TestCase):
             self.book.accept({'state':'running','device_id':self.device,'request_id':args['request_id'],
                 'progress':{'stage':'phones','observed_at':int(time.time()*1000),'number':'PRIVATE'}})
         self.assertEqual(self.book.plan(),plan);self.assertEqual(self.book.status()['contacts'],0)
+
+    def test_one_mebibyte_boundaries_reassemble_atomically_and_match_hash(self):
+        for target in (163483, m.CHUNK - 1, m.CHUNK, m.CHUNK + 1, 2 * m.CHUNK):
+            with self.subTest(target=target):
+                # Real schema with bounded strings; pad the final name to hit exact byte boundaries.
+                rows=[{'id':str(i),'lookup_key':'k'+str(i),'name':'x'*7000} for i in range(target//7000)]
+                while len(m.encode({'schema':1,'mode':'names','contacts':rows})) >= target:
+                    rows.pop()
+                overhead=len(m.encode({'schema':1,'mode':'names','contacts':rows+[{'id':'tail','lookup_key':'tail','name':''}]}))
+                rows.append({'id':'tail','lookup_key':'tail','name':'x'*(target-overhead)})
+                raw,meta=self.start(rows,mode='names')
+                self.assertEqual(len(raw),target)
+                pages=0
+                for offset in range(0,len(raw),m.CHUNK):
+                    part=raw[offset:offset+m.CHUNK];end=offset+len(part)
+                    if offset:
+                        self.book=m.Book(self.book.root)  # resume the same persisted request
+                    reply=self.response({'code':'contacts_export_page','snapshot_id':meta['snapshot_id'],
+                        'offset':offset,'next_offset':end if end<len(raw) else None,'expires_at':meta['expires_at'],
+                        'data_base64':base64.b64encode(part).decode()})
+                    self.assertLessEqual(len(m.encode(reply)),m.MAX_RESPONSE_BYTES)
+                    self.book.accept(reply);pages+=1
+                    self.assertEqual(self.book.status()['pending'],end<len(raw))
+                self.assertEqual(pages,(target+m.CHUNK-1)//m.CHUNK)
+                self.assertEqual(self.book.status()['names'],len(rows))
+
+    def test_cli_accept_reads_a_full_one_mebibyte_page_with_base64_overhead(self):
+        rows=[{'id':str(i),'lookup_key':'k'+str(i),'name':'x'*8000} for i in range(140)]
+        raw,meta=self.start(rows,mode='names')
+        reply=self.response({'code':'contacts_export_page','snapshot_id':meta['snapshot_id'],'offset':0,
+            'next_offset':m.CHUNK,'expires_at':meta['expires_at'],'data_base64':base64.b64encode(raw[:m.CHUNK]).decode()})
+        with mock.patch.object(m.sys,'argv',['phonebook.py','accept']), mock.patch.object(m,'Book',return_value=self.book), \
+             mock.patch.object(m.sys,'stdin',SimpleNamespace(buffer=io.BytesIO(m.encode(reply)))), mock.patch.object(m.sys,'stdout',io.StringIO()):
+            self.assertEqual(m.main(),0)
+        self.assertTrue(self.book.status()['pending'])
+        self.assertEqual(self.book.plan()['args']['offset'],m.CHUNK)
+        remainder=raw[m.CHUNK:]
+        self.book.accept(self.response({'code':'contacts_export_page','snapshot_id':meta['snapshot_id'],'offset':m.CHUNK,
+            'next_offset':None,'expires_at':meta['expires_at'],'data_base64':base64.b64encode(remainder).decode()}))
+        self.assertEqual(self.book.status()['names'],len(rows))
+
+    def test_large_corrupt_page_preserves_previous_copy_and_unsupported_chunk_is_rejected(self):
+        raw,meta=self.start([contact()]);self.finish(raw,meta)
+        rows=[{'id':str(i),'lookup_key':'k'+str(i),'name':'x'*8000} for i in range(150)]
+        raw,meta=self.start(rows,mode='names',digest='0'*64)
+        with self.assertRaisesRegex(m.BookError,'hash_mismatch'):
+            self.finish(raw,meta)
+        self.assertEqual(self.book.status()['contacts'],1)
+        self.assertEqual(self.book.status()['names'],0)
+        self.book.root.joinpath('pending.enc').unlink()
+        self.book.begin(self.device,names_only=True)
+        meta['chunk_bytes']=2*m.CHUNK
+        with self.assertRaises(m.BookError):self.book.accept(self.response(meta))
 
 if __name__=='__main__':unittest.main()
 

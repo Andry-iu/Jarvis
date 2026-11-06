@@ -24,7 +24,9 @@ from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
 ROOT = Path('/workspace/.jarvis-private/phonebook')
 MAX_BYTES = 8 * 1024 * 1024
-CHUNK = 6144
+CHUNK = 1024 * 1024
+LEGACY_CHUNK = 6144
+MAX_RESPONSE_BYTES = 4 * ((CHUNK + 2) // 3) + 8192
 UUID = re.compile(r'^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$')
 
 class BookError(Exception):
@@ -161,7 +163,7 @@ class Book:
             exact(result, 'code snapshot_id bytes chunk_bytes sha256 contacts phones emails mode expires_at')
             require(result['code'] == 'contacts_export_ready', 'export_not_ready')
             identifier(result['snapshot_id'])
-            require(result['mode'] == state['mode'] and result['chunk_bytes'] == CHUNK and
+            require(result['mode'] == state['mode'] and result['chunk_bytes'] in (LEGACY_CHUNK, CHUNK) and
                     integer(result['bytes'], 1, MAX_BYTES) and isinstance(result['sha256'], str) and
                     re.fullmatch('[a-f0-9]{64}', result['sha256']))
             for field, maximum in [('contacts', 100000), ('phones', 1000000), ('emails', 1000000)]:
@@ -172,17 +174,18 @@ class Book:
             self.next(state, 'contacts_export_page', {'snapshot_id': result['snapshot_id'], 'offset': 0})
         else:
             manifest = state['manifest']
+            chunk_bytes = manifest['chunk_bytes']
             exact(result, 'code snapshot_id offset next_offset data_base64 expires_at')
             require(result['code'] == 'contacts_export_page' and result['snapshot_id'] == manifest['snapshot_id'] and
                     result['offset'] == args['offset'] and
                     integer(result['expires_at'], manifest['expires_at'], int(time.time()*1000)+1805000))
             manifest['expires_at'] = result['expires_at']
-            require(isinstance(result['data_base64'], str) and len(result['data_base64']) <= 8192)
+            require(isinstance(result['data_base64'], str) and len(result['data_base64']) <= 4 * ((chunk_bytes + 2) // 3))
             try:
                 chunk = base64.b64decode(result['data_base64'], validate=True)
             except (ValueError, TypeError):
                 raise BookError('invalid_chunk') from None
-            require(len(chunk) == min(CHUNK, manifest['bytes'] - args['offset']))
+            require(len(chunk) == min(chunk_bytes, manifest['bytes'] - args['offset']))
             end = args['offset'] + len(chunk)
             require(result['next_offset'] == (end if end < manifest['bytes'] else None))
             state['chunks'].append(result['data_base64'])
@@ -362,8 +365,8 @@ def main():
             if args.command == 'begin':
                 result = book.begin(args.device_id, args.contact_ref, args.names_only)
             elif args.command == 'accept':
-                data = sys.stdin.buffer.read(32769)
-                require(len(data) <= 32768, 'response_too_large')
+                data = sys.stdin.buffer.read(MAX_RESPONSE_BYTES + 1)
+                require(len(data) <= MAX_RESPONSE_BYTES, 'response_too_large')
                 response = json.loads(data)
                 result = book.accept(response)
             elif args.command == 'abort':

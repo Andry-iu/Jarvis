@@ -1,3 +1,18 @@
+# Verifica corrente — .118/140, sorgenti preparati il6novembre2026
+
+Base remota verificata `bb6f9f3abd2dedff7bf794b92a7ed813b06551bd` di Andry-iu/Jarvis/main; documenti di rilascio .117 recuperati prima della modifica. L’utente ha autorizzato esplicitamente l’implementazione e chiarito blocchi da500K o1MB: scelti1MiB (1048576byte) per ridurre gli scambi. Nessuna cancellazione dell’importazione reale precedente o copia dei dati del telefono per i test.
+
+-20test Python superati: soglie163483,1048575,1048576,1048577,2097152byte, ricomposizione/commit atomico e ripresa, compatibilità6144byte e lease, CLI stdin con pagina1MiB+Base64, hash corrotto/conservazione copie, chunk non supportato rifiutato.
+-53test backend simulati superati: manifest nuovi e precedenti, pagina piccola/esatta/multipagina, payload sovradimensionato/offset/snapshot/coda errati, token errato, percorso non export ancora16KB, nessun nuovo invio dopo esito terminale. Regex Base64 resa lineare per evitare ripetizioni annidate su pagine grandi.
+- `python3 scripts/sync-guide.py --check`, `node --check phone-bridge/worker/index.js` e `git diff --check` superati. Guida aggiornata da un’unica fonte .118/140.
+- Test Android `oneMiBFileUsesOnePageAndLargerFilesUseOneMiBBlocksWithExactHash` aggiunto per SDK34/36 e soglie sopra. NON eseguito in questo ambiente: compilazione/JVM/lint/build/firma sono riservati al cloud Jarvis. Android modifica soltanto CHUNK; nessuna modifica al trasporto Voice/cover.
+
+Da completare nel cloud: suite Android incluse regressioni bridge/outbox/lease/revoca e cover; lint/build, firma permanente, checksum, aggiornamento stesso backend/plugin e test di trasporto MCP reale fino a1MiB senza troncamento. Solo dopo installazione app140 si potrà riavviare o rinnovare consapevolmente uno snapshot a1MiB: quello precedente rimane6144byte. Nessun APK o nuovo trasferimento reale dichiarato. Conservati tutti i collaudi/residui precedenti e roadmap; handoff docs/HANDOFF_EXPORT_1MIB_20261106.md.
+
+Richiesta finale utente: consegna APK firmata autorizzata. Capacità cloud cercate in questa chat e nel catalogo plugin, senza trovare accesso al cloud Jarvis/Codex Tasks. Build/firma/rilascio bloccati da accesso ambiente, non da mancanza di consenso; nessun tentativo fuori cloud né richiesta di segreti. Continuare nel cloud configurato dal nuovo handoff.
+
+## Verifiche precedenti conservate
+
 # 0.5.117 / 139 — verifica e rilascio cloud, 6 novembre 2026
 
 Richiesta vocale di scaricare l’ultimo Git e consegnare APK firmato. Checkout iniziale pulito c1d2b44, fetch e fast-forward al main2da97467f74c8e97c644782ac85197f0bc1f4b5f, handoff names-index letto; nessuna correzione ai sorgenti ricevuti necessaria. Cloud Jarvis `/workspace/Jarvis`, cache/toolchain `/workspace/.jarvis-cloud`, configurazione `f68203bf-ad95-493f-b5d1-b05e44686cd2~cecfg_6adcda8d13e081918b4bd1e231e145b8`, runtime `ccarenv_b64_Y2NhcmVudl8wYjg0YTNjYzkwY2M4MTkxYjIxNjc2ZmIzNDNkMjRlZA`: osservazioni correnti/running/rete enforced/Passphrase runtime ready. Nessun ambiente alternativo, Actions o segreto richiesto/stampato.

@@ -234,7 +234,7 @@ test('Status remains compatible with old snapshots and reports only the notes co
 
 test('The complete guide is available without pairing or a running phone',async()=>{
  const e=env();const r=value(await tool(e,'jarviswake_guide',{topic:'indice',query:''}));
- assert.equal(r.guide_version,'0.5.117');assert.equal(r.version_code,139);assert.equal(r.phone_required,false);assert.ok(r.topics.length>=19);
+ assert.equal(r.guide_version,'0.5.118');assert.equal(r.version_code,140);assert.equal(r.phone_required,false);assert.ok(r.topics.length>=19);
  assert.equal(e.BUCKET.data.size,0);
  for(const topic of ['wake','cover','audio','chatgpt','collegamento','appunti','plugin','maps','chiamate','whatsapp','diagnostica']) assert.ok(r.topics.some(t=>t.topic===topic));
 });
@@ -504,7 +504,7 @@ test('Export manifest/page contracts reject extra content, impossible chunks and
  const reply=value(await tool(e,'jarviswake_status_result',{device_id:c.deviceId,request_id:id}));assert.deepEqual(reply.result,manifest);
  id=crypto.randomUUID();await tool(e,'jarviswake_contacts_export_page',{device_id:c.deviceId,snapshot_id:manifest.snapshot_id,offset:0,request_id:id});await claim(e,c,id);
  const page={code:'contacts_export_page',snapshot_id:manifest.snapshot_id,offset:0,next_offset:null,data_base64:Buffer.from('simulated-only').toString('base64'),expires_at:manifest.expires_at};
- for(const delta of [{next_offset:6144},{data_base64:'!BAD!'},{data_base64:'A'.repeat(8196)},{offset:1},{raw:'PRIVATE'}]) assert.equal((await send({...page,...delta})).status,400);
+ for(const delta of [{next_offset:6144},{data_base64:'!BAD!'},{data_base64:'A'.repeat(1398108)},{offset:1},{raw:'PRIVATE'}]) assert.equal((await send({...page,...delta})).status,400);
  assert.equal((await send(page)).status,200);
  assert.deepEqual(value(await tool(e,'jarviswake_status_result',{device_id:c.deviceId,request_id:id})).result,page);
  // Same request stays terminal; reconnect cannot replace a first page/result.
@@ -577,4 +577,37 @@ test('Names-only tool is version gated, injects minimal params and rejects full-
  assert.equal((await send(manifest)).status,200);
  assert.deepEqual(value(await tool(e,'jarviswake_status_result',args)).result,manifest);
  assert.equal((await tool(e,'jarviswake_contacts_export_start',{...args,contact_ref:''})).content[0].text,'request_id_conflict');
+});
+
+test('1MiB pages transfer whole small files and exact boundary chunks while preserving legacy manifests',async()=>{
+ const {e,c,auth}=await exportFixture(140),chunk=1024*1024;
+ for(const size of [163483,chunk-1,chunk,chunk+1,2*chunk]) {
+  const manifest={...exportManifest(),bytes:size,chunk_bytes:chunk};
+  let rid=crypto.randomUUID();
+  await tool(e,'jarviswake_contacts_export_start',{device_id:c.deviceId,contact_ref:'',request_id:rid});await claim(e,c,rid);
+  assert.equal((await worker.fetch(request('/device/respond',{deviceId:c.deviceId,requestId:rid,result:manifest},auth),e)).status,200);
+  for(let offset=0;offset<size;offset+=chunk) {
+   rid=crypto.randomUUID();await tool(e,'jarviswake_contacts_export_page',{device_id:c.deviceId,snapshot_id:manifest.snapshot_id,offset,request_id:rid});await claim(e,c,rid);
+   const bytes=Math.min(chunk,size-offset),page={code:'contacts_export_page',snapshot_id:manifest.snapshot_id,offset,
+    next_offset:offset+bytes<size?offset+bytes:null,data_base64:Buffer.alloc(bytes,120).toString('base64'),expires_at:manifest.expires_at};
+   assert.equal((await worker.fetch(request('/device/respond',{deviceId:c.deviceId,requestId:rid,result:page},auth),e)).status,200);
+   assert.deepEqual(value(await tool(e,'jarviswake_status_result',{device_id:c.deviceId,request_id:rid})).result,page);
+  }
+ }
+});
+test('Large page validation rejects oversize, mismatched snapshot/offset and incomplete non-final pages',async()=>{
+ const {e,c,auth}=await exportFixture(140),rid=crypto.randomUUID(),snapshot_id=crypto.randomUUID(),chunk=1024*1024;
+ await tool(e,'jarviswake_contacts_export_page',{device_id:c.deviceId,snapshot_id,offset:0,request_id:rid});await claim(e,c,rid);
+ const page={code:'contacts_export_page',snapshot_id,offset:0,next_offset:chunk,data_base64:Buffer.alloc(chunk,120).toString('base64'),expires_at:Date.now()+1800000};
+ for(const delta of [{snapshot_id:crypto.randomUUID()},{offset:chunk,next_offset:2*chunk},
+  {data_base64:Buffer.alloc(chunk+1).toString('base64')},{data_base64:Buffer.alloc(chunk-1).toString('base64')},
+  {next_offset:chunk+1},{data_base64:'!'.repeat(1398104)}]) {
+  assert.equal((await worker.fetch(request('/device/respond',{deviceId:c.deviceId,requestId:rid,result:{...page,...delta}},auth),e)).status,400);
+ }
+ assert.equal((await worker.fetch(request('/device/respond',{deviceId:c.deviceId,requestId:rid,result:{...page,data_base64:'A'.repeat(1407000)}},auth),e)).status,413);
+ assert.equal((await worker.fetch(request('/device/respond',{deviceId:c.deviceId,requestId:rid,result:page},{Authorization:'Bearer '+'x'.repeat(43)}),e)).status,401);
+ assert.equal((await worker.fetch(request('/device/poll',{deviceId:c.deviceId,padding:'x'.repeat(20000)},auth),e)).status,413);
+ assert.equal((await worker.fetch(request('/device/respond',{deviceId:c.deviceId,requestId:rid,result:{code:'note_saved',padding:'x'.repeat(20000)}},auth),e)).status,413);
+ assert.equal((await worker.fetch(request('/mcp',{jsonrpc:'2.0',id:1,padding:'x'.repeat(20000)},user),e)).status,413);
+ assert.equal((await worker.fetch(request('/device/respond',{deviceId:c.deviceId,requestId:rid,result:page},auth),e)).status,200);
 });
