@@ -14,7 +14,8 @@ function fixture(){
  const button={getAttribute:k=>k==='data-testid'?'send-button':null,getBoundingClientRect:()=>({width:48,height:48}),click:()=>sends++};state.buttons=[button];
  const location={href:url},window={};
  const listeners=new Map();
- const document={addEventListener:(kind,fn)=>listeners.set(kind,fn),removeEventListener:(kind,fn)=>{if(listeners.get(kind)===fn)listeners.delete(kind);},contains:e=>state.editors.includes(e),querySelector:()=>state.hasMessages?{}:null,querySelectorAll:s=>{
+ const document={createDocumentFragment:()=>({nodeType:11,childNodes:[],appendChild(node){this.childNodes.push(node);}}),
+  createTextNode:data=>({nodeType:3,nodeName:'#text',data}),createElement:name=>({nodeType:1,nodeName:name.toUpperCase()}),addEventListener:(kind,fn)=>listeners.set(kind,fn),removeEventListener:(kind,fn)=>{if(listeners.get(kind)===fn)listeners.delete(kind);},contains:e=>state.editors.includes(e),querySelector:()=>state.hasMessages?{}:null,querySelectorAll:s=>{
   if(s.startsWith('textarea'))return state.editors;
   if(s==='button,[role="button"]')return state.buttons;
   if(s==='[role="dialog"],[aria-modal="true"],dialog[open]')return state.dialogs;
@@ -26,12 +27,15 @@ function fixture(){
  const editable=(node=editor)=>{
   node.isContentEditable=true;
   Object.defineProperty(node,'value',{get:()=>undefined});
-  Object.defineProperty(node,'textContent',{get:()=>node._value,set:text=>{writes++;node._value=text;}});
+  Object.defineProperty(node,'textContent',{get:()=>node._value,set:text=>{writes++;node._value=text;node.childNodes=[document.createTextNode(text)];}});
+  node.replaceChildren=fragment=>{writes++;node.childNodes=fragment.childNodes.slice();node._value=node.childNodes.map(n=>n.nodeName==='BR'?'\n':n.data).join('');};
   Object.defineProperty(node,'innerText',{get:()=>state.renderedValue ?? node._value});
   return node;
  };
+ // Model an asynchronous rich-editor parse: raw LF in text nodes becomes a space; BR survives.
+ const roundTrip=(node=editor)=>{node._value=node.childNodes.map(n=>n.nodeName==='BR'?'\n':n.data.replace(/\n/g,' ')).join('');};
  const details=()=>JSON.parse(vm.runInNewContext(source.replace('__JW_CONFIG__',JSON.stringify(cfg)),context));
- return {state,editor,button,location,cfg,window,listeners,details,editable,run:()=>details().phase,counts:()=>({sends,writes}),emit:(kind,event)=>listeners.get(kind)?.(event)};
+ return {state,editor,button,location,cfg,window,listeners,details,editable,roundTrip,run:()=>details().phase,counts:()=>({sends,writes}),emit:(kind,event)=>listeners.get(kind)?.(event)};
 }
 {
  const f=fixture();assert.equal(f.run(),'written');assert.equal(f.run(),'dispatched');
@@ -166,3 +170,41 @@ console.log('PASS Google composer diagnostics: replacement editor/form, CRLF/lin
  f.editor._value='';f.state.bodies.push(f.cfg.text);assert.equal(f.run(),'observed');assert.deepEqual(f.counts(),{sends:1,writes:1});
 }
 console.log('PASS contenteditable simulation: rendered line-break change blocks once; unchanged text sends once and observation remains distinct.');
+
+// Regression from ZIP(7): same editor/form, 13 LF lost after a rich-editor round trip.
+{
+ const text=Array.from({length:14},(_,i)=>'Istruzione di prova '+i).join('\n');
+ const old=fixture();old.editable();old.editor.textContent=text;old.roundTrip();
+ assert.equal(old.editor.innerText.split('\n').length-1,0);assert.equal(old.editor.innerText.length,text.length);
+ const f=fixture();f.editable();f.cfg.text=text;
+ const written=f.details();assert.equal(written.phase,'written');assert.equal(written.diagnostics.structuredWrite,true);
+ assert.equal(written.diagnostics.insertedLineBreaks,13);f.roundTrip();assert.equal(f.editor.innerText,text);
+ const sent=f.details();assert.equal(sent.phase,'dispatched');assert.equal(sent.diagnostics.textMatches,true);
+ assert.equal(sent.diagnostics.draftLineBreaks,13);assert.equal(f.run(),'waiting_observation');
+ f.editor._value='';f.state.bodies.push(text);assert.equal(f.run(),'observed');assert.deepEqual(f.counts(),{writes:1,sends:1});
+}
+{
+ const f=fixture();f.editable();f.cfg.text='Prima riga\n\nRiga con italiano è e testo <b>letterale</b> & \"citato\"\nFine';
+ assert.equal(f.run(),'written');f.roundTrip();assert.equal(f.editor.innerText,f.cfg.text);assert.equal(f.run(),'dispatched');
+ assert.ok(f.editor.childNodes.every(n=>n.nodeType===3 || n.nodeName==='BR'));
+ assert.deepEqual(f.counts(),{writes:1,sends:1});
+}
+{
+ const f=fixture();f.editable();f.cfg.text='Utente\n\n[JarvisWake: metadati di prova]';
+ assert.equal(f.run(),'written');f.roundTrip();f.editor._value=f.cfg.text.replace(/\n/g,' ');
+ const r=f.details();assert.equal(r.phase,'draft_changed');assert.equal(r.diagnostics.normalizedTextMatches,true);
+ assert.equal(r.diagnostics.textMatches,false);assert.equal(f.run(),'uncertain');assert.deepEqual(f.counts(),{writes:1,sends:0});
+}
+{
+ const f=fixture();f.editable();f.editor._value='Bozza personale da preservare';
+ assert.equal(f.run(),'draft');assert.deepEqual(f.counts(),{writes:0,sends:0});
+}
+{
+ const f=fixture();f.editable();f.editor.dispatchEvent=()=>false;
+ assert.equal(f.run(),'write_failed');assert.equal(f.run(),'uncertain');assert.deepEqual(f.counts(),{writes:0,sends:0});
+}
+{
+ const f=fixture();f.editable();f.editor.replaceChildren=()=>{throw Error('mutation outcome unknown')};
+ assert.equal(f.run(),'write_uncertain');assert.equal(f.run(),'uncertain');assert.equal(f.counts().sends,0);
+}
+console.log('PASS multiline insertion: literal-LF collapse reproduced, structured 13-LF round trip sends once, empty lines/markup stay literal; drafts, altered whitespace and uncertain writes never send.');

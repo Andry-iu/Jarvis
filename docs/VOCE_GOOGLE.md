@@ -1,4 +1,4 @@
-# Voce Google e ChatGPT testuale — 0.5.111 / 133
+# Voce Google e ChatGPT testuale — 0.5.112 / 134
 
 Modalità facoltativa, inizialmente **OFF**. OFF conserva ChatGPT Voice, destinazione nativa/WebView, saluti, audio e configurazioni esistenti. ON usa wake offline o avvio manuale → microfono JarvisWake/VAD locale → Google Speech-to-Text → un messaggio nella conversazione ChatGPT esistente → lavori del modello/plugin → `jarviswake_speak` → Google Text-to-Speech → audio sul telefono. Nessuna API OpenAI e nessun avvio ChatGPT Voice in questo percorso.
 
@@ -122,3 +122,15 @@ Lo ZIP(5) della .110 mostra tre tentativi con compositore vuoto, written e poi d
 La .111 distingue questi controlli soltanto nella diagnostica. Non autorizza nuove scritture o invii dopo un cambiamento e non adotta automaticamente un nodo ricreato. Testi pre/post continuano a essere inviati come configurato, senza essere aggiunti al pannello della cover. Il testo grande visibile attraverso la semitrasparenza è la pagina ChatGPT sottostante; il toggle controlla esclusivamente la sovrimpressione di Jarvis.
 
 Per la prova e l’interpretazione dei flag vedere [Diagnostica del compositore Google](DIAGNOSTICA_COMPOSITORE_GOOGLE.md). Serve un nuovo ZIP dal Galaxy con questa versione; il superamento dei test simulati non risolve né dimostra la causa fisica del blocco.
+
+## Correzione multilinea del bridge Google (.112)
+
+Il nuovo ZIP(7) distingue la causa del rifiuto: in due tentativi il campo parte vuoto, written vede13LF e uguaglianza esatta, il controllo successivo vede0LF; stesso editor/form collegati e testo uguale solo dopo normalizzazione degli spazi. Nessun input trusted osservato, nessun clic Invia. È una differenza nella rappresentazione del testo letto dal nuovo bridge Google; il log non certifica quale meccanismo interno del sito l’abbia prodotta.
+
+La scrittura contenteditable ora costruisce un DocumentFragment con nodi Text e un elemento BR per ogni LF, poi usa replaceChildren una sola volta. Nessun innerHTML o interpretazione del testo come markup, focus o API interne del sito. Eventi prima/dopo e confronti esatti immediato/successivo conservati; il nodo editor/form deve rimanere quello salvato. Se il sito modifica ancora il valore, l’invio si ferma senza adozione/riscrittura/retry. Il ramo textarea/input mantiene il suo setter nativo. Diagnostica structuredWrite e insertedLineBreaks indica solo il tipo di scrittura e il conteggio, senza contenuti.
+
+L’utente conferma che il percorso precedente funzionava e chiede di preservarlo. Il difetto e la correzione sono nel nuovo google-text.js: il percorso nativo Accessibilità, prepare-chat.js, le impostazioni dei messaggi prima/dopo e il progetto JarvisRuntime restano invariati. La .112 non allarga il confronto ad ogni differenza di spazi: normalizedTextMatches rimane un dato diagnostico.
+
+Test con modello DOM/ricostruzione simulati riproducono13LF→0per il vecchio nodo testo e13LF→13con BR, esigono uguaglianza esatta prima del singolo invio e coprono righe vuote/testo simile a HTML/bozze/cancellazioni e mutazioni incerte. Non sono il renderer reale di ChatGPT né una prova di invio Galaxy. Per il collaudo aggiornare senza disinstallare, controllare eventuale vecchia bozza e fare un solo ciclo; se si blocca, esportare lo ZIP. Screenshot sempre separato in Galleria.
+
+Fonti: [replaceChildren](https://developer.mozilla.org/en-US/docs/Web/API/Element/replaceChildren), [BR](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/br), [createTextNode](https://developer.mozilla.org/en-US/docs/Web/API/Document/createTextNode).

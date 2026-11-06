@@ -1,3 +1,11 @@
+## 0.5.112 / 134 — correzione multilinea del solo bridge Google
+
+- Il campo contenteditable riceve testo letterale e interruzioni BR esplicite con una sola sostituzione, conservando gli a capo anche nel round trip simulato dell’editor.
+- Riscontro ZIP(7): editor/form invariati,13LF letti dopo scrittura e0al controllo seguente, differenze limitate agli spazi normalizzati; individuata la guardia che bloccava l’invio.
+- Confronto esatto, scrittura/invio singoli e protezioni bozze/editor/sessione rimangono attivi. Nessuna accettazione indiscriminata delle differenze di spazi o nuovo retry.
+- Diagnostica senza contenuti estesa con structuredWrite e insertedLineBreaks. Invio nativo Accessibilità e prepare-chat invariati, come richiesto dall’utente; stessa configurazione pre/post/JarvisRuntime.
+- Cover nascosta a ogni ciclo e testi solo vocali .111 conservati. Test simulati e controlli Android completi; inserimento/invio reale da collaudare sul Galaxy, nessuna API Google reale nei test. Watch/Windows invariati.
+
 ## 0.5.111 / 133 — testi cover solo vocali e verifica del compositore Google
 
 - Sovrimpressione nascosta a ogni nuovo ciclo; tocco invisibile basso-destra per mostrarla/nasconderla, senza ricordare il ciclo precedente.

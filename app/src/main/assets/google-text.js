@@ -33,6 +33,7 @@
         originalEditorConnected:document.contains(state.editor),currentEditorConnected:document.contains(currentEditor),
         textMatches:actual===state.text,lineEndingsMatch:lineEndings(actual)===lineEndings(state.text),
         normalizedTextMatches:whitespace(actual)===whitespace(state.text),writeVerified:state.writeVerified===true,
+        structuredWrite:state.structuredWrite===true,insertedLineBreaks:state.insertedLineBreaks || 0,
         trustedInputSeen:ledger.trustedInputSeen===true,inputObservationAvailable:ledger.inputObservationAvailable===true,
         expectedChars:state.text.length,draftLineBreaks:(actual.match(/\n/g)||[]).length,
         expectedLineBreaks:(state.text.match(/\n/g)||[]).length});
@@ -109,7 +110,17 @@
         if (!editor.dispatchEvent(new InputEvent('beforeinput',{bubbles:true,cancelable:true,inputType:'insertText',data:cfg.text}))) {
           state.failed=true; return result('write_failed');
         }
-        editor.textContent=cfg.text;
+        // A literal LF inside one HTML text node can become a space when a rich editor
+        // reparses the DOM. Explicit BR nodes preserve the intended line boundaries.
+        // Text nodes keep markup-looking instructions literal; never parse user HTML.
+        const fragment=document.createDocumentFragment();
+        const lines=cfg.text.split('\n');
+        lines.forEach((line,index) => {
+          if(index) fragment.appendChild(document.createElement('br'));
+          fragment.appendChild(document.createTextNode(line));
+        });
+        editor.replaceChildren(fragment);
+        state.structuredWrite=true;state.insertedLineBreaks=lines.length-1;
       } else {
         const proto=editor instanceof HTMLInputElement ? HTMLInputElement.prototype : HTMLTextAreaElement.prototype;
         const setter=Object.getOwnPropertyDescriptor(proto,'value')?.set;
