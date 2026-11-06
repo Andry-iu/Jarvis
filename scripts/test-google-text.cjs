@@ -208,3 +208,70 @@ console.log('PASS contenteditable simulation: rendered line-break change blocks 
  assert.equal(f.run(),'write_uncertain');assert.equal(f.run(),'uncertain');assert.equal(f.counts().sends,0);
 }
 console.log('PASS multiline insertion: literal-LF collapse reproduced, structured 13-LF round trip sends once, empty lines/markup stay literal; drafts, altered whitespace and uncertain writes never send.');
+// Receipt observation is read-only and survives the project's transition to a new chat.
+{
+ const f=fixture();f.editable();f.location.href=f.cfg.project;f.state.hasMessages=false;f.cfg.fresh=true;
+ assert.equal(f.run(),'written');assert.equal(f.run(),'dispatched');
+ f.state.hasMessages=true;f.editor._value='';assert.equal(f.run(),'waiting_observation'); // URL not assigned yet
+ f.location.href='https://chatgpt.com/c/12345678-1234-4234-8234-123456789abc';
+ f.state.hasMessages=false;f.state.editors=[];assert.equal(f.run(),'waiting_observation');
+ f.state.editors=[f.editor];f.state.form=null;
+ let r=f.details();assert.equal(r.phase,'waiting_observation');assert.equal(r.diagnostics.formPresent,false);
+ assert.equal(r.diagnostics.messageNodesPresent,false);assert.equal(r.diagnostics.observingSend,true);
+ assert.equal(f.window.__jarvisGoogleBinding,undefined);
+ f.state.hasMessages=true;f.state.bodies.push(f.cfg.text);
+ r=f.details();assert.equal(r.phase,'observed');assert.equal(r.diagnostics.matchedUserMessages,1);
+ assert.equal(r.diagnostics.beforeUserMessages,0);assert.ok(r.conversation);assert.deepEqual(f.counts(),{writes:1,sends:1});
+}
+{
+ const f=fixture();f.state.bodies.push(f.cfg.text);assert.equal(f.run(),'written');assert.equal(f.run(),'dispatched');
+ f.state.form=null;f.editor._value='';assert.equal(f.run(),'waiting_observation'); // old matching body is insufficient
+ f.state.bodies.push(f.cfg.text);assert.equal(f.run(),'observed');assert.deepEqual(f.counts(),{writes:1,sends:1});
+}
+{
+ const f=fixture();assert.equal(f.run(),'written');assert.equal(f.run(),'dispatched');
+ f.state.dialogs.push({getBoundingClientRect:()=>({width:400,height:300})});assert.equal(f.run(),'waiting_observation');
+ f.state.dialogs=[];f.cfg.text='Different request';assert.equal(f.run(),'uncertain');assert.deepEqual(f.counts(),{writes:1,sends:1});
+}
+{
+ const f=fixture();f.location.href=f.cfg.project;f.state.hasMessages=false;f.cfg.fresh=true;
+ assert.equal(f.run(),'written');assert.equal(f.run(),'dispatched');
+ f.location.href='https://chatgpt.com/c/12345678-1234-4234-8234-123456789abc';assert.equal(f.run(),'waiting_observation');
+ f.location.href='https://chatgpt.com/c/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';f.state.hasMessages=true;f.editor._value='';f.state.bodies.push(f.cfg.text);
+ assert.equal(f.run(),'wrong_conversation');assert.deepEqual(f.counts(),{writes:1,sends:1});
+}
+// Restart only clears the way to the configured project; never adopt or write in an unbound old chat.
+{
+ const f=fixture();f.location.href=f.cfg.project;f.state.hasMessages=false;f.cfg.fresh=true;
+ assert.equal(f.run(),'written');assert.equal(f.run(),'dispatched');
+ f.location.href='https://chatgpt.com/c/12345678-1234-4234-8234-123456789abc';f.state.hasMessages=false;f.editor._value='';
+ assert.equal(f.run(),'waiting_observation');f.window.__jarvisGoogleText.disposeDiagnostics();delete f.window.__jarvisGoogleText;
+ f.cfg.session='next-cycle';f.cfg.action='restart';f.cfg.turn='';f.state.form=null;
+ const r=f.details();assert.equal(r.phase,'restart_ready');assert.equal(r.conversation,undefined);
+ assert.equal(f.window.__jarvisGoogleBinding,undefined);assert.equal(f.window.__jarvisGoogleText,undefined);
+ assert.deepEqual(f.counts(),{writes:1,sends:1});
+ f.cfg.action='send';f.cfg.turn='new-turn';assert.equal(f.run(),'wrong_conversation'); // no sending into this generic old chat
+ f.location.href=f.cfg.project;f.state.hasMessages=false;f.state.form={querySelectorAll:()=>f.state.buttons};f.cfg.text='New explicit cycle message';
+ assert.equal(f.run(),'written');assert.equal(f.run(),'dispatched');assert.deepEqual(f.counts(),{writes:2,sends:2});
+}
+{
+ const f=fixture();f.location.href='https://chatgpt.com/c/12345678-1234-4234-8234-123456789abc';
+ const old={session:'closed-cycle',url:'https://chatgpt.com/c/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',turns:new Map()};
+ f.window.__jarvisGoogleText=old;f.cfg.action='restart';f.editor._value='Protected personal draft';
+ assert.equal(f.run(),'draft');assert.equal(f.editor._value,'Protected personal draft');assert.equal(f.window.__jarvisGoogleText,old);
+ f.editor._value='';assert.equal(f.run(),'restart_ready');assert.equal(f.window.__jarvisGoogleText,old);assert.deepEqual(f.counts(),{writes:0,sends:0});
+}
+{
+ const f=fixture();f.location.href='https://chatgpt.com/c/12345678-1234-4234-8234-123456789abc';f.cfg.action='restart';
+ f.state.buttons.push({getAttribute:k=>k==='data-testid'?'stop-button':null,getBoundingClientRect:()=>({width:40,height:40})});
+ assert.equal(f.run(),'busy');assert.deepEqual(f.counts(),{writes:0,sends:0});
+}
+for(const target of ['https://evil.example/c/12345678-1234-4234-8234-123456789abc',
+ 'https://chatgpt.com/c/invalid','https://chatgpt.com/c/12345678-1234-4234-8234-123456789abc?unexpected=value',
+ url.replace('abc123','different')]) {
+ const f=fixture();f.cfg.action='restart';f.location.href=target;assert.equal(f.run(),'wrong_conversation');assert.deepEqual(f.counts(),{writes:0,sends:0});
+}
+{
+ const f=fixture();f.state.form=null;assert.equal(f.run(),'unverified_conversation');assert.deepEqual(f.counts(),{writes:0,sends:0});
+}
+console.log('PASS receipt/restart: delayed DOM, missing form, canonical chat pin, no false receipt, explicit read-only restart after uncertain send; drafts/busy/foreign routes block, old text never resends.');

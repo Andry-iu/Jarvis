@@ -81,6 +81,8 @@ class GoogleVoiceRuntimeTest {
         var sendChecks=0
         var writeReadyAfterCalls=1
         var holdWrite=false;var changeAfterWrite=false
+        var waitsPerSend=0;var observationWaits=0;var receiptProbes=0;var holdObservation=false
+        var heldObservation:ValueCallback<String>?=null
         var held:ValueCallback<String>?=null
         var readyAfterProbes=1
         private var stage=0
@@ -97,8 +99,13 @@ class GoogleVoiceRuntimeTest {
                 callback?.onReceiveValue(JSONObject.quote(JSONObject().put("phase","draft_changed").put("diagnostics",JSONObject()
                     .put("sameEditor",false).put("sameForm",true).put("textMatches",true).put("writeVerified",true)).toString()));return
             }
+            if(!script.contains("\"action\":\"probe\"") && stage%3==2) {
+                receiptProbes++
+                if(holdObservation) {heldObservation=callback;return}
+                if(observationWaits>0) {observationWaits--;callback?.onReceiveValue(JSONObject.quote(JSONObject().put("phase","waiting_observation").toString()));return}
+            }
             val phase=if(script.contains("\"action\":\"probe\"")){probes++;if(draft) "draft" else if(probes<readyAfterProbes) "ambiguous_editor" else "ready"}
-            else when(stage++ % 3){0->{writes++;submittedScripts.add(script);"written"};1->{sends++;currentUrl=observedNewUrl;"dispatched"};else->"observed"}
+            else when(stage++ % 3){0->{writes++;submittedScripts.add(script);"written"};1->{sends++;observationWaits=waitsPerSend;currentUrl=observedNewUrl;"dispatched"};else->"observed"}
             if(holdWrite && phase=="written") {held=callback;return}
             callback?.onReceiveValue(JSONObject.quote(JSONObject().put("phase",phase).apply {if(phase=="observed") put("conversation",currentUrl)}.toString()))
         }
@@ -424,6 +431,78 @@ class GoogleVoiceRuntimeTest {
         controller=Robolectric.buildActivity(GoogleVoiceActivity::class.java,Intent(app,GoogleVoiceActivity::class.java).putExtra(VoiceCycle.EXTRA_ID,nextToken)).setup()
         activity=controller!!.get();pump{capture.starts==2}
         assertSame(firstPage,web);assertEquals("https://chatgpt.com/g/g-p-test/project",web.currentUrl);assertEquals(1,web.loads);assertEquals(1,web.sends)
+        GoogleVoiceActivity.closeForCycle(nextToken)
+    }
+
+    @Test fun delayedReceiptAfterPreAndPostDoesNotRetryAndBindsChatBeforeListening() {
+        GoogleVoiceDependencies.opening={"PRE_UNICO"};GoogleVoiceDependencies.greeting={"POST_UNICO"}
+        GoogleVoiceDependencies.web={FakeWeb(it,url).also{w->w.waitsPerSend=4;web=w}}
+        launch();pump{capture.starts>=1}
+        assertEquals(2,web.writes);assertEquals(2,web.sends);assertTrue(web.receiptProbes>=10)
+        assertEquals(0,api.streams);assertFalse(State.getAttempt(app).contains("NON CONFERMATO"))
+        val field=GoogleVoiceActivity::class.java.getDeclaredField("conversation").apply{isAccessible=true}
+        assertEquals(url,field.get(activity))
+    }
+    @Test fun observedReplyWithInvalidDestinationNeverOpensTheFirstMicrophone() {
+        GoogleVoiceDependencies.greeting={"POST_UNICO"}
+        GoogleVoiceDependencies.web={FakeWeb(it,url).also{w->w.observedNewUrl="https://example.invalid/c/12345678-1234-4234-8234-123456789abc";web=w}}
+        launch();pump{State.getAttempt(app).contains("DESTINAZIONE NON CONFERMATA")}
+        assertEquals(1,web.writes);assertEquals(1,web.sends);assertEquals(0,capture.starts);assertEquals(0,api.streams)
+    }
+    @Test fun closingDuringReceiptIgnoresLateObservationAndNeverRestoresCoverOrAudio() {
+        GoogleVoiceDependencies.greeting={"POST_UNICO"}
+        GoogleVoiceDependencies.web={FakeWeb(it,url).also{w->w.holdObservation=true;web=w}}
+        launch();pump{web.heldObservation!=null};val late=web.heldObservation!!
+        assertEquals(1,web.writes);assertEquals(1,web.sends);GoogleVoiceActivity.closeForCycle(token)
+        late.onReceiveValue(JSONObject.quote(JSONObject().put("phase","observed").put("conversation",url).toString()))
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(5))
+        assertEquals(0,capture.starts);assertEquals(1,web.sends);assertNull(view<HolographicOverlayView>("hud").parent)
+    }
+    @Test fun receiptDuringEarlyPluginSynthesisBindsChatWithoutOverwritingReplyPhase() {
+        val gate=java.util.concurrent.CountDownLatch(1);api.synthGate=gate
+        GoogleVoiceDependencies.greeting={"POST_UNICO"}
+        GoogleVoiceDependencies.web={FakeWeb(it,url).also{w->w.holdObservation=true;web=w}}
+        launch();pump{web.heldObservation!=null};val late=web.heldObservation!!
+        val field=GoogleVoiceActivity::class.java.getDeclaredField("state").apply{isAccessible=true}
+        val turn=(field.get(activity) as GoogleTurnState).turn
+        val command=JSONObject().put("params",JSONObject().put("session_id",token).put("turn_id",turn).put("text","Risposta anticipata"))
+        val outcome=java.util.concurrent.atomic.AtomicReference<JSONObject>()
+        Thread({outcome.set(GoogleVoiceActivity.speak(command,SystemClock.elapsedRealtime()+25000,{true}){})}).apply{isDaemon=true;start()}
+        pump{api.syntheses==1};late.onReceiveValue(JSONObject.quote(JSONObject().put("phase","observed").put("conversation",url).toString()))
+        shadowOf(Looper.getMainLooper()).idle();assertEquals("synthesizing",(field.get(activity) as GoogleTurnState).phase)
+        assertEquals(0,capture.starts);gate.countDown();pump{outcome.get()!=null};pump{capture.starts==1}
+        assertTrue(outcome.get().getBoolean("completed"));assertEquals(1,web.sends);assertEquals(1,web.writes)
+    }
+    @Test fun earlySpeechCompletionWaitsForReceiptBeforeFirstMicrophoneCapture() {
+        GoogleVoiceDependencies.greeting={"POST_UNICO"}
+        GoogleVoiceDependencies.web={FakeWeb(it,url).also{w->w.holdObservation=true;web=w}}
+        launch();pump{web.heldObservation!=null};val late=web.heldObservation!!
+        val state=GoogleVoiceActivity::class.java.getDeclaredField("state").apply{isAccessible=true}.get(activity) as GoogleTurnState
+        val command=JSONObject().put("params",JSONObject().put("session_id",token).put("turn_id",state.turn).put("text","Risposta prima del riscontro"))
+        val outcome=java.util.concurrent.atomic.AtomicReference<JSONObject>()
+        Thread({outcome.set(GoogleVoiceActivity.speak(command,SystemClock.elapsedRealtime()+25000,{true}){})}).apply{isDaemon=true;start()}
+        pump{outcome.get()!=null};shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(2))
+        assertEquals(0,capture.starts);assertTrue(State.getAttempt(app).contains("ATTESA RISCONTRO CHAT"))
+        late.onReceiveValue(JSONObject.quote(JSONObject().put("phase","observed").put("conversation",url).toString()))
+        pump{capture.starts==1};assertEquals(1,web.writes);assertEquals(1,web.sends)
+    }
+    @Test fun nextWakeAfterUnobservedSendReturnsToProjectWithoutReplayingOldText() {
+        val direct="https://chatgpt.com/c/12345678-1234-4234-8234-123456789abc"
+        GoogleVoiceDependencies.greeting={"POST_VECCHIO"}
+        GoogleVoiceDependencies.web={FakeWeb(it,url).also{w->w.holdObservation=true;w.observedNewUrl=direct;web=w}}
+        launch();pump{web.heldObservation!=null};val page=web;val late=web.heldObservation!!
+        assertEquals(direct,web.currentUrl);assertEquals(1,web.sends)
+        GoogleVoiceActivity.closeForCycle(token);controller!!.pause().stop().destroy()
+        GoogleVoiceDependencies.greeting={""};GoogleVoiceDependencies.web={error("Must retain authenticated page")}
+        val nextToken=UUID.randomUUID().toString()
+        cycleField.set(null,VoiceCycleState().apply{begin(nextToken,SystemClock.elapsedRealtime());openWeb(nextToken,SystemClock.elapsedRealtime(),true,true,false,false)})
+        googleField.setBoolean(null,true)
+        controller=Robolectric.buildActivity(GoogleVoiceActivity::class.java,Intent(app,GoogleVoiceActivity::class.java).putExtra(VoiceCycle.EXTRA_ID,nextToken)).setup()
+        activity=controller!!.get();pump{capture.starts==1}
+        assertSame(page,web);assertEquals("https://chatgpt.com/g/g-p-test/project",web.currentUrl);assertEquals(1,web.loads)
+        assertEquals(1,web.writes);assertEquals(1,web.sends)
+        late.onReceiveValue(JSONObject.quote(JSONObject().put("phase","observed").put("conversation",direct).toString()))
+        shadowOf(Looper.getMainLooper()).idle();assertEquals(1,web.sends)
         GoogleVoiceActivity.closeForCycle(nextToken)
     }
 

@@ -1,6 +1,14 @@
-# Verifica del compositore Google — 0.5.112 / 134
+# Verifica del compositore Google — 0.5.113 / 135
 
 Lo ZIP(5) della .110 mostra tre sequenze campo vuoto → `written` → `draft_changed`, circa165ms fra scrittura e blocco, senza dispatch. Questa volta è il messaggio automatico scritto nel tentativo corrente; la .110 non distingue quale parte della guardia sia cambiata. Non è una prova di errore Google, React o intervento dell’utente. La .111 aggiunge la verifica mirata richiesta, senza eliminare le protezioni o dichiarare il problema risolto sul Galaxy.
+
+## Riscontro ZIP(8) e recupero .113
+
+Il nuovo tentativo .112 ha conservato13LF con confronto esatto e consumato un solo Invia. Al controllo dopo il cambio pagina è arrivato unverified_conversation con campo vuoto e riferimenti originali editor/form scollegati. Screenshot coerente con il messaggio già nella chat; non è una nuova bozza da cancellare/reinviare. La .113 separa il riscontro in sola lettura dalla guardia per scrivere: attende il DOM, il proprio nuovo corpo utente, il campo vuoto e una chat canonica senza richiedere un form solo per leggere. Fissa il primo ID chat raggiunto durante l’osservazione; cambio chat o ledger perso continuano a bloccare, senza clic o riscritture.
+
+Una wake nuova può ispezionare la vecchia pagina /c/UUID conservata anche senza binding precedente, esclusivamente per verificare che lasciarla non perda bozze o interrompa lavoro. Non la adotta come destinazione e non restituisce un nuovo binding. Se origine/percorso sono validi, campo unico vuoto/abilitato e nessun busy/dialogo, naviga al progetto JarvisRuntime configurato per una nuova chat. Non cancella bozze, messaggi o cookie, non preme Stop e non reinvia il testo vecchio. Questo risolve in codice il blocco di recupero riprodotto nella simulazione dopo chiusura di un invio non confermato; serve collaudo Galaxy.
+
+Nuovi flag readOnlyRestart/observingSend/receiptRoutePinned/blockingDialog/formPresent/messageNodesPresent e conteggi userMessages/matchedUserMessages/beforeUserMessages separano transizione della pagina e mancanza del riscontro, senza registrare contenuti o URL. send_dispatched ora è un codice riconosciuto, non il generico failed. Per la prova riattivare Google se sospeso, lasciare la chat inviata con campo vuoto e avviare un ciclo; non occorre eliminarne il messaggio già inviato.
 
 ## Riscontro ZIP(7) e correzione .112
 
@@ -12,7 +20,7 @@ Il round trip simulato mantiene13LF e passa con confronto esatto/un solo invio; 
 
 ## Prova sul Galaxy
 
-1. Installare la .112 sopra l’app esistente, senza disinstallare o cambiare credenziali. Conservare i messaggi prima/dopo configurati.
+1. Installare la .113 sopra l’app esistente, senza disinstallare o cambiare credenziali. Conservare i messaggi prima/dopo configurati.
 2. Avviare un solo ciclo Google con Hey Jarvis o Parla con Jarvis. Se esiste già una bozza, verificarla con swipe sinistro e gestirla manualmente soltanto se riconosciuta; nessuna cancellazione automatica.
 3. Alla comparsa del blocco fare doppio tocco in alto a destra e salvare lo ZIP. Non premere manualmente Invia né ripetere lo stesso tentativo incerto durante questa raccolta.
 4. Condividere lo ZIP. La foto richiesta dal gesto resta separata in Galleria Pictures/JarvisWake; eventuale condivisione dell’immagine è una scelta distinta.

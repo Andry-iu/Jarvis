@@ -1,3 +1,12 @@
+## 0.5.113 / 135 — riscontro dell’invio e ripartenza alla nuova wake
+
+- Dopo un Invia già consumato, osservazione in sola lettura attende la pagina e il proprio messaggio senza nuovi clic o scritture. Editor ricreato/form temporaneamente assente non fanno applicare le guardie di una nuova scrittura al riscontro del messaggio già inviato.
+- Conferma ancora distinta da dispatch: campo vuoto, nuovo corpo utente uguale e chat canonica verificata; cambio identità chat dopo il primo percorso osservato blocca il tentativo.
+- Nuova wake controlla la pagina conservata in sola lettura anche dopo un invio non riconosciuto. Campo unico vuoto e pagina libera permettono il ritorno al progetto configurato per una nuova chat, senza adottare la vecchia o reinviare il messaggio precedente.
+- Bozze, lavoro/generazione in corso, dialoghi e percorsi non validi restano protetti. Nessuna cancellazione automatica o reset dell’account.
+- Diagnostica con presenza form/nodi messaggio, conteggi dei riscontri e fasi readOnlyRestart/observingSend, senza contenuti; send_dispatched non è più etichettato come failed nel log.
+- Nativo, prepare-chat, inserimento multilinea e controlli cover precedenti conservati. Test simulati e controlli Android completi; recupero/invio reale da verificare sul Galaxy, nessuna API Google reale nei test, Watch/Windows invariati.
+
 ## 0.5.112 / 134 — correzione multilinea del solo bridge Google
 
 - Il campo contenteditable riceve testo letterale e interruzioni BR esplicite con una sola sostituzione, conservando gli a capo anche nel round trip simulato dell’editor.

@@ -116,6 +116,7 @@ internal class GoogleVoiceActivity : Activity() {
     private val synthesized get() = speech?.synthesized == true
     private val playbackStarted get() = speech?.playbackStarted == true
     private var waitingListening=false
+    private var receiptPending=false
     private var echoCapture:GoogleCapture?=null
     private var exportBusy = false
     @Volatile private var exportGeneration = 0
@@ -135,7 +136,7 @@ internal class GoogleVoiceActivity : Activity() {
         .put("pre_sending",preSending).put("pre_complete",preComplete).put("startup_complete",startupComplete)
         .put("capture_present",capture!=null).put("capture_released",captureOwner?.released!=false)
         .put("playback_present",playback!=null).put("playback_released",playbackOwner?.released!=false)
-        .put("muted",muted).put("cover_hidden",coverHidden).put("echo_ready",echoCapture?.echoState=="ready")
+        .put("muted",muted).put("cover_hidden",coverHidden).put("echo_ready",echoCapture?.echoState=="ready").put("receipt_pending",receiptPending)
         .put("record_route",capture?.routeType ?: 0).put("play_route",playback?.routeType ?: 0)
         .put("car_projection",BridgeCarConnection.keepMapsCover()).put("projection_known",BridgeCarConnection.observed())
 
@@ -345,7 +346,7 @@ internal class GoogleVoiceActivity : Activity() {
         if(getSystemService(AudioManager::class.java).requestAudioFocus(request)!=AudioManager.AUDIOFOCUS_REQUEST_GRANTED) return false
         focus=request;return true
     }
-    private fun canListen() = state.phase=="ready" || (waitingListening && state.phase=="waiting_reply")
+    private fun canListen() = (state.phase=="ready" && !(receiptPending && conversation.isEmpty())) || (waitingListening && state.phase=="waiting_reply")
     private fun startListening() {
         if (!alive() || muted || !canListen() || capture?.released==false) return
         if(!ensureAudioFocus()) {error("FOCUS AUDIO NON DISPONIBILE — NESSUN ASCOLTO");return}
@@ -412,7 +413,7 @@ internal class GoogleVoiceActivity : Activity() {
         val until=SystemClock.elapsedRealtime()+2000
         while(old?.released==false && allowed() && SystemClock.elapsedRealtime()<until) Thread.sleep(20)
         check(old?.released!=false && alive() && state.turn==turn)
-        if(!config.bargeIn || !allowed()) return null
+        if(!config.bargeIn || !allowed() || conversation.isEmpty()) return null
         val fresh=credentials?.resolve(config,240000) ?: config
         if(fresh.expiresAt-System.currentTimeMillis()<240000) return null
         val recorder=BridgeActions.onMain(allowed) {
@@ -449,7 +450,7 @@ internal class GoogleVoiceActivity : Activity() {
         inspect()
     }
     private fun interruptReply() {
-        waitingListening=false;dispatchEpoch++
+        waitingListening=false;receiptPending=false;dispatchEpoch++
         api?.cancel();playback?.stop()
         echoCandidate=if(playbackStarted) speech?.text else null
         val done=completion;completion=null
@@ -495,10 +496,13 @@ internal class GoogleVoiceActivity : Activity() {
         val epoch = ++dispatchEpoch
         val text = transcript + "\n\n[JarvisWake: session_id=$token; turn_id=$turn. Rispondi con jarviswake_speak per la voce, senza ChatGPT Voice.]"
         val until = SystemClock.elapsedRealtime() + 120000
+        var sendConsumed=false
+        fun current()=alive() && state.turn==turn && epoch==dispatchEpoch &&
+            (state.phase in setOf("submitting","send_dispatched") || (sendConsumed && state.phase in setOf("synthesizing","ready")))
         fun step() {
-            if (!alive() || state.turn != turn || epoch != dispatchEpoch || state.phase !in setOf("submitting", "send_dispatched")) return
+            if (!current()) return
             web.evaluateJavascript(scriptFor("send", turn, text)) { raw ->
-                if (!alive() || state.turn != turn || epoch != dispatchEpoch) return@evaluateJavascript
+                if (!current()) return@evaluateJavascript
                 GoogleVoiceDiagnostics.dom(this,token,if(startup) "post" else "send",raw)
                 observeConversation(raw)
                 when (parse(raw)) {
@@ -510,10 +514,18 @@ internal class GoogleVoiceActivity : Activity() {
                     }
                     "written", "waiting_send" -> { writtenTurns.add(turn); if (SystemClock.elapsedRealtime() < until) main.postDelayed({ step() }, 150) else error("INVIO NON DISPONIBILE — NESSUN REINVIO") }
                     "dispatched", "waiting_observation" -> {
-                        writtenTurns.add(turn); state.dispatched(); status("INVIO ESEGUITO — ATTESA RISCONTRO CHAT")
-                        if (SystemClock.elapsedRealtime() < until) main.postDelayed({ step() }, 200) else waitReply(turn, false)
+                        sendConsumed=true;receiptPending=true;writtenTurns.add(turn);state.dispatched()
+                        if(state.phase=="send_dispatched")status("INVIO ESEGUITO — ATTESA RISCONTRO CHAT")
+                        if (SystemClock.elapsedRealtime() < until) main.postDelayed({ step() }, 200)
+                        else if(state.phase=="send_dispatched") waitReply(turn,false)
                     }
-                    "observed" -> { state.dispatched(); state.observed(); waitReply(turn, true) }
+                    "observed" -> {
+                        if(conversation.isEmpty()) {error("DESTINAZIONE NON CONFERMATA — NESSUN REINVIO");return@evaluateJavascript}
+                        receiptPending=false;state.dispatched()
+                        if(state.phase=="send_dispatched") {state.observed();waitReply(turn,true)}
+                        else if(state.phase=="ready")startListening()
+                        // A receipt may bind the chat during synthesis/playback, without changing that phase.
+                    }
                     "draft_changed" -> error("TESTO O EDITOR CAMBIATO — INVIO BLOCCATO; ESPORTA DIAGNOSTICA")
                     else -> error("INVIO NON CONFERMATO O BOZZA PRESENTE — NESSUN REINVIO")
                 }
@@ -545,7 +557,7 @@ internal class GoogleVoiceActivity : Activity() {
         GoogleVoiceDiagnostics.record(this,token,"reply","accepted")
         progress("accepted")
         transcriptView.append("Jarvis",text)
-        dispatchEpoch++ // A late DOM callback must not change the accepted reply phase.
+        // Keep the already-consumed send's read-only receipt alive; it cannot overwrite this reply phase.
         status("RISPOSTA ACCETTATA — SINTESI GOOGLE…")
         val turn = state.turn
         val player = GoogleVoiceDependencies.playback(); playback = player; playbackOwner = player
@@ -591,7 +603,8 @@ internal class GoogleVoiceActivity : Activity() {
             .put("playback_started", playbackStarted).put("completed", ok))
         if (ok) {
             waitingListening=false;state.ready()
-            if(capture?.released==false && echoCapture===capture && capture?.echoState=="ready") {
+            if(receiptPending && conversation.isEmpty())status("RISPOSTA COMPLETATA — ATTESA RISCONTRO CHAT")
+            else if(capture?.released==false && echoCapture===capture && capture?.echoState=="ready") {
                 capture?.allowEchoSpeech(true);status("ASCOLTO GOOGLE — PARLA QUANDO VUOI")
             } else {status("RISPOSTA COMPLETATA — RIPRESA ASCOLTO…");main.postDelayed({if(alive())startListening()},700)}
         }
@@ -688,7 +701,7 @@ internal class GoogleVoiceActivity : Activity() {
     private fun terminate() {
         removeCover()
         if (closed) return
-        closed = true;echoCandidate=null
+        closed = true;echoCandidate=null;receiptPending=false
         credentials?.cancel(); credentials = null; resolvedConfig = null
         if (::transcriptView.isInitialized) transcriptView.clearText()
         if (::web.isInitialized) runCatching { web.evaluateJavascript("window.__jarvisGoogleText?.disposeDiagnostics?.(); delete window.__jarvisGoogleText;", null) }

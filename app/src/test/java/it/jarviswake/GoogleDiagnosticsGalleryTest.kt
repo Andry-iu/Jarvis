@@ -51,7 +51,7 @@ class GoogleDiagnosticsGalleryTest {
     }
     @Test fun technicalDiagnosticsDropContentsCredentialsUrlsAndUnknownFields() {
         val private="private-secret-token-should-never-be-exported"
-        val meta=JSONObject().put("draftChars",37).put("hasDraft",true).put("draftOwned",false).put("sameEditor",false).put("sameForm",true).put("textMatches",true).put("normalizedTextMatches",true).put("writeVerified",true).put("structuredWrite",true).put("insertedLineBreaks",13).put("expectedChars",37).put("draftLineBreaks",2).put("token",private).put("text",private)
+        val meta=JSONObject().put("draftChars",37).put("hasDraft",true).put("draftOwned",false).put("sameEditor",false).put("sameForm",true).put("textMatches",true).put("normalizedTextMatches",true).put("writeVerified",true).put("structuredWrite",true).put("insertedLineBreaks",13).put("observingSend",true).put("formPresent",false).put("matchedUserMessages",0).put("expectedChars",37).put("draftLineBreaks",2).put("token",private).put("text",private)
         val raw=JSONObject.quote(JSONObject().put("phase","draft").put("conversation","https://chatgpt.com/c/$private").put("diagnostics",meta).toString())
         GoogleVoiceDiagnostics.dom(app,"unit-cycle","page",raw)
         GoogleVoiceDiagnostics.record(app,"unit-cycle","status",private,JSONObject().put("http",403).put("url",private))
@@ -59,7 +59,7 @@ class GoogleDiagnosticsGalleryTest {
         val done=CountDownLatch(1);DiagnosticLog.afterPendingWrites{done.countDown()};assertTrue(done.await(3,TimeUnit.SECONDS))
         val files=File(app.filesDir,"diagnostics").listFiles()!!.filter{it.name.startsWith("google-")}
         val text=files.joinToString("\n"){it.readText()};assertFalse(text.contains(private));assertFalse(text.contains("https://"))
-        assertTrue(text.contains("draftChars"));assertTrue(text.contains("draft"));assertTrue(text.contains("403"));assertTrue(text.contains("project_opened"));assertTrue(text.contains("sameEditor"));assertTrue(text.contains("expectedChars"));assertTrue(text.contains("normalizedTextMatches"));assertTrue(text.contains("writeVerified"));assertTrue(text.contains("structuredWrite"));assertTrue(text.contains("insertedLineBreaks"))
+        assertTrue(text.contains("draftChars"));assertTrue(text.contains("draft"));assertTrue(text.contains("403"));assertTrue(text.contains("project_opened"));assertTrue(text.contains("sameEditor"));assertTrue(text.contains("expectedChars"));assertTrue(text.contains("normalizedTextMatches"));assertTrue(text.contains("writeVerified"));assertTrue(text.contains("structuredWrite"));assertTrue(text.contains("insertedLineBreaks"));assertTrue(text.contains("observingSend"));assertTrue(text.contains("formPresent"));assertTrue(text.contains("matchedUserMessages"))
     }
     @Test fun zipExportSelectsGoogleTechnicalFilesAndAlwaysExcludesImagesAudioAndOtherJson() {
         val root=File(app.filesDir,"diagnostics").apply{mkdirs()}
