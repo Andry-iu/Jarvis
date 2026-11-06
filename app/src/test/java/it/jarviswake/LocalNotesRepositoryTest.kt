@@ -70,7 +70,7 @@ class LocalNotesRepositoryTest {
         val r=repository(Memory())
         for(title in listOf(" ","x".repeat(81),"Titolo\naltro"," Titolo","Titolo\taltro"))
             code("invalid_note") { r.save("",title,"Testo",0) }
-        for(text in listOf(" ","x".repeat(4001),"Testo\u0000")) code("invalid_note") { r.save("","Titolo",text,0) }
+        for(text in listOf(" ","x".repeat(8001),"Testo\u0000")) code("invalid_note") { r.save("","Titolo",text,0) }
         assertEquals("Riga 1\nRiga 2",r.save("","Valido","Riga 1\nRiga 2",0).text)
     }
     @Test fun capacityLimitsDoNotDiscardOldNotes() {

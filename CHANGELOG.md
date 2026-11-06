@@ -1,10 +1,12 @@
-## 0.5.118 / 140 — limiti concordati e diagnostica export (sorgenti)
+## 0.5.118 / 140 — limiti concordati e diagnostica export
 
 - Export256KiB; manifest/hash/salvataggio atomico e compatibilità6144byte conservati. Sostituisce1MiB prima del rilascio.
 - Appunti8000caratteri e24KiB di envelope, con default16KiB per altre operazioni; richieste troppo grandi rifiutate senza troncamento. UI/archivio/server/trasporto allineati.
 - Ricerca20 risultati per pagina con offset/next_offset, snapshot RAM stabile, riferimenti precedenti conservati e risoluzione live prima di usare il numero. Versioni precedenti restano compatibili per le operazioni supportate.
 - Diagnostica export tecnica senza contenuti, correlata per richiesta, con fasi/tempi/offset/guardie/HTTP/ACK nel normale ZIP.
 -57test backend e20Python passati; nuovi test Android preparati, cloud/build/firma/deploy/collaudo reale pendenti. Handoff docs/HANDOFF_BRIDGE_LIMITS_20261107.md.
+
+- Completamento cloud:654test Android/69suite SDK34/36 e lint senza errori,5suite Node/57backend/20Python passati. Aggiornata una vecchia asserzione appunti4001→8001, coerente con8000 ammessi. APK Telefono firmato permanentemente e stesso backend privato pubblicato, checksum/verbale aggiornati; nessuna prova Galaxy o importazione reale implicita.
 
 ## 0.5.117 / 139 — indice dei soli nomi e ricerca guidata
 

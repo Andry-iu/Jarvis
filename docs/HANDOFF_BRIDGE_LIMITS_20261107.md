@@ -1,6 +1,18 @@
 # Handoff cloud Jarvis — .118/140,7novembre2026
 
-## Decisioni approvate e stato
+## Completamento cloud — 7 novembre 2026, Europe/Rome
+
+Richiesta utente di scaricare Git, compilare e consegnare APK. Checkout pulito/fetch/fast-forward dal rilascio .117 al main1495b4fbc86211a720383b930a7afa2f71482750, toolchain/cache/firma Jarvis riusati. Mirati Android nuovi limiti/pagine/diagnostica e regressioni export passati. Il primo run completo ha rilevato solo una vecchia asserzione LocalNotesRepositoryTest che rifiutava4001: aggiornata a8001 coerentemente con8000 ammessi; nuovi NotesExtendedLimitsTest già coprono accettazione8000 e rifiuto8001. Nessuna correzione dei sorgenti di produzione necessaria.
+
+Verifica finale654test/69suite SDK34/36 senza failure/error/skipped, lint55warning/0errori/fatal e assemble riusciti.5suite Node DOM/audio,57test backend e20test Python passati; guida --check33argomenti/13712parole e asset finali confrontati. Nessuna API Google reale, telefonata/messaggio o contatto reale usati come fixture.
+
+Stesso backend owner-private aggiornato: source c922d76f1367dc4b673bba41699e24805984c8a6, deployment appgdep_6aee680c1fec81918560ddd9ed013d16 succeeded/has_mcp=true/env2, stessi pairing/segreti/risorse/audience. Guida reale riletta .118/140. Nessun nuovo plugin; cataloghi MCP già aperti possono ancora richiedere aggiornamento per offset/8000caratteri.
+
+Unico APK Telefono .118/140 firmato col certificato permanente:90.019.583byte, SHA256 8a25e3be22debeca8e6a2ca5dce43d6d3b717881bcb0340673f8036ebc9d4acf. Versione/ABI/CRC ZIP/v2/v3/certificato e zipalign/3ELF16KB verificati, temporanei privati rimossi, checksum in releases/0.5.118/SHA256SUMS e binario/report fuori Git. Nessun APK intermedio1MiB, Watch o agente Windows. Verbale completo in VERIFICATION.md.
+
+Restano i collaudi fisici e le diagnosi indicati sotto e nella roadmap: questa compilazione non ha avviato una nuova importazione, non ha popolato l’indice e non certifica la causa del precedente cancelled. Le sezioni successive conservano le evidenze e lo stato iniziale della preparazione, ora seguito dal completamento cloud qui sopra.
+
+## Decisioni approvate e stato iniziale
 
 L'utente ha dato via esplicito a preparare modifica, test, documentazione e commit; ha poi concordato ogni limite e confermato di continuare. Non richiedere nuovamente consenso allo stesso gruppo. La scelta256KiB sostituisce il precedente1MiB preparato ma mai rilasciato. Stessa versione candidata .118/140.
 
