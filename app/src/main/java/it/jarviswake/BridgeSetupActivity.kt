@@ -29,8 +29,8 @@ class BridgeSetupActivity:Activity() {
         super.onCreate(savedInstanceState)
         window.setDecorFitsSystemWindows(false)
         window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
-        entry=intent.getStringExtra("section")?.takeIf { it in listOf("pair","actions","notes") } ?: "overview"
-        section=savedInstanceState?.getString("section")?.takeIf { it in listOf("overview","pair","actions","notes") } ?: entry
+        entry=intent.getStringExtra("section")?.takeIf { it in listOf("pair","actions","notes","contacts") } ?: "overview"
+        section=savedInstanceState?.getString("section")?.takeIf { it in listOf("overview","pair","actions","notes","contacts") } ?: entry
         render()
         if(Build.VERSION.SDK_INT>=33) {
             val cb=OnBackInvokedCallback { back() };backCallback=cb
@@ -38,10 +38,11 @@ class BridgeSetupActivity:Activity() {
         }
     }
     private fun render() {
-        val title=when(section) { "pair"->"Abbinamento e stato";"actions"->"Maps, chiamate e WhatsApp";"notes"->"Appunti e plugin";else->"Collegamento ChatGPT" }
+        val title=when(section) { "contacts"->"Rubrica verso workspace";"pair"->"Abbinamento e stato";"actions"->"Maps, chiamate e WhatsApp";"notes"->"Appunti e plugin";else->"Collegamento ChatGPT" }
         val help=when(section) {
             "pair"->"Apri la pagina privata di JarvisWake Link, crea un codice e incollalo soltanto qui. Attiva il collegamento e lascia operativo il servizio Jarvis. L’abbinamento resta dopo aggiornamenti firmati e normali riavvii. Cancellarlo disconnette il telefono ma non elimina gli appunti locali. Il codice contiene credenziali: non condividerlo in chat."
             "actions"->"Attiva le azioni e autorizza rubrica, chiamate e stato telefonico dal pulsante. In ChatGPT usa JarvisWake Link e chiedi una destinazione, una chiamata o un testo WhatsApp a un contatto preciso. Le ambiguità richiedono una scelta. Il comando inviato non prova una chiamata connessa, un messaggio consegnato o la navigazione su Android Auto. Per parlare con Maps aperto abilita le conversazioni in background in ChatGPT Live."
+            "contacts"->"Consenti di trasferire nomi, tutti i numeri e le email accessibili dalla rubrica Android alla copia privata nel workspace tramite lo stesso plugin. Solo telefono → workspace: nessuna scrittura o cancellazione Android. Il comando aggiorna rubrica rinnova la copia completa; una richiesta di importare un numero aggiorna solo quel numero. Il trasferimento passa dal servizio privato e dagli strumenti della conversazione; non è cifratura end-to-end. Disattivare impedisce nuove letture, non ritira copie già ricevute. Nessun invio periodico automatico."
             "notes"->"Il consenso permette al plugin di leggere, creare e aggiornare gli appunti sul telefono sbloccato. Il contenuto richiesto passa nella conversazione. Gli appunti hanno un archivio cifrato separato dall’abbinamento, escluso dalla diagnostica; disinstallazione o cancellazione dati dell’app li elimina. Apri appunti locali funziona anche senza rete o consenso remoto. Google Calendar resta al suo plugin dedicato."
             else->"Scegli una categoria: abbinamento, azioni del telefono oppure appunti. Ogni consenso è distinto. Usa sempre lo stesso JarvisWake Link: non serve un nuovo plugin dopo un aggiornamento. La guida del plugin è consultabile anche senza un telefono online."
         }
@@ -70,6 +71,11 @@ class BridgeSetupActivity:Activity() {
                 menu.button("Collega WhatsApp con QR", "Apre il collegamento del tuo WhatsApp come dispositivo aggiuntivo di JarvisWake. Non simula tasti o scrittura nell’app WhatsApp.") { startActivity(Intent(this,WhatsAppQrActivity::class.java)) }
                 menu.button("Guida alle azioni e ai plugin") { startActivity(Intent(this,GuideActivity::class.java).putExtra("topic","azioni")) }
             }
+            "contacts" -> {
+                menu.toggle("Consenti copia rubrica nel workspace",PhoneContactExport.enabled(this),help) { PhoneContactExport.enable(this,it) }
+                menu.button("Autorizza sola lettura rubrica") { requestPermissions(arrayOf(Manifest.permission.READ_CONTACTS),82) }
+                menu.button("Guida alla copia locale") { startActivity(Intent(this,GuideActivity::class.java).putExtra("topic","rubrica_locale")) }
+            }
             "notes" -> {
                 menu.toggle("Consenti appunti da ChatGPT",PhoneNotes.enabled(this),help) { PhoneNotes.enable(this,it) }
                 menu.button("Apri appunti locali") { startActivity(Intent(this,LocalNotesActivity::class.java)) }
@@ -78,6 +84,7 @@ class BridgeSetupActivity:Activity() {
             else -> {
                 menu.button("Abbinamento e stato") { section="pair";render() }
                 menu.button("Maps, chiamate e WhatsApp") { section="actions";render() }
+                menu.button("Rubrica verso workspace") { section="contacts";render() }
                 menu.button("Appunti e accesso dal plugin") { section="notes";render() }
             }
         }

@@ -1,3 +1,10 @@
+## 0.5.114 / 136 — rubrica locale dal telefono al workspace
+
+- Esportazione esplicita sola lettura di nomi, tutti i numeri ed email accessibili; consenso dedicato OFF, READ_CONTACTS e sblocco. Nessuna modifica Android, appunto o sync periodica.
+- Stessi backend/plugin/pairing, snapshot RAM30min/8MiB, blocchi6144byte, UUID/claim/journal e scambi privati120s. Consenso/revoca/scadenza ricontrollati prima della consegna; payload locali rimossi dopo ACK/409.
+- Utility workspace con contenuti/staging AES-GCM fuori Git e SQLite transazionale: verifica identità, hash, contatori e schema prima della sostituzione. «Aggiorna rubrica» copia la fonte completa; «importa questo numero» aggiorna solo quella riga conservando altri dati. Nessuna fusione per nome/numero.
+- Procedura riutilizzabile in docs/RUBRICA_LOCALE.md, guida app/plugin e continuità aggiornate. Nessun dato reale importato dai test; collaudo Galaxy dopo installazione/consenso. Voice/Google/cover, Watch e Windows invariati.
+
 ## 0.5.113 / 135 — riscontro dell’invio e ripartenza alla nuova wake
 
 - Dopo un Invia già consumato, osservazione in sola lettura attende la pagina e il proprio messaggio senza nuovi clic o scritture. Editor ricreato/form temporaneamente assente non fanno applicare le guardie di una nuova scrittura al riscontro del messaggio già inviato.

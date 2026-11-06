@@ -58,6 +58,20 @@ class MenuActivityStartupTest {
             assertEquals(OpeningMessagePolicy.TEXT,OpeningMessageSettings.get(a))
         } finally {controller.destroy();field.set(null,old);cycle.set(null,previous)}
     }
+    @Test fun phonebookIsReachableFromTheMainLinkMenuAndStartsWithDedicatedConsentOff() {
+        val c=RuntimeEnvironment.getApplication()
+        PhoneContactExport.enable(c,false)
+        val main=mainActivity();val a=main.get()
+        buttons(a.window.decorView).single {it.text.toString()=="Configurazione"}.performClick()
+        buttons(a.window.decorView).single {it.text.toString()==a.getString(R.string.menu_link)}.performClick()
+        buttons(a.window.decorView).single {it.text.toString()=="Rubrica verso workspace"}.performClick()
+        val intent=shadowOf(a).nextStartedActivity
+        assertEquals("contacts",intent.getStringExtra("section"))
+        val setup=Robolectric.buildActivity(BridgeSetupActivity::class.java,intent).create()
+        assertFalse(PhoneContactExport.enabled(c))
+        assertTrue(buttons(setup.get().window.decorView).any {it.text.toString()=="Autorizza sola lettura rubrica"})
+        setup.destroy();main.destroy()
+    }
     @Test fun uncreatedDecorMustBeCheckedBeforeAskingForTheInsetsController() {
         val a=Robolectric.buildActivity(Activity::class.java).get()
         assertNull(a.window.peekDecorView())

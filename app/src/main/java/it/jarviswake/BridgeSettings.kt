@@ -59,6 +59,7 @@ internal object BridgeSettings {
         return parse(JSONObject(String(cipher.doFinal(Base64.decode(bytes,Base64.NO_WRAP)),Charsets.UTF_8)))
     }
     fun clear(context:Context) {
+        PhoneContactExport.enable(context,false)
         prefs(context).edit().clear().apply()
         context.getSharedPreferences("bridge_private",Context.MODE_PRIVATE).edit().clear().apply()
     }

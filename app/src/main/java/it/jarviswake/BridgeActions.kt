@@ -41,6 +41,13 @@ internal object BridgeActions {
             if(!favoritesAllowed()) return result("expired_before_dispatch")
             return FavoriteOperations.execute(c,deviceId,operation,command.getJSONObject("params"),::favoritesAllowed)
         }
+        if(operation in BridgeProtocol.CONTACT_EXPORT_OPERATIONS) {
+            fun exportAllowed()=permitted() && BridgeSettings.enabled(c) && PhoneContactExport.enabled(c) &&
+                c.checkSelfPermission(Manifest.permission.READ_CONTACTS)==PackageManager.PERMISSION_GRANTED &&
+                SystemClock.elapsedRealtime()<deadline && !c.getSystemService(KeyguardManager::class.java).isKeyguardLocked
+            if(c.getSystemService(KeyguardManager::class.java).isKeyguardLocked) return result("locked")
+            return PhoneContactExport.execute(c,deviceId,operation,command.getJSONObject("params"),::exportAllowed)
+        }
         if(operation in BridgeProtocol.NOTE_OPERATIONS) {
             fun notesAllowed()=permitted() && BridgeSettings.enabled(c) && PhoneNotes.enabled(c) &&
                 SystemClock.elapsedRealtime()<deadline && !c.getSystemService(KeyguardManager::class.java).isKeyguardLocked

@@ -28,7 +28,7 @@ const snap={app:{version:'0.5.80',versionCode:102},wake:{serviceRunning:true,cap
 test('Discovery exposes bounded status and action tools without fabricated phone data',async()=>{
   const r=await worker.fetch(request('/mcp',{jsonrpc:'2.0',id:1,method:'tools/list'}),env());
   const names=(await r.json()).result.tools.map(t=>t.name);
-  assert.deepEqual(names,['jarviswake_devices','jarviswake_request_status','jarviswake_status_result','jarviswake_speak','jarviswake_find_contacts','jarviswake_navigate','jarviswake_call_by_name','jarviswake_call_contact','jarviswake_whatsapp','jarviswake_list_favorites','jarviswake_add_favorite','jarviswake_create_favorite','jarviswake_rename_favorite','jarviswake_change_favorite_number','jarviswake_delete_favorite','jarviswake_list_notes','jarviswake_read_note','jarviswake_save_note','jarviswake_guide']);
+  assert.deepEqual(names,['jarviswake_devices','jarviswake_request_status','jarviswake_status_result','jarviswake_contacts_export_start','jarviswake_contacts_export_page','jarviswake_speak','jarviswake_find_contacts','jarviswake_navigate','jarviswake_call_by_name','jarviswake_call_contact','jarviswake_whatsapp','jarviswake_list_favorites','jarviswake_add_favorite','jarviswake_create_favorite','jarviswake_rename_favorite','jarviswake_change_favorite_number','jarviswake_delete_favorite','jarviswake_list_notes','jarviswake_read_note','jarviswake_save_note','jarviswake_guide']);
 });
 test('Pairing requires authenticated same-origin browser action',async()=>{
   for(const h of [{},user,{...user,Origin:'https://attacker.example','X-Jarvis-Link':'pair'}]) {
@@ -234,7 +234,7 @@ test('Status remains compatible with old snapshots and reports only the notes co
 
 test('The complete guide is available without pairing or a running phone',async()=>{
  const e=env();const r=value(await tool(e,'jarviswake_guide',{topic:'indice',query:''}));
- assert.equal(r.guide_version,'0.5.113');assert.equal(r.version_code,135);assert.equal(r.phone_required,false);assert.ok(r.topics.length>=19);
+ assert.equal(r.guide_version,'0.5.114');assert.equal(r.version_code,136);assert.equal(r.phone_required,false);assert.ok(r.topics.length>=19);
  assert.equal(e.BUCKET.data.size,0);
  for(const topic of ['wake','cover','audio','chatgpt','collegamento','appunti','plugin','maps','chiamate','whatsapp','diagnostica']) assert.ok(r.topics.some(t=>t.topic===topic));
 });
@@ -473,4 +473,50 @@ test('Interrupted speech is terminal but never claims playback completion or can
  assert.equal((await worker.fetch(request('/device/respond',{deviceId:c.deviceId,requestId:args.request_id,result},auth),e)).status,200);
  assert.deepEqual(value(await tool(e,'jarviswake_status_result',{device_id:c.deviceId,request_id:args.request_id})).result,result);
  assert.equal(value(await tool(e,'jarviswake_speak',args)).request_id,args.request_id);
+});
+
+const exportOps=['contacts_export_start','contacts_export_page'];
+const exportManifest=()=>({code:'contacts_export_ready',snapshot_id:crypto.randomUUID(),bytes:100,chunk_bytes:6144,sha256:'a'.repeat(64),contacts:1,phones:1,emails:1,mode:'full',expires_at:Date.now()+1800000});
+async function exportFixture(versionCode=136) {
+ const e=env(),c=await pair(e),auth={Authorization:'Bearer '+c.deviceToken};
+ await worker.fetch(request('/device/poll',{deviceId:c.deviceId,versionCode,operations:exportOps},auth),e);
+ return {e,c,auth};
+}
+test('Explicit one-way export is capability and owner gated and never broadens old contact lookup',async()=>{
+ const {e,c,auth}=await exportFixture(135),args={device_id:c.deviceId,contact_ref:'',request_id:crypto.randomUUID()};
+ assert.equal((await tool(e,'jarviswake_contacts_export_start',args)).content[0].text,'app_update_required');
+ await worker.fetch(request('/device/poll',{deviceId:c.deviceId,versionCode:136,operations:exportOps},auth),e);
+ assert.equal((await tool(e,'jarviswake_contacts_export_start',args,{'oai-authenticated-user-id':'other'})).isError,true);
+ assert.equal((await tool(e,'jarviswake_contacts_export_start',{...args,contact_ref:'wildcard'})).isError,true);
+ assert.equal(value(await tool(e,'jarviswake_contacts_export_start',args)).state,'pending');
+ assert.equal(value(await tool(e,'jarviswake_contacts_export_start',args)).request_id,args.request_id);
+ const p=await (await worker.fetch(request('/device/poll',{deviceId:c.deviceId,versionCode:136,operations:exportOps},auth),e)).json();
+ assert.equal(p.request.operation,'contacts_export_start');assert.deepEqual(p.request.params,{contact_ref:''});
+ assert.equal((await tool(e,'jarviswake_find_contacts',{device_id:c.deviceId,name:'',request_id:crypto.randomUUID()})).isError,true);
+});
+test('Export manifest/page contracts reject extra content, impossible chunks and wrong operation results',async()=>{
+ const {e,c,auth}=await exportFixture();let id=crypto.randomUUID();
+ await tool(e,'jarviswake_contacts_export_start',{device_id:c.deviceId,contact_ref:'',request_id:id});await claim(e,c,id);
+ const send=result=>worker.fetch(request('/device/respond',{deviceId:c.deviceId,requestId:id,result},auth),e);
+ const manifest=exportManifest();
+ for(const delta of [{text:'PRIVATE'},{bytes:8388609},{chunk_bytes:9999},{mode:'number'},{sha256:'bad'}]) assert.equal((await send({...manifest,...delta})).status,400);
+ assert.equal((await send(manifest)).status,200);
+ const reply=value(await tool(e,'jarviswake_status_result',{device_id:c.deviceId,request_id:id}));assert.deepEqual(reply.result,manifest);
+ id=crypto.randomUUID();await tool(e,'jarviswake_contacts_export_page',{device_id:c.deviceId,snapshot_id:manifest.snapshot_id,offset:0,request_id:id});await claim(e,c,id);
+ const page={code:'contacts_export_page',snapshot_id:manifest.snapshot_id,offset:0,next_offset:null,data_base64:Buffer.from('simulated-only').toString('base64'),expires_at:manifest.expires_at};
+ for(const delta of [{next_offset:6144},{data_base64:'!BAD!'},{data_base64:'A'.repeat(8196)},{offset:1},{raw:'PRIVATE'}]) assert.equal((await send({...page,...delta})).status,400);
+ assert.equal((await send(page)).status,200);
+ assert.deepEqual(value(await tool(e,'jarviswake_status_result',{device_id:c.deviceId,request_id:id})).result,page);
+ // Same request stays terminal; reconnect cannot replace a first page/result.
+ assert.equal((await send({code:'contacts_export_expired'})).status,200);
+ assert.deepEqual(value(await tool(e,'jarviswake_status_result',{device_id:c.deviceId,request_id:id})).result,page);
+});
+test('Full-number export exchanges expire and payloads disappear without reexecution on the same id',async()=>{
+ const {e,c,auth}=await exportFixture(),id=crypto.randomUUID();
+ await tool(e,'jarviswake_contacts_export_start',{device_id:c.deviceId,contact_ref:'',request_id:id});await claim(e,c,id);
+ await worker.fetch(request('/device/respond',{deviceId:c.deviceId,requestId:id,result:exportManifest()},auth),e);
+ const key=`requests/${c.deviceId}/${id}.json`,cmd=await (await e.BUCKET.get(key)).json();cmd.createdAt=Date.now()-120001;await e.BUCKET.put(key,JSON.stringify(cmd));
+ assert.equal(value(await tool(e,'jarviswake_status_result',{device_id:c.deviceId,request_id:id})).state,'response_expired');
+ assert.equal(await e.BUCKET.get(`results/${c.deviceId}/${id}.json`),null);
+ assert.equal(value(await tool(e,'jarviswake_contacts_export_start',{device_id:c.deviceId,contact_ref:'',request_id:id})).state,'outcome_uncertain');
 });

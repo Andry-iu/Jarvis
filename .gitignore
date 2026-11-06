@@ -7,3 +7,7 @@
 *.keystore
 /JarvisWake-*-debug-arm64.apk
 /JarvisWake-*-debug-arm64.apk.sha256
+
+# Never track local Python caches or private address books.
+__pycache__/
+/.jarvis-private/

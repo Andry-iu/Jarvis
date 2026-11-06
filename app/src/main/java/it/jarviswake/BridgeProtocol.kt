@@ -16,8 +16,9 @@ internal object BridgeProtocol {
     fun validRequest(id: String, operation: String, created: Long, expires: Long): Boolean =
         validId(id) && operation in OPERATIONS && created>0 && expires>created && expires-created<=30_000
     val FAVORITE_OPERATIONS=setOf("list_favorites","add_favorite","create_favorite","rename_favorite","change_favorite_number","delete_favorite")
+    val CONTACT_EXPORT_OPERATIONS=setOf("contacts_export_start","contacts_export_page")
     val NOTE_OPERATIONS=setOf("list_notes","read_note","save_note")
-    val OPERATIONS=setOf("status","speak","find_contacts","navigate","call_contact","call_by_name","whatsapp")+NOTE_OPERATIONS+FAVORITE_OPERATIONS
+    val OPERATIONS=setOf("status","speak","find_contacts","navigate","call_contact","call_by_name","whatsapp")+NOTE_OPERATIONS+FAVORITE_OPERATIONS+CONTACT_EXPORT_OPERATIONS
     fun validText(value:String,max:Int)=value.isNotBlank() && value.length<=max &&
         value.none { it.code in 0..8 || it.code in 11..12 || it.code in 14..31 }
     fun safePhone(value:String)=value.matches(Regex("\\+?[0-9]{5,15}"))

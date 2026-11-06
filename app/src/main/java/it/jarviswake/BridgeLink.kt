@@ -98,7 +98,7 @@ internal object BridgeLink {
             previous!!.put("result",result("outcome_uncertain"));BridgeSettings.writePrivate(c,"commands",ledger);return
         }
         while(ledger.length()>=64) ledger.remove(ledger.keys().asSequence().minByOrNull { ledger.getJSONObject(it).optLong("at") }!!)
-        val record=JSONObject().put("at",System.currentTimeMillis()).put("requestId",id).put("deviceId",auth.deviceId).put("acked",false)
+        val record=JSONObject().put("at",System.currentTimeMillis()).put("requestId",id).put("deviceId",auth.deviceId).put("acked",false).put("operation",command.getString("operation"))
         ledger.put(key,record)
         // Persist consumption before a network claim or any phone action. Crashes never re-dispatch.
         BridgeSettings.writePrivate(c,"commands",ledger)
@@ -119,13 +119,21 @@ internal object BridgeLink {
             val item=ledger.getJSONObject(key)
             if(item.optString("deviceId")!=auth.deviceId || item.optBoolean("acked") || !item.has("result")) continue
             try {
+                val export=item.optString("operation") in BridgeProtocol.CONTACT_EXPORT_OPERATIONS
+                if(export && (!PhoneContactExport.enabled(c) || System.currentTimeMillis()-item.optLong("at")>120_000 ||
+                    c.checkSelfPermission(Manifest.permission.READ_CONTACTS)!=PackageManager.PERMISSION_GRANTED ||
+                    c.getSystemService(android.app.KeyguardManager::class.java).isKeyguardLocked)) item.put("result",result("contacts_export_expired"))
                 post(auth,"/device/respond",JSONObject().put("deviceId",auth.deviceId).put("requestId",item.getString("requestId"))
                     .put("result",item.getJSONObject("result")),epoch)
-                item.put("acked",true);BridgeSettings.writePrivate(c,"commands",ledger)
+                item.put("acked",true)
+                if(item.optString("operation") in BridgeProtocol.CONTACT_EXPORT_OPERATIONS) item.put("result",result("contacts_export_expired"))
+                BridgeSettings.writePrivate(c,"commands",ledger)
             } catch(e:BridgeHttpFailure) {
                 if(e.statusCode!=409) throw e
                 // Expired/never claimed: retain the consumed local record, never repeat the phone action.
-                item.put("acked",true);BridgeSettings.writePrivate(c,"commands",ledger)
+                item.put("acked",true)
+                if(item.optString("operation") in BridgeProtocol.CONTACT_EXPORT_OPERATIONS) item.put("result",result("contacts_export_expired"))
+                BridgeSettings.writePrivate(c,"commands",ledger)
             }
         }
     }
