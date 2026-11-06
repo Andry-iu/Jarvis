@@ -7,6 +7,7 @@ except an explicit nonempty search. No unencrypted contact content is written to
 import argparse
 import base64
 import contextlib
+from difflib import SequenceMatcher
 import fcntl
 import hashlib
 import json
@@ -18,6 +19,7 @@ import stat
 import sys
 import time
 import uuid
+import unicodedata
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
 ROOT = Path('/workspace/.jarvis-private/phonebook')
@@ -108,13 +110,14 @@ class Book:
     def save(self, state):
         self.write('pending.enc', self.encrypt(state, 'pending-v1'))
 
-    def begin(self, device, contact_ref=''):
+    def begin(self, device, contact_ref='', names_only=False):
         identifier(device)
         if contact_ref:
             identifier(contact_ref)
+        require(type(names_only) is bool and not (names_only and contact_ref), 'invalid_export_mode')
         require(not (self.root / 'pending.enc').exists(), 'update_already_pending')
-        state = {'device': device, 'mode': 'number' if contact_ref else 'full', 'chunks': [], 'started': int(time.time() * 1000)}
-        self.next(state, 'contacts_export_start', {'contact_ref': contact_ref})
+        state = {'device': device, 'mode': 'names' if names_only else 'number' if contact_ref else 'full', 'chunks': [], 'started': int(time.time() * 1000)}
+        self.next(state, 'contacts_export_start', {} if names_only else {'contact_ref': contact_ref})
         return self.status()
 
     def next(self, state, operation, params):
@@ -130,7 +133,8 @@ class Book:
         args = pending['args']
         if pending['queued']:
             return {'tool': 'jarviswake_status_result', 'args': {k: args[k] for k in ('device_id', 'request_id')}}
-        return {'tool': 'jarviswake_' + pending['operation'], 'args': args}
+        tool = 'jarviswake_contacts_names_export_start' if state['mode'] == 'names' and pending['operation'] == 'contacts_export_start' else 'jarviswake_' + pending['operation']
+        return {'tool': tool, 'args': args}
 
     def accept(self, response):
         state = self.state()
@@ -162,6 +166,7 @@ class Book:
                     re.fullmatch('[a-f0-9]{64}', result['sha256']))
             for field, maximum in [('contacts', 100000), ('phones', 1000000), ('emails', 1000000)]:
                 require(integer(result[field], 0, maximum))
+            require(state['mode'] != 'names' or (result['phones'] == 0 and result['emails'] == 0), 'invalid_names_export')
             require(integer(result['expires_at'], int(time.time()*1000)+1, int(time.time()*1000)+1805000))
             state['manifest'] = result
             self.next(state, 'contacts_export_page', {'snapshot_id': result['snapshot_id'], 'offset': 0})
@@ -197,11 +202,13 @@ class Book:
         ids = set()
         counts = {'contacts': len(body['contacts']), 'phones': 0, 'emails': 0}
         for contact in body['contacts']:
-            exact(contact, 'id lookup_key name phones emails')
+            exact(contact, 'id lookup_key name' if body['mode'] == 'names' else 'id lookup_key name phones emails')
             for k in ('id', 'lookup_key', 'name'):
                 require(isinstance(contact[k], str) and len(contact[k]) <= 8192)
             require(contact['id'] and contact['id'] not in ids)
             ids.add(contact['id'])
+            if body['mode'] == 'names':
+                continue
             for field, value in [('phones', 'number'), ('emails', 'address')]:
                 require(isinstance(contact[field], list))
                 row_ids = set()
@@ -227,6 +234,7 @@ class Book:
         db.execute('PRAGMA secure_delete=ON')
         db.execute('CREATE TABLE IF NOT EXISTS contacts (key TEXT PRIMARY KEY, data BLOB NOT NULL)')
         db.execute('CREATE TABLE IF NOT EXISTS metadata (key TEXT PRIMARY KEY, data BLOB NOT NULL)')
+        db.execute('CREATE TABLE IF NOT EXISTS name_contacts (key TEXT PRIMARY KEY, data BLOB NOT NULL)')
         return db
 
     def apply(self, device, body):
@@ -236,6 +244,17 @@ class Book:
                 meta_row = db.execute("SELECT data FROM metadata WHERE key='state'").fetchone()
                 meta = self.decrypt(meta_row[0], 'metadata') if meta_row else {}
                 require(not meta or meta['device'] == device, 'different_source_device')
+                names_row = db.execute("SELECT data FROM metadata WHERE key='names_state'").fetchone()
+                names_meta = self.decrypt(names_row[0], 'names_metadata') if names_row else {}
+                require(not names_meta or names_meta['device'] == device, 'different_source_device')
+                if body['mode'] == 'names':
+                    db.execute('DELETE FROM name_contacts')
+                    for contact in body['contacts']:
+                        key = hashlib.sha256(encode([device, contact['id'], contact['lookup_key']])).hexdigest()
+                        db.execute('INSERT INTO name_contacts VALUES (?,?)', (key, self.encrypt(contact, 'names:' + key)))
+                    names_meta = {'device': device, 'names_updated_at': int(time.time()*1000)}
+                    db.execute("INSERT OR REPLACE INTO metadata VALUES ('names_state',?)", (self.encrypt(names_meta, 'names_metadata'),))
+                    return  # Names never replace or mutate the complete/single-number copy.
                 if body['mode'] == 'full':
                     db.execute('DELETE FROM contacts')
                 for contact in body['contacts']:
@@ -258,7 +277,7 @@ class Book:
 
     def status(self):
         result = {'pending': (self.root / 'pending.enc').exists(), 'contacts': 0, 'phones': 0, 'emails': 0,
-                  'full_updated_at': None, 'updated_at': None}
+                  'full_updated_at': None, 'updated_at': None, 'names': 0, 'names_updated_at': None}
         if result['pending']:
             pending = self.state()
             result.update(remote_state=pending.get('remote_state', 'pending'), progress=pending.get('progress'))
@@ -269,6 +288,10 @@ class Book:
             meta = db.execute("SELECT data FROM metadata WHERE key='state'").fetchone()
             if meta:
                 result.update(self.decrypt(meta[0], 'metadata'))
+            names_meta = db.execute("SELECT data FROM metadata WHERE key='names_state'").fetchone()
+            if names_meta:
+                result['names_updated_at'] = self.decrypt(names_meta[0], 'names_metadata')['names_updated_at']
+            result['names'] = db.execute('SELECT COUNT(*) FROM name_contacts').fetchone()[0]
             for key, encrypted in db.execute('SELECT key,data FROM contacts'):
                 contact = self.decrypt(encrypted, key)
                 result['contacts'] += 1
@@ -296,19 +319,48 @@ class Book:
             db.close()
         return {'contacts': matches, 'updated_at': self.status()['updated_at'], 'limit': 20}
 
+    def search_names(self, query):
+        require(isinstance(query, str) and query.strip() and len(query) <= 256, 'query_required')
+        def normalize(value):
+            value = ''.join(c for c in unicodedata.normalize('NFKD', value.casefold()) if not unicodedata.combining(c))
+            return ' '.join(''.join(c if c.isalnum() else ' ' for c in value).split())
+        wanted = normalize(query)
+        require(wanted, 'query_required')
+        matches = []
+        if (self.root / 'book.sqlite3').exists():
+            db = self.connect()
+            try:
+                for key, encrypted in db.execute('SELECT key,data FROM name_contacts'):
+                    contact = self.decrypt(encrypted, 'names:' + key)
+                    name = normalize(contact['name'])
+                    if not name:
+                        continue
+                    score = max(SequenceMatcher(None, wanted, name, autojunk=False).ratio(),
+                                SequenceMatcher(None, ' '.join(sorted(wanted.split())), ' '.join(sorted(name.split())), autojunk=False).ratio())
+                    if wanted in name.split():
+                        score = max(score, 0.9)
+                    if score >= 0.65:
+                        matches.append({**contact, 'score': round(score, 4), 'match': 'exact' if name == wanted else 'similar'})
+            finally:
+                db.close()
+        matches.sort(key=lambda c: (-c['score'], c['name'], c['id']))
+        return {'names': matches[:20], 'names_updated_at': self.status()['names_updated_at'], 'limit': 20,
+                'truncated': len(matches) > 20, 'requires_phone_verification': True}
+
 def main():
     os.umask(0o077)
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('command', choices=['begin', 'plan', 'accept', 'status', 'search', 'abort'])
+    parser.add_argument('command', choices=['begin', 'plan', 'accept', 'status', 'search', 'search-names', 'abort'])
     parser.add_argument('--device-id')
     parser.add_argument('--contact-ref', default='')
     parser.add_argument('--query')
+    parser.add_argument('--names-only', action='store_true')
     args = parser.parse_args()
     try:
         book = Book()
         with book.locked():
             if args.command == 'begin':
-                result = book.begin(args.device_id, args.contact_ref)
+                result = book.begin(args.device_id, args.contact_ref, args.names_only)
             elif args.command == 'accept':
                 data = sys.stdin.buffer.read(32769)
                 require(len(data) <= 32768, 'response_too_large')
@@ -319,6 +371,8 @@ def main():
                 result = book.status()
             elif args.command == 'search':
                 result = book.search(args.query)
+            elif args.command == 'search-names':
+                result = book.search_names(args.query)
             else:
                 result = getattr(book, args.command)()
         print(json.dumps(result, ensure_ascii=False))
@@ -330,4 +384,5 @@ def main():
 
 if __name__ == '__main__':
     raise SystemExit(main())
+
 

@@ -42,7 +42,11 @@ class PhoneContactExportTest {
             reads++;if(unavailable) return null
             val cols=projection!!
             return MatrixCursor(cols).apply {
-                if(cols[0]=="_id" && cols.size==5) { addRow(arrayOf<Any?>("11","Same name","+39 000001",2,null)) }
+                if(cols.size==3 && cols[0]=="_id") {
+                    addRow(arrayOf("1","lookup1","Same name"));addRow(arrayOf("2","lookup2","Same name"))
+                    addRow(arrayOf("3","lookup3",""))
+                }
+                else if(cols[0]=="_id" && cols.size==5) { addRow(arrayOf<Any?>("11","Same name","+39 000001",2,null)) }
                 else if(cols.size==1) { addRow(arrayOf("1")) }
                 else if(cols.contains("contact_last_updated_timestamp")) {
                     headers++
@@ -63,6 +67,32 @@ class PhoneContactExportTest {
     }
     private fun body()=PhoneContactExport.collect(c,null){true}
     private fun failure(code:String,action:()->Unit) {try {action();fail("expected $code")} catch(e:BridgeFailure){assertEquals(code,e.code)}}
+    @Test fun namesOnlyUsesOneCursorPreservesHomonymsAndNeverReadsPhoneOrEmailRows() {
+        provider.changed=true // The names path does not reread timestamps from separate queries.
+        val stages=mutableListOf<String>()
+        val body=PhoneContactExport.collectNames(c,progress={stages.add(it)}){true}
+        assertEquals("names",body.getString("mode"));assertEquals(3,body.getJSONArray("contacts").length())
+        assertEquals(1,provider.reads);assertEquals(0,provider.headers);assertEquals(0,provider.emailQueries);assertEquals(0,provider.writes)
+        for(i in 0 until 3) assertEquals(setOf("id","lookup_key","name"),body.getJSONArray("contacts").getJSONObject(i).keys().asSequence().toSet())
+        val manifest=PhoneContactExport.freeze("d",body){true}
+        assertEquals(0,manifest.getInt("phones"));assertEquals(0,manifest.getInt("emails"));assertEquals(listOf("contacts"),stages)
+    }
+    @Test fun namesDispatcherRequiresReadConsentAndRejectsMixedSelectionWithoutFallback() {
+        PhoneContactExport.enable(c,true)
+        org.robolectric.Shadows.shadowOf(c as android.app.Application).grantPermissions(android.Manifest.permission.READ_CONTACTS)
+        val params=JSONObject().put("contact_ref","").put("names_only",true)
+        val ready=PhoneContactExport.execute(c,"d","contacts_export_start",params){true}
+        assertEquals("contacts_export_ready",ready.getString("code"));assertEquals("names",ready.getString("mode"))
+        val reads=provider.reads
+        for(p in listOf(JSONObject(params.toString()).put("contact_ref",java.util.UUID.randomUUID().toString()),
+            JSONObject(params.toString()).put("names_only","true"))) {
+            assertEquals("invalid_export_mode",PhoneContactExport.execute(c,"d","contacts_export_start",p){true}.getString("code"))
+        }
+        assertEquals(reads,provider.reads)
+        failure("cancelled"){PhoneContactExport.collectNames(c){false}}
+        provider.unavailable=true;failure("contacts_export_unavailable"){PhoneContactExport.collectNames(c){true}}
+        assertEquals(0,provider.writes)
+    }
     @Test fun allAccessibleRowsIncludingDuplicateNamesAndNumbersAndNamelessPhoneRecordsArePreservedReadOnly() {
         val b=body();val rows=b.getJSONArray("contacts")
         assertEquals(3,rows.length());assertEquals(2,rows.getJSONObject(0).getJSONArray("phones").length())
@@ -153,4 +183,5 @@ class PhoneContactExportTest {
         failure("contacts_export_expired"){PhoneContactExport.page("d",id,0){true}}
     }
 }
+
 

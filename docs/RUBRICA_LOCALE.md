@@ -1,3 +1,27 @@
+# Indice dei soli nomi e importazione del singolo numero — .117/139 (sorgenti, cloud pendente)
+
+L’utente ha approvato questi due percorsi il6novembre2026; compilazione e rilascio saranno avviati dall’utente nel cloud Jarvis dopo il commit.
+
+## Importare soltanto i nomi
+
+`python3 scripts/phonebook.py begin --device-id UUID --names-only`, quindi `plan`/tool/`accept` come nella procedura sotto. Il piano usa `jarviswake_contacts_names_export_start` con solo device_id e request_id. Nel relay la stessa operazione asincrona contacts_export_start riceve parametri fissi contact_ref vuoto/names_only=true. APK139 minimo; se non disponibile dichiarare app_update_required e non passare all’export completo.
+
+Android legge una sola query Contacts con _ID, LOOKUP_KEY e DISPLAY_NAME_PRIMARY. Non interroga Phone/Email o timestamp e non effettua un secondo passaggio. JSON schema1, mode names, contacts con oggetti esattamente {id,lookup_key,name}; nessun numero/email o relativo campo. Identificativi tecnici distinguono omonimi; i nomi vuoti sono conservati ma esclusi dai suggerimenti. Non è garantita una transazione globale del provider.
+
+Le pagine, gli UUID, i controlli e la cifratura sono gli stessi del trasferimento completo. Contatori phones/emails devono essere0; campi extra/hash o conteggi errati impediscono il commit locale. Tabella name_contacts cifrata/AAD separata e metadata names_state nello stesso archivio privato: il rinnovo sostituisce soltanto l’indice nomi, mai contatti/numeri/email della copia esistente. Status distingue names/names_updated_at da contacts/phones/emails/full_updated_at. Non è una rubrica completa importata.
+
+## Dal nome pronunciato al numero richiesto
+
+1. Usare `python3 scripts/phonebook.py search-names --query 'nome pronunciato'`. L’indice può essere assente o vecchio: dichiararlo; non inventare una ricerca locale riuscita. Se mancante, l’eventuale ricerca live usa soltanto il nome effettivamente chiesto.
+2. Il confronto normalizza maiuscole/accenti/punteggiatura e confronta anche l’ordine dei termini, con score di somiglianza. Soglia0.65 è un filtro grafico, non una probabilità d’identità. Fino20candidati con score/match, data e truncated; omonimi, più candidati plausibili o risultati troncati richiedono scelta. Nessuna chiamata/invio o fusione automatica per somiglianza.
+3. Con il nome esatto selezionato chiamare jarviswake_find_contacts. Se più persone/numeri, chiarire quale; se nessuno, non enumerare nomi diversi da soli. Il risultato mascherato non è il numero completo.
+4. Se l’utente chiede di acquisire/salvare il numero, usare il contact_ref corrente univoco con `begin --device-id UUID --contact-ref UUID` e il ciclo plan/accept già esistente. Si trasferiscono solo nome e numero scelto; mai ricostruire un numero dalle ultime quattro cifre.
+5. Il mode number aggiunge/aggiorna quella riga nella rubrica locale e preserva altri numeri/email/persone e indice nomi. Il numero completo può essere consultato con `search --query` per la persona richiesta dopo importazione riuscita. Nessuna scrittura della rubrica Android e nessun salvataggio in appunti/Git/log.
+
+Precondizioni, limiti, revoche, proprietà dei dati e procedura di trasporto restano quelle sotto. Un trasferimento vecchio pendente non viene annullato automaticamente: prima esaminarne l’esito e preservarne gli UUID. Handoff cloud in HANDOFF_NAMES_INDEX_20261106.md.
+
+## Procedura precedente per copia completa o singola voce (conservata)
+
 # Rubrica locale — procedura operativa .116 (sorgenti, collaudo cloud pendente)
 
 L’utente ha autorizzato lo sviluppo e l’importazione dal telefono al workspace. Direzione unica: Android → copia locale. La richiesta di importare un numero autorizza soltanto quella voce; «aggiorna rubrica» richiede la copia completa. Non usare appunti né modificare i contatti Android. Nessuna sincronizzazione periodica implicita.
@@ -28,4 +52,5 @@ Lo snapshot sul telefono vive soltanto in RAM e scade dopo30min senza pagine val
 8MiB/100000contatti, blocchi6144byte, nessun troncamento silenzioso. Sono inclusi tutti i contatti esposti da ContactsContract all’app, anche senza numeri/email, tutte le righe telefono/email con etichetta; nomi/lookup/valori >8192caratteri danno errore. Non si promettono contatti nascosti, SIM/account non esposti o profili aziendali. Il confronto dei timestamp prima/dopo rileva cambiamenti del provider ma non è una transazione globale garantita da Android su più query. Query cancellabili e controllo guardie per riga, lavoro nel worker bridge, nessuna I/O aggiunta ai gesti cover/audio.
 
 Fonti API: [ContactsContract.Contacts](https://developer.android.com/reference/android/provider/ContactsContract.Contacts), [Phone](https://developer.android.com/reference/android/provider/ContactsContract.CommonDataKinds.Phone), [Email](https://developer.android.com/reference/android/provider/ContactsContract.CommonDataKinds.Email), [ContentResolver.query con CancellationSignal](https://developer.android.com/reference/android/content/ContentResolver#query(android.net.Uri,%20java.lang.String[],%20java.lang.String,%20java.lang.String[],%20java.lang.String,%20android.os.CancellationSignal)). Il contratto è compilato contro SDK36; provider fittizio nei test, nessuna lettura di dati reali o prova Galaxy implicita.
+
 

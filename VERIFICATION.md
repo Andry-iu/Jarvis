@@ -1,3 +1,17 @@
+# 0.5.117 / 139 — sorgenti preparati, verifica cloud pendente
+
+Autorizzazione:6novembre2026, elenco soli nomi → ricerca locale simile → query live col nome esatto → importazione/salvataggio della singola voce. Commit di preparazione su base main c1d2b44; compilazione avviata successivamente dall’utente nel cloud Jarvis.
+
+- `python3 -m unittest discover -s scripts/tests -p 'test_phonebook.py'`:17test superati. Nuovi casi: nomi senza numeri/email, omonimi distinti, somiglianza/ordine/accenti, UUID persistito e ripresa, hash errato/campi extra senza sovrascrittura, rinnovo dei soli nomi, singolo numero conservando altre voci e indice.
+- `node --test phone-bridge/test/bridge.test.mjs`:51test superati, solo provider simulati. Nuovo tool rifiutato con APK138, parametri names_only fissi per139, nessun fallback completo, contatori zero numeri/email, modalità risultato coerente col comando, owner e UUID protetti.
+- `python3 scripts/sync-guide.py --check`, `node --check phone-bridge/worker/index.js` e `git diff --check`: superati.
+- Aggiunti due test Robolectric in PhoneContactExportTest per una sola query, JSON esclusivamente id/lookup_key/name, omonimi/vuoti,0query Phone/Email,0scritture e rifiuto selezione mista/flag non booleano. Suite Android SDK34/36, lint e build NON eseguiti: riservati al cloud Jarvis.
+- Versione sorgenti0.5.117/139; nessun APK, firma, checksum nuovo o deploy dichiarati. Nessuna lettura reale di nuovi nomi/numeri per questi test. Nessuna modifica Watch/Windows/Voice/cover.
+
+Limite: il singolo cursore evita l’incrocio di query diverse ma non dimostra una transazione globale del provider Android. La somiglianza produce candidati, non identifica una persona. Non usare il vecchio contact_ref della conversazione: risolvere di nuovo sul telefono al momento della richiesta. Origine dell’errore contacts_export_changed osservato sulla .116 ancora non isolata; percorso completo precedente conservato.
+
+## Verifiche precedenti
+
 ## 0.5.116 / 138 — compilazione da main e importazione asincrona, 6 novembre 2026
 
 Richiesta «scarica e compila anche la116». Checkout iniziale pulito7d8e2a7, fetch e fast-forward al main b08d0ec9e2eff9c6e76e10d6b6a3eb2434b05db4, handoff docs/HANDOFF_IMPORT_ASYNC_20261106.md letto prima delle verifiche. Nessuna correzione ai sorgenti ricevuti necessaria. Cloud Jarvis `/workspace/Jarvis`, strumenti/cache `/workspace/.jarvis-cloud`, configurazione `f68203bf-ad95-493f-b5d1-b05e44686cd2~cecfg_6adcda8d13e081918b4bd1e231e145b8`, runtime `ccarenv_b64_Y2NhcmVudl8wYjg0YTNjYzkwY2M4MTkxYjIxNjc2ZmIzNDNkMjRlZA`: osservazioni correnti/running, rete enforced, Passphrase runtime ready. Nessun ambiente alternativo, Actions o segreto richiesto/stampato.
@@ -1214,4 +1228,5 @@ La 0.5.26 introdusse l'attività visibile sopra il keyguard senza richiedere aut
 - [Limitazioni dei servizi foreground e permesso microfono](https://developer.android.com/develop/background-work/services/fgs/restrictions-bg-start)
 
 La base storica di verifica 0.5.26 e la ricostruzione della causa del vuoto di continuità sono riassunte in `CONTINUITY.md`.
+
 

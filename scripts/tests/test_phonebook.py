@@ -26,12 +26,12 @@ class PhonebookTest(unittest.TestCase):
         return {'state': 'responded', 'source': 'paired_device', 'device_id': self.device,
                 'request_id': p['args']['request_id'], 'operation': p['operation'], 'result': result}
     def start(self, contacts, mode='full', digest=None):
-        self.book.begin(self.device, '' if mode=='full' else str(uuid.uuid4()))
+        self.book.begin(self.device, str(uuid.uuid4()) if mode=='number' else '', names_only=mode=='names')
         raw = m.encode({'schema': 1, 'mode': mode, 'contacts': contacts})
         manifest = {'code':'contacts_export_ready','snapshot_id':str(uuid.uuid4()),'bytes':len(raw),'chunk_bytes':m.CHUNK,
                     'sha256':digest or hashlib.sha256(raw).hexdigest(),'mode':mode,
-                    'contacts':len(contacts),'phones':sum(len(c['phones']) for c in contacts),
-                    'emails':sum(len(c['emails']) for c in contacts),'expires_at':int(time.time()*1000)+100000}
+                    'contacts':len(contacts),'phones':sum(len(c.get('phones', [])) for c in contacts),
+                    'emails':sum(len(c.get('emails', [])) for c in contacts),'expires_at':int(time.time()*1000)+100000}
         self.book.accept(self.response(manifest))
         return raw, manifest
     def finish(self, raw, manifest):
@@ -40,6 +40,59 @@ class PhonebookTest(unittest.TestCase):
             self.book.accept(self.response({'code':'contacts_export_page','snapshot_id':manifest['snapshot_id'],
                 'offset':offset,'next_offset':None if end==len(raw) else end,'expires_at':manifest['expires_at'],
                 'data_base64':base64.b64encode(chunk).decode()}))
+    def test_names_import_and_fuzzy_query_preserve_complete_numbers_and_homonyms(self):
+        raw,meta=self.start([contact()]);self.finish(raw,meta)
+        full_before=self.book.search('Private');stamp=self.book.status()['full_updated_at']
+        names=[{'id':'1','lookup_key':'lookup1','name':'Marta Esempio'},
+               {'id':'2','lookup_key':'lookup2','name':'Marta Esempio'},
+               {'id':'3','lookup_key':'lookup3','name':'Élodie Esempio'},
+               {'id':'4','lookup_key':'lookup4','name':''}]
+        raw,meta=self.start(names,mode='names');self.finish(raw,meta)
+        self.assertEqual(self.book.status()['names'],4)
+        self.assertEqual(self.book.status()['full_updated_at'],stamp)
+        self.assertEqual(self.book.search('Private'),full_before)
+        result=self.book.search_names('Martta Esempio')
+        self.assertEqual([c['name'] for c in result['names']],['Marta Esempio','Marta Esempio'])
+        self.assertTrue(all(c['match']=='similar' for c in result['names']))
+        self.assertTrue(result['requires_phone_verification'])
+        self.assertEqual(self.book.search_names('Elodie Esempio')['names'][0]['match'],'exact')
+        self.assertEqual(self.book.search_names('Esempio Marta')['names'][0]['score'],1.0)
+        raw,meta=self.start([contact('3',email='')],mode='number');self.finish(raw,meta)
+        self.assertEqual(self.book.status()['names'],4);self.assertEqual(self.book.status()['contacts'],2)
+        for p in self.book.root.iterdir():
+            self.assertNotIn(b'Marta Esempio',p.read_bytes())
+
+    def test_names_only_plan_survives_resume_and_uses_dedicated_tool_without_contact_ref(self):
+        self.book.begin(self.device,names_only=True);plan=self.book.plan()
+        self.assertEqual(plan['tool'],'jarviswake_contacts_names_export_start')
+        self.assertNotIn('contact_ref',plan['args'])
+        self.assertEqual(m.Book(self.book.root).plan(),plan)
+        self.book.accept({'state':'running',**plan['args']})
+        self.assertEqual(self.book.plan()['tool'],'jarviswake_status_result')
+        self.assertEqual(self.book.plan()['args']['request_id'],plan['args']['request_id'])
+
+    def test_names_payload_rejects_numbers_extra_fields_and_bad_hash_without_replacing_index(self):
+        name={'id':'1','lookup_key':'lookup1','name':'Marta Esempio'}
+        raw,meta=self.start([name],mode='names');self.finish(raw,meta)
+        raw,meta=self.start([{**name,'phones':[]}],mode='names')
+        with self.assertRaises(m.BookError):self.finish(raw,meta)
+        self.assertEqual(self.book.status()['names'],1)
+        self.book.root.joinpath('pending.enc').unlink()
+        raw,meta=self.start([],mode='names',digest='0'*64)
+        with self.assertRaisesRegex(m.BookError,'hash_mismatch'):self.finish(raw,meta)
+        self.assertEqual(self.book.status()['names'],1)
+
+    def test_names_refresh_removes_only_old_names_and_never_claims_a_full_book(self):
+        name={'id':'1','lookup_key':'lookup1','name':'Marta Esempio'}
+        raw,meta=self.start([name],mode='names');self.finish(raw,meta)
+        self.assertEqual(self.book.status()['contacts'],0);self.assertIsNone(self.book.status()['full_updated_at'])
+        raw,meta=self.start([],mode='names');self.finish(raw,meta)
+        self.assertEqual(self.book.status()['names'],0)
+        self.assertEqual(self.book.search_names('Marta')['names'],[])
+        with self.assertRaises(m.BookError):self.book.search_names(' ')
+        with self.assertRaisesRegex(m.BookError,'invalid_export_mode'):
+            self.book.begin(self.device,str(uuid.uuid4()),names_only=True)
+
     def test_full_sync_removes_only_local_deleted_records_and_files_are_private_ciphertext(self):
         raw, meta=self.start([contact(),contact('2')]);self.finish(raw,meta)
         self.assertEqual(self.book.status()['contacts'],2)
@@ -158,4 +211,5 @@ class PhonebookTest(unittest.TestCase):
         self.assertEqual(self.book.plan(),plan);self.assertEqual(self.book.status()['contacts'],0)
 
 if __name__=='__main__':unittest.main()
+
 

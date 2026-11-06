@@ -30,6 +30,29 @@ internal object PhoneContactExport {
     @Synchronized fun clear() { snapshot?.bytes?.fill(0);snapshot=null }
     private fun checkAllowed(allowed:()->Boolean) { if(!allowed()) throw BridgeFailure("cancelled") }
     private fun text(v:String?):String { val s=v.orEmpty();if(s.length>8192) throw BridgeFailure("contacts_export_too_large");return s }
+    /** One provider cursor: no Phone/Email queries or cross-query timestamp comparison. */
+    internal fun collectNames(c:Context,progress:(String)->Unit={},allowed:()->Boolean):JSONObject {
+        checkAllowed(allowed);progress("contacts")
+        val rows=JSONArray();val ids=hashSetOf<String>();var size=0L
+        val signal=android.os.CancellationSignal();val watchdog=java.util.Timer(true)
+        watchdog.schedule(object:java.util.TimerTask(){override fun run(){if(!allowed()) signal.cancel()}},100,100)
+        try {
+            val projection=arrayOf(Contacts._ID,Contacts.LOOKUP_KEY,Contacts.DISPLAY_NAME_PRIMARY)
+            (c.contentResolver.query(Contacts.CONTENT_URI,projection,null,null,null,signal)
+                ?: throw BridgeFailure("contacts_export_unavailable")).use { cursor ->
+                while(cursor.moveToNext()) {
+                    checkAllowed(allowed)
+                    val id=text(cursor.getString(0));val lookup=text(cursor.getString(1));val name=text(cursor.getString(2))
+                    if(id.isEmpty() || !ids.add(id)) throw BridgeFailure("contacts_export_changed")
+                    size+=id.length+lookup.length+name.length+100
+                    if(rows.length()>=100_000 || size>MAX_BYTES) throw BridgeFailure("contacts_export_too_large")
+                    rows.put(JSONObject().put("id",id).put("lookup_key",lookup).put("name",name))
+                }
+            }
+        } finally {watchdog.cancel()}
+        checkAllowed(allowed)
+        return JSONObject().put("schema",1).put("mode","names").put("contacts",rows)
+    }
     /** No filtering/deduplication by number or name: Android aggregate IDs and data-row IDs are retained. */
     internal fun collect(c:Context,selected:BridgeContact?,progress:(String)->Unit={},allowed:()->Boolean):JSONObject {
         val rows=linkedMapOf<String,JSONObject>()
@@ -94,7 +117,9 @@ internal object PhoneContactExport {
         checkAllowed(allowed);clear()
         val s=Snapshot(device,UUID.randomUUID().toString(),bytes,now()+TTL,System.currentTimeMillis()+TTL);snapshot=s
         val contacts=body.getJSONArray("contacts");var phones=0;var emails=0
-        for(i in 0 until contacts.length()) { phones+=contacts.getJSONObject(i).getJSONArray("phones").length();emails+=contacts.getJSONObject(i).getJSONArray("emails").length() }
+        if(body.getString("mode")!="names") for(i in 0 until contacts.length()) {
+            phones+=contacts.getJSONObject(i).getJSONArray("phones").length();emails+=contacts.getJSONObject(i).getJSONArray("emails").length()
+        }
         return result("contacts_export_ready").put("snapshot_id",s.id).put("bytes",bytes.size).put("chunk_bytes",CHUNK)
             .put("sha256",MessageDigest.getInstance("SHA-256").digest(bytes).joinToString(""){"%02x".format(it)})
             .put("contacts",contacts.length()).put("phones",phones).put("emails",emails).put("mode",body.getString("mode")).put("expires_at",s.expires)
@@ -118,11 +143,19 @@ internal object PhoneContactExport {
         when(op) {
             "contacts_export_start" -> {
                 val ref=p.getString("contact_ref")
-                if(ref.isNotEmpty() && !BridgeProtocol.validId(ref)) throw BridgeFailure("contact_changed")
-                val selected=if(ref.isEmpty()) null else BridgeContacts.resolve(c,device,ref)
-                val body=collect(c,selected,progress=progress,allowed=allowed)
-                if(selected!=null) BridgeContacts.resolve(c,device,ref) // Revalidate selection before releasing any complete number.
-                progress("freezing");freeze(device,body,allowed)
+                if(p.has("names_only") && p.get("names_only") !is Boolean) throw BridgeFailure("invalid_export_mode")
+                if(p.optBoolean("names_only",false)) {
+                    if(ref.isNotEmpty()) throw BridgeFailure("invalid_export_mode")
+                    val body=collectNames(c,progress,allowed)
+                    progress("freezing")
+                    freeze(device,body,allowed)
+                } else {
+                    if(ref.isNotEmpty() && !BridgeProtocol.validId(ref)) throw BridgeFailure("contact_changed")
+                    val selected=if(ref.isEmpty()) null else BridgeContacts.resolve(c,device,ref)
+                    val body=collect(c,selected,progress=progress,allowed=allowed)
+                    if(selected!=null) BridgeContacts.resolve(c,device,ref) // Revalidate selection before releasing any complete number.
+                    progress("freezing");freeze(device,body,allowed)
+                }
             }
             "contacts_export_page" -> page(device,p.getString("snapshot_id"),p.getInt("offset"),allowed)
             else -> result("unsupported")
@@ -131,4 +164,5 @@ internal object PhoneContactExport {
     catch(_:SecurityException) { result("permission_required") }
     catch(_:Exception) { result("contacts_export_unavailable") }
 }
+
 

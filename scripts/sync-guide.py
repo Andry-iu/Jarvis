@@ -4,7 +4,7 @@ import json,sys
 from pathlib import Path
 root=Path(__file__).resolve().parent.parent
 source=root/'docs/guida-jarvis.json';data=json.loads(source.read_text())
-assert data['version']=='0.5.116' and data['versionCode']==138
+assert data['version']=='0.5.117' and data['versionCode']==139
 assert len(data['sections'])>=15
 ids=[s['id'] for s in data['sections']];assert len(ids)==len(set(ids))
 for s in data['sections']:
@@ -26,4 +26,5 @@ for path,content in outputs.items():
  else:
   path.parent.mkdir(parents=True,exist_ok=True);path.write_text(content)
 print(('Verified' if check else 'Generated')+' one guide source: '+str(len(ids))+' topics, '+str(len(markdown.split()))+' words')
+
 

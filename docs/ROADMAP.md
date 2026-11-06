@@ -1,3 +1,11 @@
+# Stato corrente: indice nomi e singolo numero (.117/139)
+
+Gruppo approvato e implementato nei sorgenti il6novembre2026: JSON dei soli nomi, indice locale cifrato distinto, ricerca grafica per candidati e verifica live del nome esatto; importazione/salvataggio di un singolo numero con conservazione delle altre voci. Test Python17/backend51 passati. Compilazione/firma/deploy e collaudo Galaxy ancora pendenti, da avviare dall’utente nel cloud Jarvis: docs/HANDOFF_NAMES_INDEX_20261106.md.
+
+Restano gli sviluppi concordati non completati sotto, comprese diagnosi puntuale contacts_export_changed del percorso completo e prove fisiche .115/.116. Nessuna importazione di tutta la rubrica un numero alla volta è dichiarata implementata. Nessuna scrittura di contatti Android.
+
+## Roadmap precedente conservata
+
 0.5.116 / 138 — VERIFICA CLOUD COMPLETATA, APK TELEFONO FIRMATO E BACKEND PUBBLICATO (6 novembre 2026). Main b08d0ec scaricato nel cloud Jarvis;643test Android SDK34/36, lint senza errori,5suite Node,50test backend simulati e13test rubrica passati. Importazione asincrona dopo claim, heartbeat running/awaiting_device e nessun timeout totale; snapshot rinnovato dalle pagine valide e outbox senza blocco dei poll. Stesso Site/plugin/pairing privato, deploy succeeded/has_mcp/env2 e guida online .116/138 verificata. Certificato permanente/ZIP/ABI/16KB verificati; checksum in releases/0.5.116/SHA256SUMS. Nessuna importazione reale durante questa compilazione, API Google reale, modifica Watch o agenti Windows. Restano collaudo Galaxy importazione lenta/rete/revoca/process death, prove fisiche .115, appunto regole non confermato e altri sviluppi della roadmap. Dettagli in VERIFICATION.md e docs/HANDOFF_IMPORT_ASYNC_20261106.md.
 
 0.5.115 / 137 — VERIFICA CLOUD COMPLETATA E APK TELEFONO FIRMATO (6 novembre 2026). Sorgenti main df323bb aggiornati nel cloud Jarvis; verificati servizio dedicato al collegamento e mute temporaneo da pressione prolungata.637test JVM/Robolectric SDK34/36 (66suite), lint senza errori,5script Node,48test backend simulati e10test rubrica locale passati. Aggiunti test del worker reale con solo trasporto simulato e callback WebView tardive/timeout/documento cambiato. Firma permanente, versione/ABI/ZIP/16KB verificate; checksum in releases/0.5.115/SHA256SUMS e risultati in VERIFICATION.md. Watch/Windows invariati, nessuna API Google reale. Guida backend .115 nei sorgenti ma nessun deploy in questa compilazione; appunto regole sul telefono ancora non confermato. Collaudo fisico collegamento/boot/Doze e mute nelle tre modalità, importazione reale rubrica e altri sviluppi della roadmap restano da completare.
@@ -302,4 +310,5 @@ Le misure dipendono da rete, account ChatGPT, DOM del servizio, WebView e dispos
 - Preservare HUD opaco/semitrasparente persistente senza X, gesti della cover, wake anche da schermata di blocco, cancellazione ciclo, un solo gesto Voice e nessuna ripetizione dopo l'attivazione.
 - Usare sessione ChatGPT autenticata e progetto JarvisRuntime; non API/account alternativi né ultima chat generica.
 - Aggiornare test e documenti con codice. Build/firma localmente; niente compilazione automatica GitHub al push. Al rilascio firmato per il test, commit e push fast-forward su `main` secondo `AGENTS.md`.
+
 
