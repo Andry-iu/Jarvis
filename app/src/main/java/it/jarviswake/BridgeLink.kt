@@ -47,6 +47,8 @@ internal object BridgeLink {
     }
     fun refresh(context:Context) {
         check(Looper.myLooper()==Looper.getMainLooper())
+        ContactExportDiagnostics.record(context,exportRequest?.substringAfter(':'),ContactExportDiagnostics.Stage.WORKER_REFRESH,
+            reason=ContactExportDiagnostics.Reason.GENERATION_CHANGED)
         generation++;connections.forEach {it.disconnect()};worker?.interrupt()
         val epoch=generation
         if(owners.isEmpty() || !BridgeSettings.enabled(context)) {
@@ -76,6 +78,9 @@ internal object BridgeLink {
                         check(BridgeProtocol.validRequest(id,op,command.optLong("createdAt"),command.optLong("expiresAt")))
                         if(op in setOf("call_contact","call_by_name")) NativeRuntimeSnapshot.save(app,id,"bridge_transport",
                             "stage=polled roundtrip_ms=${SystemClock.elapsedRealtime()-polledAt} server_queue_ms=${(25000-command.optLong("remainingMs",25000)).coerceAtLeast(0)}")
+                        if(op in BridgeProtocol.CONTACT_EXPORT_OPERATIONS) ContactExportDiagnostics.record(app,id,ContactExportDiagnostics.Stage.POLLED,
+                            offset=command.optJSONObject("params")?.optInt("offset",-1),elapsedMs=SystemClock.elapsedRealtime()-polledAt,
+                            remainingMs=command.optLong("remainingMs",0))
                         if(op=="status") {
                             val ready=CountDownLatch(1);var snapshot:JSONObject?=null
                             main.post { try { if(epoch==generation) snapshot=capture(app) } finally { ready.countDown() } }
@@ -122,13 +127,18 @@ internal object BridgeLink {
                     try { Thread.sleep(if(failures<3) 3000 else 10000) } catch(_:InterruptedException) { break }
                 }
             }
+            ContactExportDiagnostics.record(app,exportRequest?.substringAfter(':'),ContactExportDiagnostics.Stage.WORKER_STOPPED,
+                reason=if(epoch!=generation) ContactExportDiagnostics.Reason.GENERATION_CHANGED else ContactExportDiagnostics.Reason.INTERRUPTED)
             NativeRuntimeSnapshot.save(app,"-","bridge_lifecycle","event=worker_stopped superseded=${epoch!=generation}")
         },"Jarvis-device-link").apply { isDaemon=true;start() }
     }
     private fun executeOnce(c:Context,auth:BridgeCredentials,command:JSONObject,deadline:Long,epoch:Int) {
         val id=command.getString("requestId");val key=auth.deviceId+":"+id
+        val export=command.optString("operation") in BridgeProtocol.CONTACT_EXPORT_OPERATIONS
         val ledger=commandReader(c)
         val previous=ledger.optJSONObject(key)
+        if(export && previous!=null) ContactExportDiagnostics.record(c,id,ContactExportDiagnostics.Stage.REPLAY,
+            code=if(previous.has("result")) "saved" else "uncertain")
         if(BridgeReplayPolicy.decide(previous!=null,previous?.has("result")==true)==BridgeReplayPolicy.Decision.SAVED) return
         if(BridgeReplayPolicy.decide(previous!=null,false)==BridgeReplayPolicy.Decision.UNCERTAIN) {
             if(exportRequest==key && exportJob?.isAlive==true) return
@@ -141,8 +151,12 @@ internal object BridgeLink {
         commandWriter(c,ledger)
         val outcome=try {
             val claimAt=SystemClock.elapsedRealtime()
+            if(export) ContactExportDiagnostics.record(c,id,ContactExportDiagnostics.Stage.CLAIM_BEGIN,
+                remainingMs=(deadline-claimAt).coerceIn(0L,25000L))
             val claim=post(auth,"/device/claim",JSONObject().put("deviceId",auth.deviceId).put("requestId",id),epoch)
             if(command.optString("operation") in setOf("call_contact","call_by_name")) NativeRuntimeSnapshot.save(c,id,"bridge_transport","stage=claim roundtrip_ms=${SystemClock.elapsedRealtime()-claimAt}")
+            if(export) ContactExportDiagnostics.record(c,id,ContactExportDiagnostics.Stage.CLAIMED,code=claim.optString("state"),
+                elapsedMs=SystemClock.elapsedRealtime()-claimAt)
             if(claim.optString("state")!="claimed") result("outcome_uncertain")
             else if(command.getString("operation")=="contacts_export_start") {
                 if(exportJob?.isAlive==true) result("contacts_export_busy") else {
@@ -152,8 +166,14 @@ internal object BridgeLink {
             } else BridgeActions.execute(c,auth.deviceId,command,deadline,progress={ stage ->
                 post(auth,"/device/progress",JSONObject().put("deviceId",auth.deviceId).put("requestId",id).put("stage",stage),epoch)
             }) { epoch==generation }
-        } catch(_:Exception) { result("outcome_uncertain") }
+        } catch(e:Exception) {
+            if(export) ContactExportDiagnostics.record(c,id,ContactExportDiagnostics.Stage.RESULT_READY,code="outcome_uncertain",
+                reason=if(e is BridgeHttpFailure) ContactExportDiagnostics.Reason.HTTP else ContactExportDiagnostics.reason(e),
+                httpStatus=(e as? BridgeHttpFailure)?.statusCode)
+            result("outcome_uncertain")
+        }
         record.put("result",outcome);ledger.put(key,record);commandWriter(c,ledger)
+        if(export) ContactExportDiagnostics.record(c,id,ContactExportDiagnostics.Stage.RESULT_QUEUED,code=outcome.optString("code"))
     }
     /** Claimed export runs independently: no total-duration timeout, with live heartbeats. */
     private fun startExport(c:Context,auth:BridgeCredentials,command:JSONObject,epoch:Int,key:String) {
@@ -166,8 +186,15 @@ internal object BridgeLink {
             val heartbeat=java.util.Timer("Jarvis-export-heartbeat",true)
             heartbeat.schedule(object:java.util.TimerTask(){override fun run(){
                 if(!active.get() || epoch!=generation) return
-                try {post(auth,"/device/progress",JSONObject().put("deviceId",auth.deviceId).put("requestId",id).put("stage",phase.get()),epoch)}
-                catch(_:Exception) {NativeRuntimeSnapshot.save(c,id,"bridge_transport","stage=export_heartbeat_deferred")}
+                try {
+                    post(auth,"/device/progress",JSONObject().put("deviceId",auth.deviceId).put("requestId",id).put("stage",phase.get()),epoch)
+                    ContactExportDiagnostics.record(c,id,ContactExportDiagnostics.Stage.HEARTBEAT,phase=phase.get())
+                } catch(e:Exception) {
+                    ContactExportDiagnostics.record(c,id,ContactExportDiagnostics.Stage.HEARTBEAT,phase=phase.get(),
+                        reason=if(e is BridgeHttpFailure) ContactExportDiagnostics.Reason.HTTP else ContactExportDiagnostics.reason(e),
+                        httpStatus=(e as? BridgeHttpFailure)?.statusCode)
+                    NativeRuntimeSnapshot.save(c,id,"bridge_transport","stage=export_heartbeat_deferred")
+                }
             }},0,5000)
             val outcome=try {
                 BridgeActions.execute(c,auth.deviceId,command,Long.MAX_VALUE,progress={phase.set(it)}) {epoch==generation}
@@ -178,6 +205,7 @@ internal object BridgeLink {
                 if(record!=null && !record.has("result")) {record.put("result",outcome).put("completedAt",System.currentTimeMillis());commandWriter(c,ledger)}
                 exportRequest=null
             }
+            ContactExportDiagnostics.record(c,id,ContactExportDiagnostics.Stage.RESULT_QUEUED,code=outcome.optString("code"))
             main.post {owner(c,ownerId,false)}
         },"Jarvis-contact-export").apply {isDaemon=true;start()}
     }
@@ -188,25 +216,49 @@ internal object BridgeLink {
             if(item.optString("deviceId")!=auth.deviceId || item.optBoolean("acked") || !item.has("result")) continue
             try {
                 val export=item.optString("operation") in BridgeProtocol.CONTACT_EXPORT_OPERATIONS
-                if(export && (!PhoneContactExport.enabled(c) || System.currentTimeMillis()-item.optLong("completedAt",item.optLong("at"))>120_000 ||
-                    c.checkSelfPermission(Manifest.permission.READ_CONTACTS)!=PackageManager.PERMISSION_GRANTED ||
-                    c.getSystemService(android.app.KeyguardManager::class.java).isKeyguardLocked)) item.put("result",result("contacts_export_expired"))
+                val rejection=if(!export) null else when {
+                    !PhoneContactExport.enabled(c) -> ContactExportDiagnostics.Reason.COPY_DISABLED
+                    System.currentTimeMillis()-item.optLong("completedAt",item.optLong("at"))>120_000 -> ContactExportDiagnostics.Reason.RESULT_AGE
+                    c.checkSelfPermission(Manifest.permission.READ_CONTACTS)!=PackageManager.PERMISSION_GRANTED -> ContactExportDiagnostics.Reason.CONTACT_PERMISSION
+                    c.getSystemService(android.app.KeyguardManager::class.java).isKeyguardLocked -> ContactExportDiagnostics.Reason.SCREEN_LOCKED
+                    else -> null
+                }
+                if(rejection!=null) {
+                    ContactExportDiagnostics.record(c,item.getString("requestId"),ContactExportDiagnostics.Stage.RESULT_REVOKED,
+                        code=item.getJSONObject("result").optString("code"),reason=rejection)
+                    item.put("result",result("contacts_export_expired"))
+                }
+                if(item.optString("operation") in BridgeProtocol.NOTE_OPERATIONS) {
+                    val envelope=JSONObject().put("deviceId",auth.deviceId).put("requestId",item.getString("requestId")).put("result",item.getJSONObject("result"))
+                    if(envelope.toString().toByteArray(Charsets.UTF_8).size>24*1024) item.put("result",result("note_payload_too_large"))
+                }
+                val sentAt=SystemClock.elapsedRealtime()
+                if(export) ContactExportDiagnostics.record(c,item.getString("requestId"),ContactExportDiagnostics.Stage.SEND_BEGIN,
+                    code=item.getJSONObject("result").optString("code"),offset=item.getJSONObject("result").optInt("offset",-1))
                 post(auth,"/device/respond",JSONObject().put("deviceId",auth.deviceId).put("requestId",item.getString("requestId"))
                     .put("result",item.getJSONObject("result")),epoch)
+                if(export) ContactExportDiagnostics.record(c,item.getString("requestId"),ContactExportDiagnostics.Stage.SEND_ACK,
+                    code=item.getJSONObject("result").optString("code"),elapsedMs=SystemClock.elapsedRealtime()-sentAt)
                 item.put("acked",true)
                 if(item.optString("operation") in BridgeProtocol.CONTACT_EXPORT_OPERATIONS) item.put("result",result("contacts_export_expired"))
                 commandWriter(c,ledger)
             } catch(e:BridgeHttpFailure) {
+                if(item.optString("operation") in BridgeProtocol.CONTACT_EXPORT_OPERATIONS) ContactExportDiagnostics.record(c,item.getString("requestId"),
+                    ContactExportDiagnostics.Stage.SEND_DEFERRED,reason=ContactExportDiagnostics.Reason.HTTP,httpStatus=e.statusCode)
                 if(e.statusCode!=409) {
                     if(e.statusCode in setOf(401,403)) throw e
                     NativeRuntimeSnapshot.save(c,item.getString("requestId"),"bridge_transport","stage=outbox_deferred code=http_${e.statusCode}")
                     return@synchronized false
                 }
                 // Expired/never claimed: retain the consumed local record, never repeat the phone action.
+                if(item.optString("operation") in BridgeProtocol.CONTACT_EXPORT_OPERATIONS) ContactExportDiagnostics.record(c,item.getString("requestId"),
+                    ContactExportDiagnostics.Stage.RESULT_REVOKED,reason=ContactExportDiagnostics.Reason.HTTP,httpStatus=409)
                 item.put("acked",true)
                 if(item.optString("operation") in BridgeProtocol.CONTACT_EXPORT_OPERATIONS) item.put("result",result("contacts_export_expired"))
                 commandWriter(c,ledger)
-            } catch(_:java.io.IOException) {
+            } catch(e:java.io.IOException) {
+                if(item.optString("operation") in BridgeProtocol.CONTACT_EXPORT_OPERATIONS) ContactExportDiagnostics.record(c,item.getString("requestId"),
+                    ContactExportDiagnostics.Stage.SEND_DEFERRED,reason=ContactExportDiagnostics.reason(e))
                 NativeRuntimeSnapshot.save(c,item.getString("requestId"),"bridge_transport","stage=outbox_deferred code=network")
                 return@synchronized false
             }
@@ -228,11 +280,15 @@ internal object BridgeLink {
             conn.setRequestProperty("OAI-Sites-Authorization","Bearer ${c.siteAccess}")
             conn.outputStream.use { it.write(data.toString().toByteArray(Charsets.UTF_8)) }
             val status=conn.responseCode;if(status!=200) throw BridgeHttpFailure(status)
-            return JSONObject(conn.inputStream.use { input ->
+            val raw=conn.inputStream.use { input ->
                 val output=java.io.ByteArrayOutputStream();val buffer=ByteArray(2048)
-                while(true) { val count=input.read(buffer);if(count<0) break;check(output.size()+count<=16384);output.write(buffer,0,count) }
-                output.toString("UTF-8")
-            })
+                val maximum=if(path=="/device/poll") 24*1024 else 16*1024
+                while(true) { val count=input.read(buffer);if(count<0) break;check(output.size()+count<=maximum);output.write(buffer,0,count) }
+                output.toByteArray()
+            }
+            val reply=JSONObject(String(raw,Charsets.UTF_8))
+            check(raw.size<=16*1024 || (path=="/device/poll" && reply.optJSONObject("request")?.optString("operation").orEmpty() in BridgeProtocol.NOTE_OPERATIONS))
+            return reply
         } finally {connections.remove(conn);conn.disconnect()}
     }
     private fun capture(c:Context):JSONObject {

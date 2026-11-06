@@ -212,7 +212,8 @@ class PhonebookTest(unittest.TestCase):
                 'progress':{'stage':'phones','observed_at':int(time.time()*1000),'number':'PRIVATE'}})
         self.assertEqual(self.book.plan(),plan);self.assertEqual(self.book.status()['contacts'],0)
 
-    def test_one_mebibyte_boundaries_reassemble_atomically_and_match_hash(self):
+    def test_256_kibibyte_boundaries_reassemble_atomically_and_match_hash(self):
+        self.assertEqual(m.CHUNK, 262144)
         for target in (163483, m.CHUNK - 1, m.CHUNK, m.CHUNK + 1, 2 * m.CHUNK):
             with self.subTest(target=target):
                 # Real schema with bounded strings; pad the final name to hit exact byte boundaries.
@@ -237,8 +238,8 @@ class PhonebookTest(unittest.TestCase):
                 self.assertEqual(pages,(target+m.CHUNK-1)//m.CHUNK)
                 self.assertEqual(self.book.status()['names'],len(rows))
 
-    def test_cli_accept_reads_a_full_one_mebibyte_page_with_base64_overhead(self):
-        rows=[{'id':str(i),'lookup_key':'k'+str(i),'name':'x'*8000} for i in range(140)]
+    def test_cli_accept_reads_a_full_256_kibibyte_page_with_base64_overhead(self):
+        rows=[{'id':str(i),'lookup_key':'k'+str(i),'name':'x'*8000} for i in range(40)]
         raw,meta=self.start(rows,mode='names')
         reply=self.response({'code':'contacts_export_page','snapshot_id':meta['snapshot_id'],'offset':0,
             'next_offset':m.CHUNK,'expires_at':meta['expires_at'],'data_base64':base64.b64encode(raw[:m.CHUNK]).decode()})

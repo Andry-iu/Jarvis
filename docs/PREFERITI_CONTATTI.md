@@ -1,3 +1,7 @@
+# Ricerca remota .118/140 — sorgenti, verifica cloud pendente
+
+find_contacts restituisce20 numeri mascherati per pagina con offset0 iniziale e next_offset fino a null sullo stesso nome/dispositivo. Snapshot RAM10min, ordinamento e riferimenti già emessi stabili; non sceglie automaticamente omonimi e resolve ricontrolla live numero/preferito prima dell'uso. Nuova ricerca sostituisce la precedente e la perdita del processo rende la continuazione contact_expired; nessuna ripartenza automatica. Errore esplicito oltre10000corrispondenze/8MiB. Preferiti elencati sempre20 per pagina; cache20 e import manuale20 invariati. APK precedenti mantengono ricerca8 senza continuazione. Dettagli/test e fasi cloud in HANDOFF_BRIDGE_LIMITS_20261107.md.
+
 # .91 / 113 — gestione da chat e conflitti
 
 Home → Preferiti e cache contatti → Preferiti. Appunti resta a sinistra nella prima riga. I Preferiti sono un archivio privato cifrato di JarvisWake, separato dalla rubrica Android e dalla cache automatica dei frequenti. Non vengono rimossi svuotando cache o cancellando il solo abbinamento; disinstallazione o cancellazione dati restano distruttive. Fino a100 voci, senza rotazione automatica.

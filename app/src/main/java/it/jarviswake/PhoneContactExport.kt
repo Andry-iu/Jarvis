@@ -16,7 +16,7 @@ import java.util.UUID
 
 /** Explicit one-way export. Frozen bytes live only in RAM, never in audio/UI/diagnostic storage. */
 internal object PhoneContactExport {
-    const val CHUNK=1024*1024
+    const val CHUNK=256*1024
     const val MAX_BYTES=8*1024*1024
     const val TTL=30*60*1000L
     private data class Snapshot(val device:String,val id:String,val bytes:ByteArray,var until:Long,var expires:Long)
@@ -136,7 +136,11 @@ internal object PhoneContactExport {
             .put("next_offset",if(end==s.bytes.size) JSONObject.NULL else end)
             .put("data_base64",Base64.encodeToString(s.bytes.copyOfRange(offset,end),Base64.NO_WRAP))
     }
-    fun execute(c:Context,device:String,op:String,p:JSONObject,progress:(String)->Unit={},allowed:()->Boolean):JSONObject = try {
+    fun execute(c:Context,device:String,op:String,p:JSONObject,requestId:String?=null,progress:(String)->Unit={},allowed:()->Boolean):JSONObject {
+        val started=now()
+        ContactExportDiagnostics.record(c,requestId,ContactExportDiagnostics.Stage.STARTED,offset=p.optInt("offset",-1))
+        val report:(String)->Unit={phase->ContactExportDiagnostics.record(c,requestId,ContactExportDiagnostics.Stage.PROGRESS,phase=phase,elapsedMs=now()-started);progress(phase)}
+        val outcome=try {
         if(!enabled(c)) throw BridgeFailure("contacts_export_disabled")
         if(c.checkSelfPermission(Manifest.permission.READ_CONTACTS)!=PackageManager.PERMISSION_GRANTED) throw BridgeFailure("permission_required")
         checkAllowed(allowed)
@@ -146,15 +150,15 @@ internal object PhoneContactExport {
                 if(p.has("names_only") && p.get("names_only") !is Boolean) throw BridgeFailure("invalid_export_mode")
                 if(p.optBoolean("names_only",false)) {
                     if(ref.isNotEmpty()) throw BridgeFailure("invalid_export_mode")
-                    val body=collectNames(c,progress,allowed)
-                    progress("freezing")
+                    val body=collectNames(c,report,allowed)
+                    report("freezing")
                     freeze(device,body,allowed)
                 } else {
                     if(ref.isNotEmpty() && !BridgeProtocol.validId(ref)) throw BridgeFailure("contact_changed")
                     val selected=if(ref.isEmpty()) null else BridgeContacts.resolve(c,device,ref)
-                    val body=collect(c,selected,progress=progress,allowed=allowed)
+                    val body=collect(c,selected,progress=report,allowed=allowed)
                     if(selected!=null) BridgeContacts.resolve(c,device,ref) // Revalidate selection before releasing any complete number.
-                    progress("freezing");freeze(device,body,allowed)
+                    report("freezing");freeze(device,body,allowed)
                 }
             }
             "contacts_export_page" -> page(device,p.getString("snapshot_id"),p.getInt("offset"),allowed)
@@ -163,6 +167,11 @@ internal object PhoneContactExport {
     } catch(e:BridgeFailure) { result(e.code) }
     catch(_:SecurityException) { result("permission_required") }
     catch(_:Exception) { result("contacts_export_unavailable") }
+        ContactExportDiagnostics.record(c,requestId,ContactExportDiagnostics.Stage.RESULT_READY,code=outcome.optString("code"),
+            offset=outcome.optInt("offset",-1),bytes=outcome.optInt("bytes",-1),chunkBytes=CHUNK,
+            base64Chars=if(outcome.has("data_base64")) outcome.getString("data_base64").length else null,elapsedMs=now()-started)
+        return outcome
+    }
 }
 
 

@@ -1,8 +1,10 @@
-## 0.5.118 / 140 — pagine rubrica fino a1MiB (sorgenti)
+## 0.5.118 / 140 — limiti concordati e diagnostica export (sorgenti)
 
-- File fino a1048576byte in una pagina dati; oltre, blocchi da1MiB con coda residua. Backend/utility riconoscono anche le pagine6144byte delle app precedenti.
-- Limiti Base64/envelope adeguati solo al percorso risultato export; integrità/hash, fonte, UUID, consenso e salvataggio atomico conservati.
--20test Python/53backend simulati passati. Test Android di soglia aggiunto, cloud/build/firma/deploy/collaudo reale pendenti. Dettagli nel nuovo handoff.
+- Export256KiB; manifest/hash/salvataggio atomico e compatibilità6144byte conservati. Sostituisce1MiB prima del rilascio.
+- Appunti8000caratteri e24KiB di envelope, con default16KiB per altre operazioni; richieste troppo grandi rifiutate senza troncamento. UI/archivio/server/trasporto allineati.
+- Ricerca20 risultati per pagina con offset/next_offset, snapshot RAM stabile, riferimenti precedenti conservati e risoluzione live prima di usare il numero. Versioni precedenti restano compatibili per le operazioni supportate.
+- Diagnostica export tecnica senza contenuti, correlata per richiesta, con fasi/tempi/offset/guardie/HTTP/ACK nel normale ZIP.
+-57test backend e20Python passati; nuovi test Android preparati, cloud/build/firma/deploy/collaudo reale pendenti. Handoff docs/HANDOFF_BRIDGE_LIMITS_20261107.md.
 
 ## 0.5.117 / 139 — indice dei soli nomi e ricerca guidata
 

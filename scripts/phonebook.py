@@ -24,7 +24,7 @@ from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
 ROOT = Path('/workspace/.jarvis-private/phonebook')
 MAX_BYTES = 8 * 1024 * 1024
-CHUNK = 1024 * 1024
+CHUNK = 256 * 1024
 LEGACY_CHUNK = 6144
 MAX_RESPONSE_BYTES = 4 * ((CHUNK + 2) // 3) + 8192
 UUID = re.compile(r'^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$')

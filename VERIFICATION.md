@@ -1,15 +1,18 @@
-# Verifica corrente — .118/140, sorgenti preparati il6novembre2026
+# Verifica corrente — .118/140,7novembre2026 Europe/Rome
 
-Base remota verificata `bb6f9f3abd2dedff7bf794b92a7ed813b06551bd` di Andry-iu/Jarvis/main; documenti di rilascio .117 recuperati prima della modifica. L’utente ha autorizzato esplicitamente l’implementazione e chiarito blocchi da500K o1MB: scelti1MiB (1048576byte) per ridurre gli scambi. Nessuna cancellazione dell’importazione reale precedente o copia dei dati del telefono per i test.
+Base remota main31dade50ed81cc288670b718882b34d3a5af04fa, letta attraverso GitHub e ricontrollata prima della pubblicazione. La precedente implementazione1MiB è soltanto sorgente non rilasciato; l'ultima richiesta approva256KiB e lo stesso candidato. Nessuna cronologia riscritta, nessuna compilazione fuori cloud.
 
--20test Python superati: soglie163483,1048575,1048576,1048577,2097152byte, ricomposizione/commit atomico e ripresa, compatibilità6144byte e lease, CLI stdin con pagina1MiB+Base64, hash corrotto/conservazione copie, chunk non supportato rifiutato.
--53test backend simulati superati: manifest nuovi e precedenti, pagina piccola/esatta/multipagina, payload sovradimensionato/offset/snapshot/coda errati, token errato, percorso non export ancora16KB, nessun nuovo invio dopo esito terminale. Regex Base64 resa lineare per evitare ripetizioni annidate su pagine grandi.
-- `python3 scripts/sync-guide.py --check`, `node --check phone-bridge/worker/index.js` e `git diff --check` superati. Guida aggiornata da un’unica fonte .118/140.
-- Test Android `oneMiBFileUsesOnePageAndLargerFilesUseOneMiBBlocksWithExactHash` aggiunto per SDK34/36 e soglie sopra. NON eseguito in questo ambiente: compilazione/JVM/lint/build/firma sono riservati al cloud Jarvis. Android modifica soltanto CHUNK; nessuna modifica al trasporto Voice/cover.
+## Risultati effettivi in questa chat
 
-Da completare nel cloud: suite Android incluse regressioni bridge/outbox/lease/revoca e cover; lint/build, firma permanente, checksum, aggiornamento stesso backend/plugin e test di trasporto MCP reale fino a1MiB senza troncamento. Solo dopo installazione app140 si potrà riavviare o rinnovare consapevolmente uno snapshot a1MiB: quello precedente rimane6144byte. Nessun APK o nuovo trasferimento reale dichiarato. Conservati tutti i collaudi/residui precedenti e roadmap; handoff docs/HANDOFF_EXPORT_1MIB_20261106.md.
+-20test Python importatore superati:163483byte,256KiB−1/esatti/+1/512KiB, ricomposizione/hash/commit atomico/ripresa, stdin+Base64, hash corrotto e vecchi blocchi6144. Eseguiti con archivio temporaneo fittizio, mai con dati reali.
+-57test backend simulati superati. Nuovi casi:8000caratteri Unicode oltre16KiB salvati/ritornati entro24KiB,8001 rifiutati; envelope esattamente24576 accettato solo per appunti e24577 rifiutato; altri percorsi mantengono16KiB, nessuna prenotazione ID su body rifiutato; vecchia APK non riceve nuovi formati;20contatti mascherati e next_offset validato,21/offset incoerente/coda errata rifiutati. Conservati claim/journal/replay/revoca e note/voce/WhatsApp.
+-Test Android di soglia aggiornato e nuovi ContactSearchPaginationTest/NotesExtendedLimitsTest/ContactExportDiagnosticsTest preparati. NON eseguiti qui: compilazione/JVM/lint/build/firma riservati al cloud Jarvis. Il test ricerca prepara45 contatti fittizi su20/20/5 con riferimenti stabili; quello appunti verifica save/read/reopen8000 e rifiuto8001 senza perdita; diagnostica controlla whitelist e classificazione senza messaggi privati.
+- Revisione statica ha allineato firme requestId/offset, payload app/server e guida;57test non sono un certificato di compilazione Android. Nessun APK/build/firma/backend distribuito o prova Galaxy con nuovo formato dichiarati.
+- Il telefono .117/139 aveva preparato1155 nomi/163483byte con pagine6144; durante la copia precedente ha restituito cancelled. L'indice locale resta0nomi; nessun riavvio automatico e nessun motivo specifico retroattivamente inventato. Staging privato conservato per continuità; i dati reali non sono stati usati nei test o inseriti nel commit.
 
-Richiesta finale utente: consegna APK firmata autorizzata. Capacità cloud cercate in questa chat e nel catalogo plugin, senza trovare accesso al cloud Jarvis/Codex Tasks. Build/firma/rilascio bloccati da accesso ambiente, non da mancanza di consenso; nessun tentativo fuori cloud né richiesta di segreti. Continuare nel cloud configurato dal nuovo handoff.
+## Restante
+
+Cloud Jarvis: fetch del presente main, test Android SDK34/36 incluse regressioni worker/outbox/cover, lint/build, firma permanente/checksum, stesso backend/plugin privato e installazione sopra APK139. Prova reale dei limiti, nuove pagine e log; copia nomi non ancora completata. Tutti i precedenti residui della roadmap conservati. Handoff docs/HANDOFF_BRIDGE_LIMITS_20261107.md. Il commit di sorgenti non equivale a rilascio.
 
 ## Verifiche precedenti conservate
 

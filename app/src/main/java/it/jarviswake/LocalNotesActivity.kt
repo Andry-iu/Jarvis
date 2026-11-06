@@ -92,7 +92,7 @@ class LocalNotesActivity:Activity() {
     private fun editor(note:LocalNote?) {
         generation++;val request=generation;editing=true
         menu=SplitMenuScreen(this,if(note==null) "Nuovo appunto" else "Modifica appunto · r${note.revision}",
-            "Scrivi titolo (massimo 80 caratteri) e testo (massimo 4000), poi Salva. Per rimuovere un appunto già salvato usa Elimina appunto e conferma: non è annullabile. Indietro torna all’elenco senza salvare. In caso di conflitto o esito incerto, rileggi l’appunto prima di provare ancora.") { reload() }
+            "Scrivi titolo (massimo 80 caratteri) e testo (massimo 8000), poi Salva. Per rimuovere un appunto già salvato usa Elimina appunto e conferma: non è annullabile. Indietro torna all’elenco senza salvare. In caso di conflitto o esito incerto, rileggi l’appunto prima di provare ancora.") { reload() }
         menu.importantForAutofill=View.IMPORTANT_FOR_AUTOFILL_NO_EXCLUDE_DESCENDANTS
         val title=menu.field("Titolo",note?.title ?: "","Il titolo identifica l’appunto. Un altro appunto con lo stesso titolo non viene sovrascritto implicitamente.")
         val body=menu.field("Testo dell’appunto",note?.text ?: "","Salva conserva esattamente questo testo nell’archivio locale. Verifica il contenuto prima di confermare.",true)

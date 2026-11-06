@@ -20,7 +20,7 @@ internal class LocalNotesRepository(private val storage:NotesStorage,private val
         const val PAGE_SIZE=20
         const val MAX_TOTAL=200000
         fun validTitle(s:String)=BridgeProtocol.validText(s,80) && s==s.trim() && '\n' !in s && '\r' !in s && '\t' !in s
-        fun validBody(s:String)=BridgeProtocol.validText(s,4000)
+        fun validBody(s:String)=BridgeProtocol.validText(s,8000)
     }
     private fun load():List<LocalNote> {
         val notes=storage.load()

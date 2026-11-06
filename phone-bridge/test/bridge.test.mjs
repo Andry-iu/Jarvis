@@ -153,8 +153,8 @@ test('Pruning old payloads never permits another execution of an action id',asyn
  assert.equal((await tool(e,'jarviswake_call_contact',{...args,contact_ref:crypto.randomUUID()})).isError,true);
 });
 
-async function advertiseNotes(e,c) {
- const r=await worker.fetch(request('/device/poll',{deviceId:c.deviceId,versionCode:104,operations:['status','navigate','find_contacts','call_contact','whatsapp','list_notes','read_note','save_note']},{Authorization:'Bearer '+c.deviceToken}),e);assert.equal(r.status,200);
+async function advertiseNotes(e,c,versionCode=104) {
+ const r=await worker.fetch(request('/device/poll',{deviceId:c.deviceId,versionCode,operations:['status','navigate','find_contacts','call_contact','whatsapp','list_notes','read_note','save_note']},{Authorization:'Bearer '+c.deviceToken}),e);assert.equal(r.status,200);
 }
 const noteMeta=()=>({note_id:crypto.randomUUID(),title:'Synthetic note',revision:1,updated_at:123456});
 async function noteCommand(e,c,name,fields) {
@@ -196,7 +196,7 @@ test('Notes cannot smuggle extra private fields, arbitrary success codes or bodi
   assert.equal((await noteRespond(e,c,args,result)).status,400);
  assert.equal((await noteRespond(e,c,args,{code:'notes_listed',notes:[note],next_offset:null})).status,200);
  const read=await noteCommand(e,c,'jarviswake_read_note',{note_id:note.note_id});
- assert.equal((await noteRespond(e,c,read,{code:'note_read',note:{...note,text:'界'.repeat(4001)}})).status,400);
+ assert.equal((await noteRespond(e,c,read,{code:'note_read',note:{...note,text:'x'.repeat(8001)}})).status,400);
  const bounded={code:'note_read',note:{...note,text:'界'.repeat(4000)}};
  assert.ok(Buffer.byteLength(JSON.stringify(bounded))<16384);assert.equal((await noteRespond(e,c,read,bounded)).status,200);
 });
@@ -504,7 +504,7 @@ test('Export manifest/page contracts reject extra content, impossible chunks and
  const reply=value(await tool(e,'jarviswake_status_result',{device_id:c.deviceId,request_id:id}));assert.deepEqual(reply.result,manifest);
  id=crypto.randomUUID();await tool(e,'jarviswake_contacts_export_page',{device_id:c.deviceId,snapshot_id:manifest.snapshot_id,offset:0,request_id:id});await claim(e,c,id);
  const page={code:'contacts_export_page',snapshot_id:manifest.snapshot_id,offset:0,next_offset:null,data_base64:Buffer.from('simulated-only').toString('base64'),expires_at:manifest.expires_at};
- for(const delta of [{next_offset:6144},{data_base64:'!BAD!'},{data_base64:'A'.repeat(1398108)},{offset:1},{raw:'PRIVATE'}]) assert.equal((await send({...page,...delta})).status,400);
+ for(const delta of [{next_offset:6144},{data_base64:'!BAD!'},{data_base64:'A'.repeat(349532)},{offset:1},{raw:'PRIVATE'}]) assert.equal((await send({...page,...delta})).status,400);
  assert.equal((await send(page)).status,200);
  assert.deepEqual(value(await tool(e,'jarviswake_status_result',{device_id:c.deviceId,request_id:id})).result,page);
  // Same request stays terminal; reconnect cannot replace a first page/result.
@@ -579,8 +579,8 @@ test('Names-only tool is version gated, injects minimal params and rejects full-
  assert.equal((await tool(e,'jarviswake_contacts_export_start',{...args,contact_ref:''})).content[0].text,'request_id_conflict');
 });
 
-test('1MiB pages transfer whole small files and exact boundary chunks while preserving legacy manifests',async()=>{
- const {e,c,auth}=await exportFixture(140),chunk=1024*1024;
+test('256KiB pages transfer whole small files and exact boundary chunks while preserving legacy manifests',async()=>{
+ const {e,c,auth}=await exportFixture(140),chunk=256*1024;
  for(const size of [163483,chunk-1,chunk,chunk+1,2*chunk]) {
   const manifest={...exportManifest(),bytes:size,chunk_bytes:chunk};
   let rid=crypto.randomUUID();
@@ -596,18 +596,76 @@ test('1MiB pages transfer whole small files and exact boundary chunks while pres
  }
 });
 test('Large page validation rejects oversize, mismatched snapshot/offset and incomplete non-final pages',async()=>{
- const {e,c,auth}=await exportFixture(140),rid=crypto.randomUUID(),snapshot_id=crypto.randomUUID(),chunk=1024*1024;
+ const {e,c,auth}=await exportFixture(140),rid=crypto.randomUUID(),snapshot_id=crypto.randomUUID(),chunk=256*1024;
  await tool(e,'jarviswake_contacts_export_page',{device_id:c.deviceId,snapshot_id,offset:0,request_id:rid});await claim(e,c,rid);
  const page={code:'contacts_export_page',snapshot_id,offset:0,next_offset:chunk,data_base64:Buffer.alloc(chunk,120).toString('base64'),expires_at:Date.now()+1800000};
  for(const delta of [{snapshot_id:crypto.randomUUID()},{offset:chunk,next_offset:2*chunk},
   {data_base64:Buffer.alloc(chunk+1).toString('base64')},{data_base64:Buffer.alloc(chunk-1).toString('base64')},
-  {next_offset:chunk+1},{data_base64:'!'.repeat(1398104)}]) {
+  {next_offset:chunk+1},{data_base64:'!'.repeat(349528)}]) {
   assert.equal((await worker.fetch(request('/device/respond',{deviceId:c.deviceId,requestId:rid,result:{...page,...delta}},auth),e)).status,400);
  }
- assert.equal((await worker.fetch(request('/device/respond',{deviceId:c.deviceId,requestId:rid,result:{...page,data_base64:'A'.repeat(1407000)}},auth),e)).status,413);
+ assert.equal((await worker.fetch(request('/device/respond',{deviceId:c.deviceId,requestId:rid,result:{...page,data_base64:'A'.repeat(358000)}},auth),e)).status,413);
  assert.equal((await worker.fetch(request('/device/respond',{deviceId:c.deviceId,requestId:rid,result:page},{Authorization:'Bearer '+'x'.repeat(43)}),e)).status,401);
  assert.equal((await worker.fetch(request('/device/poll',{deviceId:c.deviceId,padding:'x'.repeat(20000)},auth),e)).status,413);
  assert.equal((await worker.fetch(request('/device/respond',{deviceId:c.deviceId,requestId:rid,result:{code:'note_saved',padding:'x'.repeat(20000)}},auth),e)).status,413);
  assert.equal((await worker.fetch(request('/mcp',{jsonrpc:'2.0',id:1,padding:'x'.repeat(20000)},user),e)).status,413);
  assert.equal((await worker.fetch(request('/device/respond',{deviceId:c.deviceId,requestId:rid,result:page},auth),e)).status,200);
+});
+
+test('8000-character Unicode notes cross the 16KiB boundary in both directions within the dedicated 24KiB limit',async()=>{
+ const e=env(),c=await pair(e);await advertiseNotes(e,c,140);
+ const text='界'.repeat(8000),note=noteMeta();
+ const save=await noteCommand(e,c,'jarviswake_save_note',{note_id:'',title:note.title,text,expected_revision:0});
+ const polled=await worker.fetch(request('/device/poll',{deviceId:c.deviceId,versionCode:140,operations:['save_note']},{Authorization:'Bearer '+c.deviceToken}),e);
+ // Claiming above hides this command from subsequent polls; inspect the exact persisted command instead.
+ assert.equal(polled.status,200);
+ const command=await (await e.BUCKET.get(`requests/${c.deviceId}/${save.request_id}.json`)).json();
+ const body={request:{...command,remainingMs:25000}};
+ assert.ok(Buffer.byteLength(JSON.stringify(body))>16384);assert.ok(Buffer.byteLength(JSON.stringify(body))<=24576);
+ assert.equal(command.params.text,text);
+ assert.equal((await noteRespond(e,c,save,{code:'note_saved',note})).status,200);
+ await advertiseNotes(e,c,140);
+ const read=await noteCommand(e,c,'jarviswake_read_note',{note_id:note.note_id});
+ assert.equal((await noteRespond(e,c,read,{code:'note_read',note:{...note,text}})).status,200);
+ assert.equal(value(await tool(e,'jarviswake_status_result',{device_id:c.deviceId,request_id:read.request_id})).result.note.text,text);
+ const invalid=await tool(e,'jarviswake_save_note',{device_id:c.deviceId,request_id:crypto.randomUUID(),note_id:'',title:'Other',text:'x'.repeat(8001),expected_revision:0});
+ assert.equal(invalid.isError,true);assert.equal(invalid.content[0].text,'invalid_text');
+});
+test('24KiB note envelopes do not broaden other routes and oversized notes never reserve their request id',async()=>{
+ const e=env(),c=await pair(e);await advertiseNotes(e,c,140);
+ const args={device_id:c.deviceId,request_id:crypto.randomUUID(),note_id:'',title:'Title',text:'Body',expected_revision:0};
+ const rpc={jsonrpc:'2.0',id:1,method:'tools/call',params:{name:'jarviswake_save_note',arguments:args},padding:''};
+ rpc.padding='x'.repeat(24576-Buffer.byteLength(JSON.stringify(rpc)));
+ assert.equal(Buffer.byteLength(JSON.stringify(rpc)),24576);
+ assert.equal((await worker.fetch(request('/mcp',{...rpc,padding:rpc.padding+'x'},user),e)).status,413);
+ assert.equal(await e.BUCKET.get(`seen/${c.deviceId}/${args.request_id}.json`),null);
+ assert.equal((await worker.fetch(request('/mcp',rpc,user),e)).status,200);
+ const other={...rpc,params:{name:'jarviswake_navigate',arguments:{device_id:c.deviceId,request_id:crypto.randomUUID(),destination:'Address'}}};
+ assert.equal((await worker.fetch(request('/mcp',other,user),e)).status,413);
+ const read=await noteCommand(e,c,'jarviswake_read_note',{note_id:crypto.randomUUID()});
+ const big={code:'note_read',note:{...noteMeta(),text:'界'.repeat(8200)}};
+ assert.equal((await noteRespond(e,c,read,big)).status,413);
+ assert.equal((await noteRespond(e,c,read,{code:'note_payload_too_large'})).status,200);
+});
+test('Older APKs keep short notes but cannot receive the new note or contact pagination formats',async()=>{
+ const e=env(),c=await pair(e);await advertiseNotes(e,c,139);
+ const long=await tool(e,'jarviswake_save_note',{device_id:c.deviceId,request_id:crypto.randomUUID(),note_id:'',title:'Title',text:'x'.repeat(4001),expected_revision:0});
+ assert.equal(long.isError,true);assert.equal(long.content[0].text,'app_update_required');
+ const more=await tool(e,'jarviswake_find_contacts',{device_id:c.deviceId,request_id:crypto.randomUUID(),name:'Name',offset:20});
+ assert.equal(more.isError,true);assert.equal(more.content[0].text,'app_update_required');
+ const first=await tool(e,'jarviswake_find_contacts',{device_id:c.deviceId,request_id:crypto.randomUUID(),name:'Name'});
+ assert.equal(value(first).state,'pending');
+});
+test('Contact search accepts20 masked results per page with validated continuation and no new names inferred',async()=>{
+ const e=env(),c=await pair(e);await advertiseNotes(e,c,140);
+ const id=crypto.randomUUID(),args={device_id:c.deviceId,request_id:id,name:'Exact requested name',offset:20};
+ assert.equal(value(await tool(e,'jarviswake_find_contacts',args)).state,'pending');await claim(e,c,id);
+ const contacts=Array.from({length:20},(_,i)=>({contact_ref:crypto.randomUUID(),name:'Synthetic '+i,label:'Test',suffix:'0000'}));
+ const send=result=>worker.fetch(request('/device/respond',{deviceId:c.deviceId,requestId:id,result},{Authorization:'Bearer '+c.deviceToken}),e);
+ const result={code:'contacts_found',contacts,truncated:true,next_offset:40};
+ for(const delta of [{contacts:[...contacts,contacts[0]]},{next_offset:20},{next_offset:41},{truncated:false},{contacts:contacts.slice(1)}])
+  assert.equal((await send({...result,...delta})).status,400);
+ assert.equal((await send(result)).status,200);
+ assert.deepEqual(value(await tool(e,'jarviswake_status_result',{device_id:c.deviceId,request_id:id})).result,result);
+ for(const offset of [-20,1,21,10020]) assert.equal((await tool(e,'jarviswake_find_contacts',{...args,request_id:crypto.randomUUID(),offset})).isError,true);
 });

@@ -1,3 +1,5 @@
+> SUPERATO dalla decisione7novembre:256KiB, appunti8000/24KiB e ricerca20/pagina. Usare HANDOFF_BRIDGE_LIMITS_20261107.md; il testo seguente conserva soltanto lo storico.
+
 # Handoff cloud Jarvis — .118/140, trasferimento1MiB
 
 ## Ambito approvato

@@ -42,11 +42,26 @@ internal object BridgeActions {
             return FavoriteOperations.execute(c,deviceId,operation,command.getJSONObject("params"),::favoritesAllowed)
         }
         if(operation in BridgeProtocol.CONTACT_EXPORT_OPERATIONS) {
-            fun exportAllowed()=permitted() && BridgeSettings.enabled(c) && PhoneContactExport.enabled(c) &&
-                c.checkSelfPermission(Manifest.permission.READ_CONTACTS)==PackageManager.PERMISSION_GRANTED &&
-                SystemClock.elapsedRealtime()<deadline && !c.getSystemService(KeyguardManager::class.java).isKeyguardLocked
-            if(c.getSystemService(KeyguardManager::class.java).isKeyguardLocked) return result("locked")
-            return PhoneContactExport.execute(c,deviceId,operation,command.getJSONObject("params"),progress=progress,allowed=::exportAllowed)
+            val id=command.optString("requestId")
+            val rejection=java.util.concurrent.atomic.AtomicBoolean(false)
+            fun exportAllowed():Boolean {
+                val reason=when {
+                    !permitted() -> ContactExportDiagnostics.Reason.GENERATION_CHANGED
+                    !BridgeSettings.enabled(c) -> ContactExportDiagnostics.Reason.LINK_DISABLED
+                    !PhoneContactExport.enabled(c) -> ContactExportDiagnostics.Reason.COPY_DISABLED
+                    c.checkSelfPermission(Manifest.permission.READ_CONTACTS)!=PackageManager.PERMISSION_GRANTED -> ContactExportDiagnostics.Reason.CONTACT_PERMISSION
+                    SystemClock.elapsedRealtime()>=deadline -> ContactExportDiagnostics.Reason.DEADLINE
+                    c.getSystemService(KeyguardManager::class.java).isKeyguardLocked -> ContactExportDiagnostics.Reason.SCREEN_LOCKED
+                    else -> null
+                }
+                if(reason!=null && rejection.compareAndSet(false,true)) ContactExportDiagnostics.record(c,id,ContactExportDiagnostics.Stage.GUARD_REJECTED,reason=reason)
+                return reason==null
+            }
+            if(c.getSystemService(KeyguardManager::class.java).isKeyguardLocked) {
+                ContactExportDiagnostics.record(c,id,ContactExportDiagnostics.Stage.GUARD_REJECTED,reason=ContactExportDiagnostics.Reason.SCREEN_LOCKED)
+                return result("locked")
+            }
+            return PhoneContactExport.execute(c,deviceId,operation,command.getJSONObject("params"),requestId=id,progress=progress,allowed=::exportAllowed)
         }
         if(operation in BridgeProtocol.NOTE_OPERATIONS) {
             fun notesAllowed()=permitted() && BridgeSettings.enabled(c) && PhoneNotes.enabled(c) &&
@@ -64,7 +79,7 @@ internal object BridgeActions {
             if(c.getSystemService(KeyguardManager::class.java).isKeyguardLocked) return result("locked")
             if(!searchAllowed()) return result("cancelled")
             return try {
-                val found=BridgeContacts.search(c,deviceId,command.getJSONObject("params").getString("name"))
+                val found=BridgeContacts.search(c,deviceId,command.getJSONObject("params").getString("name"),command.getJSONObject("params").optInt("offset",0))
                 if(searchAllowed()) found else result("cancelled")
             } catch(e:BridgeFailure) { result(e.code) }
             catch(_:SecurityException) { result("permission_required") }
@@ -76,7 +91,7 @@ internal object BridgeActions {
         val p=command.optJSONObject("params") ?: return result("unavailable")
         return try {
             when(command.getString("operation")) {
-                "find_contacts" -> BridgeContacts.search(c,deviceId,p.getString("name"))
+                "find_contacts" -> BridgeContacts.search(c,deviceId,p.getString("name"),p.optInt("offset",0))
                 "navigate" -> {
                     val destination=p.getString("destination")
                     if(!BridgeProtocol.validText(destination,300)) throw BridgeFailure("unavailable")

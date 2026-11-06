@@ -1,3 +1,7 @@
+# Limiti .118/140 — sorgenti, verifica cloud pendente
+
+Testo fino a8000caratteri, titolo80; richiesta completa fino a24KiB/24576byte JSON incluso, tanto save_note quanto risposta read_note. Entrambi i vincoli sono obbligatori: un testo valido come caratteri può comunque superare il budget in byte dopo UTF-8/escaping. L'app restituisce note_payload_too_large per un risultato di lettura oltre il tetto; nessun troncamento o cancellazione dell'appunto. Default16KiB per altre operazioni.20metadati per pagina,100appunti e totale200000caratteri invariati. App precedenti non ricevono save_note oltre4000; serve APK140 per nuovi limiti. Regressioni interpretate57backend passate; Android/cloud/lint/build/firma/deploy da eseguire. Handoff HANDOFF_BRIDGE_LIMITS_20261107.md.
+
 # .86 — elenco aggiornato e comandi separati
 
 Aggiorna appunti e Nuovo appunto occupano la prima riga, in quest’ordine; tutte le note sono nella griglia sottostante e Indietro è ultimo largo. La lettura UI usa uno snapshot dell’intero archivio sotto lo stesso lock delle scritture, senza paginazione tra aggiornamenti concorrenti. Nessun nuovo archivio o migrazione.
@@ -48,7 +52,7 @@ Questo vale dove il plugin è disponibile e utilizzabile: non garantisce accesso
 
 Archivio autorevole in `noBackupFilesDir/local-notes-v1.enc`, cifrato AES-GCM con chiave Android Keystore dedicata `jarviswake.notes.v1`. Non usa la chiave o i record di abbinamento. Cancellare/revocare/rifare il solo collegamento non cancella gli appunti; normale riavvio e aggiornamento firmato conservano dati/chiave. Disinstallazione o cancellazione dati dell’app li elimina. Non è un sistema di backup: perdita/inaccessibilità della chiave o file corrotto restituiscono errore, senza creare silenziosamente un archivio vuoto sopra i dati.
 
-Scrittura AtomicFile sotto un’unica esclusione per UI/comandi, controllo revisione, sostituzione e rilettura. Limiti:100 appunti, titolo80 caratteri, testo4000, totale200.000 caratteri tra titoli e testi;20 metadati per pagina. Il contenuto non viene copiato nei log, export diagnostici, sorgenti Git o APK; l’app ha già allowBackup=false.
+Scrittura AtomicFile sotto un’unica esclusione per UI/comandi, controllo revisione, sostituzione e rilettura. Limiti:100 appunti, titolo80 caratteri, testo8000, totale200.000 caratteri tra titoli e testi;20 metadati per pagina. Il contenuto non viene copiato nei log, export diagnostici, sorgenti Git o APK; l’app ha già allowBackup=false.
 
 **Locale indica dove risiede l’archivio, non che i contenuti richiesti restino invisibili a ChatGPT.** Creazioni/aggiornamenti passano dal collegamento; le letture richieste restituiscono testo alla conversazione e possono restarvi secondo il normale funzionamento di ChatGPT. Il relay privato conserva temporaneamente richieste/risposte: scadenza logica2min dalla richiesta, rimozione alla successiva attività del dispositivo, nuova richiesta o consultazione dell’esito. Non c’è un timer di cancellazione fisica garantita in assenza di attività. Dopo la risposta vengono rimossi i parametri del comando. Restano metadati di deduplicazione senza testo per impedire replay; sul telefono ledger/outbox cifrati possono contenere la risposta richiesta, esclusi dalla diagnostica. Non salvare un segreto presumendo che una successiva lettura via ChatGPT resti esclusivamente sul telefono.
 
