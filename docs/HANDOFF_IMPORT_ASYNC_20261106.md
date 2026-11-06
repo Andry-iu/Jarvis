@@ -1,6 +1,16 @@
 # Importazione rubrica asincrona — sorgenti 0.5.116 / 138
 
-6 novembre 2026, Europe/Rome. Stato: modifica implementata nei sorgenti; test interpretati eseguiti, build Android e firma NON eseguite. Questo documento è il punto corrente di ripresa per il cloud Jarvis. La precedente .115 resta l'ultima versione compilata documentata.
+6 novembre 2026, Europe/Rome. Stato storico della preparazione: modifica implementata nei sorgenti; test interpretati eseguiti, build Android e firma NON eseguite. Questo documento è il punto corrente di ripresa per il cloud Jarvis. La precedente .115 resta l'ultima versione compilata documentata.
+
+## Completamento nel cloud Jarvis — 6 novembre 2026
+
+Richiesta esplicita di scaricare e compilare anche la .116. Main b08d0ec scaricato e integrato fast-forward nel checkout Jarvis permanente, senza modifiche locali preesistenti. Verificati identità/operatività ambiente, cache/toolchain e firma. I test mirati BridgeLinkWorkerIntegrationTest e PhoneContactExportTest SDK34/36 sono passati; verifica finale completa643test/66suite,0failure/error/skipped, lint55warning/0errori/fatal, build assemble riuscita. Passate5suite Node DOM/audio,50test Worker e13test Python rubrica, guida --check33argomenti/13579parole. Nessuna correzione ai sorgenti ricevuti è risultata necessaria.
+
+Backend pubblicato e verificato sullo STESSO Site privato: source ea3fcfbd5382db33e922e353a3b74bce43fd843d, deployment appgdep_6aee29d62910819188f41a04d32a9240 succeeded/has_mcp=true/env2; pairing, audience e segreti conservati. Tool guida reale riletto .116/138. Nessun nuovo Site/plugin/backend, nessuna API Google a pagamento o importazione reale usata per verificare il rilascio.
+
+Unico APK Telefono .116/138 firmato permanentemente:90.003.199byte, SHA256 28ad4654772d3842818b7065425f83c00200020a06ff3629b6fe8fb04b8ee96a. Certificato atteso, v2/v3, versione/ABI/CRC ZIP e zipalign/ELF16KB verificati; temporanei di firma rimossi, checksum in releases/0.5.116/SHA256SUMS e binario/report fuori Git. Ambiente e dettagli completi in VERIFICATION.md. Nessun APK Watch o agente Windows modificato.
+
+Rimangono ESCLUSIVAMENTE da collaudare sul telefono le condizioni fisiche elencate sotto; questa compilazione non prova una rubrica realmente importata. Conservati anche i residui .115, l’appunto regole non confermato e gli altri sviluppi della roadmap. Le sezioni seguenti documentano la preparazione precedente, seguita dal completamento cloud qui sopra.
 
 ## Richiesta e riscontro
 

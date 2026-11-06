@@ -1,3 +1,9 @@
+## 0.5.116 / 138 — importazione rubrica asincrona
+
+- Raccolta dopo claim su thread dedicato, heartbeat e stati running/awaiting_device senza timeout di durata totale. Rinnovo snapshot30min a ogni pagina valida; permessi/revoca/sblocco/deduplicazione conservati.
+- Timeout HTTP separato15s e outbox differita senza impedire nuovi poll. Backend aggiornato sullo stesso Site owner-private, stesso pairing e segreti; regole delle altre azioni preservate.
+- Verifica cloud:643test Android/66suite SDK34/36, lint55warning/0errori,5suite Node,50test Worker simulati e13test Python rubrica passati. Unico APK Telefono firmato permanentemente, checksum e verbale aggiornati. Nessuna importazione reale o prova fisica implicita; Watch/Windows invariati.
+
 ## 0.5.115 / 137 — collegamento persistente e mute temporaneo
 
 - Collegamento opt-in con servizio foreground indipendente dalla pagina e dal microfono wake; notifica/disattivazione, recupero worker e diagnostica bounded. Causa effettiva sul Galaxy da verificare.
