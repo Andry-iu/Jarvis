@@ -1,3 +1,5 @@
+0.5.116 / 138 — SORGENTI PREPARATI, NON COMPILATI NÉ RILASCIATI (6 novembre 2026). Importazione rubrica asincrona dopo claim, senza timeout di durata totale, heartbeat e stati running/awaiting_device; rinnovo dello snapshot a ogni pagina valida. Timeout HTTP separato e outbox che non impedisce nuovi poll. Dettagli, prove, limiti e istruzioni cloud in docs/HANDOFF_IMPORT_ASYNC_20261106.md. Backend da distribuire sullo STESSO Site prima del collaudo; nessun nuovo pairing. Build/test Android, firma e APK da eseguire esclusivamente nel cloud Jarvis. Nessuna rubrica reale importata da questa modifica. Gli stati di rilascio sotto sono storici.
+
 ## 0.5.115 / 137 — compilazione da Git e verifica cloud, 6 novembre 2026
 
 Richiesta esplicita di scaricare il main attuale e consegnare l’APK firmato. Checkout iniziale pulito d51abe4; fetch e fast-forward al nuovo main df323bbd303233d3aa2cc70d91818065bbd1458e, con handoff .115 letto prima della compilazione. Nessuna cronologia o modifica preesistente cancellata. Ambiente obbligatorio Jarvis `/workspace/Jarvis`, cache/toolchain `/workspace/.jarvis-cloud`, configurazione `f68203bf-ad95-493f-b5d1-b05e44686cd2~cecfg_6adcda8d13e081918b4bd1e231e145b8`, runtime `ccarenv_b64_Y2NhcmVudl8wYjg0YTNjYzkwY2M4MTkxYjIxNjc2ZmIzNDNkMjRlZA`: osservazioni correnti/running, rete enforced, Passphrase runtime pronta. Nessuna toolchain alternativa o Actions, nessun segreto richiesto/stampato.
@@ -1202,3 +1204,4 @@ La 0.5.26 introdusse l'attività visibile sopra il keyguard senza richiedere aut
 - [Limitazioni dei servizi foreground e permesso microfono](https://developer.android.com/develop/background-work/services/fgs/restrictions-bg-start)
 
 La base storica di verifica 0.5.26 e la ricostruzione della causa del vuoto di continuità sono riassunte in `CONTINUITY.md`.
+

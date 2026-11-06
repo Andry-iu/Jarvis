@@ -7,6 +7,7 @@ import tempfile
 import time
 import unittest
 import uuid
+from unittest import mock
 
 spec = importlib.util.spec_from_file_location('phonebook', Path(__file__).parents[1] / 'phonebook.py')
 m = importlib.util.module_from_spec(spec);spec.loader.exec_module(m)
@@ -125,4 +126,36 @@ class PhonebookTest(unittest.TestCase):
         self.book.key_path.chmod(0o644)
         with self.assertRaisesRegex(m.BookError,'unsafe_file'):m.Book(self.book.root)
 
+    def test_long_running_and_missing_heartbeat_keep_the_same_request_without_claiming_completion(self):
+        self.book.begin(self.device);args=self.book.plan()['args']
+        for state in ('running', 'awaiting_device', 'running'):
+            self.book.accept({'state':state,'device_id':self.device,'request_id':args['request_id'],
+                              'progress':{'stage':'phones','observed_at':int(time.time()*1000)}})
+            self.assertEqual(self.book.plan()['args']['request_id'], args['request_id'])
+            self.assertEqual(self.book.status()['remote_state'], state)
+            self.assertTrue(self.book.status()['pending'])
+            self.assertEqual(self.book.status()['contacts'],0)
+        self.assertEqual(m.Book(self.book.root).plan(),self.book.plan())
+
+    def test_active_multichunk_transfer_renews_inactivity_lease_beyond_the_original_expiry(self):
+        a=contact();a['name']='à'*8000
+        raw,meta=self.start([a]);initial=meta['expires_at']
+        for offset in range(0,len(raw),m.CHUNK):
+            now=initial-1000 if offset==0 else initial+1000
+            expiry=now+1800000
+            chunk=raw[offset:offset+m.CHUNK];end=offset+len(chunk)
+            with mock.patch.object(m.time,'time',return_value=now/1000):
+                self.book.accept(self.response({'code':'contacts_export_page','snapshot_id':meta['snapshot_id'],
+                    'offset':offset,'next_offset':None if end==len(raw) else end,'expires_at':expiry,
+                    'data_base64':base64.b64encode(chunk).decode()}))
+        self.assertFalse(self.book.status()['pending']);self.assertEqual(self.book.status()['contacts'],1)
+
+    def test_progress_with_private_or_unknown_fields_does_not_advance_the_import(self):
+        self.book.begin(self.device);args=self.book.plan()['args'];plan=self.book.plan()
+        with self.assertRaisesRegex(m.BookError,'invalid_progress'):
+            self.book.accept({'state':'running','device_id':self.device,'request_id':args['request_id'],
+                'progress':{'stage':'phones','observed_at':int(time.time()*1000),'number':'PRIVATE'}})
+        self.assertEqual(self.book.plan(),plan);self.assertEqual(self.book.status()['contacts'],0)
+
 if __name__=='__main__':unittest.main()
+

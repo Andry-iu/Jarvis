@@ -19,12 +19,16 @@ internal object BridgeLink {
     // Test transport replaces only the authenticated I/O boundary, never the worker/owner logic.
     internal var credentialsReader:(Context)->BridgeCredentials?=BridgeSettings::read
     internal var transport:((BridgeCredentials,String,JSONObject,Int)->JSONObject)?=null
+    internal var commandReader:(Context)->JSONObject={BridgeSettings.readPrivate(it,"commands")}
+    internal var commandWriter:(Context,JSONObject)->Unit={c,value->BridgeSettings.writePrivate(c,"commands",value)}
     private val main=Handler(Looper.getMainLooper())
     private val owners=HashSet<String>()
     private val actionLock=Object()
     @Volatile private var generation=0
     @Volatile private var worker:Thread?=null
-    @Volatile private var connection:HttpURLConnection?=null
+    private val connections=java.util.concurrent.ConcurrentHashMap.newKeySet<HttpURLConnection>()
+    @Volatile private var exportJob:Thread?=null
+    @Volatile private var exportRequest:String?=null
     private var fastUntil=0L
     @Volatile var status="Collegamento disattivato."
         private set
@@ -43,7 +47,7 @@ internal object BridgeLink {
     }
     fun refresh(context:Context) {
         check(Looper.myLooper()==Looper.getMainLooper())
-        generation++;connection?.disconnect();worker?.interrupt()
+        generation++;connections.forEach {it.disconnect()};worker?.interrupt()
         val epoch=generation
         if(owners.isEmpty() || !BridgeSettings.enabled(context)) {
             status=if(BridgeSettings.enabled(context)) "Collegamento abilitato; servizio collegamento non operativo." else "Collegamento disattivato."
@@ -58,7 +62,7 @@ internal object BridgeLink {
             var failures=0
             while(epoch==generation && !Thread.currentThread().isInterrupted) {
                 try {
-                    flushOutbox(app,credentials,epoch)
+                    val outboxReady=flushOutbox(app,credentials,epoch)
                     val info=app.packageManager.getPackageInfo(app.packageName,0)
                     val polledAt=SystemClock.elapsedRealtime()
                     val reply=post(credentials,"/device/poll",JSONObject().put("deviceId",credentials.deviceId)
@@ -66,6 +70,7 @@ internal object BridgeLink {
                     if(epoch!=generation) break
                     val command=reply.optJSONObject("request")
                     if(command!=null) {
+                        var delivered=true
                         fastUntil=SystemClock.elapsedRealtime()+5000L
                         val id=command.optString("requestId");val op=command.optString("operation")
                         check(BridgeProtocol.validRequest(id,op,command.optLong("createdAt"),command.optLong("expiresAt")))
@@ -84,11 +89,17 @@ internal object BridgeLink {
                             BridgeActions.onMain({epoch==generation}) { owner(app,"command",true) }
                             try {
                                 synchronized(actionLock) { executeOnce(app,credentials,command,deadline,epoch) }
-                                flushOutbox(app,credentials,epoch)
+                                delivered=flushOutbox(app,credentials,epoch)
                             } finally { main.post { owner(app,"command",false) } }
                         }
-                        if(epoch==generation) status="Risposta consegnata al servizio; verifica l’esito in ChatGPT."
-                    } else if(epoch==generation && (failures>0 || status=="Connessione al servizio…")) status="Collegamento disponibile; attendo una richiesta."
+                        if(epoch==generation) status=if(exportJob?.isAlive==true) "Importazione rubrica in corso."
+                            else if(delivered) "Risposta consegnata al servizio; verifica l’esito in ChatGPT."
+                            else "Risultato in attesa di consegna; collegamento ancora attivo."
+                    } else if(epoch==generation) {
+                        if(exportJob?.isAlive==true) status="Importazione rubrica in corso."
+                        else if(!outboxReady) status="Risultato in attesa di consegna; collegamento ancora attivo."
+                        else if(failures>0 || status=="Connessione al servizio…" || status=="Importazione rubrica in corso." || status=="Risultato in attesa di consegna; collegamento ancora attivo.") status="Collegamento disponibile; attendo una richiesta."
+                    }
                     failures=0;Thread.sleep(BridgePollPolicy.delay(VoiceCycle.active,SystemClock.elapsedRealtime()<fastUntil))
                 } catch(_:InterruptedException) { break }
                 catch(error:Exception) {
@@ -116,62 +127,102 @@ internal object BridgeLink {
     }
     private fun executeOnce(c:Context,auth:BridgeCredentials,command:JSONObject,deadline:Long,epoch:Int) {
         val id=command.getString("requestId");val key=auth.deviceId+":"+id
-        val ledger=BridgeSettings.readPrivate(c,"commands")
+        val ledger=commandReader(c)
         val previous=ledger.optJSONObject(key)
         if(BridgeReplayPolicy.decide(previous!=null,previous?.has("result")==true)==BridgeReplayPolicy.Decision.SAVED) return
         if(BridgeReplayPolicy.decide(previous!=null,false)==BridgeReplayPolicy.Decision.UNCERTAIN) {
-            previous!!.put("result",result("outcome_uncertain"));BridgeSettings.writePrivate(c,"commands",ledger);return
+            if(exportRequest==key && exportJob?.isAlive==true) return
+            previous!!.put("result",result("outcome_uncertain"));commandWriter(c,ledger);return
         }
-        while(ledger.length()>=64) ledger.remove(ledger.keys().asSequence().minByOrNull { ledger.getJSONObject(it).optLong("at") }!!)
+        while(ledger.length()>=64) ledger.remove(ledger.keys().asSequence().filter {it!=exportRequest}.minByOrNull { ledger.getJSONObject(it).optLong("at") }!!)
         val record=JSONObject().put("at",System.currentTimeMillis()).put("requestId",id).put("deviceId",auth.deviceId).put("acked",false).put("operation",command.getString("operation"))
         ledger.put(key,record)
         // Persist consumption before a network claim or any phone action. Crashes never re-dispatch.
-        BridgeSettings.writePrivate(c,"commands",ledger)
+        commandWriter(c,ledger)
         val outcome=try {
             val claimAt=SystemClock.elapsedRealtime()
             val claim=post(auth,"/device/claim",JSONObject().put("deviceId",auth.deviceId).put("requestId",id),epoch)
             if(command.optString("operation") in setOf("call_contact","call_by_name")) NativeRuntimeSnapshot.save(c,id,"bridge_transport","stage=claim roundtrip_ms=${SystemClock.elapsedRealtime()-claimAt}")
             if(claim.optString("state")!="claimed") result("outcome_uncertain")
-            else BridgeActions.execute(c,auth.deviceId,command,deadline,progress={ stage ->
+            else if(command.getString("operation")=="contacts_export_start") {
+                if(exportJob?.isAlive==true) result("contacts_export_busy") else {
+                    startExport(c,auth,command,epoch,key)
+                    return
+                }
+            } else BridgeActions.execute(c,auth.deviceId,command,deadline,progress={ stage ->
                 post(auth,"/device/progress",JSONObject().put("deviceId",auth.deviceId).put("requestId",id).put("stage",stage),epoch)
             }) { epoch==generation }
         } catch(_:Exception) { result("outcome_uncertain") }
-        record.put("result",outcome);ledger.put(key,record);BridgeSettings.writePrivate(c,"commands",ledger)
+        record.put("result",outcome);ledger.put(key,record);commandWriter(c,ledger)
     }
-    private fun flushOutbox(c:Context,auth:BridgeCredentials,epoch:Int) = synchronized(actionLock) {
-        val ledger=BridgeSettings.readPrivate(c,"commands")
+    /** Claimed export runs independently: no total-duration timeout, with live heartbeats. */
+    private fun startExport(c:Context,auth:BridgeCredentials,command:JSONObject,epoch:Int,key:String) {
+        val id=command.getString("requestId");val ownerId="export:$id"
+        BridgeActions.onMain({epoch==generation}) {owner(c,ownerId,true)}
+        exportRequest=key
+        exportJob=Thread({
+            val phase=java.util.concurrent.atomic.AtomicReference("starting")
+            val active=java.util.concurrent.atomic.AtomicBoolean(true)
+            val heartbeat=java.util.Timer("Jarvis-export-heartbeat",true)
+            heartbeat.schedule(object:java.util.TimerTask(){override fun run(){
+                if(!active.get() || epoch!=generation) return
+                try {post(auth,"/device/progress",JSONObject().put("deviceId",auth.deviceId).put("requestId",id).put("stage",phase.get()),epoch)}
+                catch(_:Exception) {NativeRuntimeSnapshot.save(c,id,"bridge_transport","stage=export_heartbeat_deferred")}
+            }},0,5000)
+            val outcome=try {
+                BridgeActions.execute(c,auth.deviceId,command,Long.MAX_VALUE,progress={phase.set(it)}) {epoch==generation}
+            } catch(e:BridgeFailure) {result(e.code)} catch(_:Exception) {result("contacts_export_unavailable")}
+            finally {active.set(false);heartbeat.cancel()}
+            synchronized(actionLock) {
+                val ledger=commandReader(c);val record=ledger.optJSONObject(key)
+                if(record!=null && !record.has("result")) {record.put("result",outcome).put("completedAt",System.currentTimeMillis());commandWriter(c,ledger)}
+                exportRequest=null
+            }
+            main.post {owner(c,ownerId,false)}
+        },"Jarvis-contact-export").apply {isDaemon=true;start()}
+    }
+    private fun flushOutbox(c:Context,auth:BridgeCredentials,epoch:Int):Boolean = synchronized(actionLock) {
+        val ledger=commandReader(c)
         for(key in ledger.keys().asSequence().toList()) {
             val item=ledger.getJSONObject(key)
             if(item.optString("deviceId")!=auth.deviceId || item.optBoolean("acked") || !item.has("result")) continue
             try {
                 val export=item.optString("operation") in BridgeProtocol.CONTACT_EXPORT_OPERATIONS
-                if(export && (!PhoneContactExport.enabled(c) || System.currentTimeMillis()-item.optLong("at")>120_000 ||
+                if(export && (!PhoneContactExport.enabled(c) || System.currentTimeMillis()-item.optLong("completedAt",item.optLong("at"))>120_000 ||
                     c.checkSelfPermission(Manifest.permission.READ_CONTACTS)!=PackageManager.PERMISSION_GRANTED ||
                     c.getSystemService(android.app.KeyguardManager::class.java).isKeyguardLocked)) item.put("result",result("contacts_export_expired"))
                 post(auth,"/device/respond",JSONObject().put("deviceId",auth.deviceId).put("requestId",item.getString("requestId"))
                     .put("result",item.getJSONObject("result")),epoch)
                 item.put("acked",true)
                 if(item.optString("operation") in BridgeProtocol.CONTACT_EXPORT_OPERATIONS) item.put("result",result("contacts_export_expired"))
-                BridgeSettings.writePrivate(c,"commands",ledger)
+                commandWriter(c,ledger)
             } catch(e:BridgeHttpFailure) {
-                if(e.statusCode!=409) throw e
+                if(e.statusCode!=409) {
+                    if(e.statusCode in setOf(401,403)) throw e
+                    NativeRuntimeSnapshot.save(c,item.getString("requestId"),"bridge_transport","stage=outbox_deferred code=http_${e.statusCode}")
+                    return@synchronized false
+                }
                 // Expired/never claimed: retain the consumed local record, never repeat the phone action.
                 item.put("acked",true)
                 if(item.optString("operation") in BridgeProtocol.CONTACT_EXPORT_OPERATIONS) item.put("result",result("contacts_export_expired"))
-                BridgeSettings.writePrivate(c,"commands",ledger)
+                commandWriter(c,ledger)
+            } catch(_:java.io.IOException) {
+                NativeRuntimeSnapshot.save(c,item.getString("requestId"),"bridge_transport","stage=outbox_deferred code=network")
+                return@synchronized false
             }
         }
+        true
     }
     private class BridgeHttpFailure(val statusCode:Int):Exception()
     private fun post(c:BridgeCredentials,path:String,data:JSONObject,epoch:Int):JSONObject {
         check(BridgeProtocol.validOrigin(c.origin))
         if(epoch!=generation) throw InterruptedException()
         transport?.let { return it(c,path,data,epoch) }
-        val conn=URL(c.origin+path).openConnection() as HttpURLConnection;connection=conn
+        val conn=URL(c.origin+path).openConnection() as HttpURLConnection;connections.add(conn)
         try {
             if(epoch!=generation) throw InterruptedException()
             conn.requestMethod="POST";conn.instanceFollowRedirects=false
-            conn.connectTimeout=4000;conn.readTimeout=4000;conn.doOutput=true
+            conn.connectTimeout=4000;conn.readTimeout=15000;conn.doOutput=true
             conn.setRequestProperty("Content-Type","application/json")
             conn.setRequestProperty("Authorization","Bearer ${c.deviceToken}")
             conn.setRequestProperty("OAI-Sites-Authorization","Bearer ${c.siteAccess}")
@@ -182,7 +233,7 @@ internal object BridgeLink {
                 while(true) { val count=input.read(buffer);if(count<0) break;check(output.size()+count<=16384);output.write(buffer,0,count) }
                 output.toString("UTF-8")
             })
-        } finally { if(connection===conn) connection=null;conn.disconnect() }
+        } finally {connections.remove(conn);conn.disconnect()}
     }
     private fun capture(c:Context):JSONObject {
         val info=c.packageManager.getPackageInfo(c.packageName,0)
@@ -199,3 +250,4 @@ internal object BridgeLink {
             .put("screenInteractive",c.getSystemService(PowerManager::class.java).isInteractive)
     }
 }
+

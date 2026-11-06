@@ -118,6 +118,8 @@ class Book:
         return self.status()
 
     def next(self, state, operation, params):
+        state['remote_state'] = 'pending'
+        state.pop('progress', None)
         state['pending'] = {'operation': operation, 'queued': False,
                             'args': {'device_id': state['device'], **params, 'request_id': str(uuid.uuid4())}}
         self.save(state)  # Persist request identity BEFORE issuing a tool call.
@@ -135,8 +137,15 @@ class Book:
         pending = state['pending']
         args = pending['args']
         require(response.get('device_id') == state['device'] and response.get('request_id') == args['request_id'], 'wrong_response')
-        if response.get('state') == 'pending':
+        if response.get('state') in ('pending', 'running', 'awaiting_device'):
             pending['queued'] = True
+            state['remote_state'] = response['state']
+            progress = response.get('progress')
+            if progress is not None:
+                require(isinstance(progress, dict) and set(progress) == {'stage', 'observed_at'} and
+                        progress['stage'] in ('starting', 'contacts', 'phones', 'emails', 'verifying', 'freezing') and
+                        integer(progress['observed_at'], 1, int(time.time()*1000)+60000), 'invalid_progress')
+                state['progress'] = progress
             self.save(state)
             return self.status()
         require(response.get('state') == 'responded' and response.get('source') == 'paired_device' and
@@ -160,7 +169,9 @@ class Book:
             manifest = state['manifest']
             exact(result, 'code snapshot_id offset next_offset data_base64 expires_at')
             require(result['code'] == 'contacts_export_page' and result['snapshot_id'] == manifest['snapshot_id'] and
-                    result['offset'] == args['offset'] and result['expires_at'] == manifest['expires_at'])
+                    result['offset'] == args['offset'] and
+                    integer(result['expires_at'], manifest['expires_at'], int(time.time()*1000)+1805000))
+            manifest['expires_at'] = result['expires_at']
             require(isinstance(result['data_base64'], str) and len(result['data_base64']) <= 8192)
             try:
                 chunk = base64.b64decode(result['data_base64'], validate=True)
@@ -248,6 +259,9 @@ class Book:
     def status(self):
         result = {'pending': (self.root / 'pending.enc').exists(), 'contacts': 0, 'phones': 0, 'emails': 0,
                   'full_updated_at': None, 'updated_at': None}
+        if result['pending']:
+            pending = self.state()
+            result.update(remote_state=pending.get('remote_state', 'pending'), progress=pending.get('progress'))
         if not (self.root / 'book.sqlite3').exists():
             return result
         db = self.connect()
@@ -316,3 +330,4 @@ def main():
 
 if __name__ == '__main__':
     raise SystemExit(main())
+

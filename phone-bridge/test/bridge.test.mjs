@@ -234,7 +234,7 @@ test('Status remains compatible with old snapshots and reports only the notes co
 
 test('The complete guide is available without pairing or a running phone',async()=>{
  const e=env();const r=value(await tool(e,'jarviswake_guide',{topic:'indice',query:''}));
- assert.equal(r.guide_version,'0.5.115');assert.equal(r.version_code,137);assert.equal(r.phone_required,false);assert.ok(r.topics.length>=19);
+ assert.equal(r.guide_version,'0.5.116');assert.equal(r.version_code,138);assert.equal(r.phone_required,false);assert.ok(r.topics.length>=19);
  assert.equal(e.BUCKET.data.size,0);
  for(const topic of ['wake','cover','audio','chatgpt','collegamento','appunti','plugin','maps','chiamate','whatsapp','diagnostica']) assert.ok(r.topics.some(t=>t.topic===topic));
 });
@@ -515,8 +515,47 @@ test('Full-number export exchanges expire and payloads disappear without reexecu
  const {e,c,auth}=await exportFixture(),id=crypto.randomUUID();
  await tool(e,'jarviswake_contacts_export_start',{device_id:c.deviceId,contact_ref:'',request_id:id});await claim(e,c,id);
  await worker.fetch(request('/device/respond',{deviceId:c.deviceId,requestId:id,result:exportManifest()},auth),e);
- const key=`requests/${c.deviceId}/${id}.json`,cmd=await (await e.BUCKET.get(key)).json();cmd.createdAt=Date.now()-120001;await e.BUCKET.put(key,JSON.stringify(cmd));
+ const key=`results/${c.deviceId}/${id}.json`,terminal=await (await e.BUCKET.get(key)).json();terminal.received_at=Date.now()-120001;await e.BUCKET.put(key,JSON.stringify(terminal));
  assert.equal(value(await tool(e,'jarviswake_status_result',{device_id:c.deviceId,request_id:id})).state,'response_expired');
  assert.equal(await e.BUCKET.get(`results/${c.deviceId}/${id}.json`),null);
  assert.equal(value(await tool(e,'jarviswake_contacts_export_start',{device_id:c.deviceId,contact_ref:'',request_id:id})).state,'outcome_uncertain');
 });
+
+test('Claimed export remains a live job beyond delivery and payload lifetimes, with monotonic heartbeats',async()=>{
+ const {e,c,auth}=await exportFixture(),id=crypto.randomUUID();
+ await tool(e,'jarviswake_contacts_export_start',{device_id:c.deviceId,contact_ref:'',request_id:id});await claim(e,c,id);
+ const key=`requests/${c.deviceId}/${id}.json`,cmd=await (await e.BUCKET.get(key)).json();
+ cmd.createdAt=Date.now()-3*60*60*1000;cmd.expiresAt=cmd.createdAt+25000;await e.BUCKET.put(key,JSON.stringify(cmd));
+ const progress=stage=>worker.fetch(request('/device/progress',{deviceId:c.deviceId,requestId:id,stage},auth),e);
+ assert.equal((await progress('phones')).status,200);
+ let state=value(await tool(e,'jarviswake_status_result',{device_id:c.deviceId,request_id:id}));
+ assert.equal(state.state,'running');assert.equal(state.progress.stage,'phones');assert.ok(state.age_ms>=0);
+ await progress('contacts');state=value(await tool(e,'jarviswake_status_result',{device_id:c.deviceId,request_id:id}));
+ assert.equal(state.progress.stage,'phones');
+ // Polling and unrelated enqueue cleanup cannot delete or dispatch this claimed job again.
+ const polled=await (await worker.fetch(request('/device/poll',{deviceId:c.deviceId,versionCode:138,operations:exportOps},auth),e)).json();
+ assert.equal(polled.request,null);await tool(e,'jarviswake_request_status',{device_id:c.deviceId});
+ assert.notEqual(await e.BUCKET.get(key),null);
+ assert.equal((await claim(e,c,id)).status,409);
+ const manifest=exportManifest();assert.equal((await worker.fetch(request('/device/respond',{deviceId:c.deviceId,requestId:id,result:manifest},auth),e)).status,200);
+ assert.equal(value(await tool(e,'jarviswake_status_result',{device_id:c.deviceId,request_id:id})).state,'responded');
+ assert.equal((await progress('freezing')).status,200);
+ assert.deepEqual(value(await tool(e,'jarviswake_status_result',{device_id:c.deviceId,request_id:id})).result,manifest);
+});
+
+test('Lost export heartbeat reports awaiting device without success, deletion or automatic reexecution',async()=>{
+ const {e,c,auth}=await exportFixture(),id=crypto.randomUUID();
+ await tool(e,'jarviswake_contacts_export_start',{device_id:c.deviceId,contact_ref:'',request_id:id});await claim(e,c,id);
+ await e.BUCKET.put(`progress/${c.deviceId}/${id}.json`,JSON.stringify({stage:'contacts',observed_at:Date.now()-60000}));
+ assert.equal(value(await tool(e,'jarviswake_status_result',{device_id:c.deviceId,request_id:id})).state,'awaiting_device');
+ assert.equal(value(await tool(e,'jarviswake_contacts_export_start',{device_id:c.deviceId,contact_ref:'',request_id:id})).state,'awaiting_device');
+ for(const data of [{stage:'phones',number:'PRIVATE'},{stage:'invented'},{stage:'contacts'}]) {
+  const other=crypto.randomUUID();
+  assert.notEqual((await worker.fetch(request('/device/progress',{deviceId:c.deviceId,requestId:other,...data},auth),e)).status,200);
+ }
+ assert.equal((await worker.fetch(request('/device/progress',{deviceId:c.deviceId,requestId:id,stage:'emails'},auth),e)).status,200);
+ assert.equal(value(await tool(e,'jarviswake_status_result',{device_id:c.deviceId,request_id:id})).state,'running');
+ assert.equal((await worker.fetch(request('/device/respond',{deviceId:c.deviceId,requestId:id,result:{code:'contacts_export_busy'}},auth),e)).status,200);
+ assert.equal(value(await tool(e,'jarviswake_status_result',{device_id:c.deviceId,request_id:id})).result.code,'contacts_export_busy');
+});
+

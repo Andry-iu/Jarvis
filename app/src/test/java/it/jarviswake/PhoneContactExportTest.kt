@@ -143,4 +143,14 @@ class PhoneContactExportTest {
         failure("contacts_export_expired"){PhoneContactExport.page("d",old,0){true}}
         failure("contacts_export_too_large"){PhoneContactExport.freeze("d",JSONObject().put("padding","x".repeat(PhoneContactExport.MAX_BYTES))){true}}
     }
+    @Test fun activePageReadsRenewTheInactivityLeaseBeyondTheOriginalSnapshotLifetime() {
+        val id=PhoneContactExport.freeze("d",body()){true}.getString("snapshot_id")
+        clock+=PhoneContactExport.TTL-1
+        assertEquals("contacts_export_page",PhoneContactExport.page("d",id,0){true}.getString("code"))
+        clock+=1000
+        assertEquals("contacts_export_page",PhoneContactExport.page("d",id,0){true}.getString("code"))
+        clock+=PhoneContactExport.TTL
+        failure("contacts_export_expired"){PhoneContactExport.page("d",id,0){true}}
+    }
 }
+

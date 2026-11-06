@@ -19,7 +19,7 @@ internal object PhoneContactExport {
     const val CHUNK=6144
     const val MAX_BYTES=8*1024*1024
     const val TTL=30*60*1000L
-    private data class Snapshot(val device:String,val id:String,val bytes:ByteArray,val until:Long,val expires:Long)
+    private data class Snapshot(val device:String,val id:String,val bytes:ByteArray,var until:Long,var expires:Long)
     private var snapshot:Snapshot?=null
     internal var now:()->Long=SystemClock::elapsedRealtime
     fun enabled(c:Context)=c.getSharedPreferences("contact_export",Context.MODE_PRIVATE).getBoolean("enabled",false)
@@ -31,15 +31,14 @@ internal object PhoneContactExport {
     private fun checkAllowed(allowed:()->Boolean) { if(!allowed()) throw BridgeFailure("cancelled") }
     private fun text(v:String?):String { val s=v.orEmpty();if(s.length>8192) throw BridgeFailure("contacts_export_too_large");return s }
     /** No filtering/deduplication by number or name: Android aggregate IDs and data-row IDs are retained. */
-    internal fun collect(c:Context,selected:BridgeContact?,allowed:()->Boolean):JSONObject {
+    internal fun collect(c:Context,selected:BridgeContact?,progress:(String)->Unit={},allowed:()->Boolean):JSONObject {
         val rows=linkedMapOf<String,JSONObject>()
         fun query(uri:Uri,projection:Array<String>,selection:String?=null,args:Array<String>?=null,visit:(android.database.Cursor)->Unit) {
             checkAllowed(allowed)
             val signal=android.os.CancellationSignal()
-            // Provider execution is bounded even if it blocks before returning its cursor.
+            // A live provider query has no fixed total-duration limit. Revocation still cancels it.
             val watchdog=java.util.Timer(true)
-            val queryUntil=now()+20_000
-            watchdog.schedule(object:java.util.TimerTask(){ override fun run(){ if(now()>=queryUntil || !allowed()) signal.cancel() } },100,100)
+            watchdog.schedule(object:java.util.TimerTask(){ override fun run(){ if(!allowed()) signal.cancel() } },100,100)
             try { (c.contentResolver.query(uri,projection,selection,args,null,signal) ?: throw BridgeFailure("contacts_export_unavailable")).use { cursor ->
                 while(cursor.moveToNext()) { checkAllowed(allowed);visit(cursor) }
             } } finally { watchdog.cancel() }
@@ -66,7 +65,8 @@ internal object PhoneContactExport {
                         .put("name",text(cur.getString(2))).put("phones",JSONArray()).put("emails",JSONArray())
                 };return stamps
             }
-            val before=headers();var size=0L
+            progress("contacts");val before=headers();var size=0L
+            progress("phones")
             query(Phone.CONTENT_URI,arrayOf(Phone.CONTACT_ID,Phone._ID,Phone.NUMBER,Phone.TYPE,Phone.LABEL),
                 if(selected==null) null else Phone._ID+"=?",selected?.let {arrayOf(it.row.toString())}) { cur ->
                 val row=rows[cur.getString(0)] ?: throw BridgeFailure("contacts_export_changed")
@@ -74,12 +74,14 @@ internal object PhoneContactExport {
                 size+=n.length+label.length+100;if(size>MAX_BYTES) throw BridgeFailure("contacts_export_too_large")
                 row.getJSONArray("phones").put(JSONObject().put("id",cur.getString(1)).put("number",n).put("label",label))
             }
+            progress("emails")
             if(selected==null) query(Email.CONTENT_URI,arrayOf(Email.CONTACT_ID,Email._ID,Email.ADDRESS,Email.TYPE,Email.LABEL)) { cur ->
                 val row=rows[cur.getString(0)] ?: throw BridgeFailure("contacts_export_changed")
                 val a=text(cur.getString(2));val label=text(Email.getTypeLabel(c.resources,cur.getInt(3),cur.getString(4)).toString())
                 size+=a.length+label.length+100;if(size>MAX_BYTES) throw BridgeFailure("contacts_export_too_large")
                 row.getJSONArray("emails").put(JSONObject().put("id",cur.getString(1)).put("address",a).put("label",label))
             }
+            progress("verifying")
             if(before!=headers()) throw BridgeFailure("contacts_export_changed")
             if(selected!=null && (rows.size!=1 || rows.values.single().getJSONArray("phones").length()!=1)) throw BridgeFailure("contact_changed")
         }
@@ -103,11 +105,13 @@ internal object PhoneContactExport {
         if(device!=s.device || id!=s.id) throw BridgeFailure("contacts_export_expired")
         if(offset<0 || offset>=s.bytes.size || offset%CHUNK!=0) throw BridgeFailure("invalid_export_offset")
         checkAllowed(allowed);val end=minOf(offset+CHUNK,s.bytes.size)
+        // Retention is an inactivity limit, renewed by each verified page request.
+        s.until=now()+TTL;s.expires=System.currentTimeMillis()+TTL
         return result("contacts_export_page").put("snapshot_id",s.id).put("offset",offset).put("expires_at",s.expires)
             .put("next_offset",if(end==s.bytes.size) JSONObject.NULL else end)
             .put("data_base64",Base64.encodeToString(s.bytes.copyOfRange(offset,end),Base64.NO_WRAP))
     }
-    fun execute(c:Context,device:String,op:String,p:JSONObject,allowed:()->Boolean):JSONObject = try {
+    fun execute(c:Context,device:String,op:String,p:JSONObject,progress:(String)->Unit={},allowed:()->Boolean):JSONObject = try {
         if(!enabled(c)) throw BridgeFailure("contacts_export_disabled")
         if(c.checkSelfPermission(Manifest.permission.READ_CONTACTS)!=PackageManager.PERMISSION_GRANTED) throw BridgeFailure("permission_required")
         checkAllowed(allowed)
@@ -116,9 +120,9 @@ internal object PhoneContactExport {
                 val ref=p.getString("contact_ref")
                 if(ref.isNotEmpty() && !BridgeProtocol.validId(ref)) throw BridgeFailure("contact_changed")
                 val selected=if(ref.isEmpty()) null else BridgeContacts.resolve(c,device,ref)
-                val body=collect(c,selected,allowed)
+                val body=collect(c,selected,progress=progress,allowed=allowed)
                 if(selected!=null) BridgeContacts.resolve(c,device,ref) // Revalidate selection before releasing any complete number.
-                freeze(device,body,allowed)
+                progress("freezing");freeze(device,body,allowed)
             }
             "contacts_export_page" -> page(device,p.getString("snapshot_id"),p.getInt("offset"),allowed)
             else -> result("unsupported")
@@ -127,3 +131,4 @@ internal object PhoneContactExport {
     catch(_:SecurityException) { result("permission_required") }
     catch(_:Exception) { result("contacts_export_unavailable") }
 }
+
