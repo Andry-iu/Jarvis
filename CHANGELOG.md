@@ -1,6 +1,6 @@
 ## 0.5.114 / 136 — rubrica locale dal telefono al workspace
 
-- Esportazione esplicita sola lettura di nomi, tutti i numeri ed email accessibili; consenso dedicato OFF, READ_CONTACTS e sblocco. Nessuna modifica Android, appunto o sync periodica.
+- Esportazione esplicita sola lettura di nomi, tutti i numeri ed email accessibili; consenso dedicato OFF, READ_CONTACTS e sblocco. La ricerca mascherata per importare un numero funziona con il solo consenso rubrica, senza abilitare chiamate/Maps/WhatsApp. Nessuna modifica Android, appunto o sync periodica.
 - Stessi backend/plugin/pairing, snapshot RAM30min/8MiB, blocchi6144byte, UUID/claim/journal e scambi privati120s. Consenso/revoca/scadenza ricontrollati prima della consegna; payload locali rimossi dopo ACK/409.
 - Utility workspace con contenuti/staging AES-GCM fuori Git e SQLite transazionale: verifica identità, hash, contatori e schema prima della sostituzione. «Aggiorna rubrica» copia la fonte completa; «importa questo numero» aggiorna solo quella riga conservando altri dati. Nessuna fusione per nome/numero.
 - Procedura riutilizzabile in docs/RUBRICA_LOCALE.md, guida app/plugin e continuità aggiornate. Nessun dato reale importato dai test; collaudo Galaxy dopo installazione/consenso. Voice/Google/cover, Watch e Windows invariati.

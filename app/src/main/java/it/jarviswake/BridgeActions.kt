@@ -56,6 +56,20 @@ internal object BridgeActions {
             if(!notesAllowed()) return result("expired_before_dispatch")
             return PhoneNotes.execute(c,operation,command.getJSONObject("params"),::notesAllowed)
         }
+        // The dedicated read-only consent must suffice to select a number for export;
+        // it grants no navigate/call/WhatsApp permission and leaves the old actions path intact.
+        if(operation=="find_contacts" && !BridgeSettings.actionsEnabled(c) && PhoneContactExport.enabled(c)) {
+            fun searchAllowed()=permitted() && BridgeSettings.enabled(c) && PhoneContactExport.enabled(c) &&
+                SystemClock.elapsedRealtime()<deadline && !c.getSystemService(KeyguardManager::class.java).isKeyguardLocked
+            if(c.getSystemService(KeyguardManager::class.java).isKeyguardLocked) return result("locked")
+            if(!searchAllowed()) return result("cancelled")
+            return try {
+                val found=BridgeContacts.search(c,deviceId,command.getJSONObject("params").getString("name"))
+                if(searchAllowed()) found else result("cancelled")
+            } catch(e:BridgeFailure) { result(e.code) }
+            catch(_:SecurityException) { result("permission_required") }
+            catch(_:Exception) { result("unavailable") }
+        }
         fun allowed()=permitted() && BridgeSettings.enabled(c) && BridgeSettings.actionsEnabled(c) && SystemClock.elapsedRealtime()<deadline
         if(!BridgeSettings.actionsEnabled(c)) return result("actions_disabled")
         if(!allowed()) return result("expired_before_dispatch")

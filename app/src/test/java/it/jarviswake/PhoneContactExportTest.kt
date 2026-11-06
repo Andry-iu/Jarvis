@@ -24,13 +24,16 @@ import org.robolectric.shadows.ShadowContentResolver
 class PhoneContactExportTest {
     private lateinit var c:Context
     private var clock=100L
+    private val read=BridgeContacts.readStore;private val write=BridgeContacts.writeStore
+    private var refs=JSONObject()
     private lateinit var provider:FakeContacts
     @Before fun setup() {
+        BridgeContacts.readStore={JSONObject(refs.toString())};BridgeContacts.writeStore={_,j->refs=JSONObject(j.toString())}
         c=RuntimeEnvironment.getApplication();PhoneContactExport.now={clock};PhoneContactExport.clear()
         provider=FakeContacts();ShadowContentResolver.registerProviderInternal(ContactsContract.AUTHORITY,provider)
         PhoneContactExport.enable(c,false)
     }
-    @After fun reset() { PhoneContactExport.enable(c,false);PhoneContactExport.now=android.os.SystemClock::elapsedRealtime }
+    @After fun reset() { BridgeContacts.readStore=read;BridgeContacts.writeStore=write;PhoneContactExport.enable(c,false);PhoneContactExport.now=android.os.SystemClock::elapsedRealtime }
     class FakeContacts:ContentProvider() {
         var writes=0;var reads=0;var changed=false;var headers=0;var unavailable=false;var emailQueries=0
         override fun onCreate()=true
@@ -39,7 +42,8 @@ class PhoneContactExportTest {
             reads++;if(unavailable) return null
             val cols=projection!!
             return MatrixCursor(cols).apply {
-                if(cols.size==1) { addRow(arrayOf("1")) }
+                if(cols[0]=="_id" && cols.size==5) { addRow(arrayOf<Any?>("11","Same name","+39 000001",2,null)) }
+                else if(cols.size==1) { addRow(arrayOf("1")) }
                 else if(cols.contains("contact_last_updated_timestamp")) {
                     headers++
                     addRow(arrayOf("1","lookup1","Same name",if(changed && headers>1) "2" else "1"))
@@ -115,6 +119,23 @@ class PhoneContactExportTest {
         keyguard.setKeyguardLocked(false)
         assertEquals("cancelled",BridgeActions.execute(c,"d",command,Long.MAX_VALUE){false}.getString("code"))
         assertEquals(0,provider.reads);assertEquals(0,provider.writes);BridgeSettings.enable(c,false)
+    }
+    @Test fun singleNumberSelectionAndExportWorkWithOnlyReadConsentAndNeverEnableCalling() {
+        BridgeSettings.enable(c,true);BridgeSettings.enableActions(c,false);PhoneContactExport.enable(c,true)
+        org.robolectric.Shadows.shadowOf(c as android.app.Application).grantPermissions(android.Manifest.permission.READ_CONTACTS)
+        val find=JSONObject().put("operation","find_contacts").put("params",JSONObject().put("name","Same name"))
+        val found=BridgeActions.execute(c,"d",find,Long.MAX_VALUE){true}
+        assertEquals("contacts_found",found.getString("code"))
+        val row=found.getJSONArray("contacts").getJSONObject(0);assertFalse(row.has("number"))
+        val start=JSONObject().put("operation","contacts_export_start").put("params",JSONObject().put("contact_ref",row.getString("contact_ref")))
+        val ready=BridgeActions.execute(c,"d",start,Long.MAX_VALUE){true}
+        assertEquals("contacts_export_ready",ready.getString("code"));assertEquals("number",ready.getString("mode"))
+        assertEquals(1,ready.getInt("phones"));assertEquals(0,ready.getInt("emails"))
+        val call=JSONObject().put("operation","call_contact").put("params",JSONObject().put("contact_ref",row.getString("contact_ref")))
+        assertEquals("actions_disabled",BridgeActions.execute(c,"d",call,Long.MAX_VALUE){true}.getString("code"))
+        PhoneContactExport.enable(c,false)
+        assertEquals("actions_disabled",BridgeActions.execute(c,"d",find,Long.MAX_VALUE){true}.getString("code"))
+        assertEquals(0,provider.writes);assertFalse(BridgeSettings.actionsEnabled(c));BridgeSettings.enable(c,false)
     }
     @Test fun newSnapshotInvalidatesOldAndOversizeSnapshotIsExplicitlyRejected() {
         val old=PhoneContactExport.freeze("d",body()){true}.getString("snapshot_id")
