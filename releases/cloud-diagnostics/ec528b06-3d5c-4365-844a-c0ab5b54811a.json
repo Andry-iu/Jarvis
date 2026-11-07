@@ -1,0 +1,22 @@
+{
+  "compiler": [
+    {
+      "column": 69,
+      "kind": "unresolved_reference",
+      "line": 38,
+      "path": "app/src/test/java/it/jarviswake/BridgeNavigationTest.kt"
+    },
+    {
+      "column": 69,
+      "kind": "unresolved_reference",
+      "line": 82,
+      "path": "app/src/test/java/it/jarviswake/BridgeNavigationTest.kt"
+    }
+  ],
+  "failed_tasks": [
+    ":app:compileDebugUnitTestKotlin"
+  ],
+  "job_id": "ec528b06-3d5c-4365-844a-c0ab5b54811a",
+  "schema": 1,
+  "tests": []
+}
