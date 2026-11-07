@@ -1,7 +1,76 @@
 # Procedura collaudata: build, diagnosi e consegna JarvisWake
 Aggiornata il 7 novembre 2026 (Europe/Rome), dopo il rilascio .121/143 e la conferma utente del download. Questa è la procedura corrente; gli stati precedenti restano storici.
 
-## Prima scelta: riusare il percorso riuscito
+## Scheda eseguibile per una nuova sessione — partire da qui
+
+I nomi qui sotto sono le operazioni del plugin, non comandi shell. Cercarle nel catalogo strumenti della sessione per nome esatto; i prefissi di namespace/connector possono cambiare. Non riusare un vecchio percorso opaco di connessione. Repository fisso: `Andry-iu/Jarvis`; branch `main`. Prima stabilire se serve consegnare una build esistente o crearne una nuova.
+
+### A. Consegnare di nuovo la .121 già compilata: nessuna build
+1. `jarviswake_cloud_job({"job_id":"c6f79b80-2039-48d4-a762-e2cdab9e5307"})`. Riscontro atteso: `state:"succeeded"`, `artifact.version:"0.5.121"`, `version_code:143`, `release_commit:"b881b921a65966df70fc2a7dffebb3d2186fecf6"`.
+2. `jarviswake_cloud_artifact({"job_id":"c6f79b80-2039-48d4-a762-e2cdab9e5307"})`. Consegnare l'URL effettivamente restituito; checksum e dimensione sono nella tabella sotto. Un errore `cloud_artifact_expired` è scadenza del binario, non build fallita: verificare prima l'artefatto conservato nel cloud o una consegna già esistente, senza nuova compilazione automatica.
+3. Il link richiede accesso al Site con lo stesso account ChatGPT del job. Se il client non finalizza il download, proporre menu ⋮ → Apri nel browser/Chrome e Chrome → Download. Sono istruzioni di prova; in questo caso l'utente non ha identificato il passaggio decisivo. Non affermare che Drive sia la soluzione: qui non è stato caricato nulla su Drive.
+
+### B. Pubblicare una correzione dalla chat senza shell cloud: percorso GitHub effettivamente riuscito
+Questa sequenza è stata usata al posto dei molti `container.exec` abortiti. Non richiede un clone, il reset di un checkout o credenziali di firma nella chat.
+1. `github.fetch({"url":"https://api.github.com/repos/Andry-iu/Jarvis/git/ref/heads/main"})`. Leggere `object.sha`: chiamarlo HEAD_ATTESO.
+2. `github.fetch({"url":"https://api.github.com/repos/Andry-iu/Jarvis/git/commits/HEAD_ATTESO"})`, sostituendo HEAD_ATTESO con lo SHA ricevuto. Leggere `tree.sha`: TREE_BASE.
+3. `github.fetch_file({"repository_full_name":"Andry-iu/Jarvis","path":"PERCORSO","ref":"HEAD_ATTESO"})` per ogni file da leggere/modificare; usare valori veri al posto dei segnaposto. Conservare il contenuto integrale in memoria/file, senza ricostruirlo manualmente dai messaggi. Comporre solo le differenze richieste e i documenti pertinenti.
+4. `github.create_tree({"repository_full_name":"Andry-iu/Jarvis","base_tree_sha":"TREE_BASE","tree_elements":[{"path":"PERCORSO","mode":"100644","type":"blob","content":"CONTENUTO_COMPLETO_AGGIORNATO"}]})`. Includere tutti i file modificati; per rimuovere SOLO la richiesta diagnostica usare l'entry `{"path":"cloud-runner/diagnostic-request.json","mode":"100644","type":"blob","sha":null}`. Omettere tutti i file invariati: il base tree li conserva.
+5. `github.create_commit({"repository_full_name":"Andry-iu/Jarvis","parent_sha":"HEAD_ATTESO","tree_sha":"SHA_TREE_RESTITUITO","message":"DESCRIZIONE_CONCRETA"})`.
+6. `github.update_ref({"repository_full_name":"Andry-iu/Jarvis","branch_name":"main","expected_sha":"HEAD_ATTESO","sha":"SHA_COMMIT_RESTITUITO","force":false})`. Solo `success:true` prova lo spostamento del branch. Rileggere il ref del punto1 e confrontarlo col commit. Se la lease fallisce: rileggere head/file e ricomporre sul nuovo tree senza perdere commit concorrenti; mai force/reset.
+7. Se il tool risponde abortito o errore, controllare il ref prima di ripetere mutazioni. Un commit creato non prova che main lo contenga. Fermare tentativi equivalenti su un tool indisponibile.
+
+### C. Una nuova build su sorgenti pubblicati
+1. Scoprire `jarviswake_cloud_status`; chiamarlo con `{}`. Se `active_job` è già il lavoro pertinente, riprendere quello; non accodarne un duplicato. `runner_online:false` non significa toolchain da rifare.
+2. Ottenere lo SHA da pubblicazione B. Generare un UUIDv4 UNA volta (per esempio Python `str(uuid.uuid4())`) e conservarlo insieme a operation/revision. `jarviswake_cloud_start({"operation":"build_signed","revision":"SHA_SORGENTE_PUBBLICATO","request_id":"UUID_NUOVO_CONSERVATO"})`. Non incollare un vecchio UUID di esempio per un lavoro nuovo.
+3. Conservare il `job_id` restituito. `jarviswake_cloud_job({"job_id":"JOB_RESTITUITO"})` finché l'esito è terminale, con controlli distanziati. Fasi osservate nel job riuscito: queued → checks → android → recording → upload → complete/succeeded. La firma è provata da artifact/certificato e successo, non dall'assenza di una fase osservata nel polling.
+4. In `recording` erano già presenti695test/0failure/0skipped, lint0errori/55warning e metadata APK, ma `release_commit:null`: non consegnare ancora. In `upload` comparve release_commit b881b921..., ancora state=running: attendere. Solo state=succeeded/error=null → chiamare artifact.
+5. Se `failed/android_failed`, seguire D; se awaiting_runner/outcome_uncertain, conservare job/claim e diagnosticare l'esecuzione esistente. Non reimpostare il job. Il bootstrap è solo nel cloud Jarvis reale e serve soltanto se necessario; la chat senza shell usa il ponte.
+
+### D. Recuperare la causa di android_failed senza accesso diretto al log
+1. Cercare prima un report già pubblicato: `github.fetch_file({"repository_full_name":"Andry-iu/Jarvis","path":"releases/cloud-diagnostics/JOB_FALLITO.json"})`. Se pertinente e completo, riusarlo. Un report con array vuoti non prova assenza di errore: può mancare il log/report locale.
+2. Se non disponibile, leggere `cloud-runner/collect_diagnostic.py`, `app/build.gradle.kts` e i relativi test da main. Il raccoglitore ESISTE: non ricrearlo o sostituire il runner per ogni errore.
+3. Creare via B il file `cloud-runner/diagnostic-request.json` con questo schema esatto, già usato:
+```json
+{"job_ids":["ec528b06-3d5c-4365-844a-c0ab5b54811a"]}
+```
+Per un incidente nuovo sostituire il valore con l'UUIDv4 del job realmente fallito; ammessi1–2 job. Nessun campo percorso, comando o testo libero. Nel caso originale il commit a44061a8556bc239eb8126e1335a420a2294a11e conteneva la richiesta.
+4. Il task `cloudBuildDiagnostics` è dipendenza preBuild; oggi `onlyIf { rootProject.file("cloud-runner/diagnostic-request.json").exists() }`. Il raccoglitore si attiva solo se il sorgente è sotto `/workspace/.jarvis-cloud/builds/<job>` e `/workspace/Jarvis` esiste. Eseguirlo nello scratch della chat non raccoglie i log cloud.
+5. Avviare un job diagnostico sullo SHA appena pubblicato mediante C. Nel caso reale:
+```json
+{"operation":"build_signed","request_id":"f405a463-cbb6-411d-bbb7-93da2675c1c2","revision":"a44061a8556bc239eb8126e1335a420a2294a11e"}
+```
+È un'operazione già svolta, NON da rieseguire: UUID storico. Il preBuild lesse `/workspace/.jarvis-cloud/cloud-runner/logs/ec528b06-3d5c-4365-844a-c0ab5b54811a/build.log` e i report del worktree corrispondente. Pubblicò `releases/cloud-diagnostics/ec528b06-3d5c-4365-844a-c0ab5b54811a.json` nel commit41a55fcf13cdd7e7c9105d720d1b3e8cde533a0b, mentre il job diagnostico compilava ancora il difetto e terminò android_failed.
+6. Leggere il JSON e poi le righe sorgenti indicate. Qui compiler aveva due record `unresolved_reference`, path `app/src/test/java/it/jarviswake/BridgeNavigationTest.kt`, line38/82,column69; failed_tasks=`[":app:compileDebugUnitTestKotlin"]`, tests=`[]`. Il report omette deliberatamente i messaggi/valori privati; la causa concreta si ricava dal sorgente e dal confronto con FavoriteOperationsTest/PhoneContactExportTest: `setIsKeyguardLocked` errato, `setKeyguardLocked` corretto.
+7. PRIMA di pubblicare la correzione rileggere main: è avanzato per il report automatico. Nel caso reale il nuovo parent era41a55fc..., tree5730d75ea427f335586394e6a48c415b17e4d1bf. Correggere entrambe le chiamate, rimuovere diagnostic-request.json e conservare il guard onlyIf. Pubblicazione via B produsse cf4d12e1fd55f24134976eb40776261448f1be84.
+8. Nuovo job corretto (storico, non riavviare):
+```json
+{"operation":"build_signed","request_id":"c6f79b80-2039-48d4-a762-e2cdab9e5307","revision":"cf4d12e1fd55f24134976eb40776261448f1be84"}
+```
+Seguire C fino a succeeded e A per artifact. Questo completò la build; non sono stati necessari reset, installazione toolchain alternativa o una nuova chiave.
+
+### E. Backend dello stesso rilascio: azioni effettivamente svolte
+Il Site esistente è `appgprj_6ae75ae6cdd08191ab126c1d392a603a`, URL `https://jarviswake-link-andrea.autech-sm267-2695.chatgpt.site`. Dopo verifica dell'APK è stata ripubblicata la versione .121 già salvata, senza ricreare Site/plugin né cambiare audience/segreti:
+```json
+{"project_id":"appgprj_6ae75ae6cdd08191ab126c1d392a603a","version_id":"appgprj_6ae75ae6cdd08191ab126c1d392a603a~appgver_2ef62a90c09c81918143711680e61bad"}
+```
+Tool: `sites.deploy_private_site_version`; risultato iniziale pending, deployment_id appgdep_6aef50758b488191b4d6bbd827c846bb. Quindi `sites.get_deployment_status({"project_id":"appgprj_6ae75ae6cdd08191ab126c1d392a603a","deployment_id":"appgdep_6aef50758b488191b4d6bbd827c846bb"})` → succeeded/has_mcp=true/env_set_revision4. Infine `jarviswake_guide({"topic":"maps","query":""})` → guide_version0.5.121/version_code143.
+Questi ID sono prova storica, non default per il prossimo rilascio. Per un'altra versione leggere get_site e le versioni salvate, scegliere quella corrispondente al sorgente verificato e rispettare l'audience corrente; mai ridistribuire automaticamente questa vecchia versione.
+
+### F. Mappa problemi → risposte provate o limiti
+| Sintomo osservato | Riscontro discriminante | Passo concreto |
+| --- | --- | --- |
+| container.exec ripetutamente aborted | Nessun output/esito di Git o modifica file | Passare alla sequenza GitHub B; non eseguire reset/restore alla cieca |
+| android_failed senza log nel tool | Report tecnico D, poi sorgente alle righe indicate | Correggere il simbolo identificato; non dedurre errore test/lint o strumenti mancanti |
+| main avanza durante diagnosi | Ref passa da a44061a... a41a55fc... | Nuovo base tree/parent dal ref aggiornato prima della correzione |
+| recording/upload ma APK metadata presenti | state ancora running; release_commit può essere null | Attendere succeeded; non dire pronto |
+| Download al100% ma file non disponibile, secondo utente | Utente poi conferma riuscita; nessuna causa isolata | Tentativo browser esterno/Download; nessuna ricompilazione, nessun fix server inventato |
+| Recupero HTTP assistente=401/accesso richiesto | Sessione non autenticata del client assistente | Non equiparare a errore APK né cercare bypass |
+| Browser remoto dopo login bloccato dalla policy sul protocollo | Azione espressamente rifiutata | Fermare quel percorso; non usare superfici alternative per aggirarlo |
+| Alternativa Drive annunciata ma APK non recuperato | Nessun upload/file_id/readback | Dire non completata; nessun link Drive o trasferimento riuscito dichiarato |
+
+
+## Principi e dettagli complementari
 Leggere AGENTS.md, la continuità corrente e questo documento prima di cercare nuove soluzioni. Sviluppo e commit possono avvenire dalla chat disponibile; compilazione Android/JVM, firma e rilascio usano esclusivamente il cloud Jarvis già configurato. Non ricostruire la toolchain altrove, non usare Actions o Desktop per sostituirlo. Il consenso permanente comprende diagnosi, correzioni, verifiche, commit/push e rilascio nello stesso lavoro approvato; capacità tecnica e autorizzazione sono distinte.
 
 1. Leggere main remoto e documenti pertinenti. Preservare modifiche concorrenti; nessun reset/restore automatico per forzare una baseline. Se non esiste checkout utile, i tool GitHub consentono lettura e pubblicazione dei soli file pertinenti.
