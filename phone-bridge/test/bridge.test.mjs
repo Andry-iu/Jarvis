@@ -27,7 +27,7 @@ const value=r=>JSON.parse(r.content[0].text);
 const snap={app:{version:'0.5.80',versionCode:102},wake:{serviceRunning:true,capture:'not_recording'},cover:{accessibility:true,web:false,launch:false},voiceCycle:{active:true,phase:'VOICE',hiddenForWake:false},screenInteractive:true};
 test('Discovery exposes bounded status and action tools without fabricated phone data',async()=>{
   const r=await worker.fetch(request('/mcp',{jsonrpc:'2.0',id:1,method:'tools/list'}),env());
-  const names=(await r.json()).result.tools.map(t=>t.name);
+  const names=(await r.json()).result.tools.map(t=>t.name).filter(n=>!n.startsWith('jarviswake_cloud_'));
   assert.deepEqual(names,['jarviswake_devices','jarviswake_request_status','jarviswake_status_result','jarviswake_get_contact','jarviswake_contacts_names_export_start','jarviswake_contacts_export_start','jarviswake_contacts_export_page','jarviswake_speak','jarviswake_find_contacts','jarviswake_navigate','jarviswake_call_by_name','jarviswake_call_contact','jarviswake_whatsapp','jarviswake_list_favorites','jarviswake_add_favorite','jarviswake_create_favorite','jarviswake_rename_favorite','jarviswake_change_favorite_number','jarviswake_delete_favorite','jarviswake_list_notes','jarviswake_read_note','jarviswake_save_note','jarviswake_guide']);
 });
 test('Pairing requires authenticated same-origin browser action',async()=>{

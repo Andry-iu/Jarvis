@@ -1,3 +1,7 @@
+# Comandi cloud nel plugin esistente
+
+Cinque tool aggiuntivi: jarviswake_cloud_status, start, job, cancel, artifact (prefisso jarviswake_cloud_). Coda verifiche/build firmata nel cloud Jarvis, una claim senza riassegnazione automatica; UUID stabile, stati tecnici, link APK privato dopo firma e verbale su main. Nessun APK app nuovo richiesto. Vedere ../docs/CLOUD_BUILDS.md per uso, configurazione, segreti e limiti. Modulo worker/cloud.js incluso nel singolo artefatto ESM da scripts/bundle-worker.mjs; test separati test/cloud.test.mjs.
+
 ## .114: copia rubrica verso workspace
 
 Stessa identità/plugin/pairing. Nuovi tool contacts_export_start e contacts_export_page (APK136+) per richiesta esplicita completa oppure singolo contact_ref risolto. Consenso dedicato, READ_CONTACTS e telefono sbloccato. Pagine base64 bounded, relay120s, snapshot RAM30min/8MiB; nessuna scrittura Android. Dati completi solo in questa operazione autorizzata: find_contacts e chiamate restano mascherati. [Procedura locale](../docs/RUBRICA_LOCALE.md), archivio cifrato fuori Git; nessuna copia effettiva garantita dall’accettazione pending.
