@@ -1,0 +1,24 @@
+{
+  "artifact": {
+    "bytes": 90035967,
+    "certificate_sha256": "a8ddfbe2b78be5460e72df57afbc3434411e3cc27328b13bc16b4daaba13389a",
+    "expires_at": 1794670303820,
+    "sha256": "e563a083ea277dd66ece94d42e1a6edab99db06e8a2d044dd6cdca53546e5cc2",
+    "version": "0.5.120",
+    "version_code": 142
+  },
+  "counts": {
+    "android_failures": 0,
+    "android_skipped": 0,
+    "android_tests": 682,
+    "lint_errors": 0,
+    "lint_warnings": 55
+  },
+  "google_paid_calls": false,
+  "job_id": "c16101ac-141c-4aad-a3cb-cc0aa8d4fe3b",
+  "operation": "build_signed",
+  "physical_device_tested": false,
+  "resolved_commit": "bfb8747bfacacbe3fbbefb2208d6320a0fee9acb",
+  "revision": "main",
+  "scope": "Cloud build verification; existing application behavior unchanged"
+}

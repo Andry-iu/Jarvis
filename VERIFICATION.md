@@ -1,3 +1,6 @@
+CLOUD JOB c16101ac-141c-4aad-a3cb-cc0aa8d4fe3b — bfb8747bfacacbe3fbbefb2208d6320a0fee9acb
+Verifiche cloud e checksum: releases/cloud-jobs/c16101ac-141c-4aad-a3cb-cc0aa8d4fe3b.json. Nessun collaudo Galaxy o API a pagamento. Tutte le attività ancora pendenti e i requisiti precedenti restano sotto.
+
 0.5.120 / 142 — APK COMPILATO, FIRMATO E VERIFICATO NEL CLOUD JARVIS (7 novembre 2026, Europe/Rome)
 
 Sorgente esatto b52730345cdb81a93bf4ca7da777c7f43bad5549, worktree senza modifiche tracciate. Recupero locale autorizzato nello stesso cloud/worktree dopo che il nuovo job0ac83a9e-46e6-4d07-8472-8fa89f2313d8 è terminato per cache Android incompleta in modalità offline; il suo stato remoto failed non è stato cambiato e nessuna terza richiesta è stata creata. Gradle test/lint/assemble realmente BUILD SUCCESSFUL:682test/71report,0failure/error/skipped,lint0errori/55warning; SDK34/36, JDK17/Java21.87test backend,29rubrica e16runner del sorgente passati;24test del runner aggiornato passati.
