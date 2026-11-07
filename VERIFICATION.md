@@ -1,3 +1,6 @@
+CLOUD JOB c6f79b80-2039-48d4-a762-e2cdab9e5307 — cf4d12e1fd55f24134976eb40776261448f1be84
+Verifiche cloud e checksum: releases/cloud-jobs/c6f79b80-2039-48d4-a762-e2cdab9e5307.json. Nessun collaudo Galaxy o API a pagamento. Tutte le attività ancora pendenti e i requisiti precedenti restano sotto.
+
 0.5.121 / 143 — CAUSA ANDROID RECUPERATA E CORRETTA; VERIFICA CLOUD DA COMPLETARE (7 novembre 2026)
 
 Il recupero autonomo ha pubblicato il report tecnico releases/cloud-diagnostics/ec528b06-3d5c-4365-844a-c0ab5b54811a.json su main41a55fc: due unresolved_reference in BridgeNavigationTest.kt righe38/82, task compileDebugUnitTestKotlin. Causa accertata: nuovi test usavano setIsKeyguardLocked, inesistente nello shadow Robolectric. Corretto in setKeyguardLocked come nelle suite esistenti FavoriteOperationsTest/PhoneContactExportTest. Nessun errore nei test Android eseguiti è stato dedotto: il compilatore si era fermato prima di eseguirli.
