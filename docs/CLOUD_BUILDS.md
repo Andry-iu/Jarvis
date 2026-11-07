@@ -33,12 +33,24 @@ Avvio nel cloud Jarvis con il segreto `Passphrase` già configurato:
 
 ```sh
 umask 077
-python /workspace/.jarvis-cloud/cloud-runner/current/runner.py
+bash /workspace/Jarvis/cloud-runner/bootstrap.sh --repair --start
 ```
 
 `--once` esegue una sola iterazione diagnostica. Il processo usa TLS e proxy ordinari, rifiuta redirect e invia i due bearer soltanto all’origine esatta. Non stampa i segreti. Git/Gradle/script del repository non ricevono passphrase e token nell’ambiente del sottoprocesso; questo non è un sandbox per eseguire codice ostile: il codice ammesso è la storia del repository autorizzato. Le chiavi in chiaro esistono solo in una directory temporanea privata durante la firma, rimossa in finally; hash del backup e certificato sono fissati. Nessuna chiave nuova.
 
 Log completi e journal restano privati nel cloud, esclusi da Git e diagnostica telefono. MCP espone solo stati, codici fissi, conteggi letti dai report e metadati APK. `worker_tests`/`phonebook_tests` non vengono inventati: il job corrente espone i conteggi Android/lint effettivamente analizzati, con esito degli altri controlli rappresentato dal passaggio di fase/successo complessivo. Nessun contenuto della rubrica, testo chat, audio o credenziale viene inserito nel verbale. Dopo7giorni il backend nega il download; la rimozione fisica del binario è opportunistica quando viene richiesto il link, senza promessa di cancellazione temporizzata.
+
+### Ambiente pronto prima della claim
+
+`cloud-runner/environment-setup.json` registra il comando riutilizzabile di setup/avvio e quello di salute. Il bootstrap ripara i componenti aggiuntivi mancanti nel cloud Jarvis già configurato: Go1.27.3 con checksum fissato e archivio riusabile, NDK28.2.13676358, gomobile/gobind alla revisione fissata, moduli Go e pyrage1.4.0 per la firma. Riusa SDK/JDK/cache/modello; non compila l'app né crea un job. L'installazione Go diventa visibile soltanto dopo estrazione completa; una directory incompleta richiede ispezione. Il setup nativo già completo non reinstalla i binari Go. `--check` non scarica né modifica nulla.
+
+`readiness.py` controlla esistenza/versione degli strumenti, NDK completo/clang, SDK36/Build Tools36, Gradle8.13, modello verificato, interprete firma e disponibilità della passphrase. Non espone valori di credenziali. Il runner ripete il controllo prima di ogni nuova claim: `runner_not_ready` lascia la richiesta in coda e non crea un journal di esecuzione. I percorsi di recupero di una claim già iniziata conservano la regola di non ricompilare e non dipendono dagli strumenti di build. Un heartbeat recente continua a provare soltanto contatto col backend, non prontezza completa.
+
+Il bootstrap conserva `config.json` e journal. Se la configurazione privata manca in una nuova istanza, può ricostruirla **soltanto** dai binding segreti esistenti `JARVIS_RUNNER_TOKEN` e `JARVIS_SITE_ACCESS`, oltre alla `Passphrase` già prevista. Nessuna rotazione o generazione automatica: se i binding non sono disponibili, si ferma con `runner_config_missing`. Questi valori si configurano nelle impostazioni dell'ambiente, mai su Git o in chat. L'avvio acquisisce il lock prima di installare il codice e lo trasferisce al runner/figli; un runner o build attivo non viene sostituito.
+
+Per mantenere la preparazione tra **nuove istanze**, registrare il comando di setup/avvio e i binding privati nella configurazione gestita, quindi salvare e pubblicare lo snapshot dell'ambiente preparato. Un commit, un processo in esecuzione o la pubblicazione del Site non salvano lo snapshot cloud. In assenza degli strumenti di configurazione/pubblicazione non dichiarare eseguito questo passaggio: la procedura versionata e il controllo preventivo restano disponibili, ma non garantiscono da soli che la piattaforma li esegua al prossimo avvio. Nessuna promessa di cloud sempre acceso.
+
+Riscontro7novembre2026: runtime corrente diverso da quello registrato per la .119; JDK/SDK/cache base presenti, componenti Go/NDK e directory privata runner assenti prima del ripristino. Questo non dimostra perché fossero assenti e non smentisce le build precedenti. Il 403 è superato nella policy corrente; token runner sostituito con autorizzazione esplicita, conservati firma/telefono/Google. Il job `25f43cf0-399c-4a74-8fce-431b65e34f0c` ha effettivamente eseguito i controlli interpretati e avviato Gradle sul commit `b52730345cdb81a93bf4ca7da777c7f43bad5549`, poi è terminato `failed/android_failed` su `:app:whatsappNative` per l'assenza del compilatore Go previsto (`Go: Unknown option: list` dal programma di sistema). Un job terminale è immutabile; nessuna nuova richiesta o riesecuzione viene introdotta dal bootstrap.
 
 L’esecutore può essere sospeso o terminato insieme all’ambiente gestito. Non è un servizio sempre acceso e non riattiva da solo il cloud; una richiesta resta in coda fino alla riattivazione/riavvio del runner. Nessun ricorso a GitHub Actions o a un’altra macchina. Se il proxy rifiuta il Site con403, il runner rimane disconnesso: la pubblicazione MCP non risolve la policy di rete del cloud.
 

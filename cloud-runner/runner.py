@@ -61,7 +61,7 @@ def validate_identity(value):
 def child_environment():
     # Repository build scripts never receive signing or bridge credentials in their environment.
     env = {k: v for k, v in os.environ.items()
-           if k not in ('Passphrase', 'JARVIS_SIGNING_PASSWORD')
+           if k not in ('Passphrase', 'JARVIS_SIGNING_PASSWORD', 'JARVIS_SITE_ACCESS')
            and not any(x in k.upper() for x in ('TOKEN', 'SECRET', 'PASSWORD', 'API_KEY'))}
     env.update(JAVA_HOME=str(BASE/'jdk-17.0.21+9'),
                ANDROID_HOME=str(BASE/'android-sdk'), ANDROID_SDK_ROOT=str(BASE/'android-sdk'),
@@ -99,11 +99,17 @@ class Client:
 
 
 class Runner:
-    def __init__(self, client, state, repo=REPO, base=BASE):
+    def __init__(self, client, state, repo=REPO, base=BASE, readiness_check=None):
         self.client, self.state, self.repo, self.base = client, Path(state), Path(repo), Path(base)
         self.current = None
         self.last_poll = 0
         self.lock_fd = None
+        self.readiness_check = readiness_check or self.check_readiness
+
+    def check_readiness(self):
+        from readiness import problems
+        if problems(self.base, self.repo):
+            raise JobError('runner_not_ready')
 
     def save(self):
         private_json(self.state, self.current)
@@ -294,6 +300,9 @@ class Runner:
             next_job = active
         if not next_job:
             return
+        # A missing tool must leave the request queued, rather than consume its
+        # immutable execution attempt. Recovery/finish paths above never rebuild.
+        self.readiness_check()
         if not self.current or self.current['job_id'] != next_job['job_id']:
             self.current = {**next_job, 'claim_id': str(uuid.uuid4()), 'status': 'claim_ready'}
             self.save()
@@ -322,12 +331,14 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--config', type=Path, default=BASE/'cloud-runner/config.json')
     parser.add_argument('--once', action='store_true')
+    parser.add_argument('--lock-fd', type=int, help='Already-held lock inherited from bootstrap')
     args = parser.parse_args()
     os.umask(0o077)
     if args.config.stat().st_mode & 0o077:
         raise SystemExit('Runner config must be private (0600)')
     args.config.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
-    with (args.config.parent/'runner.lock').open('w') as lock:
+    with (os.fdopen(args.lock_fd, 'w') if args.lock_fd is not None else
+          (args.config.parent/'runner.lock').open('w')) as lock:
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         runner = Runner(Client(json.loads(args.config.read_text())), args.config.parent/'journal.json')
         runner.lock_fd = lock.fileno()

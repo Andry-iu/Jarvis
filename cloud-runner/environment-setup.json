@@ -1,0 +1,14 @@
+{
+  "repository": "Andry-iu/Jarvis",
+  "checkout": "/workspace/Jarvis",
+  "setup_start_command": "bash /workspace/Jarvis/cloud-runner/bootstrap.sh --repair --start",
+  "health_command": "bash /workspace/Jarvis/cloud-runner/bootstrap.sh --check",
+  "required_allowed_host": "jarviswake-link-andrea.autech-sm267-2695.chatgpt.site",
+  "private_runtime_bindings": [
+    "Passphrase",
+    "JARVIS_RUNNER_TOKEN",
+    "JARVIS_SITE_ACCESS"
+  ],
+  "private_config_alternative": "/workspace/.jarvis-cloud/cloud-runner/config.json",
+  "notes": "This is a versioned setup specification, not proof that the managed environment settings or snapshot have been saved/published. Reuse existing credentials; never generate tokens during startup. Preserve journal and runner lock."
+}

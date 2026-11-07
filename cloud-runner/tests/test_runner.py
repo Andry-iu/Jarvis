@@ -39,7 +39,24 @@ class RunnerTest(unittest.TestCase):
     def make(self, client=None, value=None):
         if value:
             runner.private_json(self.state, {**self.identity, **value})
-        return runner.Runner(client or FakeClient(), self.state, self.root, self.root)
+        return runner.Runner(client or FakeClient(), self.state, self.root, self.root,
+                             readiness_check=lambda: None)
+
+    def test_missing_tool_leaves_new_job_unclaimed_and_without_journal(self):
+        next_job = {k: self.identity[k] for k in ('owner', 'job_id')}
+        r = self.make(FakeClient({'/cloud/runner/poll': {'next': next_job}}))
+        r.readiness_check = lambda: (_ for _ in ()).throw(runner.JobError('runner_not_ready'))
+        with self.assertRaisesRegex(runner.JobError, 'runner_not_ready'):
+            r.step()
+        self.assertEqual([c[0] for c in r.client.calls], ['/cloud/runner/poll'])
+        self.assertFalse(self.state.exists())
+
+    def test_missing_tool_does_not_replay_or_obstruct_running_recovery(self):
+        r = self.make(value={'status': 'running'})
+        r.readiness_check = lambda: self.fail('recovery must not require build tools')
+        r.step()
+        self.assertEqual(r.client.calls[-1][1]['state'], 'outcome_uncertain')
+        self.assertEqual(json.loads(self.state.read_text())['status'], 'done')
 
     def test_private_journal_atomic_and_strict_identity(self):
         r = self.make(value={'status': 'running'})
@@ -111,9 +128,9 @@ class RunnerTest(unittest.TestCase):
 
     def test_child_environment_excludes_bridge_and_signing_secrets(self):
         with patch.dict(os.environ, {'Passphrase': 'test-private', 'CLOUD_RUNNER_TOKEN': 'secret',
-                                     'SOME_API_KEY': 'secret', 'JARVIS_SIGNING_PASSWORD': 'secret'}):
+                                     'JARVIS_SITE_ACCESS': 'secret', 'SOME_API_KEY': 'secret', 'JARVIS_SIGNING_PASSWORD': 'secret'}):
             env = runner.child_environment()
-        self.assertTrue(all(k not in env for k in ('Passphrase', 'CLOUD_RUNNER_TOKEN', 'SOME_API_KEY', 'JARVIS_SIGNING_PASSWORD')))
+        self.assertTrue(all(k not in env for k in ('Passphrase', 'CLOUD_RUNNER_TOKEN', 'JARVIS_SITE_ACCESS', 'SOME_API_KEY', 'JARVIS_SIGNING_PASSWORD')))
         self.assertEqual(env['GRADLE_USER_HOME'], '/workspace/.jarvis-cloud/gradle')
 
     def test_client_refuses_unexpected_destination(self):

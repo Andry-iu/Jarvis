@@ -1,3 +1,15 @@
+RIPRISTINO RUNNER E PRONTEZZA CLOUD — 7 novembre 2026, Europe/Rome
+
+Richiesta esplicita: ripristinare gli strumenti e rendere riutilizzabile la preparazione. Runtime Jarvis corrente con rete Site consentita/enforced; runner collegato, token sostituito solo dopo autorizzazione, firma permanente e pairing conservati. Ripristinati Go1.27.3 (checksum fissato), NDK28.2.13676358, gomobile/gobind alla revisione prevista, cache moduli Go e pyrage1.4.0. Backup cifrato e certificato permanente realmente verificati; temporanei in chiaro rimossi.
+
+Nuova procedura: `bash /workspace/Jarvis/cloud-runner/bootstrap.sh --repair --start`; sola salute `bash /workspace/Jarvis/cloud-runner/bootstrap.sh --check`. Specifica `cloud-runner/environment-setup.json`, istruzioni `docs/CLOUD_BUILDS.md`. Bootstrap idempotente, lock trasferito al runner/figli, nessuna rotazione implicita; preflight prima della claim lascia in coda i job se mancano strumenti.24test Python runner/prontezza passati, shell syntax/diff check passati, verifica reale ready=true e bootstrap ripetuto senza reinstallare i binari né duplicare il runner. Nessuna nuova compilazione APK introdotta da questo ripristino.
+
+Limite ancora aperto: nessuno strumento di salvataggio/pubblicazione/configurazione snapshot cloud disponibile in questa sessione, verificato nel catalogo. Lo snapshot NON è stato applicato né pubblicato: un'eventuale affermazione vocale contraria è errata. Per nuove istanze occorre salvare/pubblicare l'ambiente preparato e configurare il comando di avvio/binding privati nelle impostazioni gestite. La procedura su Git e il processo attivo non provano la persistenza della piattaforma. Non promettere cloud sempre acceso o assenza assoluta di ripristini.
+
+Job originale25f43cf0-399c-4a74-8fce-431b65e34f0c: controlli interpretati completati e Gradle realmente avviato sul commit b52730345cdb81a93bf4ca7da777c7f43bad5549; terminato failed/android_failed per Go mancante in :app:whatsappNative. Nessuna seconda richiesta, nessun APK .120 o firma/rilascio completati. Un job terminale resta immutabile. Le build precedenti (compresa .119) restano documentate; l'assenza iniziale degli strumenti in questo runtime diverso non ne prova la causa. Rimangono tutti i collaudi e sviluppi precedenti, inclusi Android/live-link/streaming e Galaxy.
+
+STATO PRECEDENTE CONSERVATO
+
 # .120 / 142 — canale HTTP di sessione e riduzione dei passaggi (7 novembre 2026)
 
 **Sorgenti implementati, verifica Android e rilascio cloud pendenti.** Via esplicito utente a implementazione e commit dell’intero gruppo. Base aggiornata a `d02f7cd`, conservando i commit del ponte cloud successivi alla .119/141; checkout di lavoro isolato `voice-live-link`.

@@ -1,5 +1,9 @@
 # Istruzioni per lavorare su JarvisWake
 
+## Ambiente di compilazione pronto — richiesta7novembre2026
+
+Prima di prendere in carico una compilazione usare `bash /workspace/Jarvis/cloud-runner/bootstrap.sh --repair --start`; per sola diagnosi `--check`. Seguire `docs/CLOUD_BUILDS.md` e `cloud-runner/environment-setup.json`. Non consumare un job per scoprire che mancano Go/gomobile/NDK/firma: il runner deve controllarli prima della claim. Conservare credenziali/journal, nessuna rotazione implicita o nuova richiesta dopo esito terminale. Snapshot e comando di avvio dell'ambiente devono essere salvati/pubblicati nelle impostazioni gestite per valere sulle nuove istanze: Git e un runner attivo non provano la persistenza. Distinguere ripristino corrente e configurazione pubblicata; non promettere disponibilità continua del cloud.
+
 Prima di modificare il progetto leggere `README.md`, `CONTINUITY.md` e `VERIFICATION.md`. `PROMPT_CONTINUITA.txt` è il testo breve per riprendere il lavoro in una nuova conversazione; `docs/ROADMAP.md` distingue le decisioni approvate dalle funzioni implementate.
 
 - Conservare i requisiti consolidati elencati in `CONTINUITY.md`; confrontare ogni modifica di comportamento con tali requisiti e con le nuove richieste dell'utente.
