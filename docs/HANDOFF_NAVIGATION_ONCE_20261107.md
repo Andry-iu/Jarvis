@@ -1,3 +1,13 @@
+0.5.121 / 143 — BUILD FIRMATA COMPLETATA; DOWNLOAD CONFERMATO DALL’UTENTE (7 novembre 2026, Europe/Rome)
+
+Job c6f79b80-2039-48d4-a762-e2cdab9e5307 succeeded sul sorgente cf4d12e1fd55f24134976eb40776261448f1be84; verbale main b881b921a65966df70fc2a7dffebb3d2186fecf6. 695 test Android, 0 failure/skipped; lint 0 errori/55 warning. APK 90052351byte, SHA256 1b39d0c8e039a20200ac6d3d64b5a5a2b51ae73f5dc18b51b6937323b1b73ca4, certificato permanente verificato. Backend privato .121 pubblicato (appgdep_6aef50758b488191b4d6bbd827c846bb succeeded/has_mcp/env4), guida maps .121/143 riletta.
+
+Corrette due chiamate Robolectric setIsKeyguardLocked→setKeyguardLocked; vecchi job falliti conservati. Download dapprima segnalato fermo e poi confermato funzionante dall’utente; causa client/server non accertata, nessun fix download o upload Drive completato. Installazione e navigazione reali sul Galaxy, streaming/latenza/batteria e gli altri residui roadmap restano da collaudare. Nessuna API Google a pagamento usata per la verifica.
+
+Procedura da riusare prima di nuove ricerche: docs/PROCEDURA_BUILD_RILASCIO.md; dettagli del report in releases/cloud-jobs/c6f79b80-2039-48d4-a762-e2cdab9e5307.json. Aggiornamento documentale richiesto dall’utente: nessuna nuova build, firma o distribuzione.
+
+STORICO DEGLI STATI PRECEDENTI — NON RIPRENDERE COME LAVORI ANCORA DA ESEGUIRE
+
 0.5.121 / 143 — CAUSA ANDROID RECUPERATA E CORRETTA; VERIFICA CLOUD DA COMPLETARE (7 novembre 2026)
 
 Il recupero autonomo ha pubblicato il report tecnico releases/cloud-diagnostics/ec528b06-3d5c-4365-844a-c0ab5b54811a.json su main41a55fc: due unresolved_reference in BridgeNavigationTest.kt righe38/82, task compileDebugUnitTestKotlin. Causa accertata: nuovi test usavano setIsKeyguardLocked, inesistente nello shadow Robolectric. Corretto in setKeyguardLocked come nelle suite esistenti FavoriteOperationsTest/PhoneContactExportTest. Nessun errore nei test Android eseguiti è stato dedotto: il compilatore si era fermato prima di eseguirli.

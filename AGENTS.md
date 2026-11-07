@@ -1,6 +1,10 @@
-## Recupero autonomo diagnostica build .121
+## Percorso build/rilascio già riuscito — 7 novembre 2026
 
-Utente autorizza tutti gli strumenti necessari fino all’APK firmato e un retry esplicito. Due job android_failed non forniscono causa. Raccoglitore opt-in collect_diagnostic.py attivo solo con diagnostic-request.json e nel cloud Jarvis: metadata sorgente pubblicabili, mai log/messaggi/valori privati o credenziali. Nessuna modifica al runner in esecuzione; preBuild legge il primo log e registra releases/cloud-diagnostics/<job>.json su main con push fast-forward. Rimuovere la richiesta dopo recupero, correggere la causa e verificare nuovamente nello stesso cloud. Test interpretati27passati; nessuna nuova riuscita Android dichiarata.
+Prima di nuove ricerche o ripristini leggere docs/PROCEDURA_BUILD_RILASCIO.md e lo stato corrente in CONTINUITY.md. .121/143 compilata e firmata: job c6f79b80-2039-48d4-a762-e2cdab9e5307 succeeded, 695test/0failure, lint0errori/55warning, verbale b881b921a65966df70fc2a7dffebb3d2186fecf6; backend .121 pubblicato e download confermato dall’utente. Collaudo Galaxy distinto e ancora aperto. Le precedenti diciture «build/firma/consegna da completare» sono storiche.
+
+Usare il ponte cloud_status/start/job/artifact e uno SHA esatto; conservare UUID e stati terminali. Dopo android_failed recuperare causa dal log o dal raccoglitore opt-in esistente prima di altre build. Causa .121 accertata: nei test Robolectric usare setKeyguardLocked, non setIsKeyguardLocked; richiesta diagnostica rimossa e hook inattivo in sua assenza. Dopo comandi abortiti non assumere effetti e non insistere sul medesimo percorso indisponibile: il canale GitHub create_tree/create_commit/update_ref con expected_sha e force=false è riuscito. Nessun reset distruttivo o ricostruzione toolchain altrove.
+
+Un download bloccato non richiede nuova compilazione. Link artifact privato autenticato, 7giorni; browser esterno è tentativo, non causa/soluzione provata. L’utente ha confermato il successo senza specificare il passaggio risolutivo; nessun fix download o upload Drive completato. Non dichiarare pronta un’alternativa prima di recupero byte/hash, upload e readback. Aggiornare procedure e stato nelle fonti pertinenti; non replicare interi storici in ogni documento.
 
 ## Consenso permanente al cloud — confermato 7 novembre 2026
 

@@ -1,3 +1,7 @@
+## Percorso verificato e insegnamenti correnti
+
+La build .121/143 è riuscita (job c6f79b80-2039-48d4-a762-e2cdab9e5307), il backend è pubblicato e l’utente ha confermato il download. Prima di ripetere diagnosi o cercare un’altra consegna leggere [PROCEDURA_BUILD_RILASCIO.md](PROCEDURA_BUILD_RILASCIO.md): contiene causa Robolectric risolta, passaggi GitHub/cloud riusciti, distinzione download/Drive e limiti del collaudo. Gli esempi di fallimenti precedenti sotto sono storici.
+
 # Compilazioni richiamabili dalle altre chat
 
 Il ponte estende **JarvisWake Link**, lo stesso plugin/Site privato già abbinato al telefono. Non richiede un nuovo plugin, un APK diverso o una pagina del telefono aperta. Le richieste di compilazione riguardano esclusivamente `Andry-iu/Jarvis`; l’esecutore usa `/workspace/Jarvis`, gli strumenti/cache in `/workspace/.jarvis-cloud` e la firma permanente. Non esegue shell ricevute dalla chat e non compila Watch o agenti Windows.
