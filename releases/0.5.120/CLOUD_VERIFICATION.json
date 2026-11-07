@@ -1,0 +1,44 @@
+{
+  "apk": {
+    "bytes": 90035967,
+    "certificate_sha256": "a8ddfbe2b78be5460e72df57afbc3434411e3cc27328b13bc16b4daaba13389a",
+    "sha256": "4da895adf54cddd9db39d46039a8d1b3c691243f7325e5ced38c94798211d316",
+    "version": "0.5.120",
+    "version_code": 142
+  },
+  "backend_live_link_deployed": false,
+  "backend_tests": 87,
+  "cloud_request_id": "0ac83a9e-46e6-4d07-8472-8fa89f2313d8",
+  "counts": {
+    "android_failures": 0,
+    "android_skipped": 0,
+    "android_tests": 682,
+    "lint_errors": 0,
+    "lint_warnings": 55
+  },
+  "delivery": "Private Google Drive file in the account explicitly selected by the user; no Drive expiration configured",
+  "drive_file_id": "1XVcgd4zBgBRItUpusX12dP0peLq39wa3",
+  "environment_config": "f68203bf-ad95-493f-b5d1-b05e44686cd2~cecfg_6adcda8d13e081918b4bd1e231e145b8",
+  "google_paid_calls": false,
+  "installed_runner_tests": 24,
+  "phonebook_tests": 29,
+  "physical_device_tested": false,
+  "pinned_source_runner_tests": 16,
+  "platform_snapshot_saved": false,
+  "recovery": "Manual Gradle continuation in the same Jarvis cloud and worktree; no additional queued request; remote result remains immutable",
+  "remote_job_error": "android_failed",
+  "remote_job_state": "failed",
+  "runtime": "ccarenv_b64_Y2NhcmVudl9lZmUzZWIzM2IzY2M4MTkxOTRiNWNiMDVkZGYyOTE5NQ",
+  "source_commit": "b52730345cdb81a93bf4ca7da777c7f43bad5549",
+  "verified": [
+    "ZIP CRC",
+    "arm64-v8a only",
+    "3 native ELF LOAD alignment >=16KiB",
+    "zipalign 16KiB",
+    "permanent certificate",
+    "APK v2 for API24-27",
+    "APK v3 for API31+"
+  ],
+  "version": "0.5.120",
+  "version_code": 142
+}

@@ -191,7 +191,10 @@ class Runner:
         self.command(['node', 'scripts/validate-artifact.mjs'], work/'phone-bridge', 'checks_failed')
 
     def android(self, work, build):
-        args = ['bash', 'gradlew', '--offline', '--no-daemon', '-PjarvisUnsigned=true',
+        # Reuse the Gradle cache, but allow pinned dependencies to be fetched if
+        # a resumed environment has an incomplete cache. A cache miss is not a
+        # reason to consume and fail an otherwise valid immutable job.
+        args = ['bash', 'gradlew', '--no-daemon', '-PjarvisUnsigned=true',
                 '-Pkotlin.compiler.execution.strategy=in-process',
                 '-PjarvisTestJava=/usr/lib/jvm/java-21-openjdk-amd64/bin/java', '-PjarvisTestSdks=34,36',
                 ':app:testDebugUnitTest', ':app:lintDebug']

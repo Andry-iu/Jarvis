@@ -1,3 +1,15 @@
+0.5.120 / 142 — APK COMPILATO, FIRMATO E VERIFICATO NEL CLOUD JARVIS (7 novembre 2026, Europe/Rome)
+
+Sorgente esatto b52730345cdb81a93bf4ca7da777c7f43bad5549, worktree senza modifiche tracciate. Recupero locale autorizzato nello stesso cloud/worktree dopo che il nuovo job0ac83a9e-46e6-4d07-8472-8fa89f2313d8 è terminato per cache Android incompleta in modalità offline; il suo stato remoto failed non è stato cambiato e nessuna terza richiesta è stata creata. Gradle test/lint/assemble realmente BUILD SUCCESSFUL:682test/71report,0failure/error/skipped,lint0errori/55warning; SDK34/36, JDK17/Java21.87test backend,29rubrica e16runner del sorgente passati;24test del runner aggiornato passati.
+
+APK JarvisWake-0.5.120-debug-arm64-permanent.apk,90.035.967byte; SHA256 4da895adf54cddd9db39d46039a8d1b3c691243f7325e5ced38c94798211d316. Firma permanente/certificato a8ddfbe2b78be5460e72df57afbc3434411e3cc27328b13bc16b4daaba13389a, v2/v3,ZIP CRC,solo arm64-v8a,3ELF LOAD16KiB e zipalign16KiB verificati. Backup cifrato e temporanei gestiti come previsto, nessuna nuova chiave. Verbale releases/0.5.120/CLOUD_VERIFICATION.json e checksum SHA256SUMS; APK e credenziali fuori Git. Consegna privata tramite Google Drive nell'account scelto esplicitamente dall'utente, senza nuova condivisione pubblica e senza scadenza Drive automatica.
+
+Runner: bootstrap/prontezza documentati in docs/CLOUD_BUILDS.md e cloud-runner/environment-setup.json; rimossa l'imposizione --offline, così Gradle riusa la cache e può recuperare dipendenze fissate mancanti. Questa è una verifica strumenti, non garanzia di cache completa o rete sempre disponibile. Snapshot della piattaforma NON salvato/pubblicato: strumenti dedicati assenti in questa sessione; l'asserzione vocale contraria era errata. Richiesta e procedura memorizzate negli appunti Jarvis.
+
+Da completare: pubblicazione del backend .120/live-link nello stesso Site, prova reale streaming/gateway, collaudo Galaxy e misura latenza/batteria; nessuna API Google a pagamento o azione reale sul telefono usata per validare l'APK. Conservare tutti gli altri residui della roadmap e la regola uscite Voice/cover. Non dichiarare il nuovo percorso live attivo sul telefono dal solo APK compilato. Restano storici i precedenti blocchi e job falliti sotto.
+
+STATO PRECEDENTE CONSERVATO
+
 RIPRISTINO RUNNER E PRONTEZZA CLOUD — 7 novembre 2026, Europe/Rome
 
 Richiesta esplicita: ripristinare gli strumenti e rendere riutilizzabile la preparazione. Runtime Jarvis corrente con rete Site consentita/enforced; runner collegato, token sostituito solo dopo autorizzazione, firma permanente e pairing conservati. Ripristinati Go1.27.3 (checksum fissato), NDK28.2.13676358, gomobile/gobind alla revisione prevista, cache moduli Go e pyrage1.4.0. Backup cifrato e certificato permanente realmente verificati; temporanei in chiaro rimossi.
