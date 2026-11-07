@@ -59,6 +59,7 @@ val whatsappNative by tasks.registering(Exec::class) {
     outputs.file(layout.buildDirectory.file("whatsapp-native/wabridge.aar"))
 }
 val cloudBuildDiagnostics by tasks.registering(Exec::class) {
+    onlyIf { rootProject.file("cloud-runner/diagnostic-request.json").exists() }
     workingDir(rootProject.projectDir)
     commandLine("python3", rootProject.file("cloud-runner/collect_diagnostic.py").absolutePath)
 }

@@ -35,7 +35,7 @@ class BridgeNavigationTest {
             override fun store(notes:List<LocalNote>) {error("navigation must never write notes")}
         },{1L},{error("must never create notes")}))
         BridgeSettings.enable(app,true);BridgeSettings.enableActions(app,true);PhoneNotes.enable(app,true)
-        shadowOf(app.getSystemService(KeyguardManager::class.java)).setIsKeyguardLocked(false)
+        shadowOf(app.getSystemService(KeyguardManager::class.java)).setKeyguardLocked(false)
         shadowOf(app).clearNextStartedActivities()
     }
     @After fun reset() {
@@ -79,7 +79,7 @@ class BridgeNavigationTest {
     @Test fun ambiguityAndLockNeverStartMaps() {
         rows=rows+rows.single().copy(id="4ac0e8f0-19b7-413c-aed8-5e49089e5f18",title="Casa")
         assertEquals("destination_ambiguous",run("casa").getString("code"));assertNull(shadowOf(app).nextStartedActivity)
-        shadowOf(app.getSystemService(KeyguardManager::class.java)).setIsKeyguardLocked(true)
+        shadowOf(app.getSystemService(KeyguardManager::class.java)).setKeyguardLocked(true)
         assertEquals("locked",run("via Esempio 4, Città").getString("code"));assertNull(shadowOf(app).nextStartedActivity)
     }
     @Test fun changedNoteOrRevokedConsentBeforeDispatchNeverLaunchesOldDestination() {
