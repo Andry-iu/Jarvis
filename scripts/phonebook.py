@@ -112,14 +112,23 @@ class Book:
     def save(self, state):
         self.write('pending.enc', self.encrypt(state, 'pending-v1'))
 
-    def begin(self, device, contact_ref='', names_only=False):
+    def begin(self, device, contact_ref='', names_only=False, direct=False, query='', offset=0):
         identifier(device)
         if contact_ref:
             identifier(contact_ref)
         require(type(names_only) is bool and not (names_only and contact_ref), 'invalid_export_mode')
+        require(type(direct) is bool and not (direct and names_only), 'invalid_export_mode')
+        if direct:
+            require(isinstance(query, str) and bool(query) != bool(contact_ref) and len(query) <= 80 and
+                    integer(offset, 0, 10000) and offset % 20 == 0 and not (contact_ref and offset), 'invalid_selection')
+        else:
+            require(not query and offset == 0, 'invalid_export_mode')
         require(not (self.root / 'pending.enc').exists(), 'update_already_pending')
         state = {'device': device, 'mode': 'names' if names_only else 'number' if contact_ref else 'full', 'chunks': [], 'started': int(time.time() * 1000)}
-        self.next(state, 'contacts_export_start', {} if names_only else {'contact_ref': contact_ref})
+        if direct:
+            self.next(state, 'get_contact', {'name': query, 'contact_ref': contact_ref, 'offset': offset})
+        else:
+            self.next(state, 'contacts_export_start', {} if names_only else {'contact_ref': contact_ref})
         return self.status()
 
     def next(self, state, operation, params):
@@ -157,6 +166,35 @@ class Book:
         require(response.get('state') == 'responded' and response.get('source') == 'paired_device' and
                 response.get('operation') == pending['operation'], 'export_not_completed')
         result = response.get('result', {})
+        if pending['operation'] == 'get_contact':
+            if result.get('code') == 'contacts_found':
+                exact(result, 'code contacts truncated next_offset')
+                require(isinstance(result['contacts'], list) and len(result['contacts']) <= 20 and
+                        type(result['truncated']) is bool and result['truncated'] == (result['next_offset'] is not None))
+                require(not result['truncated'] or (len(result['contacts']) == 20 and
+                        type(result['next_offset']) is int and result['next_offset'] == args['offset'] + 20))
+                for contact in result['contacts']:
+                    exact(contact, 'contact_ref name label suffix')
+                    identifier(contact['contact_ref'])
+                    require(isinstance(contact['name'], str) and len(contact['name']) <= 100 and
+                            isinstance(contact['label'], str) and len(contact['label']) <= 40 and
+                            isinstance(contact['suffix'], str) and re.fullmatch('[0-9]{0,4}', contact['suffix']))
+                (self.root / 'pending.enc').unlink()
+                return {**self.status(), 'selection_required': bool(result['contacts']), 'code': 'contacts_found',
+                        'candidates': result['contacts'], 'next_offset': result['next_offset']}
+            exact(result, 'code bytes sha256 data_base64')
+            require(result['code'] == 'contact_number' and integer(result['bytes'], 1, 8192) and
+                    isinstance(result['sha256'], str) and re.fullmatch('[a-f0-9]{64}', result['sha256']) and
+                    isinstance(result['data_base64'], str) and len(result['data_base64']) <= 10924)
+            try:
+                raw = base64.b64decode(result['data_base64'], validate=True)
+            except (ValueError, TypeError):
+                raise BookError('invalid_chunk') from None
+            require(len(raw) == result['bytes'] and hashlib.sha256(raw).hexdigest() == result['sha256'], 'hash_mismatch')
+            body = self.validate(json.loads(raw.decode('utf-8')), {'mode': 'number', 'contacts': 1, 'phones': 1, 'emails': 0})
+            self.apply(state['device'], body)
+            (self.root / 'pending.enc').unlink()
+            return self.status()
         if 'manifest' in state:
             require(state['manifest']['expires_at'] > int(time.time()*1000), 'snapshot_expired')
         if pending['operation'] == 'contacts_export_start':
@@ -358,12 +396,14 @@ def main():
     parser.add_argument('--contact-ref', default='')
     parser.add_argument('--query')
     parser.add_argument('--names-only', action='store_true')
+    parser.add_argument('--direct', action='store_true')
+    parser.add_argument('--offset', type=int, default=0)
     args = parser.parse_args()
     try:
         book = Book()
         with book.locked():
             if args.command == 'begin':
-                result = book.begin(args.device_id, args.contact_ref, args.names_only)
+                result = book.begin(args.device_id, args.contact_ref, args.names_only, args.direct, args.query or '', args.offset)
             elif args.command == 'accept':
                 data = sys.stdin.buffer.read(MAX_RESPONSE_BYTES + 1)
                 require(len(data) <= MAX_RESPONSE_BYTES, 'response_too_large')

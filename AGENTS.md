@@ -18,6 +18,13 @@ Prima di modificare il progetto leggere `README.md`, `CONTINUITY.md` e `VERIFICA
 - L'autorizzazione all'implementazione segue la regola di discussione qui sopra; il rilascio e il push non anticipano mai la decisione di scope.
 - Se esiste una cronologia remota, recuperarla e integrare i cambiamenti conservandola. Nessun force-push per sostituirla con una copia ricavata da ZIP.
 
+## Riduzione delle transazioni remote — via esplicito 7 novembre 2026
+
+- Per operazioni simili verso il telefono, preferire meno transazioni: raggruppare i passaggi compatibili in un comando che restituisce direttamente il risultato. Preservare consensi, scelta delle ambiguità, revalidazione e UUID/journal; non aggregare automaticamente chiamate/invii o altre azioni non richieste.
+- .119/141: per un singolo numero preferire `jarviswake_get_contact`, preceduto dalla consultazione dell’indice locale; nome esatto oppure riferimento scelto, mai entrambi. `contacts_found` non contiene numeri completi e richiede scelta; paginazione finale non rende univoca l’intera ricerca. `contact_number` va passato alla utility `phonebook.py begin --direct`/`accept` con verifica hash/schema e aggiornamento incrementale cifrato. Export completo/nomi conserva il percorso precedente e il lavoro asincrono senza timeout dopo claim.
+- Misurare separatamente attesa/lettura/invio/restituzione; `age_ms` è età del risultato e durata tool non è trasferimento puro. Un secondo è obiettivo da verificare, non SLA. Non attribuire un ritardo al telefono senza log pertinenti; distinguere sempre salvataggio nel workspace e scrittura Android.
+- Stato .119: sorgenti e test interpretati preparati/verificati fuori cloud, test Android/build/firma/deploy/collaudo non ancora eseguiti. Continuare nel cloud Jarvis senza chiedere nuovamente consenso allo stesso gruppo. Handoff corrente `docs/HANDOFF_DIRECT_NUMBER_20261107.md`.
+
 ## Build, firma e consegna APK — regola operativa consolidata
 
 - Autorizzazione permanente dell’utente (25 ottobre 2026): a ogni rilascio APK eseguire il push fast-forward su `main` di tutti i sorgenti, test, documentazione e checksum pertinenti, senza chiedere nuovamente conferma. Verificare la coincidenza di `HEAD` e `origin/main` prima della consegna. Restano esclusi APK, output di build, chiavi e credenziali; nessun force-push. Questa autorizzazione al push Git non autorizza la pubblicazione dell’ambiente cloud.

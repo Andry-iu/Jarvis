@@ -10,7 +10,7 @@ internal object ContactExportDiagnostics {
     enum class Reason { GENERATION_CHANGED, LINK_DISABLED, COPY_DISABLED, CONTACT_PERMISSION, DEADLINE, SCREEN_LOCKED,
         NETWORK, TIMEOUT, DNS, TLS, INTERRUPTED, PROTOCOL_OR_STORAGE, RESULT_AGE, HTTP }
     private val phases=setOf("starting","contacts","phones","emails","verifying","freezing")
-    private val codes=setOf("contacts_export_ready","contacts_export_page","contacts_export_disabled","contacts_export_expired",
+    private val codes=setOf("contact_number","contact_number_too_large","contacts_found","contacts_search_too_large","invalid_number","contacts_export_ready","contacts_export_page","contacts_export_disabled","contacts_export_expired",
         "contacts_export_unavailable","contacts_export_changed","contacts_export_too_large","contacts_export_busy","invalid_export_offset",
         "invalid_export_mode","permission_required","locked","cancelled","expired_before_dispatch","outcome_uncertain","unsupported",
         "contact_changed","contact_expired","unavailable","claimed","already_claimed","saved","uncertain","provider_cancelled")

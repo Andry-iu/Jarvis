@@ -1,3 +1,11 @@
+# 0.5.119 / 141 — sorgenti, non ancora rilasciata
+
+- Recupero diretto del singolo numero richiesto, con ambiguità esplicita e possibilità di scelta attraverso riferimento corrente.
+- Risultato piccolo in una risposta con SHA256, controllo dello schema e salvataggio cifrato incrementale; export completo/nomi conservato.
+- Coda da eseguire distinta dallo storico, migrazione compatibile paginata e pulizia privata separata; attesa breve integrata, UUID invariato.
+- Tempi server queue_ms/claimed_to_response_ms/server_total_ms, diagnostica tecnica del telefono senza dati privati.
+- 65 test backend e 24 Python passati; test Android preparati, compilazione/firma/deploy e prova Galaxy ancora pendenti nel cloud Jarvis. Dettagli in VERIFICATION.md e handoff corrente.
+
 ## 0.5.118 / 140 — limiti concordati e diagnostica export
 
 - Export256KiB; manifest/hash/salvataggio atomico e compatibilità6144byte conservati. Sostituisce1MiB prima del rilascio.

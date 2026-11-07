@@ -42,6 +42,55 @@ class PhonebookTest(unittest.TestCase):
             self.book.accept(self.response({'code':'contacts_export_page','snapshot_id':manifest['snapshot_id'],
                 'offset':offset,'next_offset':None if end==len(raw) else end,'expires_at':manifest['expires_at'],
                 'data_base64':base64.b64encode(chunk).decode()}))
+    def direct_result(self, contacts=None):
+        raw = m.encode({'schema': 1, 'mode': 'number', 'contacts': contacts or [contact(email='')]})
+        return {'code': 'contact_number', 'bytes': len(raw), 'sha256': hashlib.sha256(raw).hexdigest(),
+                'data_base64': base64.b64encode(raw).decode()}
+
+    def test_direct_number_is_one_persisted_request_with_atomic_incremental_save(self):
+        raw, meta = self.start([contact('old')]); self.finish(raw, meta)
+        self.book.begin(self.device, direct=True, query='Private Contact 1')
+        plan = self.book.plan()
+        self.assertEqual(plan['tool'], 'jarviswake_get_contact')
+        self.assertEqual(plan['args']['name'], 'Private Contact 1')
+        self.assertEqual(m.Book(self.book.root).plan(), plan)
+        result = self.book.accept(self.response(self.direct_result()))
+        self.assertFalse(result['pending']); self.assertEqual(result['contacts'], 2)
+        self.assertEqual(len(self.book.search('Private Contact 1')['contacts']), 1)
+        for path in self.book.root.iterdir():
+            self.assertNotIn(b'Private Contact', path.read_bytes())
+
+    def test_direct_ambiguity_never_saves_masked_suffix_as_number(self):
+        self.book.begin(self.device, direct=True, query='Example')
+        candidate = {'contact_ref': str(uuid.uuid4()), 'name': 'Example', 'label': 'mobile', 'suffix': '0001'}
+        result = self.book.accept(self.response({'code': 'contacts_found', 'contacts': [candidate], 'truncated': False, 'next_offset': None}))
+        self.assertTrue(result['selection_required']); self.assertEqual(result['candidates'], [candidate])
+        self.assertFalse(result['pending']); self.assertEqual(self.book.status()['phones'], 0)
+        self.book.begin(self.device, contact_ref=candidate['contact_ref'], direct=True)
+        self.assertEqual(self.book.plan()['args']['name'], '')
+        self.book.accept(self.response(self.direct_result()))
+        self.assertEqual(self.book.status()['phones'], 1)
+
+    def test_direct_corrupt_hash_and_multiple_numbers_never_replace_previous_copy(self):
+        raw, meta = self.start([contact('old')]); self.finish(raw, meta)
+        self.book.begin(self.device, direct=True, query='Example')
+        before = self.book.status()['contacts']
+        bad = self.direct_result(); bad['sha256'] = '0' * 64
+        with self.assertRaises(m.BookError): self.book.accept(self.response(bad))
+        with self.assertRaises(m.BookError): self.book.accept(self.response(self.direct_result([contact(email=''), contact('2', email='')])))
+        self.assertEqual(self.book.status()['contacts'], before)
+        self.assertTrue(self.book.status()['pending'])
+
+    def test_direct_waiting_keeps_same_uuid_and_wrong_source_cannot_save(self):
+        self.book.begin(self.device, direct=True, query='Example')
+        args = self.book.plan()['args']
+        self.book.accept({'state': 'pending', 'device_id': self.device, 'request_id': args['request_id']})
+        self.assertEqual(self.book.plan()['tool'], 'jarviswake_status_result')
+        self.assertEqual(self.book.plan()['args']['request_id'], args['request_id'])
+        bad = self.response(self.direct_result()); bad['source'] = 'untrusted'
+        with self.assertRaises(m.BookError): self.book.accept(bad)
+        self.assertEqual(self.book.status()['phones'], 0)
+
     def test_names_import_and_fuzzy_query_preserve_complete_numbers_and_homonyms(self):
         raw,meta=self.start([contact()]);self.finish(raw,meta)
         full_before=self.book.search('Private');stamp=self.book.status()['full_updated_at']

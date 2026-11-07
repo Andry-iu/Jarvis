@@ -1,3 +1,13 @@
+# Singolo numero rapido — .119/141 (sorgenti, rilascio pendente)
+
+Percorso preferito dopo avere consultato `search-names`: `begin --device-id UUID --direct --query "Nome esatto"`, quindi `plan`, invio dello strumento `jarviswake_get_contact` e `accept` del risultato. Il piano salva UUID e parametri PRIMA del comando. Se pending, il piano passa a `status_result` sullo stesso UUID; nessun nuovo export automatico. Se `contacts_found`, la utility restituisce candidati mascherati e next_offset senza modificare l’archivio dei numeri. Chiarire persona/numero e poi `begin --device-id UUID --direct --contact-ref UUID_SCELTO`; per altre pagine nome identico e `--offset NEXT_OFFSET`. Anche una singola voce nella pagina finale resta da scegliere.
+
+`contact_number` contiene esattamente code/bytes/sha256/data_base64, massimo8192byte decodificati: JSON schema1/mode number, un contatto/un numero/zero email. Backend e utility verificano struttura e SHA256; salvataggio cifrato e transazionale conserva gli altri numeri/email e l’indice dei nomi. Nessuno snapshot nuovo: l’export massivo eventualmente esistente non è invalidato dal recupero diretto. Riferimenti scaduti/cambiati o consenso/permesso/sblocco mancanti restituiscono errore, mai un numero ipotizzato. Payload troppo grande: errore esplicito, non esportazione completa implicita. Nessuna scrittura dei contatti Android, chiamata o messaggio.
+
+Il server attende brevemente1200ms il risultato; l’attesa non è timeout dell’azione né garanzia di risposta entro un secondo. Le funzioni esistenti restano compatibili; attivare il percorso nuovo solo con APK141 e backend corrispondente. Tempi coda/claim→risposta/totale server in `timings`; tempo lettura e roundtrip claim/invio nei log tecnici del telefono. Nessun nome/numero/Base64/hash nei log o in Git. Sorgenti verificati solo con simulazioni backend/Python, Android e prova reale nel cloud/Galaxy ancora da fare: handoff corrente.
+
+## Percorso export completo/nomi e compatibilità precedente
+
 # Trasferimento .118/140 — 256KiB, sorgenti preparati
 
 La decisione del7novembre sostituisce la scelta1MiB precedente, mai rilasciata. La pagina contiene fino a256KiB =262144byte del JSON UTF-8: file fino alla soglia inclusa in una pagina dati, oltre blocchi256KiB/ultimo residuo. Manifest iniziale e limite totale8MiB conservati. App140 annuncia chunk_bytes262144; backend/utility accettano anche6144 per telefoni e staging precedenti, senza nuovo export automatico.

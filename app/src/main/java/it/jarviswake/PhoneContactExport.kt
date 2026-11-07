@@ -18,6 +18,7 @@ import java.util.UUID
 internal object PhoneContactExport {
     const val CHUNK=256*1024
     const val MAX_BYTES=8*1024*1024
+    const val DIRECT_MAX_BYTES=8192
     const val TTL=30*60*1000L
     private data class Snapshot(val device:String,val id:String,val bytes:ByteArray,var until:Long,var expires:Long)
     private var snapshot:Snapshot?=null
@@ -136,15 +137,37 @@ internal object PhoneContactExport {
             .put("next_offset",if(end==s.bytes.size) JSONObject.NULL else end)
             .put("data_base64",Base64.encodeToString(s.bytes.copyOfRange(offset,end),Base64.NO_WRAP))
     }
+    private fun direct(c:Context,device:String,p:JSONObject,report:(String)->Unit,allowed:()->Boolean):JSONObject {
+        val name=p.getString("name");var ref=p.getString("contact_ref")
+        val offset=p.optInt("offset",0)
+        if((name.isEmpty()==ref.isEmpty()) || (ref.isNotEmpty() && (!BridgeProtocol.validId(ref) || offset!=0)))
+            throw BridgeFailure("invalid_export_mode")
+        if(ref.isEmpty()) {
+            val found=BridgeContacts.search(c,device,name,offset)
+            val candidates=found.getJSONArray("contacts")
+            if(offset!=0 || found.optBoolean("truncated") || candidates.length()!=1) return found.also {checkAllowed(allowed)}
+            ref=candidates.getJSONObject(0).getString("contact_ref")
+        }
+        val selected=BridgeContacts.resolve(c,device,ref)
+        val body=collect(c,selected,progress=report,allowed=allowed)
+        BridgeContacts.resolve(c,device,ref)
+        checkAllowed(allowed)
+        val bytes=body.toString().toByteArray(Charsets.UTF_8)
+        if(bytes.size>DIRECT_MAX_BYTES) throw BridgeFailure("contact_number_too_large")
+        return result("contact_number").put("bytes",bytes.size)
+            .put("sha256",MessageDigest.getInstance("SHA-256").digest(bytes).joinToString(""){"%02x".format(it)})
+            .put("data_base64",Base64.encodeToString(bytes,Base64.NO_WRAP))
+    }
     fun execute(c:Context,device:String,op:String,p:JSONObject,requestId:String?=null,progress:(String)->Unit={},allowed:()->Boolean):JSONObject {
         val started=now()
         ContactExportDiagnostics.record(c,requestId,ContactExportDiagnostics.Stage.STARTED,offset=p.optInt("offset",-1))
-        val report:(String)->Unit={phase->ContactExportDiagnostics.record(c,requestId,ContactExportDiagnostics.Stage.PROGRESS,phase=phase,elapsedMs=now()-started);progress(phase)}
+        val report:(String)->Unit={phase->ContactExportDiagnostics.record(c,requestId,ContactExportDiagnostics.Stage.PROGRESS,phase=phase,elapsedMs=now()-started);if(op=="contacts_export_start") progress(phase)}
         val outcome=try {
         if(!enabled(c)) throw BridgeFailure("contacts_export_disabled")
         if(c.checkSelfPermission(Manifest.permission.READ_CONTACTS)!=PackageManager.PERMISSION_GRANTED) throw BridgeFailure("permission_required")
         checkAllowed(allowed)
         when(op) {
+            "get_contact" -> direct(c,device,p,report,allowed)
             "contacts_export_start" -> {
                 val ref=p.getString("contact_ref")
                 if(p.has("names_only") && p.get("names_only") !is Boolean) throw BridgeFailure("invalid_export_mode")

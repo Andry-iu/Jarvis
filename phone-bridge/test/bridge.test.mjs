@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {webcrypto} from 'node:crypto';
+import {webcrypto,createHash} from 'node:crypto';
 import worker from '../worker/index.js';
 globalThis.crypto ??= webcrypto;
 class Bucket {
@@ -28,7 +28,7 @@ const snap={app:{version:'0.5.80',versionCode:102},wake:{serviceRunning:true,cap
 test('Discovery exposes bounded status and action tools without fabricated phone data',async()=>{
   const r=await worker.fetch(request('/mcp',{jsonrpc:'2.0',id:1,method:'tools/list'}),env());
   const names=(await r.json()).result.tools.map(t=>t.name);
-  assert.deepEqual(names,['jarviswake_devices','jarviswake_request_status','jarviswake_status_result','jarviswake_contacts_names_export_start','jarviswake_contacts_export_start','jarviswake_contacts_export_page','jarviswake_speak','jarviswake_find_contacts','jarviswake_navigate','jarviswake_call_by_name','jarviswake_call_contact','jarviswake_whatsapp','jarviswake_list_favorites','jarviswake_add_favorite','jarviswake_create_favorite','jarviswake_rename_favorite','jarviswake_change_favorite_number','jarviswake_delete_favorite','jarviswake_list_notes','jarviswake_read_note','jarviswake_save_note','jarviswake_guide']);
+  assert.deepEqual(names,['jarviswake_devices','jarviswake_request_status','jarviswake_status_result','jarviswake_get_contact','jarviswake_contacts_names_export_start','jarviswake_contacts_export_start','jarviswake_contacts_export_page','jarviswake_speak','jarviswake_find_contacts','jarviswake_navigate','jarviswake_call_by_name','jarviswake_call_contact','jarviswake_whatsapp','jarviswake_list_favorites','jarviswake_add_favorite','jarviswake_create_favorite','jarviswake_rename_favorite','jarviswake_change_favorite_number','jarviswake_delete_favorite','jarviswake_list_notes','jarviswake_read_note','jarviswake_save_note','jarviswake_guide']);
 });
 test('Pairing requires authenticated same-origin browser action',async()=>{
   for(const h of [{},user,{...user,Origin:'https://attacker.example','X-Jarvis-Link':'pair'}]) {
@@ -234,7 +234,7 @@ test('Status remains compatible with old snapshots and reports only the notes co
 
 test('The complete guide is available without pairing or a running phone',async()=>{
  const e=env();const r=value(await tool(e,'jarviswake_guide',{topic:'indice',query:''}));
- assert.equal(r.guide_version,'0.5.118');assert.equal(r.version_code,140);assert.equal(r.phone_required,false);assert.ok(r.topics.length>=19);
+ assert.equal(r.guide_version,'0.5.119');assert.equal(r.version_code,141);assert.equal(r.phone_required,false);assert.ok(r.topics.length>=19);
  assert.equal(e.BUCKET.data.size,0);
  for(const topic of ['wake','cover','audio','chatgpt','collegamento','appunti','plugin','maps','chiamate','whatsapp','diagnostica']) assert.ok(r.topics.some(t=>t.topic===topic));
 });
@@ -668,4 +668,100 @@ test('Contact search accepts20 masked results per page with validated continuati
  assert.equal((await send(result)).status,200);
  assert.deepEqual(value(await tool(e,'jarviswake_status_result',{device_id:c.deviceId,request_id:id})).result,result);
  for(const offset of [-20,1,21,10020]) assert.equal((await tool(e,'jarviswake_find_contacts',{...args,request_id:crypto.randomUUID(),offset})).isError,true);
+});
+
+async function advertiseDirect(e,c,versionCode=141) {
+  return worker.fetch(request('/device/poll',{deviceId:c.deviceId,versionCode,operations:['status','get_contact','find_contacts','contacts_export_start','contacts_export_page']},{Authorization:'Bearer '+c.deviceToken}),e);
+}
+function directPayload() {
+  const body={schema:1,mode:'number',contacts:[{id:'101',lookup_key:'synthetic-lookup',name:'Example Person',phones:[{id:'102',number:'+390000001',label:'mobile'}],emails:[]}]};
+  const raw=Buffer.from(JSON.stringify(body));
+  return {code:'contact_number',bytes:raw.length,sha256:requireDigest(raw),data_base64:raw.toString('base64')};
+}
+function requireDigest(raw) { // Synthetic fixture only; no phone contents.
+  return createHash('sha256').update(raw).digest('hex');
+}
+async function directRoundTrip(e,c,result,args={name:'Example Person',contact_ref:''}) {
+  await advertiseDirect(e,c);
+  const request_id=crypto.randomUUID(),params={device_id:c.deviceId,request_id,...args};
+  const waiting=tool(e,'jarviswake_get_contact',params);
+  const key=`pending/${c.deviceId}/${request_id}.json`;
+  const until=Date.now()+3000;
+  while(!await e.BUCKET.get(key) && Date.now()<until) await new Promise(r=>setTimeout(r,2));
+  const poll=await advertiseDirect(e,c);assert.equal((await poll.json()).request.requestId,request_id);
+  const auth={Authorization:'Bearer '+c.deviceToken};
+  assert.equal((await worker.fetch(request('/device/claim',{deviceId:c.deviceId,requestId:request_id},auth),e)).status,200);
+  const sent=await worker.fetch(request('/device/respond',{deviceId:c.deviceId,requestId:request_id,result},auth),e);
+  return {sent,reply:await waiting,params};
+}
+test('Direct number requires APK141 and exactly a name or a selected reference',async()=>{
+  const e=env(),c=await pair(e);await advertiseDirect(e,c,140);
+  const args={device_id:c.deviceId,request_id:crypto.randomUUID(),name:'Example Person',contact_ref:''};
+  assert.equal((await tool(e,'jarviswake_get_contact',args)).content[0].text,'app_update_required');
+  await advertiseDirect(e,c);
+  for(const bad of [{name:'',contact_ref:''},{name:'Example',contact_ref:crypto.randomUUID()},{name:'',contact_ref:crypto.randomUUID(),offset:20},{name:'Example',contact_ref:'',offset:1}])
+    assert.equal((await tool(e,'jarviswake_get_contact',{...args,...bad})).isError,true);
+});
+test('One direct command can return a complete single number without export start/page calls',async()=>{
+  const e=env(),c=await pair(e),payload=directPayload();
+  const {sent,reply,params}=await directRoundTrip(e,c,payload);
+  assert.equal(sent.status,200);const r=value(reply);assert.equal(r.state,'responded');assert.equal(r.operation,'get_contact');assert.deepEqual(r.result,payload);
+  assert.ok(r.timings.queue_ms>=0);assert.ok(r.timings.claimed_to_response_ms>=0);assert.equal(r.timings.server_total_ms,r.timings.queue_ms+r.timings.claimed_to_response_ms);
+  assert.equal([...e.BUCKET.data.keys()].filter(k=>k.startsWith(`requests/${c.deviceId}/`)).length,1);
+  assert.equal([...e.BUCKET.data.keys()].filter(k=>k.startsWith(`pending/${c.deviceId}/`)).length,0);
+  assert.equal(value(await tool(e,'jarviswake_get_contact',params)).request_id,params.request_id);
+});
+test('Direct ambiguity sends only masked candidates and selection is a second direct command',async()=>{
+  const e=env(),c=await pair(e),ref=crypto.randomUUID();
+  const metadata={code:'contacts_found',contacts:[{contact_ref:ref,name:'Example Person',label:'mobile',suffix:'0001'},{contact_ref:crypto.randomUUID(),name:'Example Person',label:'home',suffix:'0002'}],truncated:false,next_offset:null};
+  const first=await directRoundTrip(e,c,metadata);assert.equal(first.sent.status,200);assert.deepEqual(value(first.reply).result,metadata);
+  const second=await directRoundTrip(e,c,directPayload(),{name:'',contact_ref:ref});assert.equal(second.sent.status,200);assert.equal(value(second.reply).result.code,'contact_number');
+});
+test('Direct result rejects bad encoding, full-book payloads and unsolicited private fields',async()=>{
+  const e=env(),c=await pair(e),payload=directPayload();
+  await advertiseDirect(e,c);const args={device_id:c.deviceId,request_id:crypto.randomUUID(),name:'Example',contact_ref:''};
+  const pending=value(await tool(e,'jarviswake_get_contact',args));assert.equal(pending.state,'pending');
+  const auth={Authorization:'Bearer '+c.deviceToken};
+  await worker.fetch(request('/device/claim',{deviceId:c.deviceId,requestId:args.request_id},auth),e);
+  const pack=body=>{const raw=Buffer.from(JSON.stringify(body));return {...payload,bytes:raw.length,sha256:requireDigest(raw),data_base64:raw.toString('base64')};};
+  const original=JSON.parse(Buffer.from(payload.data_base64,'base64'));
+  for(const bad of [{...payload,sha256:'0'.repeat(64)},{...payload,audio:'forbidden'},{...payload,bytes:payload.bytes+1},{...payload,data_base64:'%%%='},pack({...original,mode:'full'}),pack({...original,contacts:[...original.contacts,...original.contacts]}),pack({...original,contacts:[{...original.contacts[0],emails:[{id:'e',label:'home',address:'private@example.invalid'}]}]})])
+    assert.equal((await worker.fetch(request('/device/respond',{deviceId:c.deviceId,requestId:args.request_id,result:bad},auth),e)).status,400);
+});
+test('Pending queue delivery does not scan completed request history after one-time migration',async()=>{
+  const e=env(),c=await pair(e);await advertiseDirect(e,c);
+  for(let i=0;i<300;i++) await e.BUCKET.put(`requests/${c.deviceId}/history-${i}.json`,JSON.stringify({requestId:`history-${i}`,operation:'status',createdAt:1,expiresAt:2}));
+  const get=e.BUCKET.get.bind(e.BUCKET),list=e.BUCKET.list.bind(e.BUCKET);let historyReads=0,historyLists=0;
+  e.BUCKET.get=async k=>{if(k.includes('/history-'))historyReads++;return get(k);};
+  e.BUCKET.list=async q=>{if(q.prefix.startsWith('requests/'))historyLists++;return list(q);};
+  const q=value(await tool(e,'jarviswake_request_status',{device_id:c.deviceId}));
+  const polled=await advertiseDirect(e,c);assert.equal((await polled.json()).request.requestId,q.request_id);
+  assert.equal(historyReads,0);assert.equal(historyLists,0);
+});
+test('First indexed poll migrates an existing legacy pending request without dropping it',async()=>{
+  const e=env(),c=await pair(e),rid=crypto.randomUUID(),now=Date.now();
+  await e.BUCKET.put(`requests/${c.deviceId}/${rid}.json`,JSON.stringify({requestId:rid,operation:'status',params:{},createdAt:now,expiresAt:now+25000}));
+  const poll=await advertiseDirect(e,c);assert.equal((await poll.json()).request.requestId,rid);
+  assert.ok(await e.BUCKET.get(`pending-index/${c.deviceId}.json`));
+});
+
+test('Legacy migration follows every R2 cursor before enabling indexed-only delivery',async()=>{
+  const e=env(),c=await pair(e),now=Date.now(),rid=crypto.randomUUID();
+  for(let i=0;i<205;i++) await e.BUCKET.put(`requests/${c.deviceId}/a-history-${String(i).padStart(3,'0')}.json`,JSON.stringify({requestId:`a-history-${i}`,operation:'status',createdAt:1,expiresAt:2}));
+  await e.BUCKET.put(`requests/${c.deviceId}/z-pending.json`,JSON.stringify({requestId:rid,operation:'status',params:{},createdAt:now,expiresAt:now+25000}));
+  // The canonical key is used during dispatch after migration.
+  await e.BUCKET.put(`requests/${c.deviceId}/${rid}.json`,JSON.stringify({requestId:rid,operation:'status',params:{},createdAt:now,expiresAt:now+25000}));
+  e.BUCKET.list=async ({prefix,limit,cursor})=>{const keys=[...e.BUCKET.data.keys()].filter(k=>k.startsWith(prefix)).sort();const start=Number(cursor||0),end=start+limit;return {objects:keys.slice(start,end).map(key=>({key})),truncated:end<keys.length,cursor:end<keys.length?String(end):undefined};};
+  const poll=await advertiseDirect(e,c);assert.equal((await poll.json()).request.requestId,rid);
+  assert.ok(await e.BUCKET.get(`pending-index/${c.deviceId}.json`));
+});
+test('Same direct UUID repairs a missing queue index without creating or claiming a new request',async()=>{
+  const e=env(),c=await pair(e);await advertiseDirect(e,c);
+  const args={device_id:c.deviceId,request_id:crypto.randomUUID(),name:'Example',contact_ref:''};
+  assert.equal(value(await tool(e,'jarviswake_get_contact',args)).state,'pending');
+  await e.BUCKET.delete(`pending/${c.deviceId}/${args.request_id}.json`);
+  assert.equal(value(await tool(e,'jarviswake_get_contact',args)).state,'pending');
+  const poll=await advertiseDirect(e,c);assert.equal((await poll.json()).request.requestId,args.request_id);
+  assert.equal([...e.BUCKET.data.keys()].filter(k=>k.startsWith(`requests/${c.deviceId}/`)).length,1);
+  assert.equal(await e.BUCKET.get(`claims/${c.deviceId}/${args.request_id}.json`),null);
 });
