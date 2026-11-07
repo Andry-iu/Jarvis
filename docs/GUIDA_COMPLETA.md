@@ -1,4 +1,4 @@
-# Guida completa JarvisWake — 0.5.120 / 142
+# Guida completa JarvisWake — 0.5.121 / 143
 
 ## Iniziare e orientarsi
 
@@ -89,7 +89,7 @@ Dalla .89 la risoluzione comprende anche i Preferiti di JarvisWake aggiunti dall
 
 ## Maps, cambio destinazione e Android Auto
 
-Esempio: «Usa JarvisWake Link e avvia Maps in auto verso [indirizzo preciso]». Per cambiare: «Cambia destinazione verso [nuovo indirizzo]». Il comando usa l’Intent di navigazione di Google Maps e richiede un nuovo percorso verso la destinazione indicata. Indirizzi ambigui vanno chiariti prima.
+Dalla .121/143: «Avvia navigazione verso casa», un indirizzo completo o il nome di un luogo richiedono un solo comando jarviswake_navigate. Passare subito destination con le parole dell’utente oppure un indirizzo completo già disponibile; riusare device_id noto, senza preflight di stato, elenco/lettura appunti o ricerca web. Jarvis risolve sul telefono le etichette esatte negli appunti autorizzati: per esempio «casa» corrisponde a «Indirizzo di casa». La nota deve contenere un indirizzo singolo e concreto (anche «Casa è in via …»); non interpreta istruzioni o testi complessi. Rilegge la revisione prima di aprire Maps. Consenso appunti necessario solo per leggere le note; un indirizzo completo funziona anche senza quel consenso. Casa mancante, ambigua, cambiata o non interpretabile produce un esito esplicito senza avvio. Nomi di luoghi e indirizzi da cercare sono passati letteralmente alla ricerca di Google Maps, senza geocodifica a pagamento separata; Maps può richiedere una scelta. Una richiesta non garantisce una singola transazione HTTP: claim/risposta e lettura di un eventuale pending restano correlate allo stesso UUID, senza altro comando di navigazione. Per cambiare destinazione serve una nuova richiesta esplicita.
 Se è rilevata una connessione Android Auto in proiezione, Jarvis conserva la cover già aperta sul telefono. Senza connessione confermata rimuove la cover per mostrare Maps. Il solo Bluetooth non viene considerato prova di Android Auto. La conversazione Live può restare in background se le impostazioni di ChatGPT lo consentono: abilita le conversazioni in background quando vuoi continuare a parlare con Maps davanti. Questo non cambia progetto o apre una chat sostitutiva.
 intent_dispatched significa che l’apertura è stata richiesta; non certifica che Maps abbia calcolato il percorso o iniziato la guida. Verifica destinazione e itinerario sul telefono.
 Con Android Auto collegato la visualizzazione e la navigazione dipendono da Maps, collegamento e sistema dell’auto. Jarvis non controlla direttamente il display dell’auto e l’Intent non garantisce la proiezione. La prima prova va fatta da fermi, dopo aver verificato la navigazione sul telefono. Non sono introdotte API di navigazione a pagamento separate.

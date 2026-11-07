@@ -1,3 +1,5 @@
+.121/143: navigate riceve direttamente destinazione letterale o indirizzo completo. Una sola invocazione operativa, nessun devices/status/list_notes/read_note preliminare con device_id noto. Etichette personali risolte sul telefono con consenso appunti e revalidazione; luoghi generici delegati a Maps. Richiede APK143, errori code-only senza indirizzi; altri comandi invariati. Handoff docs/HANDOFF_NAVIGATION_ONCE_20261107.md.
+
 # .120 / 142 — canale Voice e ritorno diretto dell’esito
 
 `POST /device/live` autenticato come gli endpoint dispositivo, protocol1 e capability APK142, emette ready/heartbeat/request in NDJSON. Stessa coda R2, nessuno stato globale di isolate usato per consegnare richieste; nessuna nuova risorsa hosting o API esterna. Un flusso serve più comandi, con backpressure e rinnovo entro20s/40 scansioni. Controlli server250ms, heartbeat3s, verifica pairing prima di consegna e heartbeat, chiusura su abort. Rimane polling della coda lato server: misurare carico/limiti dell’hosting nel cloud. Il rinnovo può introdurre una pausa e non promette socket eterno.

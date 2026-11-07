@@ -92,14 +92,14 @@ async function claim(e,c,id) {return worker.fetch(request('/device/claim',{devic
 test('New actions require an upgraded device; old polling only receives status',async()=>{
  const e=env(),c=await pair(e),id=crypto.randomUUID();
  assert.equal((await tool(e,'jarviswake_navigate',{device_id:c.deviceId,destination:'Test address',request_id:id})).isError,true);
- await advertise(e,c);
+ await advertise(e,c,143);
  assert.equal(value(await tool(e,'jarviswake_navigate',{device_id:c.deviceId,destination:'Test address',request_id:id})).state,'pending');
  const read=value(await tool(e,'jarviswake_request_status',{device_id:c.deviceId}));
  const poll=await worker.fetch(request('/device/poll',{deviceId:c.deviceId},{Authorization:'Bearer '+c.deviceToken}),e);
  assert.equal((await poll.json()).request.requestId,read.request_id);
 });
 test('Maps uses a stable idempotency key, claim and correlated honest result',async()=>{
- const e=env(),c=await pair(e);await advertise(e,c);const id=crypto.randomUUID();
+ const e=env(),c=await pair(e);await advertise(e,c,143);const id=crypto.randomUUID();
  const args={device_id:c.deviceId,destination:'Test address & symbols',request_id:id};
  assert.equal(value(await tool(e,'jarviswake_navigate',args)).state,'pending');
  assert.equal(value(await tool(e,'jarviswake_navigate',args)).request_id,id);
@@ -169,6 +169,7 @@ test('Notes require version104 without disrupting the version103 actions',async(
  const args={device_id:c.deviceId,offset:0,request_id:crypto.randomUUID()};
  const old=await tool(e,'jarviswake_list_notes',args);assert.equal(old.isError,true);assert.equal(old.content[0].text,'app_update_required');
  await advertiseNotes(e,c);assert.equal(value(await tool(e,'jarviswake_list_notes',args)).state,'pending');
+ await advertiseNotes(e,c,143);
  assert.equal(value(await tool(e,'jarviswake_navigate',{device_id:c.deviceId,destination:'Test address',request_id:crypto.randomUUID()})).state,'pending');
 });
 test('Notes schema enforces revisions, limits and exact bounded literal fields',async()=>{
@@ -234,7 +235,7 @@ test('Status remains compatible with old snapshots and reports only the notes co
 
 test('The complete guide is available without pairing or a running phone',async()=>{
  const e=env();const r=value(await tool(e,'jarviswake_guide',{topic:'indice',query:''}));
- assert.equal(r.guide_version,'0.5.120');assert.equal(r.version_code,142);assert.equal(r.phone_required,false);assert.ok(r.topics.length>=19);
+ assert.equal(r.guide_version,'0.5.121');assert.equal(r.version_code,143);assert.equal(r.phone_required,false);assert.ok(r.topics.length>=19);
  assert.equal(e.BUCKET.data.size,0);
  for(const topic of ['wake','cover','audio','chatgpt','collegamento','appunti','plugin','maps','chiamate','whatsapp','diagnostica']) assert.ok(r.topics.some(t=>t.topic===topic));
 });
@@ -767,7 +768,7 @@ test('Same direct UUID repairs a missing queue index without creating or claimin
 });
 
 async function openLive(e,c,overrides={}) {
-  const r=await worker.fetch(request('/device/live',{deviceId:c.deviceId,protocol:1,versionCode:142,
+  const r=await worker.fetch(request('/device/live',{deviceId:c.deviceId,protocol:1,versionCode:143,
     operations:['status','get_contact','navigate','find_contacts','contacts_export_start','contacts_export_page'],...overrides},
     {Authorization:'Bearer '+c.deviceToken}),e);
   return r;
@@ -822,12 +823,12 @@ test('Closing a live stream stops queue checks without removing or restarting an
   const e=env(),c=await pair(e),r=await openLive(e,c),reader=r.body.getReader();
   await liveFrame(reader);
   // A non-live capability makes the enqueue return immediately for this recovery fixture.
-  await advertise(e,c,142);
+  await advertise(e,c,143);
   const args={device_id:c.deviceId,destination:'Synthetic',request_id:crypto.randomUUID()};
   const queued=value(await tool(e,'jarviswake_navigate',args));
   const command=await liveFrame(reader);assert.equal(command.request.requestId,queued.request_id);
   await reader.cancel();
-  const recovered=await worker.fetch(request('/device/poll',{deviceId:c.deviceId,versionCode:142,operations:['status','navigate']},{Authorization:'Bearer '+c.deviceToken}),e);assert.equal((await recovered.json()).request.requestId,queued.request_id);
+  const recovered=await worker.fetch(request('/device/poll',{deviceId:c.deviceId,versionCode:143,operations:['status','navigate']},{Authorization:'Bearer '+c.deviceToken}),e);assert.equal((await recovered.json()).request.requestId,queued.request_id);
   assert.equal((await claim(e,c,queued.request_id)).status,200);
   assert.equal((await claim(e,c,queued.request_id)).status,200);
   const again=await claim(e,c,queued.request_id);assert.equal((await again.json()).state,'already_claimed');
@@ -835,7 +836,7 @@ test('Closing a live stream stops queue checks without removing or restarting an
 });
 test('Revocation blocks delivery on an already-open live channel',async()=>{
   const e=env(),c=await pair(e),r=await openLive(e,c),reader=r.body.getReader();
-  await liveFrame(reader);await advertise(e,c,142);
+  await liveFrame(reader);await advertise(e,c,143);
   value(await tool(e,'jarviswake_navigate',{device_id:c.deviceId,destination:'Synthetic',request_id:crypto.randomUUID()}));
   await worker.fetch(request('/api/revoke',{}, {...user,Origin:origin,'X-Jarvis-Link':'pair'}),e);
   await assert.rejects(()=>reader.read(),/live_channel_closed/);
@@ -869,4 +870,28 @@ test('Client abort closes live stream without recording a device disconnection o
   await liveFrame(reader);abort.abort();
   assert.equal((await reader.read()).done,true);
   assert.equal(value(await tool(e,'jarviswake_devices',{})).devices[0].device_id,c.deviceId);
+});
+
+
+test('One navigation command carries either a literal query or complete address and never asks for notes',async()=>{
+ for(const destination of ['casa','Farmacia Esempio Rimini','via Esempio 4, Città']) {
+  const e=env(),c=await pair(e);await advertise(e,c,143);
+  const args={device_id:c.deviceId,destination,request_id:crypto.randomUUID()};
+  assert.equal(value(await tool(e,'jarviswake_navigate',args)).state,'pending');
+  const polled=await worker.fetch(request('/device/poll',{deviceId:c.deviceId,versionCode:143,operations:['navigate']},{Authorization:'Bearer '+c.deviceToken}),e),command=(await polled.json()).request;
+  assert.equal(command.operation,'navigate');assert.deepEqual(command.params,{destination});
+  assert.equal([...e.BUCKET.data.keys()].filter(k=>k.startsWith(`requests/${c.deviceId}/`)).length,1);
+ }
+});
+test('Navigation resolver requires APK143 and exposes only bounded navigation errors',async()=>{
+ for(const code of ['destination_ambiguous','destination_not_found','destination_invalid','destination_changed','notes_disabled','notes_unavailable']) {
+  const e=env(),c=await pair(e);await advertise(e,c,142);
+  const args={device_id:c.deviceId,destination:'casa',request_id:crypto.randomUUID()};
+  assert.equal((await tool(e,'jarviswake_navigate',args)).content[0].text,'app_update_required');
+  await advertise(e,c,143);assert.equal(value(await tool(e,'jarviswake_navigate',args)).state,'pending');await claim(e,c,args.request_id);
+  const auth={Authorization:'Bearer '+c.deviceToken};
+  assert.equal((await worker.fetch(request('/device/respond',{deviceId:c.deviceId,requestId:args.request_id,result:{code,address:'private'}},auth),e)).status,400);
+  assert.equal((await worker.fetch(request('/device/respond',{deviceId:c.deviceId,requestId:args.request_id,result:{code}},auth),e)).status,200);
+  assert.deepEqual(value(await tool(e,'jarviswake_status_result',{device_id:c.deviceId,request_id:args.request_id})).result,{code});
+ }
 });

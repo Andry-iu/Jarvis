@@ -1,3 +1,13 @@
+0.5.121 / 143 — NAVIGAZIONE CON UN SOLO COMANDO; BUILD CLOUD DA ESEGUIRE (7 novembre 2026, Europe/Rome)
+
+Via esplicito utente alla consegna di un APK per il gruppo concordato: una sola richiesta operativa a JarvisWake con indirizzo già completo oppure destinazione da cercare. Nessun preflight devices/status o list_notes/read_note quando device_id è già noto. Il telefono risolve etichette esatte negli appunti autorizzati, revalida contenuto/revisione prima del dispatch e apre Maps. Indirizzi completi non leggono le note; luoghi generici sono passati letteralmente alla ricerca Maps. Casa mancante/ambigua, note invalide/cambiate, permessi/revoca/lock fermano il dispatch con codici distinti. Nessuna API di geocodifica a pagamento o trasmissione degli appunti al modello. Ricerca geografica/ambiguità dei luoghi resta di Maps: intent_dispatched non certifica itinerario attivo.
+
+Compatibilità: tool navigate richiede APK143; gli altri comandi e il trasporto .120 sono conservati. Un comando può includere claim/risposta/status_result correlati allo stesso UUID: non promettere una sola connessione HTTP né latenza garantita. Diagnostica solo fonte/fase/durata, niente indirizzi/titoli/testi nei log o risposte.
+
+Verifiche Android, lint, build, firma permanente, pubblicazione backend e consegna APK ancora da completare nel cloud Jarvis. Nuove suite NavigationDestinationTest e BridgeNavigationTest preparate; 89test backend passati,0failure; sync-guide --check, Worker ESM e git diff --check passati. Handoff docs/HANDOFF_NAVIGATION_ONCE_20261107.md. Conservati tutti i residui della roadmap, inclusi streaming/gateway reale, latenza/batteria e collaudo Galaxy. La .120 resta l’ultima release verificata finché il job non termina con successo.
+
+STATO PRECEDENTE CONSERVATO
+
 # Canale pronto durante Voice — via esplicito 7 novembre 2026
 
 Implementato nei sorgenti .120/142: HTTP NDJSON di sessione, risultati nella prima richiesta MCP quando pronti, percorso locale rubrica accorpato. Soglia di accettazione concordata: 1–3 secondi desiderati e massimo5 secondi dalla fine della richiesta all’inizio della risposta con il numero; il superamento non annulla né ripete il comando. Test interpretati completati; restano verifica Android/build/firma/deploy nel cloud Jarvis, collaudo Galaxy e consumi. Il server continua a scandire R2 e il trasporto si rinnova; non è una garanzia di latenza o di batteria. Dettagli in [HANDOFF_LIVE_LINK_20261107.md](HANDOFF_LIVE_LINK_20261107.md). Tutti gli sviluppi precedenti restano aperti.

@@ -95,12 +95,28 @@ internal object BridgeActions {
                 "navigate" -> {
                     val destination=p.getString("destination")
                     if(!BridgeProtocol.validText(destination,300)) throw BridgeFailure("unavailable")
+                    unlocked(c)
+                    val started=SystemClock.elapsedRealtime()
+                    val plan=NavigationDestination.resolve(destination,PhoneNotes.enabled(c)) {
+                        try { PhoneNotes.book(c).snapshot() }
+                        catch(_:Exception) { throw BridgeFailure("notes_unavailable") }
+                    }
+                    NativeRuntimeSnapshot.save(c,command.getString("requestId"),"bridge_navigation",
+                        "stage=resolved source=${if(plan.note==null) "maps" else "note"} elapsed_ms=${SystemClock.elapsedRealtime()-started}")
                     onMain(::allowed) {
                         unlocked(c)
+                        plan.note?.let { previous ->
+                            if(!PhoneNotes.enabled(c)) throw BridgeFailure("notes_disabled")
+                            val current=try { PhoneNotes.book(c).read(previous.id) }
+                                catch(_:Exception) { throw BridgeFailure("destination_changed") }
+                            if(current!=previous) throw BridgeFailure("destination_changed")
+                        }
                         if(VoiceCycle.active && (VoiceCycle.phase!=VoiceCycleState.Phase.VOICE || (!VoiceCycle.googleMode && !NativeChatSettings.enabled(c)))) throw BridgeFailure("unsupported")
-                        launch(c,Intent(Intent.ACTION_VIEW,Uri.parse("google.navigation:q="+Uri.encode(destination)+"&mode=d"))
+                        launch(c,Intent(Intent.ACTION_VIEW,Uri.parse("google.navigation:q="+Uri.encode(plan.query)+"&mode=d"))
                             .setPackage("com.google.android.apps.maps"),keepCover=BridgeCarConnection.keepMapsCover())
                     }
+                    NativeRuntimeSnapshot.save(c,command.getString("requestId"),"bridge_navigation",
+                        "stage=intent_dispatched elapsed_ms=${SystemClock.elapsedRealtime()-started}")
                     result("intent_dispatched")
                 }
                 "call_contact" -> call(c,deviceId,command.getString("requestId"),p.getString("contact_ref"),deadline,::allowed)

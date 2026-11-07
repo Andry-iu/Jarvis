@@ -1,3 +1,13 @@
+0.5.121 / 143 — NAVIGAZIONE CON UN SOLO COMANDO; BUILD CLOUD DA ESEGUIRE (7 novembre 2026, Europe/Rome)
+
+Via esplicito utente alla consegna di un APK per il gruppo concordato: una sola richiesta operativa a JarvisWake con indirizzo già completo oppure destinazione da cercare. Nessun preflight devices/status o list_notes/read_note quando device_id è già noto. Il telefono risolve etichette esatte negli appunti autorizzati, revalida contenuto/revisione prima del dispatch e apre Maps. Indirizzi completi non leggono le note; luoghi generici sono passati letteralmente alla ricerca Maps. Casa mancante/ambigua, note invalide/cambiate, permessi/revoca/lock fermano il dispatch con codici distinti. Nessuna API di geocodifica a pagamento o trasmissione degli appunti al modello. Ricerca geografica/ambiguità dei luoghi resta di Maps: intent_dispatched non certifica itinerario attivo.
+
+Compatibilità: tool navigate richiede APK143; gli altri comandi e il trasporto .120 sono conservati. Un comando può includere claim/risposta/status_result correlati allo stesso UUID: non promettere una sola connessione HTTP né latenza garantita. Diagnostica solo fonte/fase/durata, niente indirizzi/titoli/testi nei log o risposte.
+
+Verifiche Android, lint, build, firma permanente, pubblicazione backend e consegna APK ancora da completare nel cloud Jarvis. Nuove suite NavigationDestinationTest e BridgeNavigationTest preparate; 89test backend passati,0failure; sync-guide --check, Worker ESM e git diff --check passati. Handoff docs/HANDOFF_NAVIGATION_ONCE_20261107.md. Conservati tutti i residui della roadmap, inclusi streaming/gateway reale, latenza/batteria e collaudo Galaxy. La .120 resta l’ultima release verificata finché il job non termina con successo.
+
+STATO PRECEDENTE CONSERVATO
+
 0.5.120 / 142 — APK COMPILATO, FIRMATO E VERIFICATO NEL CLOUD JARVIS (7 novembre 2026, Europe/Rome)
 
 Sorgente esatto b52730345cdb81a93bf4ca7da777c7f43bad5549, worktree senza modifiche tracciate. Recupero locale autorizzato nello stesso cloud/worktree dopo che il nuovo job0ac83a9e-46e6-4d07-8472-8fa89f2313d8 è terminato per cache Android incompleta in modalità offline; il suo stato remoto failed non è stato cambiato e nessuna terza richiesta è stata creata. Gradle test/lint/assemble realmente BUILD SUCCESSFUL:682test/71report,0failure/error/skipped,lint0errori/55warning; SDK34/36, JDK17/Java21.87test backend,29rubrica e16runner del sorgente passati;24test del runner aggiornato passati.

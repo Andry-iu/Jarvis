@@ -1,3 +1,7 @@
+## Navigazione in una richiesta — via esplicito 7 novembre 2026
+
+La richiesta di APK autorizza implementazione, commit/push e build firmata del gruppo .121/143: una sola richiesta navigate con destinazione letterale oppure indirizzo completo già disponibile. Riusa device_id noto; non premettere devices/status/list_notes/read_note o ricerca web. Risoluzione di etichette personali esatte negli appunti sul telefono con consenso e revalidazione; query geografiche a Maps. Ambiguità o dati non validi richiedono chiarimento, nessun indirizzo inventato. Claim/journal/outbox e lettura di pending con stesso UUID restano; un comando non significa un solo HTTP o successo Maps. Preparazione fuori cloud, Android/build/firma obbligatori nel cloud Jarvis. Handoff docs/HANDOFF_NAVIGATION_ONCE_20261107.md.
+
 # Istruzioni per lavorare su JarvisWake
 
 ## Ambiente di compilazione pronto — richiesta7novembre2026

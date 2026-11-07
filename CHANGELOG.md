@@ -1,3 +1,9 @@
+## 0.5.121 / 143 — navigazione in una richiesta
+
+- Indirizzo completo oppure query a Maps nello stesso comando navigate; etichette personali risolte sul telefono dagli appunti con consenso e revalidazione.
+- Codici espliciti per destinazione mancante/ambigua/invalida/cambiata; niente indirizzi o appunti nei risultati/log.
+- Tool/guida e test aggiornati. Build/firma/deploy cloud ancora da verificare: vedere handoff corrente.
+
 # 0.5.119 / 141 — numero diretto e coda indicizzata
 
 - Recupero diretto del singolo numero richiesto, con ambiguità esplicita e possibilità di scelta attraverso riferimento corrente.
