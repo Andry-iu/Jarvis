@@ -1,6 +1,16 @@
 # Handoff .119/141 — singolo numero diretto
 
-## Stato e ambito autorizzato
+## Completamento cloud — 7 novembre 2026
+
+La richiesta «Intanto compilami l’APK firmato» ha avviato il rilascio dal mainbd7d5668c775f3f2bf4b06e223fd8fbd5801ba75, checkout pulito/fetch corrente, toolchain/cache/firma Jarvis riusati. Mirati DirectContactNumberTest e regressioni export/diagnostica/paginazione passati SDK34/36, poi suite completa670test/70suite/0failure/error/skipped, lint55warning/0errori/fatal e assemble riusciti.5suite Node DOM/audio,65test Worker e24test Python passati; guida --check34argomenti/13930parole. Nessuna correzione dei sorgenti ricevuti necessaria.
+
+Stesso backend owner-private pubblicato: source dce04d87ccc047d4b3a99283519c4ccd59bb0272, deployment appgdep_6aef227566f481919bbaaac43de3a032 succeeded/has_mcp=true/env2, pairing/audience/segreti conservati e guida nativa riletta .119/141. Nuovo tool get_contact nel server; una chat con catalogo precedente può richiedere aggiornamento. Non è una prova sul telefono o una garanzia≤1s.
+
+Unico APK Telefono .119/141 firmato permanentemente:90.019.583byte, SHA256 88c060a32943cec83d8fa6b1fb27394402c2aa64c6a45abe1672da3bbd26a722. Versione/ABI/CRC ZIP/v2/v3/certificato/zipalign e3ELF16KB verificati; temporanei privati rimossi, checksum in releases/0.5.119/SHA256SUMS e APK/report fuori Git. Nessuna API Google reale, query di contatti reali, chiamata o modifica Watch/Windows/Voice/cover per compilare.
+
+Restano prove fisiche e residui sotto elencati. Il ponte MCP per comandare build/verifiche da altre chat è un lavoro separato approvato ma non ancora implementato: ultimo probe HTTPS dal cloud al Site rifiutato dal proxy403, dominio da consentire nelle impostazioni cloud. Questo rilascio non lo considera funzionante e non crea automaticamente un esecutore. Le sezioni successive conservano lo stato storico della preparazione, seguito da questo completamento cloud.
+
+## Stato iniziale e ambito autorizzato
 
 Via esplicito «Implementa anche questa modifica che la proviamo» e «No, tu implementala». Baseline remota aggiornata095dfe7; checkout di lavoro separato allineato prima delle modifiche. Regola generale concordata: meno transazioni verso il telefono per operazioni simili, senza allargare autorizzazioni o scegliere contatti ambigui. Sorgenti app/backend/importatore/guida implementati. Ultima release effettiva .118/140; .119 NON compilata, firmata, distribuita o provata sul Galaxy.
 

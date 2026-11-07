@@ -1,10 +1,12 @@
-# 0.5.119 / 141 — sorgenti, non ancora rilasciata
+# 0.5.119 / 141 — numero diretto e coda indicizzata
 
 - Recupero diretto del singolo numero richiesto, con ambiguità esplicita e possibilità di scelta attraverso riferimento corrente.
 - Risultato piccolo in una risposta con SHA256, controllo dello schema e salvataggio cifrato incrementale; export completo/nomi conservato.
 - Coda da eseguire distinta dallo storico, migrazione compatibile paginata e pulizia privata separata; attesa breve integrata, UUID invariato.
 - Tempi server queue_ms/claimed_to_response_ms/server_total_ms, diagnostica tecnica del telefono senza dati privati.
 - 65 test backend e 24 Python passati; test Android preparati, compilazione/firma/deploy e prova Galaxy ancora pendenti nel cloud Jarvis. Dettagli in VERIFICATION.md e handoff corrente.
+
+- Completamento cloud:670test Android/70suite SDK34/36, lint senza errori,5suite Node/65backend/24Python passati. APK Telefono firmato permanentemente e stesso backend privato aggiornato; collaudo Galaxy e ponte MCP compilazioni ancora aperti.
 
 ## 0.5.118 / 140 — limiti concordati e diagnostica export
 
