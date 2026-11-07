@@ -1,3 +1,9 @@
+0.5.121 / 143 — RECUPERO DIAGNOSTICO AUTORIZZATO NEL CLOUD (7 novembre 2026)
+
+Il retry esplicito af71ad2f-b818-433e-bd50-989ba1c8682e sullo stesso sorgente60a510a è terminato failed/android_failed come il primo: nessun APK e causa ancora ignota. Implementato un raccoglitore opt-in della diagnostica del primo job, eseguito da preBuild solo nel worktree cloud Jarvis. Legge il log/XML locali e pubblica su main esclusivamente percorsi/righe/categorie compilatore, task falliti e identificativi/frame dei test; MAI messaggi di assert, valori attesi, system-out o log integrali. Nessuna lettura di credenziali o cambi al runner installato. Report previsto releases/cloud-diagnostics/ec528b06-3d5c-4365-844a-c0ab5b54811a.json.27test Python runner/diagnostica passati; attivazione e recupero reale ancora da eseguire con nuova revisione su main. Serve poi correggere la causa, rimuovere diagnostic-request.json e completare Android/firma/rilascio nel medesimo cloud. Non dichiarare nuovi test Android passati. Backend precedente34 ripristinato, .12135 salvato e da ripubblicare solo dopo APK verificato.
+
+STATO PRECEDENTE CONSERVATO
+
 0.5.121 / 143 — BUILD CLOUD FALLITA NELLA FASE ANDROID; NESSUN APK (7 novembre 2026, Europe/Rome)
 
 Sorgenti/test/documentazione del gruppo navigazione in una richiesta pubblicati su main nel commit 60a510a624a66df2304775bf757019fc40b9f7b3.89test backend passati/0failure, guida e Worker ESM verificati. Job cloud ec528b06-3d5c-4365-844a-c0ab5b54811a realmente preso in carico sul medesimo commit: controlli interpretati completati, fase Android terminata failed/android_failed. Il bridge non espone il dettaglio del log; non è accertato se il fallimento riguardi compilazione, test o lint. Nessuna firma, nessun APK, checksum o collaudo Galaxy della .121 completati. La frase vocale «è pronta» era prematura e non corrisponde al risultato.

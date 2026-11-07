@@ -58,6 +58,11 @@ val whatsappNative by tasks.registering(Exec::class) {
     inputs.file(rootProject.file("scripts/build-whatsapp-native.sh"))
     outputs.file(layout.buildDirectory.file("whatsapp-native/wabridge.aar"))
 }
+val cloudBuildDiagnostics by tasks.registering(Exec::class) {
+    workingDir(rootProject.projectDir)
+    commandLine("python3", rootProject.file("cloud-runner/collect_diagnostic.py").absolutePath)
+}
+tasks.named("preBuild").configure { dependsOn(cloudBuildDiagnostics) }
 tasks.named("preBuild").configure { dependsOn(whatsappNative) }
 
 dependencies {

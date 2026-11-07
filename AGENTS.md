@@ -1,3 +1,7 @@
+## Recupero autonomo diagnostica build .121
+
+Utente autorizza tutti gli strumenti necessari fino all’APK firmato e un retry esplicito. Due job android_failed non forniscono causa. Raccoglitore opt-in collect_diagnostic.py attivo solo con diagnostic-request.json e nel cloud Jarvis: metadata sorgente pubblicabili, mai log/messaggi/valori privati o credenziali. Nessuna modifica al runner in esecuzione; preBuild legge il primo log e registra releases/cloud-diagnostics/<job>.json su main con push fast-forward. Rimuovere la richiesta dopo recupero, correggere la causa e verificare nuovamente nello stesso cloud. Test interpretati27passati; nessuna nuova riuscita Android dichiarata.
+
 ## Consenso permanente al cloud — confermato 7 novembre 2026
 
 Per i lavori richiesti sono già autorizzati accesso al cloud Jarvis, diagnosi/raccolta/lettura log pertinenti, modifiche/correzioni, test, commit/push, compilazione, firma permanente e rilascio. Non chiedere nuovi consensi ai passaggi dello stesso lavoro, anche tra chat. Rispetta controlli obbligatori reali e UUID/stati terminali; nessuna ripetizione cieca. Non inventare moduli o dialoghi a schermo: capacità tecnica e consenso sono distinti. Conferma salvata nelle regole generali v40 e appunto consenso sul telefono rev3. Il job .121 ec528b06-3d5c-4365-844a-c0ab5b54811a è fallito nella fase Android: leggere il log privato nel cloud, senza dedurre la causa dal solo android_failed. Handoff aggiornato.
