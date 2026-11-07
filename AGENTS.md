@@ -25,7 +25,16 @@ Prima di modificare il progetto leggere `README.md`, `CONTINUITY.md` e `VERIFICA
 - Misurare separatamente attesa/lettura/invio/restituzione; `age_ms` è età del risultato e durata tool non è trasferimento puro. Un secondo è obiettivo da verificare, non SLA. Non attribuire un ritardo al telefono senza log pertinenti; distinguere sempre salvataggio nel workspace e scrittura Android.
 - Stato .119: sorgenti e test interpretati preparati/verificati fuori cloud, test Android/build/firma/deploy/collaudo non ancora eseguiti. Continuare nel cloud Jarvis senza chiedere nuovamente consenso allo stesso gruppo. Handoff corrente `docs/HANDOFF_DIRECT_NUMBER_20261107.md`.
 
+## Canale Voice — via esplicito 7 novembre 2026
+
+- .120/142: canale HTTP NDJSON durante il ciclo Voice, aperto in anticipo all’avvio e riusato per tutte le operazioni compatibili. Rinnovo trasporto non è nuovo comando. Fuori Voice resta il percorso ordinario. Non confondere questo flusso con WebSocket/push: il server continua a controllare R2; misurare buffering e limiti della piattaforma.
+- Per numero singolo preferire `phonebook.py lookup --device-id UUID --query "Nome"`, poi tool indicato e `accept --show-number`; accorpare nella stessa esecuzione quando disponibile. Chiarire ambiguità e preservare UUID, verifiche e salvataggio. Non cercare un altro nome per inferenza, non stampare rubrica/Base64.
+- Obiettivo1–3s e soglia5s end-to-end: fine richiesta vocale → inizio risposta contenente il numero. Superamento è un test fallito, mai motivo per annullare/reinviare un comando già preso in carico. Tempo backend/trasporto e attesa del modello vanno distinti; il solo codice Android non osserva tutti i confini della Voice nativa.
+- Via esplicito già ricevuto per implementare e committare il gruppo. Non chiedere nuovamente consenso a completamento, verifiche o commit dello stesso ambito. APK/firma/deploy ancora riservati al cloud Jarvis; handoff `docs/HANDOFF_LIVE_LINK_20261107.md`.
+
 ## Build, firma e consegna APK — regola operativa consolidata
+
+- Autorizzazione permanente esplicita confermata il7novembre2026: per modifiche il cui sviluppo è già approvato, eseguire commit completi e push fast-forward su main/origin/main senza chiedere ogni volta consenso a commit o pubblicazione. «Implementa e committa» include il push; «compila nel cloud Jarvis» include la pubblicazione dei sorgenti necessari e l’avvio della build nel cloud configurato. Conservare i controlli su branch, concorrenza, destinazione e segreti. Nessun force-push, cancellazione o modifica fuori ambito autorizzati da questa regola. Riferimento generale: /Istruzioni/JarvisRuntime_regole.txt e appunto «Consenso permanente — Git, appunti e JarvisWake».
 
 - Autorizzazione permanente dell’utente (25 ottobre 2026): a ogni rilascio APK eseguire il push fast-forward su `main` di tutti i sorgenti, test, documentazione e checksum pertinenti, senza chiedere nuovamente conferma. Verificare la coincidenza di `HEAD` e `origin/main` prima della consegna. Restano esclusi APK, output di build, chiavi e credenziali; nessun force-push. Questa autorizzazione al push Git non autorizza la pubblicazione dell’ambiente cloud.
 

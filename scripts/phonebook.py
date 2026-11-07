@@ -147,10 +147,23 @@ class Book:
         tool = 'jarviswake_contacts_names_export_start' if state['mode'] == 'names' and pending['operation'] == 'contacts_export_start' else 'jarviswake_' + pending['operation']
         return {'tool': tool, 'args': args}
 
-    def accept(self, response):
+    def lookup(self, device, query):
+        # One local step: inspect the names index, journal one direct request, return its plan.
+        identifier(device)
+        require(isinstance(query, str) and query.strip() and len(query) <= 80, 'invalid_selection')
+        names = self.search_names(query)
+        exact_matches = [c for c in names['names'] if c['match'] == 'exact']
+        if names['truncated'] or len(exact_matches) > 1 or (not exact_matches and names['names']):
+            return {'selection_required': True, 'candidates': exact_matches or names['names'], 'truncated': names['truncated']}
+        selected = exact_matches[0]['name'] if exact_matches else query
+        self.begin(device, direct=True, query=selected)
+        return {**self.plan(), 'selection_required': False}
+
+    def accept(self, response, show_number=False):
         state = self.state()
         pending = state['pending']
         args = pending['args']
+        require(type(show_number) is bool and (not show_number or pending['operation'] == 'get_contact'), 'invalid_output_mode')
         require(response.get('device_id') == state['device'] and response.get('request_id') == args['request_id'], 'wrong_response')
         if response.get('state') in ('pending', 'running', 'awaiting_device'):
             pending['queued'] = True
@@ -194,7 +207,12 @@ class Book:
             body = self.validate(json.loads(raw.decode('utf-8')), {'mode': 'number', 'contacts': 1, 'phones': 1, 'emails': 0})
             self.apply(state['device'], body)
             (self.root / 'pending.enc').unlink()
-            return self.status()
+            result = self.status()
+            if show_number:
+                selected = body['contacts'][0]
+                phone = selected['phones'][0]
+                result['selected_contact'] = {'name': selected['name'], 'number': phone['number'], 'label': phone['label']}
+            return result
         if 'manifest' in state:
             require(state['manifest']['expires_at'] > int(time.time()*1000), 'snapshot_expired')
         if pending['operation'] == 'contacts_export_start':
@@ -391,24 +409,27 @@ class Book:
 def main():
     os.umask(0o077)
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('command', choices=['begin', 'plan', 'accept', 'status', 'search', 'search-names', 'abort'])
+    parser.add_argument('command', choices=['begin', 'lookup', 'plan', 'accept', 'status', 'search', 'search-names', 'abort'])
     parser.add_argument('--device-id')
     parser.add_argument('--contact-ref', default='')
     parser.add_argument('--query')
     parser.add_argument('--names-only', action='store_true')
     parser.add_argument('--direct', action='store_true')
     parser.add_argument('--offset', type=int, default=0)
+    parser.add_argument('--show-number', action='store_true', help='Return only the verified selected contact on direct accept')
     args = parser.parse_args()
     try:
         book = Book()
         with book.locked():
             if args.command == 'begin':
                 result = book.begin(args.device_id, args.contact_ref, args.names_only, args.direct, args.query or '', args.offset)
+            elif args.command == 'lookup':
+                result = book.lookup(args.device_id, args.query)
             elif args.command == 'accept':
                 data = sys.stdin.buffer.read(MAX_RESPONSE_BYTES + 1)
                 require(len(data) <= MAX_RESPONSE_BYTES, 'response_too_large')
                 response = json.loads(data)
-                result = book.accept(response)
+                result = book.accept(response, show_number=getattr(args, 'show_number', False))
             elif args.command == 'abort':
                 (book.root / 'pending.enc').unlink(missing_ok=True)
                 result = book.status()

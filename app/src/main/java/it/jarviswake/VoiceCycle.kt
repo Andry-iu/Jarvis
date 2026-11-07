@@ -80,6 +80,7 @@ internal object VoiceCycle {
         hideStopInFlightToken = null
         val token = existingCycleId ?: UUID.randomUUID().toString()
         state.begin(token, SystemClock.elapsedRealtime())
+        BridgeLink.voiceSession(context,true)
         WaitingAudio.begin(context, token)
         DiagnosticLog.record(context, DiagnosticLog.Event.CYCLE_STARTED, token)
         app = context.applicationContext as Application
@@ -145,12 +146,14 @@ internal object VoiceCycle {
             DiagnosticLog.record(context, if (returnHome) DiagnosticLog.Event.COVER_HIDDEN_FOR_WAKE
                 else DiagnosticLog.Event.CHAT_REVEALED_FOR_INTERACTION, token)
             VoiceAccessibilityService.coverHidden(token, returnHome)
+            BridgeLink.voiceSession(context,false)
             WakeService.listenWhileHidden()
         }
     }
 
     fun resumeHidden(context: Context, token: String?): Boolean {
         if (!hiddenForWake || token == null || !state.resumeFromWake(token, SystemClock.elapsedRealtime())) return false
+        BridgeLink.voiceSession(context,true)
         WaitingAudio.begin(context, token)
         DiagnosticLog.record(context, DiagnosticLog.Event.WAKE_RESUMED_HIDDEN_CYCLE, token)
         WakeService.pauseForVoiceCycle()
@@ -177,6 +180,7 @@ internal object VoiceCycle {
         VoiceAccessibilityService.disarm(context)
         LaunchActivity.closeForCycle(token)
         WebChatActivity.closeForCycle(token)
+        BridgeLink.voiceSession(context,false)
         State.setAttempt(context, message)
         State.set(context, message)
         WakeService.resumeAfterVoice(context)

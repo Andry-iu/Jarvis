@@ -234,7 +234,7 @@ test('Status remains compatible with old snapshots and reports only the notes co
 
 test('The complete guide is available without pairing or a running phone',async()=>{
  const e=env();const r=value(await tool(e,'jarviswake_guide',{topic:'indice',query:''}));
- assert.equal(r.guide_version,'0.5.119');assert.equal(r.version_code,141);assert.equal(r.phone_required,false);assert.ok(r.topics.length>=19);
+ assert.equal(r.guide_version,'0.5.120');assert.equal(r.version_code,142);assert.equal(r.phone_required,false);assert.ok(r.topics.length>=19);
  assert.equal(e.BUCKET.data.size,0);
  for(const topic of ['wake','cover','audio','chatgpt','collegamento','appunti','plugin','maps','chiamate','whatsapp','diagnostica']) assert.ok(r.topics.some(t=>t.topic===topic));
 });
@@ -764,4 +764,109 @@ test('Same direct UUID repairs a missing queue index without creating or claimin
   const poll=await advertiseDirect(e,c);assert.equal((await poll.json()).request.requestId,args.request_id);
   assert.equal([...e.BUCKET.data.keys()].filter(k=>k.startsWith(`requests/${c.deviceId}/`)).length,1);
   assert.equal(await e.BUCKET.get(`claims/${c.deviceId}/${args.request_id}.json`),null);
+});
+
+async function openLive(e,c,overrides={}) {
+  const r=await worker.fetch(request('/device/live',{deviceId:c.deviceId,protocol:1,versionCode:142,
+    operations:['status','get_contact','navigate','find_contacts','contacts_export_start','contacts_export_page'],...overrides},
+    {Authorization:'Bearer '+c.deviceToken}),e);
+  return r;
+}
+async function liveFrame(reader) {
+  const chunk=await reader.read();assert.equal(chunk.done,false);
+  return JSON.parse(new TextDecoder().decode(chunk.value).trim());
+}
+test('Live channel authenticates and rejects unsupported versions, protocols and arbitrary operations',async()=>{
+  const e=env(),c=await pair(e);
+  for(const bad of [{versionCode:141},{protocol:2},{operations:['shell']},{operations:['status','status']},{extra:true}])
+    assert.equal((await openLive(e,c,bad)).status,400);
+  assert.equal((await worker.fetch(request('/device/live',{deviceId:c.deviceId},{}),e)).status,401);
+});
+test('A single live HTTP stream delivers successive commands and complete MCP results without status polls',async()=>{
+  const e=env(),c=await pair(e),r=await openLive(e,c),reader=r.body.getReader();
+  assert.equal(r.headers.get('Content-Type'),'application/x-ndjson');
+  assert.equal(r.headers.get('Cache-Control'),'no-store');
+  try {
+    assert.equal((await liveFrame(reader)).type,'ready');
+    for(let i=0;i<2;i++) {
+      const request_id=crypto.randomUUID();
+      const result=tool(e,'jarviswake_navigate',{device_id:c.deviceId,destination:'Synthetic test destination',request_id});
+      const frame=await liveFrame(reader);
+      assert.equal(frame.type,'request');assert.equal(frame.request.requestId,request_id);
+      assert.equal(frame.request.operation,'navigate');assert.ok(frame.request.remainingMs>0);
+      assert.equal((await claim(e,c,request_id)).status,200);
+      const sent=await worker.fetch(request('/device/respond',{deviceId:c.deviceId,requestId:request_id,result:{code:'intent_dispatched'}},
+        {Authorization:'Bearer '+c.deviceToken}),e);assert.equal(sent.status,200);
+      const answer=value(await result);
+      assert.equal(answer.state,'responded');assert.equal(answer.request_id,request_id);
+      assert.equal(answer.result.code,'intent_dispatched');
+    }
+  } finally {await reader.cancel();}
+});
+test('Direct contact over live channel returns verified single-number payload in original tool call',async()=>{
+  const e=env(),c=await pair(e),r=await openLive(e,c),reader=r.body.getReader();
+  try {
+    await liveFrame(reader);
+    const request_id=crypto.randomUUID(),pending=tool(e,'jarviswake_get_contact',{
+      device_id:c.deviceId,request_id,name:'Synthetic contact',contact_ref:'',offset:0});
+    const frame=await liveFrame(reader);assert.equal(frame.request.requestId,request_id);
+    assert.equal((await claim(e,c,request_id)).status,200);
+    const payload=directPayload();
+    assert.equal((await worker.fetch(request('/device/respond',{deviceId:c.deviceId,requestId:request_id,result:payload},
+      {Authorization:'Bearer '+c.deviceToken}),e)).status,200);
+    const result=value(await pending);assert.equal(result.state,'responded');assert.deepEqual(result.result,payload);
+    assert.equal([...e.BUCKET.data.keys()].filter(k=>k.startsWith(`requests/${c.deviceId}/`)).length,1);
+  } finally {await reader.cancel();}
+});
+test('Closing a live stream stops queue checks without removing or restarting an accepted request',async()=>{
+  const e=env(),c=await pair(e),r=await openLive(e,c),reader=r.body.getReader();
+  await liveFrame(reader);
+  // A non-live capability makes the enqueue return immediately for this recovery fixture.
+  await advertise(e,c,142);
+  const args={device_id:c.deviceId,destination:'Synthetic',request_id:crypto.randomUUID()};
+  const queued=value(await tool(e,'jarviswake_navigate',args));
+  const command=await liveFrame(reader);assert.equal(command.request.requestId,queued.request_id);
+  await reader.cancel();
+  const recovered=await worker.fetch(request('/device/poll',{deviceId:c.deviceId,versionCode:142,operations:['status','navigate']},{Authorization:'Bearer '+c.deviceToken}),e);assert.equal((await recovered.json()).request.requestId,queued.request_id);
+  assert.equal((await claim(e,c,queued.request_id)).status,200);
+  assert.equal((await claim(e,c,queued.request_id)).status,200);
+  const again=await claim(e,c,queued.request_id);assert.equal((await again.json()).state,'already_claimed');
+  assert.equal(value(await tool(e,'jarviswake_navigate',args)).state,'pending');
+});
+test('Revocation blocks delivery on an already-open live channel',async()=>{
+  const e=env(),c=await pair(e),r=await openLive(e,c),reader=r.body.getReader();
+  await liveFrame(reader);await advertise(e,c,142);
+  value(await tool(e,'jarviswake_navigate',{device_id:c.deviceId,destination:'Synthetic',request_id:crypto.randomUUID()}));
+  await worker.fetch(request('/api/revoke',{}, {...user,Origin:origin,'X-Jarvis-Link':'pair'}),e);
+  await assert.rejects(()=>reader.read(),/live_channel_closed/);
+});
+test('Live channel for one device never delivers another paired device command',async()=>{
+  const e=env(),a=await pair(e),b=await pair(e),r=await openLive(e,a),reader=r.body.getReader();
+  try {
+    await liveFrame(reader);
+    const other=value(await tool(e,'jarviswake_request_status',{device_id:b.deviceId}));
+    const own=value(await tool(e,'jarviswake_request_status',{device_id:a.deviceId}));
+    const frame=await liveFrame(reader);assert.equal(frame.request.requestId,own.request_id);
+    assert.notEqual(frame.request.requestId,other.request_id);
+  } finally {await reader.cancel();}
+});
+test('Live MCP wait timeout preserves one pending UUID and never cancels or re-enqueues the action',async()=>{
+  const e=env(),c=await pair(e),r=await openLive(e,c),reader=r.body.getReader();
+  try {
+    await liveFrame(reader);
+    const request_id=crypto.randomUUID();
+    const answer=value(await tool(e,'jarviswake_navigate',{device_id:c.deviceId,destination:'Synthetic timeout test',request_id}));
+    assert.equal(answer.state,'pending');assert.equal(answer.request_id,request_id);
+    const delivered=await liveFrame(reader);assert.equal(delivered.request.requestId,request_id);
+    assert.equal(await e.BUCKET.get(`claims/${c.deviceId}/${request_id}.json`),null);
+    assert.equal([...e.BUCKET.data.keys()].filter(k=>k.startsWith(`requests/${c.deviceId}/`)).length,1);
+  } finally {await reader.cancel();}
+});
+test('Client abort closes live stream without recording a device disconnection or deleting pairing',async()=>{
+  const e=env(),c=await pair(e),abort=new AbortController();
+  const req=request('/device/live',{deviceId:c.deviceId,protocol:1,versionCode:142,operations:['status']},{Authorization:'Bearer '+c.deviceToken});
+  const r=await worker.fetch(new Request(req,{signal:abort.signal}),e),reader=r.body.getReader();
+  await liveFrame(reader);abort.abort();
+  assert.equal((await reader.read()).done,true);
+  assert.equal(value(await tool(e,'jarviswake_devices',{})).devices[0].device_id,c.deviceId);
 });

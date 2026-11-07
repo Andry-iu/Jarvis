@@ -18,6 +18,7 @@ import java.util.concurrent.TimeUnit
 internal object BridgeLink {
     // Test transport replaces only the authenticated I/O boundary, never the worker/owner logic.
     internal var credentialsReader:(Context)->BridgeCredentials?=BridgeSettings::read
+    internal var liveChannelFactory:((BridgeCredentials,Long)->BridgeLiveChannel)?=null
     internal var transport:((BridgeCredentials,String,JSONObject,Int)->JSONObject)?=null
     internal var commandReader:(Context)->JSONObject={BridgeSettings.readPrivate(it,"commands")}
     internal var commandWriter:(Context,JSONObject)->Unit={c,value->BridgeSettings.writePrivate(c,"commands",value)}
@@ -29,6 +30,21 @@ internal object BridgeLink {
     private val connections=java.util.concurrent.ConcurrentHashMap.newKeySet<HttpURLConnection>()
     @Volatile private var exportJob:Thread?=null
     @Volatile private var exportRequest:String?=null
+    private val pollWake=Object()
+    @Volatile private var liveWanted=false
+    @Volatile private var liveRetryAt=0L
+    @Volatile private var liveChannel:BridgeLiveChannel?=null
+    @Volatile private var idlePoll:HttpURLConnection?=null
+    private class LiveModeChanged:Exception()
+    // Session-only channel. Closing it must never interrupt an in-flight action/outbox response.
+    fun voiceSession(context:Context,active:Boolean) {
+        check(Looper.myLooper()==Looper.getMainLooper())
+        liveWanted=active
+        if(active) {liveRetryAt=0;idlePoll?.disconnect()} else {liveChannel?.close();liveChannel=null}
+        synchronized(pollWake){pollWake.notifyAll()}
+        owner(context,"voice_live",active)
+    }
+    private fun useLive()=liveWanted && (transport==null || liveChannelFactory!=null) && SystemClock.elapsedRealtime()>=liveRetryAt
     private var fastUntil=0L
     @Volatile var status="Collegamento disattivato."
         private set
@@ -49,7 +65,7 @@ internal object BridgeLink {
         check(Looper.myLooper()==Looper.getMainLooper())
         ContactExportDiagnostics.record(context,exportRequest?.substringAfter(':'),ContactExportDiagnostics.Stage.WORKER_REFRESH,
             reason=ContactExportDiagnostics.Reason.GENERATION_CHANGED)
-        generation++;connections.forEach {it.disconnect()};worker?.interrupt()
+        generation++;liveChannel?.close();liveChannel=null;connections.forEach {it.disconnect()};worker?.interrupt()
         val epoch=generation
         if(owners.isEmpty() || !BridgeSettings.enabled(context)) {
             status=if(BridgeSettings.enabled(context)) "Collegamento abilitato; servizio collegamento non operativo." else "Collegamento disattivato."
@@ -62,24 +78,55 @@ internal object BridgeLink {
         NativeRuntimeSnapshot.save(app,"-","bridge_lifecycle","event=worker_started owners=${owners.size} dedicated=${"link_service" in owners}")
         worker=Thread({
             var failures=0
+            var sessionChannel:BridgeLiveChannel?=null
+            fun closeSessionChannel() {
+                val old=sessionChannel;old?.close()
+                if(liveChannel===old)liveChannel=null
+                sessionChannel=null
+            }
             while(epoch==generation && !Thread.currentThread().isInterrupted) {
                 try {
                     val outboxReady=flushOutbox(app,credentials,epoch)
                     val info=app.packageManager.getPackageInfo(app.packageName,0)
                     val polledAt=SystemClock.elapsedRealtime()
-                    val reply=post(credentials,"/device/poll",JSONObject().put("deviceId",credentials.deviceId)
-                        .put("versionCode",info.longVersionCode).put("operations",JSONArray(BridgeProtocol.OPERATIONS.toList())),epoch)
+                    var transitBudget=0L
+                    val command=if(useLive()) {
+                        try {
+                            val channel=sessionChannel?.takeUnless {it.isClosed} ?: (liveChannelFactory?.invoke(credentials,info.longVersionCode) ?: BridgeLiveChannel(credentials,info.longVersionCode,onReady={
+                                if(epoch==generation) {
+                                    status="Canale Voice disponibile; attendo una richiesta."
+                                    NativeRuntimeSnapshot.save(app,"-","bridge_transport","stage=live_ready")
+                                }
+                            })).also {sessionChannel=it;liveChannel=it}
+                            val delivery=channel.next()
+                            if(delivery==null) {closeSessionChannel();continue}
+                            transitBudget=delivery.transitBudget+(SystemClock.elapsedRealtime()-delivery.receivedAt).coerceAtLeast(0)
+                            delivery.request
+                        } catch(e:Exception) {
+                            closeSessionChannel()
+                            if(epoch!=generation) break
+                            if(!liveWanted) continue
+                            liveRetryAt=SystemClock.elapsedRealtime()+60000L
+                            NativeRuntimeSnapshot.save(app,"-","bridge_transport","stage=live_fallback code=unavailable")
+                            continue
+                        }
+                    } else {
+                        closeSessionChannel()
+                        val reply=post(credentials,"/device/poll",JSONObject().put("deviceId",credentials.deviceId)
+                            .put("versionCode",info.longVersionCode).put("operations",JSONArray(BridgeProtocol.OPERATIONS.toList())),epoch)
+                        transitBudget=SystemClock.elapsedRealtime()-polledAt
+                        reply.optJSONObject("request")
+                    }
                     if(epoch!=generation) break
-                    val command=reply.optJSONObject("request")
                     if(command!=null) {
                         var delivered=true
                         fastUntil=SystemClock.elapsedRealtime()+5000L
                         val id=command.optString("requestId");val op=command.optString("operation")
                         check(BridgeProtocol.validRequest(id,op,command.optLong("createdAt"),command.optLong("expiresAt")))
                         if(op in setOf("call_contact","call_by_name")) NativeRuntimeSnapshot.save(app,id,"bridge_transport",
-                            "stage=polled roundtrip_ms=${SystemClock.elapsedRealtime()-polledAt} server_queue_ms=${(25000-command.optLong("remainingMs",25000)).coerceAtLeast(0)}")
+                            "stage=delivered channel=${if(sessionChannel!=null) "live" else "poll"} transit_budget_ms=$transitBudget server_queue_ms=${(25000-command.optLong("remainingMs",25000)).coerceAtLeast(0)}")
                         if(op in BridgeProtocol.CONTACT_EXPORT_OPERATIONS) ContactExportDiagnostics.record(app,id,ContactExportDiagnostics.Stage.POLLED,
-                            offset=command.optJSONObject("params")?.optInt("offset",-1),elapsedMs=SystemClock.elapsedRealtime()-polledAt,
+                            offset=command.optJSONObject("params")?.optInt("offset",-1),elapsedMs=transitBudget,
                             remainingMs=command.optLong("remainingMs",0))
                         if(op=="status") {
                             val ready=CountDownLatch(1);var snapshot:JSONObject?=null
@@ -89,7 +136,7 @@ internal object BridgeLink {
                             post(credentials,"/device/respond",JSONObject().put("deviceId",credentials.deviceId)
                                 .put("requestId",id).put("snapshot",value),epoch)
                         } else {
-                            val remaining=BridgeProtocol.remainingLease(command.optLong("remainingMs",0),SystemClock.elapsedRealtime()-polledAt)
+                            val remaining=BridgeProtocol.remainingLease(command.optLong("remainingMs",0),transitBudget)
                             val deadline=SystemClock.elapsedRealtime()+remaining
                             BridgeActions.onMain({epoch==generation}) { owner(app,"command",true) }
                             try {
@@ -105,10 +152,15 @@ internal object BridgeLink {
                         else if(!outboxReady) status="Risultato in attesa di consegna; collegamento ancora attivo."
                         else if(failures>0 || status=="Connessione al servizio…" || status=="Importazione rubrica in corso." || status=="Risultato in attesa di consegna; collegamento ancora attivo.") status="Collegamento disponibile; attendo una richiesta."
                     }
-                    failures=0;Thread.sleep(BridgePollPolicy.delay(VoiceCycle.active,SystemClock.elapsedRealtime()<fastUntil))
-                } catch(_:InterruptedException) { break }
+                    failures=0
+                    if(!useLive()) synchronized(pollWake) {
+                        if(!useLive()) pollWake.wait(BridgePollPolicy.delay(VoiceCycle.active,SystemClock.elapsedRealtime()<fastUntil))
+                    }
+                } catch(_:LiveModeChanged) { continue }
+                catch(_:InterruptedException) { break }
                 catch(error:Exception) {
                     if(epoch!=generation) break
+                    if(useLive() && sessionChannel==null) continue
                     val code=when(error) {
                         is BridgeHttpFailure -> "http_${error.statusCode}"
                         is java.net.SocketTimeoutException -> "timeout"
@@ -127,6 +179,7 @@ internal object BridgeLink {
                     try { Thread.sleep(if(failures<3) 3000 else 10000) } catch(_:InterruptedException) { break }
                 }
             }
+            closeSessionChannel()
             ContactExportDiagnostics.record(app,exportRequest?.substringAfter(':'),ContactExportDiagnostics.Stage.WORKER_STOPPED,
                 reason=if(epoch!=generation) ContactExportDiagnostics.Reason.GENERATION_CHANGED else ContactExportDiagnostics.Reason.INTERRUPTED)
             NativeRuntimeSnapshot.save(app,"-","bridge_lifecycle","event=worker_stopped superseded=${epoch!=generation}")
@@ -270,7 +323,9 @@ internal object BridgeLink {
         check(BridgeProtocol.validOrigin(c.origin))
         if(epoch!=generation) throw InterruptedException()
         transport?.let { return it(c,path,data,epoch) }
+        if(path=="/device/poll" && useLive()) throw LiveModeChanged()
         val conn=URL(c.origin+path).openConnection() as HttpURLConnection;connections.add(conn)
+        if(path=="/device/poll") idlePoll=conn
         try {
             if(epoch!=generation) throw InterruptedException()
             conn.requestMethod="POST";conn.instanceFollowRedirects=false
@@ -289,7 +344,7 @@ internal object BridgeLink {
             val reply=JSONObject(String(raw,Charsets.UTF_8))
             check(raw.size<=16*1024 || (path=="/device/poll" && reply.optJSONObject("request")?.optString("operation").orEmpty() in BridgeProtocol.NOTE_OPERATIONS))
             return reply
-        } finally {connections.remove(conn);conn.disconnect()}
+        } finally {if(idlePoll===conn)idlePoll=null;connections.remove(conn);conn.disconnect()}
     }
     private fun capture(c:Context):JSONObject {
         val info=c.packageManager.getPackageInfo(c.packageName,0)

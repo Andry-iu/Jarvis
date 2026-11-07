@@ -1,3 +1,9 @@
+# .120 / 142 — canale Voice e ritorno diretto dell’esito
+
+`POST /device/live` autenticato come gli endpoint dispositivo, protocol1 e capability APK142, emette ready/heartbeat/request in NDJSON. Stessa coda R2, nessuno stato globale di isolate usato per consegnare richieste; nessuna nuova risorsa hosting o API esterna. Un flusso serve più comandi, con backpressure e rinnovo entro20s/40 scansioni. Controlli server250ms, heartbeat3s, verifica pairing prima di consegna e heartbeat, chiusura su abort. Rimane polling della coda lato server: misurare carico/limiti dell’hosting nel cloud. Il rinnovo può introdurre una pausa e non promette socket eterno.
+
+Capability live recente abilita attesa fino a4s dell’esito nella stessa chiamata MCP per le operazioni; la fotografia status resta asincrona. Il timer limita l’attesa della chiamata, non l’esecuzione del comando: stesso UUID e status_result se pending. Fuori sessione/vecchio backend rimane il poll precedente. Le risposte restano schema-validate, condizionali e private come prima. Handoff: [HANDOFF_LIVE_LINK_20261107](../docs/HANDOFF_LIVE_LINK_20261107.md).
+
 # Comandi cloud nel plugin esistente
 
 Cinque tool aggiuntivi: jarviswake_cloud_status, start, job, cancel, artifact (prefisso jarviswake_cloud_). Coda verifiche/build firmata nel cloud Jarvis, una claim senza riassegnazione automatica; UUID stabile, stati tecnici, link APK privato dopo firma e verbale su main. Nessun APK app nuovo richiesto. Vedere ../docs/CLOUD_BUILDS.md per uso, configurazione, segreti e limiti. Modulo worker/cloud.js incluso nel singolo artefatto ESM da scripts/bundle-worker.mjs; test separati test/cloud.test.mjs.

@@ -23,6 +23,7 @@ import java.util.concurrent.atomic.AtomicInteger
 @Config(sdk=[34,36])
 class BridgeLinkWorkerIntegrationTest {
     private val app:Application get()=RuntimeEnvironment.getApplication()
+    private val oldLiveFactory=BridgeLink.liveChannelFactory
     private val oldReader=BridgeLink.credentialsReader;private val oldTransport=BridgeLink.transport
     private val oldCommandReader=BridgeLink.commandReader;private val oldCommandWriter=BridgeLink.commandWriter
     @Volatile private var ledger="{}"
@@ -52,16 +53,55 @@ class BridgeLinkWorkerIntegrationTest {
     }
     @After fun cleanup() {
         val thread=worker
-        BridgeSettings.enable(app,false);BridgeLink.refresh(app);release.countDown()
+        BridgeSettings.enable(app,false);BridgeLink.voiceSession(app,false);BridgeLink.refresh(app);release.countDown()
         service?.destroy();service=null
         BridgeLink.owner(app,"setup",false)
         thread?.join(1000)
         (BridgeLink::class.java.getDeclaredField("exportJob").apply {isAccessible=true}.get(null) as? Thread)?.join(1000)
+        BridgeLink.liveChannelFactory=oldLiveFactory
         BridgeLink.credentialsReader=oldReader;BridgeLink.transport=oldTransport
         BridgeLink.commandReader=oldCommandReader;BridgeLink.commandWriter=oldCommandWriter
         PhoneContactExport.enable(app,false)
         app.getSharedPreferences("bridge_link",0).edit().clear().commit()
     }
+    @Test fun closingVoiceStreamDoesNotCancelAnAlreadySendingReplyOrReplaceTheWorker() {
+        val sending=CountDownLatch(1);val allowResponse=CountDownLatch(1)
+        val deliveries=AtomicInteger();val opens=AtomicInteger()
+        val closed=java.util.concurrent.atomic.AtomicBoolean(false)
+        val now=System.currentTimeMillis()
+        val command=JSONObject().put("requestId",id).put("operation","status").put("createdAt",now)
+            .put("expiresAt",now+25000).put("remainingMs",25000)
+        val frames=JSONObject().put("type","ready").put("protocol",1).put("serverNow",now).toString()+"\n"+
+            JSONObject().put("type","request").put("sentAt",now).put("request",command).toString()+"\n"
+        BridgeLink.liveChannelFactory={auth,version->
+            if(opens.incrementAndGet()>1)throw java.io.IOException("synthetic fallback")
+            BridgeLiveChannel(auth,version,{url->object:java.net.HttpURLConnection(url) {
+                override fun connect() {}
+                override fun usingProxy()=false
+                override fun disconnect() {closed.set(true)}
+                override fun getOutputStream()=java.io.ByteArrayOutputStream()
+                override fun getInputStream()=java.io.ByteArrayInputStream(frames.toByteArray())
+                override fun getResponseCode()=200
+                override fun getContentType()="application/x-ndjson"
+            }})
+        }
+        BridgeLink.transport={_,path,data,_->when(path) {
+            "/device/respond" -> {sending.countDown();check(allowResponse.await(5,TimeUnit.SECONDS));
+                deliveries.incrementAndGet();response=JSONObject(data.toString());responded.countDown();JSONObject()}
+            "/device/poll" -> JSONObject()
+            else -> error("unexpected synthetic route")
+        }}
+        try {
+            BridgeLink.voiceSession(app,true);awaitMain(sending)
+            val original=worker
+            BridgeLink.owner(app,"setup",true)
+            BridgeLink.voiceSession(app,false)
+            assertTrue(closed.get());assertSame(original,worker)
+            allowResponse.countDown();awaitMain(responded)
+            assertEquals(1,deliveries.get());assertEquals(id,response!!.getString("requestId"))
+        } finally {allowResponse.countDown()}
+    }
+
     @Test fun sameWorkerDeliversStatusAfterPageLeavesWithWakeOffAndServiceHeartbeatDoesNotReplaceIt() {
         BridgeLink.owner(app,"setup",true)
         assertTrue(entered.await(2,TimeUnit.SECONDS));val original=worker;assertNotNull(original)

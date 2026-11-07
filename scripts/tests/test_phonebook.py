@@ -47,6 +47,41 @@ class PhonebookTest(unittest.TestCase):
         return {'code': 'contact_number', 'bytes': len(raw), 'sha256': hashlib.sha256(raw).hexdigest(),
                 'data_base64': base64.b64encode(raw).decode()}
 
+    def test_lookup_combines_exact_index_choice_and_persisted_plan(self):
+        names=[{'id':'1','lookup_key':'lookup1','name':'Élodie Example'}]
+        raw,meta=self.start(names,mode='names');self.finish(raw,meta)
+        result=self.book.lookup(self.device,'Elodie Example')
+        self.assertFalse(result['selection_required'])
+        self.assertEqual(result['args']['name'],'Élodie Example')
+        self.assertEqual(result['args']['request_id'],self.book.plan()['args']['request_id'])
+
+    def test_lookup_never_selects_a_similar_candidate_or_homonym(self):
+        for names,query in [([{'id':'1','lookup_key':'one','name':'Marta Example'}],'Martta Example'),
+                            ([{'id':'1','lookup_key':'one','name':'Marta Example'},
+                              {'id':'2','lookup_key':'two','name':'Marta Example'}],'Marta Example')]:
+            raw,meta=self.start(names,mode='names');self.finish(raw,meta)
+            result=self.book.lookup(self.device,query)
+            self.assertTrue(result['selection_required']);self.assertFalse(self.book.status()['pending'])
+
+    def test_lookup_with_no_index_match_keeps_literal_user_name(self):
+        result=self.book.lookup(self.device,'Exact user spelling')
+        self.assertEqual(result['args']['name'],'Exact user spelling')
+        self.assertEqual(result['tool'],'jarviswake_get_contact')
+
+    def test_direct_accept_can_return_verified_number_without_another_search(self):
+        self.book.lookup(self.device,'Private Contact 1')
+        answer=self.book.accept(self.response(self.direct_result()),show_number=True)
+        self.assertEqual(answer['selected_contact'],{'name':'Private Contact 1','number':'+39000001','label':'mobile'})
+        self.assertFalse(answer['pending'])
+
+    def test_direct_accept_never_discloses_corrupt_or_wrong_request_payload(self):
+        self.book.lookup(self.device,'Private Contact 1')
+        response=self.response(self.direct_result());response['request_id']=str(uuid.uuid4())
+        with self.assertRaises(m.BookError):self.book.accept(response,show_number=True)
+        response=self.response(self.direct_result());response['result']['sha256']='0'*64
+        with self.assertRaises(m.BookError):self.book.accept(response,show_number=True)
+        self.assertEqual(self.book.status()['phones'],0)
+
     def test_direct_number_is_one_persisted_request_with_atomic_incremental_save(self):
         raw, meta = self.start([contact('old')]); self.finish(raw, meta)
         self.book.begin(self.device, direct=True, query='Private Contact 1')
