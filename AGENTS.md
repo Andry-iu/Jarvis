@@ -1,3 +1,7 @@
+## Consenso permanente al cloud — confermato 7 novembre 2026
+
+Per i lavori richiesti sono già autorizzati accesso al cloud Jarvis, diagnosi/raccolta/lettura log pertinenti, modifiche/correzioni, test, commit/push, compilazione, firma permanente e rilascio. Non chiedere nuovi consensi ai passaggi dello stesso lavoro, anche tra chat. Rispetta controlli obbligatori reali e UUID/stati terminali; nessuna ripetizione cieca. Non inventare moduli o dialoghi a schermo: capacità tecnica e consenso sono distinti. Conferma salvata nelle regole generali v40 e appunto consenso sul telefono rev3. Il job .121 ec528b06-3d5c-4365-844a-c0ab5b54811a è fallito nella fase Android: leggere il log privato nel cloud, senza dedurre la causa dal solo android_failed. Handoff aggiornato.
+
 ## Navigazione in una richiesta — via esplicito 7 novembre 2026
 
 La richiesta di APK autorizza implementazione, commit/push e build firmata del gruppo .121/143: una sola richiesta navigate con destinazione letterale oppure indirizzo completo già disponibile. Riusa device_id noto; non premettere devices/status/list_notes/read_note o ricerca web. Risoluzione di etichette personali esatte negli appunti sul telefono con consenso e revalidazione; query geografiche a Maps. Ambiguità o dati non validi richiedono chiarimento, nessun indirizzo inventato. Claim/journal/outbox e lettura di pending con stesso UUID restano; un comando non significa un solo HTTP o successo Maps. Preparazione fuori cloud, Android/build/firma obbligatori nel cloud Jarvis. Handoff docs/HANDOFF_NAVIGATION_ONCE_20261107.md.

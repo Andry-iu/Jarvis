@@ -1,3 +1,13 @@
+0.5.121 / 143 — BUILD CLOUD FALLITA NELLA FASE ANDROID; NESSUN APK (7 novembre 2026, Europe/Rome)
+
+Sorgenti/test/documentazione del gruppo navigazione in una richiesta pubblicati su main nel commit 60a510a624a66df2304775bf757019fc40b9f7b3.89test backend passati/0failure, guida e Worker ESM verificati. Job cloud ec528b06-3d5c-4365-844a-c0ab5b54811a realmente preso in carico sul medesimo commit: controlli interpretati completati, fase Android terminata failed/android_failed. Il bridge non espone il dettaglio del log; non è accertato se il fallimento riguardi compilazione, test o lint. Nessuna firma, nessun APK, checksum o collaudo Galaxy della .121 completati. La frase vocale «è pronta» era prematura e non corrisponde al risultato.
+
+Log privato nel cloud Jarvis: /workspace/.jarvis-cloud/cloud-runner/logs/ec528b06-3d5c-4365-844a-c0ab5b54811a/build.log. Worktree: /workspace/.jarvis-cloud/builds/ec528b06-3d5c-4365-844a-c0ab5b54811a. Occorre leggere l’errore lì, correggerne la causa e completare le verifiche nel medesimo cloud. Nessun riavvio automatico dello stesso job; esito terminale immutabile. L’utente ha confermato l’autorizzazione permanente al lavoro nel cloud, inclusi lettura/raccolta log e correzioni: regole generali v40 e appunto consenso sul telefono revisione3 salvati. Nessun nuovo consenso da richiedere; resta il limite tecnico di accesso al log da questa chat. Non ricostruire toolchain altrove.
+
+Backend .121 pubblicato temporaneamente come versione Site35 (sorgente8550e2720338919f63be970c1111eaa0d6aaf81c); ripristino della versione Site34 precedente riuscito (deploy appgdep_6aef4c1c38f48191ac4e1e2268538078, succeeded/has_mcp/env4), per conservare navigate sulle app142 e precedenti finché APK143 non è verificato. Stesso Site privato, pairing/R2/segreti conservati; sorgenti .121 restano in Git. Ultima release APK verificata resta .120/142; non consegnarla come se contenesse la modifica .121. Continuano tutti i residui della roadmap.
+
+STATO PRECEDENTE CONSERVATO
+
 # .121/143 — navigazione in una richiesta
 
 Richiesta approvata: APK firmato da provare; una sola invocazione operativa navigate, con indirizzo completo o query. Nessun’altra richiesta di consenso per questo gruppo.
