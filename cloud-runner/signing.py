@@ -26,19 +26,23 @@ def run(args, cwd):
     return result.stdout
 
 
-def sign(work, repo, out):
+def sign(work, repo, out, kind='phone'):
+    if kind not in ('phone', 'cube'):
+        raise JobError('signing_failed')
+    module = 'app' if kind == 'phone' else 'car-game'
+    package_id = 'it.jarviswake' if kind == 'phone' else 'it.jarviswake.cube' 
     sys.path.insert(0, str(BASE/'signing-python'))
     import pyrage
     out.mkdir(parents=True, exist_ok=True, mode=0o700)
-    meta = json.loads((work/'app/build/outputs/apk/debug/output-metadata.json').read_text())
-    if meta['applicationId'] != 'it.jarviswake' or len(meta['elements']) != 1:
+    meta = json.loads((work/module/'build/outputs/apk/debug/output-metadata.json').read_text())
+    if meta['applicationId'] != package_id or len(meta['elements']) != 1:
         raise JobError('signing_failed')
     entry = meta['elements'][0]
     version, code = entry['versionName'], entry['versionCode']
     if not re.fullmatch(r'\d+\.\d+\.\d+', version) or Path(entry['outputFile']).name != entry['outputFile']:
         raise JobError('signing_failed')
-    source = work/'app/build/outputs/apk/debug'/entry['outputFile']
-    target = out/f'JarvisWake-{version}-debug-arm64-permanent.apk'
+    source = work/module/'build/outputs/apk/debug'/entry['outputFile']
+    target = out/(f'JarvisWake-{version}-debug-arm64-permanent.apk' if kind == 'phone' else f'JarvisCube-{version}-debug-permanent.apk')
     bt = BASE/'android-sdk/build-tools/36.0.0'
     archive = run(['git', 'show', 'origin/signing-handoff-2026-10-19:signing-transfer/jarvis-signing-backup.tar.age'], repo)
     if hashlib.sha256(archive).hexdigest() != BACKUP or not os.environ.get('Passphrase'):
@@ -69,12 +73,12 @@ def sign(work, repo, out):
         raise JobError('signing_failed')
     run([bt/'zipalign', '-c', '-P', '16', '-v', '4', target], work)
     package = run([bt/'aapt2', 'dump', 'badging', target], work).decode()
-    if not all(text in package for text in (f"package: name='it.jarviswake' versionCode='{code}' versionName='{version}'",
-                                             "minSdkVersion:'31'", "targetSdkVersion:'36'", "native-code: 'arm64-v8a'")):
+    if not all(text in package for text in (f"package: name='{package_id}' versionCode='{code}' versionName='{version}'",
+                                             "minSdkVersion:'31'", "targetSdkVersion:'36'")):
         raise JobError('signing_failed')
     with zipfile.ZipFile(target) as z:
         libs = [n for n in z.namelist() if n.startswith('lib/') and n.endswith('.so')]
-        if z.testzip() or len(libs) != 3 or not all(n.startswith('lib/arm64-v8a/') for n in libs):
+        if z.testzip() or (kind == 'phone' and (len(libs) != 3 or not all(n.startswith('lib/arm64-v8a/') for n in libs))) or (kind == 'cube' and libs):
             raise JobError('signing_failed')
         with tempfile.TemporaryDirectory(prefix='jarvis-cloud-elf-') as directory:
             elf = Path(directory)/'library.so'

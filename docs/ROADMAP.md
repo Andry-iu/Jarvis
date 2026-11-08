@@ -1,3 +1,11 @@
+0.5.123 / 145 — JARVIS CUBE, GIOCO SEPARATO; VERIFICHE ANDROID E APK PENDENTI (8 novembre 2026, Europe/Rome)
+
+Via esplicito «Procedi, proviamo» al vero minigioco 3D parcheggiato, installato soltanto sul telefono, con apertura dal launcher Android Auto e sincronizzazione di cover/mute. Due APK: it.jarviswake assistente e it.jarviswake.cube gioco. Nessuna categoria game dichiarata dall’assistente, nessuna installazione Audi, nessun avvio automatico sopra Maps o override al movimento. Tutti i requisiti precedenti e i collaudi ancora aperti restano conservati.
+
+Sorgenti/test preparati: rotazione, trascinamento, faccia bersaglio, conferma e punteggio; collegamento read-only con permesso signature e controllo pacchetto/certificato, soli flag cover/mute e tempo monotono. Test Android/JVM, lint, due assemble, firma e consegna ancora da eseguire nel cloud Jarvis. Dettagli e prima prova: docs/HANDOFF_JARVIS_CUBE_GAME_20261108.md. La .122 installata sul Galaxy ha mostrato nessun display autorizzato con Maps attivo sull’Audi; l’avviso accorpava connessione e display, non prova la causa del rifiuto.
+
+STORICO PRECEDENTE CONSERVATO
+
 0.5.122 / 144 — APK FIRMATO VERIFICATO; COLLAUDO GALAXY/AUDI PENDENTE (8 novembre 2026, Europe/Rome)
 
 Job 6c800b3f-05c5-49a4-ae4e-7b8e39d9cd9f succeeded sul sorgente d70a27714fa216ca62dbf9f8eff71ea13424e816; verbale 8cce21cbb389308f278796b2015a555b9917fc28. 710 test Android passati, 0 failure/skipped; lint 0 errori/56 avvisi. APK .122/144 compilato, firmato con il certificato permanente e disponibile tramite cloud_artifact sullo stesso job. Hash, dimensione e dettagli: docs/HANDOFF_ANDROID_AUTO_CUBE_20261108.md e releases/cloud-jobs/6c800b3f-05c5-49a4-ae4e-7b8e39d9cd9f.json.

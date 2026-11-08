@@ -65,6 +65,7 @@ internal object CarCubeProbe {
 
     /** These hooks only enqueue work; closing the phone HUD must never wait for this experiment. */
     fun coverChanged(view: View, attached: Boolean) {
+        CarCubeSync.coverChanged(view, attached)
         main.post {
             if (attached) covers[view] = true else covers.remove(view)
             if (state.armed(SystemClock.elapsedRealtime())) schedule()

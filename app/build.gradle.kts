@@ -8,8 +8,8 @@ android {
         applicationId = "it.jarviswake"
         minSdk = 31
         targetSdk = 36
-        versionCode = 144
-        versionName = "0.5.122"
+        versionCode = 145
+        versionName = "0.5.123"
         ndk { abiFilters += listOf("arm64-v8a") }
     }
     val ciKeystore = System.getenv("JARVIS_KEYSTORE_PATH")
@@ -80,4 +80,7 @@ dependencies {
 
 kotlin { compilerOptions { jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17) } }
 
-
+// One release group verifies and assembles both phone apps in the Jarvis cloud.
+tasks.matching { it.name == "testDebugUnitTest" }.configureEach { dependsOn(":car-game:testDebugUnitTest") }
+tasks.matching { it.name == "lintDebug" }.configureEach { dependsOn(":car-game:lintDebug") }
+tasks.matching { it.name == "assembleDebug" }.configureEach { dependsOn(":car-game:assembleDebug") }

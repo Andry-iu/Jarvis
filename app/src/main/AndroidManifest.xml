@@ -16,24 +16,25 @@
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW"/>
     <uses-permission android:name="android.permission.INTERNET"/>
+    <permission android:name="it.jarviswake.permission.CUBE_STATUS" android:protectionLevel="signature"/>
     <queries>
         <package android:name="com.openai.chatgpt"/>
+        <package android:name="it.jarviswake.cube"/>
         <package android:name="com.google.android.apps.maps"/>
         <package android:name="com.whatsapp"/>
         <intent><action android:name="android.intent.action.CALL"/><data android:scheme="tel"/></intent>
         <intent><action android:name="android.speech.RecognitionService"/></intent>
     </queries>
     <application android:label="JarvisWake" android:icon="@drawable/ic_jarvis" android:theme="@android:style/Theme.Material.NoActionBar" android:allowBackup="false" android:supportsRtl="true">
+        <provider android:name=".CarCubeSyncProvider" android:authorities="it.jarviswake.cube.status"
+            android:exported="true" android:readPermission="it.jarviswake.permission.CUBE_STATUS"
+            android:writePermission="it.jarviswake.permission.CUBE_STATUS"/>
         <activity android:name=".CarCubeProbeSettingsActivity" android:exported="false"/>
         <!-- Experimental parked entry only. No NAVIGATION/game category or safety override. -->
         <activity android:name=".CarCubeProbeActivity" android:exported="true"
             android:label="Jarvis · prova cubo" android:resizeableActivity="true"
             android:taskAffinity="it.jarviswake.carprobe" android:excludeFromRecents="true"
             android:configChanges="screenSize|smallestScreenSize|orientation|screenLayout|density">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN"/>
-                <category android:name="android.intent.category.CAR_LAUNCHER"/>
-            </intent-filter>
         </activity>
         <activity android:name=".GoogleVoiceSettingsActivity" android:exported="false"/>
         <activity android:name=".GoogleVoiceActivity" android:exported="false" android:enableOnBackInvokedCallback="true" android:showWhenLocked="true" android:turnScreenOn="true"/>

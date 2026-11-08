@@ -1,6 +1,6 @@
 {
-  "version": "0.5.122",
-  "versionCode": 144,
+  "version": "0.5.123",
+  "versionCode": 145,
   "title": "Guida completa JarvisWake",
   "sections": [
     {
@@ -209,9 +209,9 @@
     },
     {
       "id": "android_auto_cube",
-      "title": "Android Auto: prova cubo 3D ad auto ferma",
-      "keywords": "audi android auto cubo sfera cover automatica display prova auto ferma",
-      "text": "Prototipo sperimentale .122/144, non una compatibilità Android Auto certificata. Non richiede installazioni sull’autoradio. Sul telefono apri Configurazione → Cover → Android Auto · prova cubo 3D. Con auto parcheggiata, telefono sbloccato e Android Auto collegato, premi Auto ferma · abilita prova 60 s e scegli esplicitamente il display di prova. Se nessun display autorizzato è disponibile, la prova si ferma senza aprire finestre. La connessione Android Auto e un display secondario non provano da soli che quel display sia l’Audi.\nNei 60 secondi avvia Jarvis normalmente: la comparsa della cover richiede una sola apertura del cubo sul display scelto. Comando, Activity ripresa e primo frame sono riscontri distinti; anche il primo frame non sostituisce la conferma visiva dell’utente sull’Audi. Un rifiuto o una chiusura non provoca riaperture nello stesso ciclo. Chiudere o nascondere la cover chiude anche il cubo, senza cambiare lo stop Voice del telefono. Mute confermato rende il cubo grigio e fermo. Blocco del telefono, disconnessione o scadenza terminano la prova; l’abilitazione non viene salvata.\nAndroid Auto può non mostrare o rifiutare questa Activity: CAR_LAUNCHER non basta a qualificare Jarvis come una categoria supportata. Il prototipo non si dichiara navigatore o gioco e non disabilita controlli di Android Auto. La prova diretta con APK può richiedere sul telefono la modalità sviluppatore Android Auto e l’opzione Origini sconosciute; questa opzione non garantisce l’ammissione della cover. Non cambiare impostazioni durante la guida. La fase corrente di compilazione, firma e collaudo va letta dal verbale del rilascio: questa guida descrive i sorgenti e non certifica un APK già disponibile."
+      "title": "Jarvis Cube: gioco 3D e Android Auto",
+      "keywords": "android auto audi cubo gioco game parcheggiata launcher origini sconosciute cover mute display",
+      "text": "Dalla .123/145 sono previsti due APK sul telefono: JarvisWake e il gioco separato Jarvis Cube, entrambi firmati con lo stesso certificato permanente. Non installare nulla sull’Audi e non disinstallare JarvisWake per aggiornarlo. JarvisWake rimane l’assistente; la categoria game è dichiarata dal vero gioco Jarvis Cube, con trascinamento, allineamento delle facce, conferma e punteggio.\nAd auto parcheggiata apri il menu delle app di Android Auto e scegli Jarvis Cube. Per APK di prova può servire Origini sconosciute nelle impostazioni sviluppatore di Android Auto sul telefono. Il supporto alla categoria non garantisce che quella versione di Android Auto o MMI mostri l’icona: serve collaudo reale. La .123 non sostituisce automaticamente Maps alla wake.\nQuando il gioco è già aperto, la cover visibile di Jarvis aggiorna il suo stato; mute confermato significa cubo grigio e rotazione automatica ferma. Cover chiusa significa gioco autonomo. Trascina per portare dritta davanti la faccia numerata richiesta, poi premi Conferma; Mescola riavvia la rotazione, Chiudi esce dal gioco. Il gioco non avvia Voice, chiamate o audio. Android Auto gestisce l’interruzione delle app parcheggiate quando l’auto si muove; non vengono aggiunti override o avvii sul display privato.\nConfigurazione → Cover → Android Auto · Jarvis Cube mostra la preparazione e consente soltanto l’anteprima sul telefono. Il vecchio armamento60s della .122 non è il percorso del gioco e l’assistente non è più esposto come app parcheggiata nel launcher.\nLa sincronizzazione usa un provider di sola lettura protetto da permesso signature e controllo del chiamante. Trasferisce solo due flag, versione del protocollo e tempo monotono: nessun testo, audio, contatto, URL o ID di conversazione. Stato vecchio o firma non corrispondente non vengono presentati come collegamento riuscito. Uscita e mute della cover conservano i propri gesti; i test automatici non provano la comparsa fisica sull’Audi."
     }
   ]
 }

@@ -1,3 +1,9 @@
+## Jarvis Cube .123/145 — via esplicito «Procedi, proviamo» 8 novembre 2026
+
+Gruppo approvato: vero minigioco 3D separato nel modulo car-game, package it.jarviswake.cube, installato solo sul telefono e apribile dal launcher Android Auto ad auto parcheggiata. L’assistente it.jarviswake resta senza categoria game e senza CAR_LAUNCHER. Sincronizzazione di sola lettura della visibilità/mute mediante provider signature, controllo UID/pacchetto/certificato e dati fissi; nessun testo, audio, contatto o controllo Voice. Il gioco resta giocabile autonomamente (trascina/allinea/conferma/punteggio), non è una categoria fittizia. Nessun avvio automatico sopra Maps, root, API private o override al movimento. Leggere docs/HANDOFF_JARVIS_CUBE_GAME_20261108.md; preparati sorgenti/test, Android/build/firma ancora pendenti. Due APK nello stesso gruppo: test/assemble app dipendono dai task del gioco; firma cloud con signing.sign(kind='cube') limitata al package previsto, certificato permanente invariato. Preservare uscite .70/.79/.96 e tutti i residui. Il solo supporto al gioco non certifica la presenza dell’icona o il risultato Audi.
+
+## Storico .122 — prova display precedente
+
 ## Prova Android Auto .122/144 — via esplicito 8 novembre 2026
 
 L’utente ha autorizzato la prova del cubo rotante e la richiesta automatica alla comparsa della cover sul telefono, senza installare app sull’Audi. Leggere docs/HANDOFF_ANDROID_AUTO_CUBE_20261108.md: APK .122/144 compilato e firmato, job 6c800b3f-05c5-49a4-ae4e-7b8e39d9cd9f succeeded con710test e lint0errori/56avvisi; nessun risultato fisico ancora verificato. Prova60s solo RAM/auto ferma, display scelto esplicitamente e API pubbliche; CAR_LAUNCHER non qualifica Jarvis come categoria supportata. Nessuna finta navigazione/gioco, override o retry dopo rifiuto. Conservare uscite .70/.79/.96; Android/JVM/firma soltanto nel cloud Jarvis. La sola richiesta di lancio non prova la comparsa sull’Audi.
