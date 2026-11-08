@@ -1,5 +1,5 @@
 # Procedura collaudata: build, diagnosi e consegna JarvisWake
-Aggiornata il 7 novembre 2026 (Europe/Rome), dopo il rilascio .121/143 e la conferma utente del download. Questa è la procedura corrente; gli stati precedenti restano storici.
+Aggiornata l’8 novembre 2026 (Europe/Rome), dopo il rilascio .121/143 e il ripristino del runner per la build .122. Questa è la procedura corrente; gli stati precedenti restano storici.
 
 ## Scheda eseguibile per una nuova sessione — partire da qui
 
@@ -68,6 +68,21 @@ Questi ID sono prova storica, non default per il prossimo rilascio. Per un'altra
 | Recupero HTTP assistente=401/accesso richiesto | Sessione non autenticata del client assistente | Non equiparare a errore APK né cercare bypass |
 | Browser remoto dopo login bloccato dalla policy sul protocollo | Azione espressamente rifiutata | Fermare quel percorso; non usare superfici alternative per aggirarlo |
 | Alternativa Drive annunciata ma APK non recuperato | Nessun upload/file_id/readback | Dire non completata; nessun link Drive o trasferimento riuscito dichiarato |
+
+
+### G. Runner offline: riattivazione riuscita dalla sessione cloud esistente (8 novembre 2026)
+Il ponte cloud accoda richieste ma non risveglia l’ambiente. Se non sono esposti strumenti diretti di gestione cloud, verificare anche la UI di Codex prima di dichiarare il ripristino impossibile. In questo caso il browser autenticato esponeva la sessione già usata per compilare la .120:
+- Titolo: «Ripristina il collegamento del runner Jarvis. Verifica sull…».
+- URL osservato: https://chatgpt.com/local/01a1b65d-703a-74dd-96c6-f7a8d4e6804b .
+- Percorso riuscito: ChatGPT → Codex → Recenti → sessione esistente → campo «Richiedi modifiche di follow-up». Nessun nuovo task, ambiente o job di build è stato creato.
+
+Nel follow-up specificare il ripristino nel cloud Jarvis originale, il job già accodato e lo SHA completo fissato; vietare duplicazione/cancellazione della richiesta, rotazione dei segreti e ricostruzione della toolchain altrove. La sessione cloud disponeva di Environment status e shell su /workspace/Jarvis; la chat chiamante non li esponeva. Prima verificare identità e percorsi reali, stato processi, journal e prontezza: aprire una chat da solo non prova che il runner sia online.
+
+Azioni osservate nel cloud: fetch di origin/main, aggiornamento fast-forward del checkout pulito, lettura delle procedure, bootstrap --check, poi avvio separato di `bash /workspace/Jarvis/cloud-runner/bootstrap.sh --repair --start`, stdin chiuso e log in /workspace/.jarvis-cloud/cloud-runner/runner.log. Preservati journal e configurazione privata; confronto SHA-256 della configurazione prima/dopo confermava assenza di modifiche. Non stampare il contenuto della configurazione né i suoi segreti.
+
+Risultato provato dal ponte: runner_online=true, heartbeat aggiornato e active_job=6c800b3f-05c5-49a4-ae4e-7b8e39d9cd9f; lo stesso job passò queued → running/checks → android, resolved_commit=d70a27714fa216ca62dbf9f8eff71ea13424e816. Claim originale della presa in carico: 546f328f-acc2-4a0d-97e6-2360a8e70457. La diagnosi della sessione rilevò processo runner assente, strumenti e configurazione integri; non è accertato perché il processo fosse terminato. Nessun nuovo UUID e nessuna reinstallazione degli strumenti.
+
+Heartbeat/claim provano il ripristino e l’avvio, non l’APK riuscito: seguire C fino all’esito terminale. Questo avvio non salva uno snapshot e non garantisce always-on. Per future riprese usare il job realmente pertinente, non reinviare quello storico; se la sessione non espone il cloud autentico o presenta un blocco concreto, conservarne lo stato e descrivere il limite osservato senza inventare accessi.
 
 
 ## Principi e dettagli complementari
