@@ -1,3 +1,7 @@
+## Prova Android Auto .122/144 — via esplicito 8 novembre 2026
+
+L’utente ha autorizzato la prova del cubo rotante e la richiesta automatica alla comparsa della cover sul telefono, senza installare app sull’Audi. Leggere docs/HANDOFF_ANDROID_AUTO_CUBE_20261108.md: sorgenti/test preparati, nessun APK o risultato fisico ancora verificato. Prova60s solo RAM/auto ferma, display scelto esplicitamente e API pubbliche; CAR_LAUNCHER non qualifica Jarvis come categoria supportata. Nessuna finta navigazione/gioco, override o retry dopo rifiuto. Conservare uscite .70/.79/.96; Android/JVM/firma soltanto nel cloud Jarvis. La sola richiesta di lancio non prova la comparsa sull’Audi.
+
 ## Percorso build/rilascio già riuscito — 7 novembre 2026
 
 Istruzioni eseguibili: docs/PROCEDURA_BUILD_RILASCIO.md, schede A (riottenere APK .121 esistente), B (GitHub senza shell), C (nuova build su SHA), D (schema job_ids e recupero log), E (deploy stesso Site), F (sintomi/riscontri/soluzioni). Le schede riportano tool, input JSON, output atteso, parent/tree e ID storici: leggerle effettivamente prima di agire, senza trattare «percorso già riuscito» come un'istruzione sufficiente. Per i lavori nuovi sostituire segnaposto e generare nuovi UUID; per il download esistente riusare il job riuscito.

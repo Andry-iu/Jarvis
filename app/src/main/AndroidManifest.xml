@@ -24,6 +24,17 @@
         <intent><action android:name="android.speech.RecognitionService"/></intent>
     </queries>
     <application android:label="JarvisWake" android:icon="@drawable/ic_jarvis" android:theme="@android:style/Theme.Material.NoActionBar" android:allowBackup="false" android:supportsRtl="true">
+        <activity android:name=".CarCubeProbeSettingsActivity" android:exported="false"/>
+        <!-- Experimental parked entry only. No NAVIGATION/game category or safety override. -->
+        <activity android:name=".CarCubeProbeActivity" android:exported="true"
+            android:label="Jarvis · prova cubo" android:resizeableActivity="true"
+            android:taskAffinity="it.jarviswake.carprobe" android:excludeFromRecents="true"
+            android:configChanges="screenSize|smallestScreenSize|orientation|screenLayout|density">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.CAR_LAUNCHER"/>
+            </intent-filter>
+        </activity>
         <activity android:name=".GoogleVoiceSettingsActivity" android:exported="false"/>
         <activity android:name=".GoogleVoiceActivity" android:exported="false" android:enableOnBackInvokedCallback="true" android:showWhenLocked="true" android:turnScreenOn="true"/>
         <activity android:name=".MainActivity" android:enableOnBackInvokedCallback="true" android:exported="true" android:windowSoftInputMode="adjustResize">

@@ -194,6 +194,7 @@ class MainActivity : Activity() {
             MenuPage.COVER -> {
                 coverButton=menu.button("", "Cambia l’opacità iniziale della cover tra opaca e semitrasparente. Non cambia mute, audio o gesti.") { CoverSettings.setOpaque(this,!CoverSettings.isOpaque(this));updateCoverButton() }
                 updateCoverButton()
+                button("Android Auto · prova cubo 3D") { startActivity(Intent(this,CarCubeProbeSettingsActivity::class.java)) }
                 button("Guida ai gesti") { startActivity(Intent(this,GuideActivity::class.java).putExtra("topic","cover")) }
             }
             MenuPage.LINK -> {

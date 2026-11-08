@@ -27,6 +27,7 @@ class HolographicOverlayView(context: Context) : View(context) {
     private val versionName = readVersionName()
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
     private var microphoneMuted = false
+    internal val probeMicrophoneMuted: Boolean get() = microphoneMuted
     private val cyan get() = if (microphoneMuted) Color.rgb(170, 170, 170) else Color.rgb(54, 222, 255)
     private val blue get() = if (microphoneMuted) Color.rgb(100, 100, 100) else Color.rgb(30, 116, 255)
     private var voiceActive = false
@@ -244,6 +245,7 @@ class HolographicOverlayView(context: Context) : View(context) {
         super.onAttachedToWindow()
         coverPreferences.registerOnSharedPreferenceChangeListener(coverListener)
         updateCoverOpacity()
+        CarCubeProbe.coverChanged(this, true)
     }
 
     override fun onDetachedFromWindow() {
@@ -254,16 +256,19 @@ class HolographicOverlayView(context: Context) : View(context) {
         lastTapTarget = 0
         coverPreferences.unregisterOnSharedPreferenceChangeListener(coverListener)
         super.onDetachedFromWindow()
+        CarCubeProbe.coverChanged(this, false)
     }
 
     override fun onVisibilityChanged(changedView: View, visibility: Int) {
         super.onVisibilityChanged(changedView,visibility)
         if (gesturesReady && visibility != VISIBLE) cancelMicrophoneHold()
+        if (gesturesReady) CarCubeProbe.coverChanged(this, isAttachedToWindow)
     }
 
     override fun onWindowVisibilityChanged(visibility: Int) {
         super.onWindowVisibilityChanged(visibility)
         if (gesturesReady && visibility != VISIBLE) cancelMicrophoneHold()
+        if (gesturesReady) CarCubeProbe.coverChanged(this, isAttachedToWindow)
     }
 
     private fun updateCoverOpacity() {

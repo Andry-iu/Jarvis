@@ -1,3 +1,9 @@
+0.5.122 / 144 — PROTOTIPO CUBO ANDROID AUTO; VERIFICA ANDROID E APK ANCORA PENDENTI (8 novembre 2026, Europe/Rome)
+
+Via esplicito «Procedi» alla prova del cubo con richiesta di apertura dalla cover del telefono, senza installazioni sull’Audi. Preparati sorgenti, guida e test; 89test backend e suite HTML passati. Compatibilità del launcher, apertura automatica reale, Gradle/lint/firma e collaudo Galaxy/Audi NON verificati. Armamento60s solo RAM/auto ferma; nessuna falsa categoria di navigazione o garanzia di ammissione Android Auto. Dettagli, limiti e richiesta cloud conservata: docs/HANDOFF_ANDROID_AUTO_CUBE_20261108.md. Ultimo APK verificato resta .121/143; backend live .121 conservato. Tutti i residui precedenti restano aperti.
+
+STORICO PRECEDENTE CONSERVATO
+
 0.5.121 / 143 — BUILD FIRMATA COMPLETATA; DOWNLOAD CONFERMATO DALL’UTENTE (7 novembre 2026, Europe/Rome)
 
 Job c6f79b80-2039-48d4-a762-e2cdab9e5307 succeeded sul sorgente cf4d12e1fd55f24134976eb40776261448f1be84; verbale main b881b921a65966df70fc2a7dffebb3d2186fecf6. 695 test Android, 0 failure/skipped; lint 0 errori/55 warning. APK 90052351byte, SHA256 1b39d0c8e039a20200ac6d3d64b5a5a2b51ae73f5dc18b51b6937323b1b73ca4, certificato permanente verificato. Backend privato .121 pubblicato (appgdep_6aef50758b488191b4d6bbd827c846bb succeeded/has_mcp/env4), guida maps .121/143 riletta.
