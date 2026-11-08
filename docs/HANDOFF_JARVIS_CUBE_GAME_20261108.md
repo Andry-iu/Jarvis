@@ -26,6 +26,10 @@ Dopo il job telefono riuscito, firmare l’output car-game del MEDESIMO worktree
 - XML e sintassi Python verificati fuori cloud;89test backend passati, guida unica35argomenti sincronizzata. Test Android, lint, assemble e firme ancora da eseguire.
 - Nessun DHU o riscontro fisico effettuato. Non affermare che la prima apertura sia già riuscita né che il cubo si apra automaticamente alla wake.
 
+## Prima verifica cloud e correzione
+Job b815df22-4310-4e3f-9f19-50c49d1721cf, sorgente b6e28dbd0ac09cc469ade1563f9d0c2b03b68cab: failed/android_failed,12test gioco/10passati/2falliti/0skipped. Entrambi i fallimenti in CubeLifecycleTest.gameOpensWithoutJarvisAndStopsWhenPaused su SDK34/36, UnsupportedOperationException in CubeGameActivity.kt67: Activity.display chiamato su contesto senza display associato. I task test del modulo app non sono stati raggiunti e i report lint non erano finali; nessun APK o firma dedotti.
+Correzione minima: cube.display anziché Activity.display per identificare il display effettivamente associato alla View, fallback telefono quando non è ancora attached. La stessa suite che ha rilevato il difetto deve passare prima della firma; non trattare il job fallito come ripetibile. L’avviso del display esterno non certifica Android Auto o Audi. Correzione ancora da verificare nel cloud.
+
 ## Prima prova reale
 1. Aggiornare JarvisWake .123 e installare Jarvis Cube .123 sullo stesso telefono senza disinstallare JarvisWake.
 2. Ad auto parcheggiata collegare Android Auto. Per APK di sviluppo usare, se necessario, l’opzione Origini sconosciute nelle opzioni sviluppatore Android Auto sul telefono, secondo la documentazione Google. Nessun cambiamento automatico alle impostazioni.

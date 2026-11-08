@@ -4,6 +4,8 @@ Via esplicito «Procedi, proviamo» al vero minigioco 3D parcheggiato, installat
 
 Sorgenti/test preparati: rotazione, trascinamento, faccia bersaglio, conferma e punteggio; collegamento read-only con permesso signature e controllo pacchetto/certificato, soli flag cover/mute e tempo monotono. Test Android/JVM, lint, due assemble, firma e consegna ancora da eseguire nel cloud Jarvis. Dettagli e prima prova: docs/HANDOFF_JARVIS_CUBE_GAME_20261108.md. La .122 installata sul Galaxy ha mostrato nessun display autorizzato con Maps attivo sull’Audi; l’avviso accorpava connessione e display, non prova la causa del rifiuto.
 
+Prima verifica cloud: job b815df22-4310-4e3f-9f19-50c49d1721cf sul sorgente b6e28dbd0ac09cc469ade1563f9d0c2b03b68cab terminato failed/android_failed:12test gioco,10passati/2falliti su SDK34/36, task app non raggiunti. Causa accertata: lettura Activity.display da un contesto non associato a display. Corretto usando il display della View, che può essere assente prima dell’attach senza sollevare eccezione. Nuova verifica cloud necessaria sullo SHA corretto; stato del vecchio job preservato, nessun APK o firma .123 ancora completati.
+
 STORICO PRECEDENTE CONSERVATO
 
 0.5.122 / 144 — APK FIRMATO VERIFICATO; COLLAUDO GALAXY/AUDI PENDENTE (8 novembre 2026, Europe/Rome)

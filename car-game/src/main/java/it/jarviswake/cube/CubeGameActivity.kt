@@ -64,7 +64,7 @@ class CubeGameActivity : Activity() {
                 main.post {
                     if (!resumed || epoch != generation) return@post
                     cube.updateLink(value)
-                    val screen = if ((display?.displayId ?: Display.DEFAULT_DISPLAY) == Display.DEFAULT_DISPLAY) "Anteprima telefono" else "Display esterno"
+                    val screen = if ((cube.display?.displayId ?: Display.DEFAULT_DISPLAY) == Display.DEFAULT_DISPLAY) "Anteprima telefono" else "Display esterno"
                     val status = when {
                         value.code == "linked" && value.visible && value.muted -> "Jarvis in mute · animazione ferma"
                         value.code == "linked" && value.visible -> "Cover Jarvis visibile · sincronizzato"
