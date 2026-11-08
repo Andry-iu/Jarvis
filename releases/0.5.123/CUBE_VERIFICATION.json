@@ -56,7 +56,13 @@
   },
   "delivery": {
     "phone": "private_cloud_artifact_link_obtained",
-    "cube": "signed_file_in_cloud_not_uploaded",
-    "cube_drive_upload_authorization": "pending"
+    "cube": "private_google_drive_upload_verified",
+    "cube_drive_upload_authorization": "explicitly_granted_by_user_2026_11_08",
+    "cube_drive_file_id": "1TCl1MopqN3dLhxNv8xfqyr_x5abo7zIe",
+    "cube_drive_url": "https://drive.google.com/file/d/1TCl1MopqN3dLhxNv8xfqyr_x5abo7zIe/view?usp=drivesdk",
+    "remote_size_verified": 2491555,
+    "remote_shared": false,
+    "remote_permissions": "owner_only",
+    "remote_checksum_available": false
   }
 }
