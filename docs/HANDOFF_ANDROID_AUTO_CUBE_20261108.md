@@ -37,7 +37,7 @@ Il requisito finale resta: aprire automaticamente il contenuto sull’Audi all�
 ## Compilazione e ripresa
 Runner interrogato: runner_online=false, active_job=null. In questa chat non sono esposti strumenti per riattivare/configurare il cloud registrato; /workspace/Jarvis e /workspace/.jarvis-cloud non sono presenti nel workspace della chat. Nessuna toolchain ricostruita altrove.
 Richiesta di build conservata (non duplicare): operation=build_signed, request_id=6c800b3f-05c5-49a4-ae4e-7b8e39d9cd9f.
-Stato richiesta: **non ancora inviata**; SHA da fissare dopo il commit dei sorgenti.
+Stato richiesta: **queued**, accettata dal backend l’8 novembre2026; stage=queued e runner_online=false. Job_id=6c800b3f-05c5-49a4-ae4e-7b8e39d9cd9f; sorgente esatto d70a27714fa216ca62dbf9f8eff71ea13424e816. Nessuna compilazione Android, firma o consegna dedotta dalla coda. Conservare questo job/UUID: non inviare una seconda richiesta né sostituirlo dopo timeout o sospensione. La coda scade dopo24ore se nessun runner la prende in carico; verificare lo stato effettivo prima di qualsiasi seguito.
 Seguire docs/PROCEDURA_BUILD_RILASCIO.md, schede B/C/D. Accodare sullo SHA pubblicato con questo UUID una sola volta; accodamento non significa compilazione. Riattivare il runner soltanto nel cloud Jarvis autentico se un accesso effettivo diventa disponibile, usando il bootstrap esistente. Nessuna nuova chiave o passphrase richiesta.
 
 ## Prima prova, soltanto dopo APK verificato
