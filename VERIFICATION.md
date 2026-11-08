@@ -1,9 +1,11 @@
 CLOUD JOB 6c800b3f-05c5-49a4-ae4e-7b8e39d9cd9f — d70a27714fa216ca62dbf9f8eff71ea13424e816
 Verifiche cloud e checksum: releases/cloud-jobs/6c800b3f-05c5-49a4-ae4e-7b8e39d9cd9f.json. Nessun collaudo Galaxy o API a pagamento. Tutte le attività ancora pendenti e i requisiti precedenti restano sotto.
 
-0.5.122 / 144 — PROTOTIPO CUBO ANDROID AUTO; VERIFICA ANDROID E APK ANCORA PENDENTI (8 novembre 2026, Europe/Rome)
+0.5.122 / 144 — APK FIRMATO VERIFICATO; COLLAUDO GALAXY/AUDI PENDENTE (8 novembre 2026, Europe/Rome)
 
-Via esplicito «Procedi» alla prova del cubo con richiesta di apertura dalla cover del telefono, senza installazioni sull’Audi. Preparati sorgenti, guida e test; 89test backend e suite HTML passati. Compatibilità del launcher, apertura automatica reale, Gradle/lint/firma e collaudo Galaxy/Audi NON verificati. Armamento60s solo RAM/auto ferma; nessuna falsa categoria di navigazione o garanzia di ammissione Android Auto. Build firmata accodata sul sorgente d70a27714fa216ca62dbf9f8eff71ea13424e816; job 6c800b3f-05c5-49a4-ae4e-7b8e39d9cd9f ancora queued/runner offline, nessuna esecuzione Android avviata. Dettagli, limiti e richiesta cloud conservata: docs/HANDOFF_ANDROID_AUTO_CUBE_20261108.md. Ultimo APK verificato resta .121/143; backend live .121 conservato. Tutti i residui precedenti restano aperti.
+Job 6c800b3f-05c5-49a4-ae4e-7b8e39d9cd9f succeeded sul sorgente d70a27714fa216ca62dbf9f8eff71ea13424e816; verbale 8cce21cbb389308f278796b2015a555b9917fc28. 710 test Android passati, 0 failure/skipped; lint 0 errori/56 avvisi. APK .122/144 compilato, firmato con il certificato permanente e disponibile tramite cloud_artifact sullo stesso job. Hash, dimensione e dettagli: docs/HANDOFF_ANDROID_AUTO_CUBE_20261108.md e releases/cloud-jobs/6c800b3f-05c5-49a4-ae4e-7b8e39d9cd9f.json.
+
+Runner riattivato nella sessione cloud Jarvis esistente senza duplicare la richiesta: processo assente, strumenti e configurazione integri; heartbeat e claim verificati. Procedura concreta: docs/PROCEDURA_BUILD_RILASCIO.md, scheda G. Nessuna garanzia always-on o snapshot pubblicato. Prova cubo temporanea60s/auto ferma; compatibilità del launcher, comparsa e apertura automatica reale sull’Audi ancora da collaudare. Backend live .121 conservato, nessuna pubblicazione del backend .122 eseguita. Tutti gli altri residui e requisiti precedenti restano aperti.
 
 STORICO PRECEDENTE CONSERVATO
 

@@ -1,6 +1,6 @@
-## 0.5.122 / 144 — prova cubo Android Auto (sorgenti preparati)
+## 0.5.122 / 144 — prova cubo Android Auto (APK firmato verificato)
 
-Cubo HTML/Canvas locale e tentativo singolo di apertura sul display selezionato quando compare la cover del telefono. Armamento temporaneo60s ad auto ferma, scadenza/lock/disconnessione e chiusura senza replay; nessuna modifica allo stop Voice e nessuna installazione sull’MMI. Non è ancora un’integrazione Android Auto verificata: categoria/launcher possono rifiutarla. Test interpretati passati; Android/build/firma/collaudo Audi pendenti. Vedi docs/HANDOFF_ANDROID_AUTO_CUBE_20261108.md.
+Cubo HTML/Canvas locale e tentativo singolo di apertura sul display selezionato quando compare la cover del telefono. Armamento temporaneo60s ad auto ferma, scadenza/lock/disconnessione e chiusura senza replay; nessuna modifica allo stop Voice e nessuna installazione sull’MMI. Non è ancora un’integrazione Android Auto verificata: categoria/launcher possono rifiutarla. Test interpretati e710test Android passati; lint0errori/56avvisi, APK compilato e firmato permanentemente nel cloud Jarvis. Collaudo Galaxy/Audi e compatibilità effettiva ancora pendenti. Vedi docs/HANDOFF_ANDROID_AUTO_CUBE_20261108.md.
 
 ## 0.5.121 / 143 — navigazione in una richiesta
 

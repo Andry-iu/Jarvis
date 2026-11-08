@@ -5,6 +5,9 @@ Aggiornata l’8 novembre 2026 (Europe/Rome), dopo il rilascio .121/143 e il rip
 
 I nomi qui sotto sono le operazioni del plugin, non comandi shell. Cercarle nel catalogo strumenti della sessione per nome esatto; i prefissi di namespace/connector possono cambiare. Non riusare un vecchio percorso opaco di connessione. Repository fisso: `Andry-iu/Jarvis`; branch `main`. Prima stabilire se serve consegnare una build esistente o crearne una nuova.
 
+### A0. APK più recente .122/144 verificato l’8 novembre: nessuna nuova build
+Job 6c800b3f-05c5-49a4-ae4e-7b8e39d9cd9f succeeded sul sorgente d70a27714fa216ca62dbf9f8eff71ea13424e816; verbale8cce21cbb389308f278796b2015a555b9917fc28. Chiamare jarviswake_cloud_job con quel job_id e poi jarviswake_cloud_artifact sullo stesso job, usando il link effettivamente restituito.710test/0failure/skipped, lint0errori/56avvisi; firma permanente verificata. Metadata/hash in docs/HANDOFF_ANDROID_AUTO_CUBE_20261108.md e releases/cloud-jobs/6c800b3f-05c5-49a4-ae4e-7b8e39d9cd9f.json. APK privato; download/installazione e comparsa reale sull’Audi non confermati. Non accodare una nuova compilazione per scaricarlo.
+
 ### A. Consegnare di nuovo la .121 già compilata: nessuna build
 1. `jarviswake_cloud_job({"job_id":"c6f79b80-2039-48d4-a762-e2cdab9e5307"})`. Riscontro atteso: `state:"succeeded"`, `artifact.version:"0.5.121"`, `version_code:143`, `release_commit:"b881b921a65966df70fc2a7dffebb3d2186fecf6"`.
 2. `jarviswake_cloud_artifact({"job_id":"c6f79b80-2039-48d4-a762-e2cdab9e5307"})`. Consegnare l'URL effettivamente restituito; checksum e dimensione sono nella tabella sotto. Un errore `cloud_artifact_expired` è scadenza del binario, non build fallita: verificare prima l'artefatto conservato nel cloud o una consegna già esistente, senza nuova compilazione automatica.

@@ -2,9 +2,7 @@
 Aggiornato l’8 novembre 2026, Europe/Rome.
 
 ## Stato corrente
-Sorgenti sperimentali **0.5.122 / 144** preparati dopo il via esplicito «Procedi».
-**Nessun APK .122 ancora compilato, firmato o consegnato; nessun collaudo Audi eseguito.**
-Ultimo APK verificato resta .121/143, documentato nella procedura di rilascio.
+APK sperimentale **0.5.122 / 144 compilato, firmato e verificato** nel cloud Jarvis sul sorgente d70a27714fa216ca62dbf9f8eff71ea13424e816. Job 6c800b3f-05c5-49a4-ae4e-7b8e39d9cd9f succeeded; link privato ottenuto tramite cloud_artifact. Installazione/download sul telefono e collaudo Audi non ancora confermati.
 Il requisito finale resta: aprire automaticamente il contenuto sull’Audi all’apertura della cover sul telefono, senza installare nulla sull’MMI. Questo prototipo tenta un’apertura su un display scelto durante una prova temporanea; non certifica quel risultato né lo abilita stabilmente a ogni wake.
 
 ## Perimetro e limite decisivo
@@ -29,16 +27,19 @@ Il requisito finale resta: aprire automaticamente il contenuto sull’Audi all�
 - node --test --test-isolation=none phone-bridge/test/cloud.test.mjs:14passati/0falliti.
 - python3 scripts/sync-guide.py --check:35argomenti sincronizzati.
 - Build Worker ESM e relativo validate-artifact:PASS. Non sono compilazione Android.
-- Preparati CarCubeProbeStateTest e CarCubeProbeActivityTest per SDK34/36; **NON compilati o eseguiti qui**. Da eseguire insieme a NativeExitStateTest, NativeAudioRecovery e tutte le regressioni esistenti.
+- Nel cloud Jarvis compilati ed eseguiti i nuovi CarCubeProbeStateTest e CarCubeProbeActivityTest insieme alle regressioni esistenti:710test Android,0failure,0skipped; lint0errori/56avvisi. Report del job conservato su main.
 - Tentativo Playwright reale non avviabile: binario chromium_headless_shell-1234 assente. Nessuna screenshot/browser QA dichiarata e nessun download di browser eseguito.
-- Non eseguiti Gradle/JVM, lint Android, assemble, firma, test del launcher Android Auto/DHU o prova Galaxy/Audi.
+- Gradle/JVM, lint Android, assemble e firma completati nel cloud Jarvis. Non eseguiti test del launcher Android Auto/DHU o prova Galaxy/Audi.
 - Prima della modifica13blob della baseline confrontati con gli SHA Git remoti. Pubblicare soltanto le differenze pertinenti e controllare la lease sul main aggiornato.
 
 ## Compilazione e ripresa
-Runner interrogato: runner_online=false, active_job=null. In questa chat non sono esposti strumenti per riattivare/configurare il cloud registrato; /workspace/Jarvis e /workspace/.jarvis-cloud non sono presenti nel workspace della chat. Nessuna toolchain ricostruita altrove.
-Richiesta di build conservata (non duplicare): operation=build_signed, request_id=6c800b3f-05c5-49a4-ae4e-7b8e39d9cd9f.
-Stato richiesta: **queued**, accettata dal backend l’8 novembre2026; stage=queued e runner_online=false. Job_id=6c800b3f-05c5-49a4-ae4e-7b8e39d9cd9f; sorgente esatto d70a27714fa216ca62dbf9f8eff71ea13424e816. Nessuna compilazione Android, firma o consegna dedotta dalla coda. Conservare questo job/UUID: non inviare una seconda richiesta né sostituirlo dopo timeout o sospensione. La coda scade dopo24ore se nessun runner la prende in carico; verificare lo stato effettivo prima di qualsiasi seguito.
-Seguire docs/PROCEDURA_BUILD_RILASCIO.md, schede B/C/D. Accodare sullo SHA pubblicato con questo UUID una sola volta; accodamento non significa compilazione. Riattivare il runner soltanto nel cloud Jarvis autentico se un accesso effettivo diventa disponibile, usando il bootstrap esistente. Nessuna nuova chiave o passphrase richiesta.
+Runner riattivato tramite la sessione cloud Jarvis esistente: processo assente, strumenti e configurazione integri. Bootstrap eseguito nel cloud originale, configurazione e journal preservati; heartbeat recente e claim dello stesso job provati. Percorso completo e URL della sessione: docs/PROCEDURA_BUILD_RILASCIO.md, scheda G. Non dedurre always-on o salvataggio dello snapshot dall’avvio del runner.
+
+Job **6c800b3f-05c5-49a4-ae4e-7b8e39d9cd9f succeeded/complete**, operation=build_signed, risoluzione esatta d70a27714fa216ca62dbf9f8eff71ea13424e816. Conservata la richiesta originaria; nessuna duplicazione. Verbale su main nel commit8cce21cbb389308f278796b2015a555b9917fc28, file releases/cloud-jobs/6c800b3f-05c5-49a4-ae4e-7b8e39d9cd9f.json.
+
+APK .122/144:90072897byte; SHA256 f4cf5503b46fd3662bb317dfb99de4af04fc214decbe93c53f3e3020a0f85ecd; certificato permanente a8ddfbe2b78be5460e72df57afbc3434411e3cc27328b13bc16b4daaba13389a.710test passati,0failure/skipped; lint0errori/56avvisi. Nessuna API Google a pagamento e nessun collaudo fisico dedotti dalla build.
+
+Per consegnare usare jarviswake_cloud_artifact con questo job_id, autenticazione Site dello stesso account; artefatto privato con scadenza15novembre2026 (epoch1794762870642). Non conservare qui il link di download temporaneo e non ricompilare per riottenerlo. Backend live .121 conservato: il backend sorgente .122 cambia la guida, ma non è stato pubblicato in questa richiesta.
 
 ## Prima prova, soltanto dopo APK verificato
 1. Installare .122/144 firmata con lo stesso certificato della .121; nessuna installazione sull’MMI.
