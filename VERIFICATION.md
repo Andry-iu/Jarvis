@@ -1,3 +1,6 @@
+CLOUD JOB c89551d1-8436-4b1b-9b02-219502625adb — 5dbd435d1982282e83d79f3f9d2b3a7654952a9e
+Verifiche cloud e checksum: releases/cloud-jobs/c89551d1-8436-4b1b-9b02-219502625adb.json. Nessun collaudo Galaxy o API a pagamento. Tutte le attività ancora pendenti e i requisiti precedenti restano sotto.
+
 0.5.123 / 145 — JARVIS CUBE, GIOCO SEPARATO; VERIFICHE ANDROID E APK PENDENTI (8 novembre 2026, Europe/Rome)
 
 Via esplicito «Procedi, proviamo» al vero minigioco 3D parcheggiato, installato soltanto sul telefono, con apertura dal launcher Android Auto e sincronizzazione di cover/mute. Due APK: it.jarviswake assistente e it.jarviswake.cube gioco. Nessuna categoria game dichiarata dall’assistente, nessuna installazione Audi, nessun avvio automatico sopra Maps o override al movimento. Tutti i requisiti precedenti e i collaudi ancora aperti restano conservati.
