@@ -1,0 +1,62 @@
+{
+  "source_commit": "5dbd435d1982282e83d79f3f9d2b3a7654952a9e",
+  "phone_job_id": "c89551d1-8436-4b1b-9b02-219502625adb",
+  "phone_job_release_commit": "3fc9b8340bf021125714ffbd6bc06aea983363a9",
+  "artifacts": {
+    "phone": {
+      "version": "0.5.123",
+      "version_code": 145,
+      "sha256": "7b678e123dad759c397d4f3c04eab123fd2fae30d5907c67b72274d97aa15757",
+      "bytes": 90072897,
+      "certificate_sha256": "a8ddfbe2b78be5460e72df57afbc3434411e3cc27328b13bc16b4daaba13389a"
+    },
+    "cube": {
+      "package": "it.jarviswake.cube",
+      "version": "0.5.123",
+      "version_code": 145,
+      "sha256": "544bbc4286a1f3814196adc7423f02fc7388f8cda6c47dddd6dcc8650f953393",
+      "bytes": 2491555,
+      "certificate_sha256": "a8ddfbe2b78be5460e72df57afbc3434411e3cc27328b13bc16b4daaba13389a"
+    }
+  },
+  "modules": {
+    "app": {
+      "tests": 718,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "lint_errors": 0,
+      "lint_warnings": 58
+    },
+    "car_game": {
+      "tests": 12,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "lint_errors": 0,
+      "lint_warnings": 8
+    }
+  },
+  "verified": [
+    "permanent_certificate",
+    "apk_v2",
+    "apk_v3",
+    "zip_crc",
+    "zipalign_16k",
+    "cube_has_no_native_libraries"
+  ],
+  "physical_device_tested": false,
+  "google_paid_calls": false,
+  "automatic_open_over_maps": false,
+  "previous_failed_job": {
+    "job_id": "b815df22-4310-4e3f-9f19-50c49d1721cf",
+    "state": "failed",
+    "source_commit": "b6e28dbd0ac09cc469ade1563f9d0c2b03b68cab",
+    "cause": "Activity.display without an associated display; corrected to attached View display"
+  },
+  "delivery": {
+    "phone": "private_cloud_artifact_link_obtained",
+    "cube": "signed_file_in_cloud_not_uploaded",
+    "cube_drive_upload_authorization": "pending"
+  }
+}

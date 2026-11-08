@@ -1,9 +1,9 @@
-## 0.5.123 / 145 — Jarvis Cube, gioco separato (sorgenti preparati)
+## 0.5.123 / 145 — Jarvis Cube, gioco separato (APK firmati verificati)
 
 - Nuovo car-game/it.jarviswake.cube: vero cubo da trascinare e allineare, bersaglio, conferma e punteggio; categoria game soltanto nel gioco.
 - Provider read-only signature e identità verificata, soli flag cover/mute; aggiornamenti asincroni senza attese nei gesti di uscita. Gioco già aperto: mute grigio/rotazione ferma; cover chiusa: gioco autonomo.
 - Menu telefono aggiornato; rimossa entry CAR_LAUNCHER dell’assistente. Android Auto decide la disponibilità e la modalità parcheggiata; apertura automatica sopra Maps esclusa dal gruppo attuale.
-- Task Gradle del gioco inclusi nel gruppo del telefono, adattatore di firma limitato ai due package noti. Test Android, lint, APK/firma e Audi ancora pendenti. Handoff docs/HANDOFF_JARVIS_CUBE_GAME_20261108.md.
+- Task Gradle del gioco inclusi nel gruppo del telefono, adattatore di firma limitato ai due package noti. App718test e gioco12test passati; lint0errori/58+8avvisi, due APK firmati permanentemente e verificati. Installazione e Audi ancora pendenti. Handoff docs/HANDOFF_JARVIS_CUBE_GAME_20261108.md.
 
 ## 0.5.122 / 144 — prova cubo Android Auto (APK firmato verificato)
 
