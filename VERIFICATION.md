@@ -1,3 +1,6 @@
+CLOUD JOB 6c800b3f-05c5-49a4-ae4e-7b8e39d9cd9f — d70a27714fa216ca62dbf9f8eff71ea13424e816
+Verifiche cloud e checksum: releases/cloud-jobs/6c800b3f-05c5-49a4-ae4e-7b8e39d9cd9f.json. Nessun collaudo Galaxy o API a pagamento. Tutte le attività ancora pendenti e i requisiti precedenti restano sotto.
+
 0.5.122 / 144 — PROTOTIPO CUBO ANDROID AUTO; VERIFICA ANDROID E APK ANCORA PENDENTI (8 novembre 2026, Europe/Rome)
 
 Via esplicito «Procedi» alla prova del cubo con richiesta di apertura dalla cover del telefono, senza installazioni sull’Audi. Preparati sorgenti, guida e test; 89test backend e suite HTML passati. Compatibilità del launcher, apertura automatica reale, Gradle/lint/firma e collaudo Galaxy/Audi NON verificati. Armamento60s solo RAM/auto ferma; nessuna falsa categoria di navigazione o garanzia di ammissione Android Auto. Build firmata accodata sul sorgente d70a27714fa216ca62dbf9f8eff71ea13424e816; job 6c800b3f-05c5-49a4-ae4e-7b8e39d9cd9f ancora queued/runner offline, nessuna esecuzione Android avviata. Dettagli, limiti e richiesta cloud conservata: docs/HANDOFF_ANDROID_AUTO_CUBE_20261108.md. Ultimo APK verificato resta .121/143; backend live .121 conservato. Tutti i residui precedenti restano aperti.
