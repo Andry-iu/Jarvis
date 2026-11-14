@@ -1,4 +1,4 @@
-JARVIS AGENT SETUP 0.8.1 / AGENTE 0.8.1 - Windows x64
+JARVIS AGENT SETUP 0.8.2 / AGENTE 0.8.2 - Windows x64
 
 Estrarre lo ZIP in una cartella e avviare INSTALLA.cmd. Consentire UAC con lo
 stesso utente Windows. Scegliere il nome libero e univoco del computer, la cartella
@@ -32,7 +32,7 @@ AGGIORNA.cmd sul PC da aggiornare, con UAC dello stesso utente. Indicare la cart
 Jarvis esistente (es. C:\Jarvis). Non eseguire INSTALLA sopra l'installazione.
 AGGIORNA usa l'unico updater, con backup e prova di ripristino, conserva nome,
 identita, configurazione e avvio automatico. Non richiede Go o Cloudflare.
-Al termine attendere la conferma 0.8.1; tenere la sessione aperta e sbloccata.
+Al termine attendere la conferma 0.8.2; tenere la sessione aperta e sbloccata.
 
 Config\devices.json conserva nomi, identita, indirizzi, percorsi via altri agenti e
 stato active/retired. Dismesso e offline sono distinti. Ogni gateway conserva la

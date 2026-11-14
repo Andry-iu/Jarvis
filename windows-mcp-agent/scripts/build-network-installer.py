@@ -9,17 +9,17 @@ if len(a.source_commit)!=40 or any(c not in '0123456789abcdef' for c in a.source
 head=subprocess.check_output(['git','-C',str(root),'rev-parse','HEAD'],text=True).strip()
 if head!=a.source_commit:raise SystemExit('source commit mismatch')
 out=a.output.resolve();out.mkdir(parents=True,exist_ok=True)
-package=out/'Jarvis-Agent-Setup-0.8.1';package.mkdir(exist_ok=False)
+package=out/'Jarvis-Agent-Setup-0.8.2';package.mkdir(exist_ok=False)
 try:
  files={x.name:x for x in (root/'installer').iterdir() if x.suffix in ('.ps1','.cjs') and not x.name.startswith('Test-')}
  files.update({x.name:x for x in (root/'installer-network').iterdir() if x.is_file()})
  files['update-agent.ps1']=root/'scripts/update-agent.ps1'
  files['jarvis-mcp.exe']=a.candidate
  for name,source in files.items():shutil.copyfile(source,package/name)
- manifest={'installer_version':'0.8.1','agent_version':'0.8.1','agent_sha256':hashlib.sha256(a.candidate.read_bytes()).hexdigest(),'source_commit':head,'files':[]}
+ manifest={'installer_version':'0.8.2','agent_version':'0.8.2','agent_sha256':hashlib.sha256(a.candidate.read_bytes()).hexdigest(),'source_commit':head,'files':[]}
  for file in sorted(package.iterdir()):manifest['files'].append({'path':file.name,'sha256':hashlib.sha256(file.read_bytes()).hexdigest(),'size_bytes':file.stat().st_size})
  (package/'package.json').write_text(json.dumps(manifest,indent=2)+'\n')
- target=out/'Jarvis-Agent-Setup-0.8.1.zip'
+ target=out/'Jarvis-Agent-Setup-0.8.2.zip'
  with zipfile.ZipFile(target,'w',zipfile.ZIP_DEFLATED) as z:
   for file in sorted(package.iterdir()):z.write(file,package.name+'/'+file.name)
  receipt={'path':str(target),'sha256':hashlib.sha256(target.read_bytes()).hexdigest(),'size_bytes':target.stat().st_size,'source_commit':head,'agent_sha256':manifest['agent_sha256']}

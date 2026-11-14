@@ -1,3 +1,9 @@
+## 0.8.2 — 2026-11-14
+
+- Corretto avvio del dialogo di abbinamento: nessuna console, ma senza SW_HIDE sulla prima finestra WinForms.
+- Prova Windows opt-in della visibilita reale tramite lo stesso comando Go di produzione.
+- Versione unificata agente/installer0.8.2; AGGIORNA accetta0.8.0 e0.8.1.
+
 ## 0.8.1 — 2026-11-14
 
 - Primo abbinamento da chat con codice e conferma locale, scambio privato automatico.
