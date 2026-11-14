@@ -117,6 +117,28 @@ func TestSourceUpdateDoesNotReplayCompatibilityBootstrap(t *testing.T) {
 		t.Fatal("bootstrap ID rebound")
 	}
 }
+
+func TestSourceUpdateAcceptsTerminalPowerShellBOMActiveRecord(t *testing.T) {
+	a, r, n := sourceUpdateFixture(t)
+	p := sourceUpdateRequest(r)
+	oldID := newID()
+	path, _ := sourceUpdatePath(r.home, oldID)
+	if e := os.MkdirAll(filepath.Dir(path), 0700); e != nil {
+		t.Fatal(e)
+	}
+	v := &sourceUpdateRecord{RequestID: oldID, MachineID: r.MachineID, SourceCommit: p.SourceCommit, TargetVersion: version, Phase: "completed", CleanupVerified: true}
+	if e := atomicJSON(path, v); e != nil {
+		t.Fatal(e)
+	}
+	b, _ := json.Marshal(map[string]string{"request_id": oldID})
+	b = append([]byte{0xef, 0xbb, 0xbf}, b...)
+	if e := os.WriteFile(filepath.Join(r.home, "State", "source-updates", "active.json"), b, 0600); e != nil {
+		t.Fatal(e)
+	}
+	if toolFailed(invokeSource(a, p)) || *n != 1 {
+		t.Fatal("valid terminal PowerShell bootstrap receipt refused")
+	}
+}
 func TestSourceUpdateBatchDoesNotInterpolateShell(t *testing.T) {
 	p := runtimeRequest{RequestID: newID(), MachineID: newID(), SourceCommit: strings.Repeat("a", 40), TargetVersion: version}
 	home := `C:\Test & percent%\O'Brian`

@@ -108,7 +108,7 @@ try{
    $prior=Get-Content (Join-Path (Split-Path $statusDir -Parent) ($a.request_id+'\status.json')) -Raw|ConvertFrom-Json
    if($prior.phase -notin @('completed','failed','prepared') -or !$prior.cleanup_verified){throw 'another_update_active_or_uncertain'}
   }
-  @{request_id=$RequestId}|ConvertTo-Json|Set-Content $active -Encoding UTF8
+  [IO.File]::WriteAllText($active,(@{request_id=$RequestId}|ConvertTo-Json),(New-Object Text.UTF8Encoding($false)))
  }
  $admitted=$true;Save-Status 'checking'
  $principal=New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())

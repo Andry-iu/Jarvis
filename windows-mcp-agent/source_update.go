@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	_ "embed"
 	"encoding/base64"
 	"encoding/binary"
@@ -110,7 +111,9 @@ func (a *Agent) startSourceUpdate(r *Runtime, p runtimeRequest) (any, error) {
 		var old struct {
 			RequestID string `json:"request_id"`
 		}
-		if json.Unmarshal(b, &old) != nil {
+		// Windows PowerShell Set-Content -Encoding UTF8 writes a BOM. Older
+		// compatibility bootstraps used that encoding; preserve and accept it.
+		if json.Unmarshal(bytes.TrimPrefix(b, []byte{0xef, 0xbb, 0xbf}), &old) != nil {
 			return nil, errors.New("invalid active update record; preserved")
 		}
 		v, e := readSourceUpdate(r.home, old.RequestID)
