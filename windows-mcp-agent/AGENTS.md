@@ -1,3 +1,12 @@
+# Pulizia permanente — 14 novembre 2026
+
+Alla richiesta di pulizia riusare ProcedurePermanenti/Invoke-JarvisCleanup.ps1
+sul destinatario. [Uso, ambito e protezioni](../docs/mcp-agent/CLEANUP.md).
+Conservare un solo backup verificato per PC; Projects e area Jarvis separate.
+Dopo ogni aggiornamento verificato il coordinatore esegue Scope=Backups.
+Nessun hook autonomo aggiunto all'updater 0.8.4; non confondere regola ed esecuzione.
+Le ricevute restano in State/cleanup-receipts; niente replay degli ID esistenti.
+
 Prima di scegliere strumenti o diagnosi, leggere [problemi e metodi gia riusciti](../docs/mcp-agent/KNOWN-BUILD-UPDATE-PROBLEMS.md).
 
 # Agente 0.8.4 — installato e verificato sui tre PC
