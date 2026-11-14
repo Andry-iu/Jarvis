@@ -1,10 +1,21 @@
-# 0.8.0 — checkpoint di sviluppo, 14 novembre 2026
+# 0.8.0 — installata e verificata su Desktop1 e Desktop2
 
-Gateway universali senza ruoli; LAN TLS e inoltro completo su piu passaggi,
-aggiornamenti persistenti, configurazione/nome/dismissione e installer 2.0.0.
-Specifica: GATEWAY-0.8.0.md.
-Validazione corrente: VALIDATION-0.8.0-20261114.md.
-Distribuzione ancora pendente: gli stati seguenti sono storici.
+14 novembre 2026. Runtime definitivo 07760a3eb212bb63f9919e2702a46f1f0d290338,
+branch feature/agent-gateway-20261114. Entrambi aggiornati con updater canonico,
+backup, rehearsal rollback e verifica MCP di identita/versione/hash/privilegi.
+Canale LAN pronto, configurazioni iniziali vuote; nessun nuovo PC ancora associato.
+
+Agente universale senza ruoli: controllo e inoltro completo su piu gateway,
+aggiornamenti persistenti, nomi liberi univoci e dismissione, discovery e pairing
+privato. Installer 2.0.0 disponibile: nome, locale oppure Cloudflare, avvio automatico
+all'accesso Windows. Suite Go/race/vet Linux, test/vet/build Windows e collaudo
+installer reale isolato su entrambi PASS. Nessun reboot fisico certificato.
+
+Candidati finali e ricevute D:\Jarvis\Releases\0.8.0-r2; sorgenti operativi
+D:\Jarvis\MCP-Source\Gateway-0.8.0. Checkout precedenti preservati. Non ripetere
+la distribuzione gia riuscita. Le sezioni successive sono storico.
+
+ [Specifica](GATEWAY-0.8.0.md), [istruzioni client](CLIENT-INSTRUCTIONS-0.8.0.md), [validazione](VALIDATION-0.8.0-20261114.md), [checksum](CHECKSUMS-0.8.0.json).
 
 # Agente 0.7.4 — installato e collaudato su entrambi i desktop
 

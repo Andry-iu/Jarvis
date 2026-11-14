@@ -1,3 +1,18 @@
+# 14 novembre 2026 — gateway universali 0.8.0 completati
+
+Richiesta: agenti sempre capaci di inoltro, percorsi LAN su piu reti/gateway,
+aggiornamenti remoti, nomi liberi univoci, configurazione persistente e dismissione;
+installer unico locale/Cloudflare con avvio automatico all'accesso Windows.
+Implementato e pubblicato runtime 07760a3eb212bb63f9919e2702a46f1f0d290338.
+Test Go/race/vet Linux; test/vet/build e due installazioni isolate reali su ciascun
+PC PASS. Updater canonico, backup/rollback rehearsal e verifica MCP completati
+su Desktop1 e Desktop2; 0.8.0, identita/configurazioni/privilegi preservati.
+Pacchetto 2.0.0 con manifest verificato. Stato e limiti in
+[VALIDATION-0.8.0-20261114.md](VALIDATION-0.8.0-20261114.md); nessun reboot fisico
+certificato, nessuna inferenza Codex, nessuna modifica Android/NestingOpt/main.
+Pulizia temporanei e worktree PASS; SDK ZIP verificato conservato come cache
+Desktop2 per evitare nuovi download. I paragrafi seguenti sono storico.
+
 # Chiusura 0.7.3 - 3 novembre 2026
 
 Sorgenti b00e7e6 pubblicati con albero identico al commit collaudato. Installati
