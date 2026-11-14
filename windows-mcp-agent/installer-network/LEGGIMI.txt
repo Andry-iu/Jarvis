@@ -1,4 +1,4 @@
-JARVIS AGENT SETUP 2.1.0 / AGENTE 0.8.1 - Windows x64
+JARVIS AGENT SETUP 0.8.1 / AGENTE 0.8.1 - Windows x64
 
 Estrarre lo ZIP in una cartella e avviare INSTALLA.cmd. Consentire UAC con lo
 stesso utente Windows. Scegliere il nome libero e univoco del computer, la cartella

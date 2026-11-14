@@ -8,10 +8,10 @@ try{
  Copy-Item -Path (Join-Path $Package '*') -Destination $oldPackage
  Copy-Item -LiteralPath $PreviousCandidate -Destination (Join-Path $oldPackage 'jarvis-mcp.exe') -Force
  $install=Join-Path $oldPackage 'Install.ps1'
- $text=[IO.File]::ReadAllText($install).Replace('2.1.0','2.0.0').Replace('0.8.1','0.8.0')
+ $text=[IO.File]::ReadAllText($install).Replace('0.8.1','0.8.0')
  [IO.File]::WriteAllText($install,$text,(New-Object Text.UTF8Encoding($false)))
  $old=Get-Content (Join-Path $oldPackage 'package.json') -Raw|ConvertFrom-Json
- $old.installer_version='2.0.0';$old.agent_version='0.8.0';$old.agent_sha256=(Get-FileHash (Join-Path $oldPackage 'jarvis-mcp.exe')).Hash.ToLowerInvariant()
+ $old.installer_version='0.8.0';$old.agent_version='0.8.0';$old.agent_sha256=(Get-FileHash (Join-Path $oldPackage 'jarvis-mcp.exe')).Hash.ToLowerInvariant()
  $old.files=@(Get-ChildItem $oldPackage -File|Where-Object {$_.Name -ne 'package.json'}|ForEach-Object {@{path=$_.Name;sha256=(Get-FileHash $_.FullName).Hash.ToLowerInvariant();size_bytes=$_.Length}})
  [IO.File]::WriteAllText((Join-Path $oldPackage 'package.json'),($old|ConvertTo-Json -Depth 12),(New-Object Text.UTF8Encoding($false)))
  & $install -NonInteractive -DeviceName 'Bootstrap update test' -InstallDir $testHome -Connection local -Port 19865 -PeerPort 19866

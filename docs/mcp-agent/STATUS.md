@@ -1,7 +1,7 @@
 # Stato corrente — abbinamento0.8.1
 
 Protocollo con confronto codice e conferma locale implementato; nessuna copia file.
-Installer2.1.0: INSTALLA.cmd oppure AGGIORNA.cmd per agenti0.8.0.
+Installer0.8.1: INSTALLA.cmd oppure AGGIORNA.cmd per agenti0.8.0.
 Prove e distribuzione: [VALIDATION](VALIDATION-0.8.1-20261114.md).
 Uso: [PAIRING](PAIRING-0.8.1.md).
 

@@ -1,7 +1,7 @@
 # Novita0.8.1
 
 Primo abbinamento senza copia file: chat, confronto codice e conferma locale.
-Installer2.1.0 include AGGIORNA.cmd per0.8.0. [Procedura](../docs/mcp-agent/PAIRING-0.8.1.md).
+Installer0.8.1 include AGGIORNA.cmd per0.8.0. [Procedura](../docs/mcp-agent/PAIRING-0.8.1.md).
 
 # Gateway universali 0.8.0 / installer 2.0.0
 

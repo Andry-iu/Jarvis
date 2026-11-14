@@ -8,7 +8,7 @@ if(-not $HomeDir){$HomeDir=Read-Host 'Cartella Jarvis gia installata [C:\Jarvis]
 $HomeDir=Get-FullPath $HomeDir
 $settings=Read-Install $HomeDir
 $package=Get-Content (Join-Path $PSScriptRoot 'package.json') -Raw|ConvertFrom-Json
-if($package.installer_version -ne '2.1.0' -or $package.agent_version -ne '0.8.1' -or $package.source_commit -notmatch '^[a-f0-9]{40}$'){throw 'Pacchetto aggiornamento inatteso'}
+if($package.installer_version -ne '0.8.1' -or $package.agent_version -ne '0.8.1' -or $package.source_commit -notmatch '^[a-f0-9]{40}$'){throw 'Pacchetto aggiornamento inatteso'}
 foreach($file in $package.files){if($file.path -notmatch '^[A-Za-z0-9_.-]+$' -or (Get-FileHash (Join-Path $PSScriptRoot $file.path)).Hash -ine $file.sha256){throw 'Pacchetto incompleto o alterato'}}
 $info=Invoke-LocalTool $HomeDir 'machine_info'
 if($info.version -eq $package.agent_version){Write-Host ('Agente gia alla versione '+$info.version);return}

@@ -1,7 +1,7 @@
 # Stato corrente0.8.1 — 14 novembre2026
 
 Approvato: abbinamento senza file, richiesta da chat e conferma locale con codice.
-Protocollo/test/installer2.1.0 e AGGIORNA.cmd implementati. Stato verifiche e
+Protocollo/test/installer0.8.1 e AGGIORNA.cmd implementati. Stato verifiche e
 distribuzione: docs/mcp-agent/VALIDATION-0.8.1-20261114.md.
 SoftPlcTest1 trovato da Desktop1 a192.168.1.101, identita
 e803423d08ab396b98262b3cf55df658,0.8.0 non associato. Bootstrap locale con

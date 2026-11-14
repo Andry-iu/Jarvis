@@ -1,4 +1,4 @@
-# Abbinamento con conferma locale — 0.8.1 / installer 2.1.0
+# Abbinamento con conferma locale — 0.8.1 / installer 0.8.1
 
 Installare con INSTALLA.cmd e assegnare un nome. Chiedere in chat «Collega
 SoftPlcTest1 tramite Desktop1». Il gateway avvia la richiesta; la chat mostra
@@ -45,7 +45,7 @@ Il vecchio percorso da file resta compatibile.
 
 ## Aggiornare un agente0.8.0 non associato
 
-Estrarre ZIP2.1.0 in una cartella distinta, avviare AGGIORNA.cmd come amministratore
+Estrarre ZIP0.8.1 in una cartella distinta, avviare AGGIORNA.cmd come amministratore
 dello stesso account e indicare la cartella Jarvis esistente. Non INSTALLA sopra
 la cartella. Non servono Go o Cloudflare. Il bootstrap legge SOLO LOCALMENTE le
 credenziali gia presenti e usa il listener loopback TLS con pin per passare

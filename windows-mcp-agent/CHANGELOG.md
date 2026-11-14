@@ -2,7 +2,7 @@
 
 - Primo abbinamento da chat con codice e conferma locale, scambio privato automatico.
 - TLS pin, prova RSA-PSS e credenziale RSA-OAEP; nessuna approvazione remota.
-- Installer2.1.0 e AGGIORNA.cmd per agenti0.8.0, stesso updater/backup/rollback.
+- Installer0.8.1 e AGGIORNA.cmd per agenti0.8.0, stesso updater/backup/rollback.
 - Procedura: docs/mcp-agent/PAIRING-0.8.1.md.
 
 ## 0.8.0 — 2026-11-14
