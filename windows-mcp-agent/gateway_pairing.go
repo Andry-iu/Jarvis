@@ -1,7 +1,8 @@
 package main
 
-// First trust is a physical, local decision. The same transcript code is shown
-// at both ends. RSA proof of possession binds polling to the initiating agent;
+// First trust is a physical, local decision. The requester exposes the code
+// to chat; the target requires local entry without displaying the expected code.
+// RSA proof of possession binds polling to the initiating agent;
 // OAEP seals the credential to it even if a response is intercepted. Names and
 // discovery alone never grant control. There is no remotely callable approve.
 import (
@@ -11,6 +12,7 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/sha256"
+	"crypto/subtle"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/base64"
@@ -82,6 +84,41 @@ func pairCode(t pairTranscript) string {
 	s := strings.ToUpper(digest(b)[:12])
 	return s[:4] + "-" + s[4:8] + "-" + s[8:]
 }
+
+// Only ASCII hex, optional grouping hyphens and whitespace are accepted.
+// This is a human verification code bound to public pairing data, not a password.
+func normalizePairCode(raw string) string {
+	if len(raw) > 128 {
+		return ""
+	}
+	var b strings.Builder
+	for _, c := range raw {
+		switch {
+		case c == '-' || c == ' ' || c == '\t' || c == '\r' || c == '\n':
+			continue
+		case c >= 'a' && c <= 'f':
+			b.WriteByte(byte(c - 'a' + 'A'))
+		case c >= 'A' && c <= 'F' || c >= '0' && c <= '9':
+			b.WriteByte(byte(c))
+		default:
+			return ""
+		}
+	}
+	if b.Len() != 12 {
+		return ""
+	}
+	return b.String()
+}
+
+func pairingPromptAccepted(ctx context.Context, entered, expected string) bool {
+	return ctx.Err() == nil && pairingCodeMatches(entered, expected)
+}
+
+func pairingCodeMatches(entered, expected string) bool {
+	a, b := normalizePairCode(entered), normalizePairCode(expected)
+	return a != "" && b != "" && subtle.ConstantTimeCompare([]byte(a), []byte(b)) == 1
+}
+
 func validPairName(s string) bool {
 	return strings.TrimSpace(s) != "" && len(s) <= 160 && !strings.ContainsFunc(s, func(r rune) bool { return unicode.IsControl(r) || unicode.Is(unicode.Cf, r) })
 }

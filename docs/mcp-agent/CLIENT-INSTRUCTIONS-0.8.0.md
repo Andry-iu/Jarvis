@@ -1,3 +1,5 @@
+> Abbinamento interattivo aggiornato: [PAIRING-0.8.3.md](PAIRING-0.8.3.md). Controllare la versione del destinatario prima di descrivere la finestra.
+
 # Istruzioni client — gateway universali 0.8.0
 
 Ogni agente controlla il proprio PC e inoltra ad altri senza cambio di ruolo.

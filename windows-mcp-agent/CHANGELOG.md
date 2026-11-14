@@ -1,3 +1,12 @@
+## 0.8.3 — 2026-11-14
+
+- Il nuovo PC richiede il codice ricevuto in chat, senza mostrarlo nella finestra.
+- Nessun consenso con solo clic: helper e agente verificano il codice digitato; ALLOW legacy, input vuoto/errato e risposte tardive sono rifiutati.
+- Conto alla rovescia visibile da 1:50, rosso negli ultimi 20 secondi; tre codici errati chiudono la richiesta.
+- Mantiene TLS pin, firme, identita, scadenze e collegamenti gia associati; nuova verifica sul destinatario aggiornato.
+- Versione unica agente/installer 0.8.3; AGGIORNA accetta 0.8.0, 0.8.1 e 0.8.2.
+- Procedura e limiti: docs/mcp-agent/PAIRING-0.8.3.md.
+
 ## 0.8.2 — 2026-11-14
 
 - Corretto avvio del dialogo di abbinamento: nessuna console, ma senza SW_HIDE sulla prima finestra WinForms.

@@ -1,4 +1,4 @@
-JARVIS AGENT SETUP 0.8.2 / AGENTE 0.8.2 - Windows x64
+JARVIS AGENT SETUP 0.8.3 / AGENTE 0.8.3 - Windows x64
 
 Estrarre lo ZIP in una cartella e avviare INSTALLA.cmd. Consentire UAC con lo
 stesso utente Windows. Scegliere il nome libero e univoco del computer, la cartella
@@ -20,19 +20,21 @@ nuovo PC. Nessun segreto o stato Desktop1/Desktop2 e incluso in questo pacchetto
 
 PRIMO ABBINAMENTO SENZA FILE: chiedere in chat "Collega <nome> tramite Desktop1".
 Il gateway scopre l'agente e avvia la richiesta. Sul nuovo PC appare una finestra
-con nome, indirizzo e identita del richiedente e un codice. Confrontare il codice
-con quello in chat, poi fare clic su Consenti. Il nome da solo non autentica.
+con nome, indirizzo e identita del richiedente e una casella vuota. Inserire il
+codice ricevuto in chat, poi fare clic su Consenti: solo la corrispondenza esatta
+autorizza il collegamento. Il codice atteso non appare sul nuovo PC.
+Conto alla rovescia visibile da 1:50; tre errori chiudono la richiesta. Il nome da solo non autentica.
 Scadenza breve, rifiuto predefinito; chiusura, blocco schermo o timeout non abilitano
 il controllo. Credenziali scambiate automaticamente e conservate privatamente.
 Dopo la conferma il gateway completa e verifica il collegamento; poi basta il nome.
 Il vecchio percorso Abbina.cmd da file privato resta compatibile.
 
-AGENTI 0.8.0 GIA INSTALLATI: estrarre questo ZIP in una cartella distinta e avviare
+AGENTI 0.8.0 / 0.8.1 / 0.8.2 GIA INSTALLATI: estrarre questo ZIP in una cartella distinta e avviare
 AGGIORNA.cmd sul PC da aggiornare, con UAC dello stesso utente. Indicare la cartella
 Jarvis esistente (es. C:\Jarvis). Non eseguire INSTALLA sopra l'installazione.
 AGGIORNA usa l'unico updater, con backup e prova di ripristino, conserva nome,
 identita, configurazione e avvio automatico. Non richiede Go o Cloudflare.
-Al termine attendere la conferma 0.8.2; tenere la sessione aperta e sbloccata.
+Al termine attendere la conferma 0.8.3; tenere la sessione aperta e sbloccata.
 
 Config\devices.json conserva nomi, identita, indirizzi, percorsi via altri agenti e
 stato active/retired. Dismesso e offline sono distinti. Ogni gateway conserva la

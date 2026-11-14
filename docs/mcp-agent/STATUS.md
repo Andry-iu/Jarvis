@@ -1,3 +1,18 @@
+# Candidato 0.8.3 — 14 novembre 2026
+
+Autorizzato inserimento obbligatorio sul nuovo PC del codice ricevuto in chat,
+con conto alla rovescia visibile. Implementazione completata; test e pubblicazione
+in corso, nessun agente operativo ancora sostituito per questa release.
+La finestra non mostra il valore atteso, il launcher Go verifica anche l'output;
+vuoto/errato/ALLOW legacy/scaduto non approvano. Timer 110 secondi, tre errori.
+Versione unica sorgenti/agente/installer 0.8.3. AGGIORNA include 0.8.2.
+Branch feature/pairing-code-required-20261114, base remota 4215ffd.
+Leggere PAIRING-0.8.3.md e VALIDATION-0.8.3-20261114.md in docs/mcp-agent.
+Precedenti collegamenti conservati; nessuna nuova conferma per PC gia associati.
+Il destinatario deve essere aggiornato: un target 0.8.2 mantiene il confronto a vista.
+
+## Stato precedente
+
 # Stato corrente — release0.8.2, 14 novembre2026
 
 Desktop1 e Desktop2 aggiornati, riconnessi e verificati0.8.2. Difetto0.8.1 della

@@ -11,7 +11,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strings"
 	"syscall"
 )
 
@@ -35,5 +34,6 @@ func confirmPeerPair(ctx context.Context, p pairPrompt) (bool, error) {
 	if e != nil {
 		return false, errors.New("local pairing confirmation unavailable or expired")
 	}
-	return strings.TrimSpace(string(out)) == "ALLOW", nil
+	// A legacy ALLOW marker, a wrong code or a late helper response cannot approve.
+	return pairingPromptAccepted(ctx, string(out), p.Code), nil
 }

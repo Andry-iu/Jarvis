@@ -1,3 +1,15 @@
+## 14 novembre 2026 — codice obbligatorio e conto alla rovescia, candidato 0.8.3
+
+Utente ha approvato implementazione, commit e aggiornamento documentale. Il codice
+calcolato dai due agenti viene comunicato alla chat dal gateway e digitato sul
+nuovo PC, senza valore atteso visibile. Richiesto durante lo sviluppo un conto
+alla rovescia: 110 secondi visibili accanto al campo. Verifica locale e nel Go,
+rifiuto di semplice ALLOW, input errato e risposte scadute. Tre errori chiudono.
+La verifica evita il solo clic distratto; il codice deriva da dati pubblici del
+protocollo, non e una password o un secondo fattore segreto. Collegamenti salvati
+invariati; target precedenti richiedono aggiornamento per la nuova UI.
+Stato effettivo delle prove in VALIDATION-0.8.3-20261114.md.
+
 ## 2026-11-05 — 0.7.4 pubblicata, installata e collaudata
 
 Contatori token per progetto/incarico/categoria, dialoghi conservati. Sorgente

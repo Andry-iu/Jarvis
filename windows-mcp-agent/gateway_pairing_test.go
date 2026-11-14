@@ -210,3 +210,44 @@ func TestPairingCodeBindsEveryIdentityAndKey(t *testing.T) {
 		}
 	}
 }
+
+func TestPairingPromptRequiresEnteredCode(t *testing.T) {
+	const expected = "ABCD-1234-5678"
+	for _, tc := range []struct {
+		name, entered, expected string
+		want                    bool
+	}{
+		{"exact", expected, expected, true},
+		{"lowercase compact", "abcd12345678", expected, true},
+		{"group separators", " abcd 1234 5678\r\n", expected, true},
+		{"empty", "", expected, false},
+		{"legacy button marker", "ALLOW", expected, false},
+		{"denied", "DENY", expected, false},
+		{"wrong code", "ABCD-1234-5679", expected, false},
+		{"short code", "ABCD-1234-567", expected, false},
+		{"extra hex", "ABCD-1234-56780", expected, false},
+		{"non hex", "ABCD-1234-567G", expected, false},
+		{"unicode lookalike", "ＡBCD-1234-5678", expected, false},
+		{"hidden unicode", "ABCD-1234-5678\u200b", expected, false},
+		{"helper chatter", "APPROVED ABCD-1234-5678", expected, false},
+		{"missing expected", expected, "", false},
+		{"both empty", "", "", false},
+		{"oversized", strings.Repeat(" ", 129) + expected, expected, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := pairingPromptAccepted(context.Background(), tc.entered, tc.expected); got != tc.want {
+				t.Fatalf("approval = %v, want %v", got, tc.want)
+			}
+		})
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	if pairingPromptAccepted(ctx, expected, expected) {
+		t.Fatal("cancelled prompt approved")
+	}
+	ctx, cancel = context.WithDeadline(context.Background(), time.Now().Add(-time.Second))
+	defer cancel()
+	if pairingPromptAccepted(ctx, expected, expected) {
+		t.Fatal("expired prompt approved")
+	}
+}

@@ -1,3 +1,5 @@
+> Procedura storica 0.8.1/0.8.2: dalla 0.8.3 usare [inserimento obbligatorio](PAIRING-0.8.3.md).
+
 # Abbinamento con conferma locale — 0.8.1 / installer 0.8.1
 
 Installare con INSTALLA.cmd e assegnare un nome. Chiedere in chat «Collega

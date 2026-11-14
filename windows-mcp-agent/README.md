@@ -1,3 +1,12 @@
+# Abbinamento con codice da inserire — 0.8.3
+
+Il gateway fornisce il codice alla chat. Il nuovo PC mostra una casella vuota,
+verifica il codice inserito e autorizza solo la corrispondenza; un semplice clic
+non basta. Conto alla rovescia visibile da 1:50, tre errori massimi.
+Aggiornare il destinatario per ottenere il nuovo comportamento; i collegamenti
+gia salvati restano validi. [Procedura e limiti](../docs/mcp-agent/PAIRING-0.8.3.md).
+Stato effettivo di test e distribuzione: [validazione](../docs/mcp-agent/VALIDATION-0.8.3-20261114.md).
+
 # Correzione0.8.2
 
 Risolta finestra di abbinamento invisibile. Usare pacchetto0.8.2; AGGIORNA.cmd

@@ -1,3 +1,12 @@
+# Inserimento codice 0.8.3
+
+Per nuovi abbinamenti leggere PAIRING-0.8.3.md e VALIDATION-0.8.3-20261114.md.
+Codice dal gateway alla chat, casella vuota sul target, corrispondenza obbligatoria
+anche nel launcher Go. Conto alla rovescia 110s e tre errori. Non inserire codici
+o approvare reali richieste tramite automazione. Test GUI solo dummy e rifiuto;
+matching corretto verificato nelle funzioni isolate, senza creare fiducia.
+Versione unica 0.8.3. Non confondere sorgenti pubblicati con agenti aggiornati.
+
 # Correzione GUI0.8.2
 
 Prima di intervenire leggere FIX-0.8.2.md e VALIDATION-0.8.2-20261114.md in

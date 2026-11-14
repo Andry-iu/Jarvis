@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"context"
 	"os"
+	"strings"
 	"syscall"
 	"testing"
 	"time"
@@ -28,7 +29,7 @@ func TestPairingPromptNativeVisible(t *testing.T) {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()
-	cmd := pairingPromptCommand(ctx, pairPrompt{Name: "PROVA DIAGNOSTICA - NON CONSENTIRE", Machine: "fixture", Address: "127.0.0.1", Code: "TEST-TEST-TEST"})
+	cmd := pairingPromptCommand(ctx, pairPrompt{Name: "PROVA DIAGNOSTICA - NON CONSENTIRE", Machine: "fixture", Address: "127.0.0.1", Code: "ABCD-1234-5678"})
 	var output, stderr bytes.Buffer
 	cmd.Stdout = &output
 	cmd.Stderr = &stderr
@@ -61,7 +62,55 @@ func TestPairingPromptNativeVisible(t *testing.T) {
 		}
 		time.Sleep(50 * time.Millisecond)
 	}
-	if handle != 0 {
+	// Inspect only this dummy dialog. Never synthesize a correct approval.
+	testedWrongAttempts := false
+	if visible {
+		var input, allow, countdown uintptr
+		readText := func(hwnd uintptr) string {
+			var text [1024]uint16
+			user.NewProc("SendMessageW").Call(hwnd, 0x000D, uintptr(len(text)), uintptr(unsafe.Pointer(&text[0])))
+			return syscall.UTF16ToString(text[:])
+		}
+		childCallback := syscall.NewCallback(func(hwnd, unused uintptr) uintptr {
+			text := readText(hwnd)
+			if strings.Contains(text, "ABCD-1234-5678") || strings.Contains(text, "ABCD12345678") {
+				t.Error("expected pairing code is visible in a control")
+			}
+			var class [128]uint16
+			user.NewProc("GetClassNameW").Call(hwnd, uintptr(unsafe.Pointer(&class[0])), uintptr(len(class)))
+			if strings.Contains(syscall.UTF16ToString(class[:]), "EDIT") || strings.Contains(strings.ToLower(syscall.UTF16ToString(class[:])), "edit") {
+				input = hwnd
+			}
+			if text == "Consenti" {
+				allow = hwnd
+			}
+			if strings.HasPrefix(text, "Tempo rimasto: ") {
+				countdown = hwnd
+			}
+			return 1
+		})
+		user.NewProc("EnumChildWindows").Call(handle, childCallback, 0)
+		if input == 0 || allow == 0 || countdown == 0 {
+			t.Error("missing code input, approval button or countdown")
+		} else {
+			enabled, _, _ := user.NewProc("IsWindowEnabled").Call(allow)
+			if enabled != 0 {
+				t.Error("empty input enables approval")
+			}
+			before := readText(countdown)
+			time.Sleep(1200 * time.Millisecond)
+			if after := readText(countdown); after == before || !strings.HasPrefix(after, "Tempo rimasto: ") {
+				t.Error("countdown did not advance")
+			}
+			testedWrongAttempts = true
+			wrong, _ := syscall.UTF16PtrFromString("0000-0000-0000")
+			for i := 0; i < 3; i++ {
+				user.NewProc("SendMessageW").Call(input, 0x000C, 0, uintptr(unsafe.Pointer(wrong)))
+				user.NewProc("SendMessageW").Call(allow, 0x00F5, 0, 0)
+			}
+		}
+	}
+	if handle != 0 && !testedWrongAttempts {
 		user.NewProc("PostMessageW").Call(handle, 0x10, 0, 0)
 	}
 	if !visible {
