@@ -1,3 +1,8 @@
+# Correzione0.8.2
+
+Risolta finestra di abbinamento invisibile. Usare pacchetto0.8.2; AGGIORNA.cmd
+accetta0.8.0 e0.8.1. [Prove native e procedura](../docs/mcp-agent/VALIDATION-0.8.2-20261114.md).
+
 # Novita0.8.1
 
 Primo abbinamento senza copia file: chat, confronto codice e conferma locale.

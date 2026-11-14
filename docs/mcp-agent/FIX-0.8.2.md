@@ -16,7 +16,7 @@ Regressione: TestPairingPromptHasNoConsoleButDoesNotHideGUI e opt-in Windows
 JARVIS_TEST_PAIRING_UI=1/TestPairingPromptNativeVisible. La seconda avvia lo stesso
 comando Go di produzione, osserva il PID/handle/titolo e IsWindowVisible, poi
 chiude esclusivamente il dialogo dummy con WM_CLOSE. Nessuna conferma/trust
-sintetizzata. Verifiche/distribuzione0.8.2 ancora in corso.
+sintetizzata. Verifiche e distribuzione0.8.2 completate: vedere VALIDATION-0.8.2-20261114.md.
 
 Unica release sorgenti/agente/installer0.8.2. AGGIORNA accetta0.8.0 e0.8.1.
 Per SoftPlcTest1 non ancora associato serve aggiornamento locale dal nuovo ZIP.

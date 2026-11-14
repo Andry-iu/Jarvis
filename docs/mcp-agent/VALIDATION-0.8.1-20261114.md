@@ -1,3 +1,8 @@
+# SUPERATO per il consenso grafico
+
+Il difetto di visibilita del launcher Go e risolto dalla0.8.2. Questo verbale resta
+storico; usare VALIDATION-0.8.2-20261114.md e il pacchetto0.8.2.
+
 # Validazione finale0.8.1 — 14 novembre2026
 
 ## Esito verificato

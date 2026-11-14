@@ -1,3 +1,11 @@
+# Correzione GUI0.8.2
+
+Prima di intervenire leggere FIX-0.8.2.md e VALIDATION-0.8.2-20261114.md in
+docs/mcp-agent. Helper di consenso: CREATE_NO_WINDOW, mai HideWindow/SW_HIDE.
+Verificare il launcher Go reale con JARVIS_TEST_PAIRING_UI=1 su Windows sbloccato;
+non sostituire questa prova con ProcessStartInfo o parse. Dummy chiudibile, mai
+automatizzare un Consenti. Versione unica0.8.2 sorgenti/agente/installer.
+
 Versione unificata concordata: sorgenti, agente e installer condividono la stessa
 release; nome pacchetto Jarvis-Agent-Setup-<versione>.zip. Non introdurre un altro
 contatore per il solo installer.

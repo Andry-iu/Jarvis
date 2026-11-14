@@ -1,4 +1,19 @@
-# Stato corrente — release0.8.1, 14 novembre2026
+# Stato corrente — release0.8.2, 14 novembre2026
+
+Desktop1 e Desktop2 aggiornati, riconnessi e verificati0.8.2. Difetto0.8.1 della
+finestra nascosta riprodotto e risolto: helper senza console ma senza SW_HIDE.
+Suite Windows con test nativo visibilita, installer, aggiornamento0.8.1->0.8.2,
+backup/rollback e controllo finestra sugli agenti installati PASS su entrambi.
+Sorgente20a862a, branch feature/agent-gateway-20261114. Manifest/checksum e prove
+in docs/mcp-agent/{CHECKSUMS-0.8.2.json,VALIDATION-0.8.2-20261114.md,FIX-0.8.2.md}.
+Jarvis-Agent-Setup-0.8.2.zip, Library libfile_95fc00b0ebac81918eca7d9b917eecae.
+SoftPlcTest1 ancora0.8.1 non associato: AGGIORNA.cmd locale, poi nuova richiesta
+di abbinamento/codice/conferma locale. Due codici precedenti scaduti, non riusarli.
+Nessuna approvazione UI automatizzata, nuovo tunnel o altro progetto ripreso.
+
+## Storico0.8.1 — superato dalla0.8.2 per la visibilita della finestra
+
+# Stato storico — release0.8.1, 14 novembre2026
 
 Desktop1 e Desktop2 aggiornati e verificati via MCP alla0.8.1. Backup, rollback
 rehearsal, test Windows e prove di installazione/aggiornamento locale PASS.
