@@ -25,7 +25,7 @@ function Save-Status([string]$value){
  $record.installed_sha256=$script:installedHash;$record.backup=$script:backup;$record.error=$script:failure;$record.cleanup_verified=$script:cleanup
  $pending=$statusFile+'.pending-'+[guid]::NewGuid().ToString('N')
  [IO.File]::WriteAllText($pending,($record|ConvertTo-Json -Depth 5),(New-Object Text.UTF8Encoding($false)))
- if(Test-Path -LiteralPath $statusFile){[IO.File]::Replace($pending,$statusFile,$null)}else{[IO.File]::Move($pending,$statusFile)}
+ if(Test-Path -LiteralPath $statusFile){$previous=$statusFile+'.previous';[IO.File]::Replace($pending,$statusFile,$previous);Remove-Item -LiteralPath $previous -Force}else{[IO.File]::Move($pending,$statusFile)}
  Report ('PHASE '+$value)
 }
 function Local-Call([string]$name,[hashtable]$arguments=@{}){
