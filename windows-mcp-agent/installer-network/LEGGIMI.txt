@@ -1,0 +1,35 @@
+JARVIS AGENT SETUP 2.0.0 / AGENTE 0.8.0 - Windows x64
+
+Estrarre lo ZIP in una cartella e avviare INSTALLA.cmd. Consentire UAC con lo
+stesso utente Windows. Scegliere il nome libero e univoco del computer, la cartella
+e la modalita di collegamento:
+1. Rete locale tramite un altro agente: nessun dato Cloudflare necessario.
+2. Accesso diretto ChatGPT: procedura Cloudflare e dati per connettore MCP dedicato.
+
+Ogni installazione include sempre controllo e inoltro: nessun ruolo gateway.
+Avvio automatico all'accesso a Windows dopo il riavvio, con attivita pianificata
+persistente per l'utente. Non e un servizio headless prima dell'accesso; il
+controllo grafico richiede la sessione attiva e sbloccata. Cloudflare diretto e
+collaudo del connettore sono distinti dalla riuscita dell'installazione locale.
+
+Rete: porta TLS 8766, interfacce private rilevate automaticamente (anche adattatori
+aggiunti in seguito), firewall limitato a profili Privato/Dominio e sottorete locale.
+L'installazione su una rete Windows Pubblica non apre il firewall: configurare
+consapevolmente il profilo corretto. Identita e chiavi uniche vengono generate sul
+nuovo PC. Nessun segreto o stato Desktop1/Desktop2 e incluso in questo pacchetto.
+
+PRIMO ABBINAMENTO: trasferire privatamente Config\peer-enrollment.json dal nuovo
+PC al gateway scelto e avviare Abbina.cmd su quel gateway. Il file contiene una
+credenziale e non deve essere inviato in chat, pubblicato o conservato in cartelle
+condivise. Abbina verifica TLS e identita prima di registrare il collegamento.
+Dopo il primo abbinamento si usano solo nomi: non servono chiavi a ogni comando.
+La ricerca device_discover identifica gli agenti, ma non autorizza da sola il controllo.
+
+Config\devices.json conserva nomi, identita, indirizzi, percorsi via altri agenti e
+stato active/retired. Dismesso e offline sono distinti. Ogni gateway conserva la
+propria configurazione: aggiornare tutti i gateway coinvolti per dismettere un PC.
+
+Codex e i profili di sviluppo richiedono CLI, toolchain e account gia disponibili
+sul PC: l'installer non acquista servizi e non copia autorizzazioni economiche.
+Aggiornamenti: agente -> batch separato -> unico Scripts\update-agent.ps1,
+backup/rollback e verifica del risultato. Non reinstallare sopra un agente attivo.

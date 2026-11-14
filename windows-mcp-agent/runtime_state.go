@@ -23,6 +23,7 @@ type Runtime struct {
 	codexStarting   bool
 	codexSessionOps map[string]bool
 	dir, MachineID  string
+	home            string
 	lock            *os.File
 	Jobs            map[string]*Job
 	codex           *codexClient
@@ -120,7 +121,7 @@ func newRuntime(dir string) (*Runtime, error) {
 	if e != nil {
 		return nil, e
 	}
-	r := &Runtime{dir: dir, lock: lock, Jobs: map[string]*Job{}}
+	r := &Runtime{dir: dir, home: os.Getenv("JARVIS_HOME"), lock: lock, Jobs: map[string]*Job{}}
 	ok := false
 	defer func() {
 		if !ok {

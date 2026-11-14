@@ -1,3 +1,8 @@
+# Gateway universali 0.8.0 / installer 2.0.0
+
+[Specifica e uso](../docs/mcp-agent/GATEWAY-0.8.0.md), [stato delle verifiche](../docs/mcp-agent/VALIDATION-0.8.0-20261114.md).
+I dettagli successivi includono lo storico: per inoltro e installazione prevale la specifica 0.8.0.
+
 # Agente 0.7.4 — installato e collaudato su entrambi i desktop
 
 5 novembre 2026. Contatori token separati per progetto/incarico/categoria,

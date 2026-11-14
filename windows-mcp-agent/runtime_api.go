@@ -15,6 +15,7 @@ import (
 )
 
 type runtimeRequest struct {
+	Port             int      `json:"port,omitempty"`
 	UsageCategory    string   `json:"usage_category,omitempty"`
 	WindowID         string   `json:"window_id,omitempty"`
 	SnapshotID       string   `json:"snapshot_id,omitempty"`
@@ -68,6 +69,7 @@ type runtimeRequest struct {
 	Quality  int             `json:"quality,omitempty"`
 	DeviceID string          `json:"device_id,omitempty"`
 	Call     json.RawMessage `json:"call,omitempty"`
+	Device   *peerDevice     `json:"device,omitempty"`
 }
 type runtimeTool struct {
 	Name, Description string
@@ -76,6 +78,9 @@ type runtimeTool struct {
 }
 
 var runtimeCatalog = []runtimeTool{
+	{"network_setup", "Provision the same authenticated LAN capabilities on an existing agent without changing its external connection or role. Default auto private-interface listeners; existing credentials/config preserved.", []string{"port", "request_id"}, []string{"request_id"}, false},
+	{"device_discover", "Find agent identities on attached private IPv4 networks or one explicit CIDR, bounded to /24 or narrower. Sends no credentials; unknown agents are never automatically trusted. No role switch required.", []string{"query", "port"}, nil, true},
+	{"device_pair", "Import a private enrollment JSON from Config/enrollments/<path>. Verify certificate/target before saving credentials and configuration. Never return secrets.", []string{"path", "device_id", "label", "expected_sha256", "request_id"}, []string{"path", "device_id", "expected_sha256", "request_id"}, false},
 	{"codex_token_usage", "Read measured per-turn tokens for one project's Jarvis-dispatched Codex work. Default category development; dialogue, other and unclassified are separate. No external ChatGPT/audio visibility, quota conversion or inference.", []string{"project", "thread_id", "usage_category", "offset", "limit"}, []string{"project"}, true},
 	{"agent_restart_admin", "Request an idle agent restart with Windows administrator privileges. Already elevated is a no-op. UAC may require local approval; original remains active on pre-handoff cancellation/failure. Read agent_restart_status and verify new process privileges.", []string{"request_id"}, []string{"request_id"}, false},
 	{"agent_restart_status", "Read durable status of an administrator restart by request_id; acknowledgement is not completion.", []string{"request_id"}, []string{"request_id"}, true},
@@ -112,7 +117,9 @@ var runtimeCatalog = []runtimeTool{
 	{"codex_events", "Read durable bounded Codex events and pending approvals using the sequence cursor. After turn/completed, wait for jarvis/usage for that turn: final account-wide quota/credits snapshot or explicit unavailability.", []string{"project", "thread_id", "after", "limit"}, []string{"project", "thread_id"}, true},
 	{"codex_respond", "Answer one exact pending approval/user-input request. No session-wide grants; approvals require explicit user authorization for the presented action.", []string{"project", "thread_id", "approval_id", "decision", "answers", "request_id"}, []string{"project", "thread_id", "approval_id", "request_id"}, false},
 	{"device_list", "List this computer plus locally configured trusted peers; offline status is explicit. Does not scan the network.", nil, nil, true},
-	{"device_call", "Forward one allowlisted operation to an explicitly configured peer, verifying its stable identity before dispatch. Never forwards update batches or nested routing.", []string{"device_id", "call"}, []string{"device_id", "call"}, false},
+	{"device_call", "Forward a public agent tool to a configured device, including updates, over authenticated gateway hops. Verify target identity; loops/retired peers refused. Keep target request_id/update_id on uncertainty.", []string{"device_id", "call"}, []string{"device_id", "call"}, false},
+	{"device_configure", "Add or replace one trusted device using expected configuration SHA-256 from device_list (missing for a new file). Names are free; secrets are environment references only. Identity replacement requires retirement and a new device_id.", []string{"device", "expected_sha256", "request_id"}, []string{"device", "expected_sha256", "request_id"}, false},
+	{"device_retire", "Persistently retire one device on this gateway, preserving its record and history and blocking dependent routes. Does not change other gateways automatically.", []string{"device_id", "expected_sha256", "request_id"}, []string{"device_id", "expected_sha256", "request_id"}, false},
 }
 
 func isRuntimeTool(name string) bool {
@@ -136,13 +143,13 @@ func toolsList() any {
 		for _, f := range t.Fields {
 			typ := "string"
 			switch f {
-			case "offset", "limit", "timeout_seconds", "after", "monitor", "max_width", "quality":
+			case "port", "offset", "limit", "timeout_seconds", "after", "monitor", "max_width", "quality":
 				typ = "integer"
 			case "recursive", "elevated", "overwrite":
 				typ = "boolean"
 			case "region", "depends_on", "resources", "keys", "args":
 				typ = "array"
-			case "call", "answers":
+			case "call", "answers", "device":
 				typ = "object"
 			}
 			s := map[string]any{"type": typ}
@@ -272,6 +279,36 @@ func (a *Agent) invokeRuntime(name string, raw json.RawMessage) any {
 	if p.Operation != "machine_info" && p.MachineID != r.MachineID {
 		return toolResult(map[string]any{"error": "machine_id mismatch; read machine_info and select the intended computer"}, true)
 	}
+	if p.Operation == "network_setup" {
+		v, e := r.mutation(p, func(_ *Receipt) (any, error) {
+			a.peerMu.Lock()
+			defer a.peerMu.Unlock()
+			path := filepath.Join(r.home, "Config", "peer-listener.json")
+			if _, err := os.Stat(path); os.IsNotExist(err) {
+				port := p.Port
+				if port == 0 {
+					port = 8766
+				}
+				if err = initPeerListener(r.home, fmt.Sprintf("auto:%d", port), r); err != nil {
+					return nil, err
+				}
+			} else if err != nil {
+				return nil, err
+			}
+			if a.peerServer == nil {
+				var err error
+				a.peerServer, err = startPeerListener(a)
+				if err != nil {
+					return nil, err
+				}
+			}
+			return map[string]any{"state": "ready", "machine_id": r.MachineID, "capabilities": "control and gateway on every agent", "credentials": "private local enrollment file; never return in chat"}, nil
+		})
+		if e != nil {
+			return toolResult(map[string]any{"error": e.Error()}, true)
+		}
+		return toolResult(v, false)
+	}
 	if p.Operation == "agent_restart_admin" {
 		v, e := a.restartAdmin(r, p)
 		if e != nil {
@@ -363,7 +400,9 @@ func (r *Runtime) call(p runtimeRequest) (any, error) {
 		return r.queueControl(p)
 	case "job_list", "job_status", "job_cancel":
 		return r.jobCall(p)
-	case "device_list", "device_call":
+	case "device_discover":
+		return r.discoverDevices(p)
+	case "device_list", "device_call", "device_configure", "device_retire", "device_pair":
 		return r.deviceCall(p)
 	default:
 		if strings.HasPrefix(p.Operation, "codex_") {

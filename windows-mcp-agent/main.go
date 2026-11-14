@@ -22,7 +22,7 @@ import (
 	"time"
 )
 
-const version = "0.7.4"
+const version = "0.8.0"
 
 type RPCRequest struct {
 	JSONRPC string          `json:"jsonrpc"`
@@ -51,6 +51,8 @@ type Task struct {
 	cancel     context.CancelFunc
 }
 type Agent struct {
+	peerMu            sync.Mutex
+	peerServer        *http.Server
 	controlMu         sync.RWMutex
 	restartPending    bool
 	listenAddress     string
@@ -243,6 +245,18 @@ func (a *Agent) invokeUncounted(name string, args json.RawMessage) any {
 			return toolResult(map[string]string{"error": err.Error()}, true)
 		}
 		return toolResult(v, false)
+	case "update_status":
+		var p struct {
+			UpdateID string `json:"update_id"`
+		}
+		if json.Unmarshal(args, &p) != nil {
+			return toolResult(map[string]string{"error": "invalid update parameters"}, true)
+		}
+		v, err := readUpdateStatus(p.UpdateID)
+		if err != nil {
+			return toolResult(map[string]string{"error": err.Error()}, true)
+		}
+		return toolResult(v, false)
 	case "diagnostic_status":
 		var p struct {
 			ID string `json:"id"`
@@ -289,6 +303,7 @@ func legacyToolsList() any {
 		map[string]any{"name": "task_start", "description": "Start a cancellable diagnostic or restricted Go test/build task in an authorized module directory. No arbitrary commands.", "inputSchema": map[string]any{"type": "object", "properties": map[string]any{"name": map[string]any{"type": "string"}, "duration_seconds": map[string]any{"type": "integer", "minimum": 1, "maximum": 300}, "operation": map[string]any{"type": "string", "enum": []string{"go_test", "go_build", "desktop_inspect", "desktop_action"}}, "project": map[string]any{"type": "string"}, "desktop": map[string]any{"type": "object", "additionalProperties": false, "properties": map[string]any{"snapshot_id": map[string]any{"type": "string"}, "element_id": map[string]any{"type": "string"}, "action": map[string]any{"type": "string", "enum": []string{"invoke", "set_text", "select", "toggle"}}, "text": map[string]any{"type": "string", "maxLength": 4096}}}}}},
 		map[string]any{"name": "update_prepare", "description": "Stage a single-use Windows update batch; requires Cloudflare Access authentication. Submit exact UTF-8 CRLF content, 32-hex update ID in first REM line, SHA-256 of bytes. Does not execute.", "inputSchema": map[string]any{"type": "object", "properties": map[string]any{"update_id": map[string]any{"type": "string"}, "sha256": map[string]any{"type": "string"}, "content": map[string]any{"type": "string"}}, "required": []string{"update_id", "sha256", "content"}}},
 		map[string]any{"name": "update_execute", "description": "Rehash and start a previously staged batch as separate Windows process; requires Cloudflare Access authentication. Does not report completed deployment.", "inputSchema": map[string]any{"type": "object", "properties": map[string]any{"update_id": map[string]any{"type": "string"}, "sha256": map[string]any{"type": "string"}}, "required": []string{"update_id", "sha256"}}},
+		map[string]any{"name": "update_status", "description": "Read durable update preparation/launch/exit status by update_id. Never replays; batch exit is not proof of successful installation. Cloudflare Access or paired peer listener required.", "inputSchema": map[string]any{"type": "object", "properties": map[string]any{"update_id": map[string]any{"type": "string"}}, "required": []string{"update_id"}}},
 		map[string]any{"name": "diagnostic_status", "description": "Read bounded non-secret structured status of a diagnostic batch by 32-hex ID; no arbitrary file or log reading", "inputSchema": map[string]any{"type": "object", "properties": map[string]any{"id": map[string]any{"type": "string"}}, "required": []string{"id"}}},
 		map[string]any{"name": "log_list", "description": "List files under the restricted Jarvis Logs directory (maximum 300 records); Cloudflare Access required.", "inputSchema": map[string]any{"type": "object", "properties": map[string]any{}}},
 		map[string]any{"name": "log_read", "description": "Read the last N bytes of one .log within Jarvis Logs; no arbitrary path access. Cloudflare Access required.", "inputSchema": map[string]any{"type": "object", "properties": map[string]any{"path": map[string]any{"type": "string"}, "tail_bytes": map[string]any{"type": "integer", "minimum": 1, "maximum": 32768}}, "required": []string{"path"}}},
@@ -412,7 +427,7 @@ func handler(a *Agent, token string, access *AccessVerifier) http.Handler {
 			if err := json.Unmarshal(q.Params, &p); err != nil || p.Name == "" {
 				res = response(q.ID, nil, &RPCError{Code: -32602, Message: "invalid parameters"})
 			} else {
-				if (p.Name == "update_prepare" || p.Name == "update_execute" || p.Name == "log_list" || p.Name == "log_read" || p.Name == "diagnostic_status") && !validAccess {
+				if (p.Name == "update_prepare" || p.Name == "update_execute" || p.Name == "update_status" || p.Name == "log_list" || p.Name == "log_read" || p.Name == "diagnostic_status") && !validAccess {
 					res = response(q.ID, toolResult(map[string]string{"error": "Cloudflare Access authentication required for update tools"}, true), nil)
 				} else {
 					res = response(q.ID, a.invoke(p.Name, p.Arguments), nil)
@@ -430,6 +445,8 @@ func handler(a *Agent, token string, access *AccessVerifier) http.Handler {
 }
 func main() {
 	listen := flag.String("listen", "127.0.0.1:8765", "listen address (localhost by default)")
+	initPeer := flag.String("init-peer", "", "provision an authenticated TLS peer listener at a private IP:port, then exit")
+
 	restartID := flag.String("restart-admin-helper", "", "internal elevation handoff")
 	restartHome := flag.String("restart-home", "", "internal configured home")
 	flag.Parse()
@@ -446,6 +463,18 @@ func main() {
 		if err := runAdminRestartHelper(*restartHome, *restartID); err != nil {
 			log.Print("Admin restart helper failed; inspect agent_restart_status")
 			os.Exit(1)
+		}
+		return
+	}
+	if *initPeer != "" {
+		a := &Agent{}
+		r, e := a.getRuntime()
+		if e != nil {
+			log.Fatal(e)
+		}
+		defer a.closeRuntime()
+		if e = initPeerListener(os.Getenv("JARVIS_HOME"), *initPeer, r); e != nil {
+			log.Fatal(e)
 		}
 		return
 	}
@@ -485,6 +514,13 @@ func main() {
 		}
 		access = &AccessVerifier{TeamDomain: teamDomain, Audience: audience}
 	}
+	peerServer, err := startPeerListener(a)
+	a.peerMu.Lock()
+	a.peerServer = peerServer
+	a.peerMu.Unlock()
+	if err != nil {
+		log.Fatalf("Peer listener failed: %v", err)
+	}
 	server := &http.Server{Addr: *listen, Handler: handler(a, token, access), ReadHeaderTimeout: 5 * time.Second}
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
@@ -495,6 +531,12 @@ func main() {
 		}
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
+		a.peerMu.Lock()
+		activePeer := a.peerServer
+		a.peerMu.Unlock()
+		if activePeer != nil {
+			_ = activePeer.Shutdown(ctx)
+		}
 		server.Shutdown(ctx)
 	}()
 	exe, _ := os.Executable()

@@ -1,3 +1,11 @@
+# 0.8.0 — implementazione in verifica, 14 novembre 2026
+
+Gateway universali senza ruoli; LAN TLS e inoltro completo su piu passaggi,
+aggiornamenti persistenti, configurazione/nome/dismissione e installer 2.0.0.
+Specifica: ../docs/mcp-agent/GATEWAY-0.8.0.md.
+Validazione corrente: ../docs/mcp-agent/VALIDATION-0.8.0-20261114.md.
+Distribuzione ancora pendente: gli stati seguenti sono storici.
+
 # Agente 0.7.4 — installato e collaudato su entrambi i desktop
 
 5 novembre 2026. Contatori token separati per progetto/incarico/categoria,

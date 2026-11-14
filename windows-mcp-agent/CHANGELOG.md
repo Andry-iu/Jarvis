@@ -1,3 +1,12 @@
+## 0.8.0 — 2026-11-14
+
+- Agente universale: TLS LAN separato, tutti gli strumenti pubblici e aggiornamenti su piu gateway, con identita e limiti/cicli verificati.
+- Configurazione atomica con nomi liberi univoci, abbinamento privato e dismissione distinta da offline.
+- Discovery privata limitata e adattatori rilevati automaticamente; nessuna fiducia assegnata dalla sola scoperta.
+- Ricevute aggiornamento persistenti e nessun replay incerto.
+- Installer 2.0.0: nome e collegamento locale/Cloudflare, nessun ruolo, avvio automatico all accesso Windows.
+- Prove e stato effettivo in docs/mcp-agent/VALIDATION-0.8.0-20261114.md.
+
 ## 0.7.4 — 2026-11-05
 
 - Registro privato dei token Codex per incarico/progetto/categoria, senza testo dei dialoghi.
