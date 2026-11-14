@@ -9,6 +9,11 @@ try{
   if(-not (Test-Path (Join-Path $installHome 'Config\install-complete.json'))){throw 'install_missing_receipt'}
   . (Join-Path $installHome 'Scripts\Common.ps1')
   $settings=Read-Install $installHome
+  # Fixture listeners stay on loopback: avoid LAN/firewall prompts from test copies.
+  $listenerPath=Join-Path $installHome 'Config\peer-listener.json'
+  $listener=Get-Content $listenerPath -Raw|ConvertFrom-Json;$listener.listen='127.0.0.1:'+$peerPort
+  [IO.File]::WriteAllText($listenerPath,($listener|ConvertTo-Json),(New-Object Text.UTF8Encoding($false)))
+  Remove-NetFirewallRule -Name $settings.task_name -ErrorAction SilentlyContinue
   $task=Get-ScheduledTask -TaskName $settings.task_name
   if($task.Principal.LogonType -ne 'Interactive' -or $task.Principal.RunLevel -ne 'Highest' -or -not $task.Triggers){throw 'startup_task_not_registered'}
   if($settings.remote_configured -or ([IO.File]::ReadAllText((Join-Path $installHome 'Config\agent.env')) -match 'CLOUDFLARE|JARVIS_CF_')){throw 'local_install_requires_cloudflare'}

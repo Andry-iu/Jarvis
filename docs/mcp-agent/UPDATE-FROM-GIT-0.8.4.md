@@ -1,3 +1,5 @@
+Prima di scegliere strumenti o diagnosi, leggere [problemi e metodi gia riusciti](KNOWN-BUILD-UPDATE-PROBLEMS.md).
+
 # Aggiornamento uniforme degli agenti — 0.8.4
 
 ## Contratto approvato

@@ -14,8 +14,14 @@ try{
  $old.installer_version=$PreviousVersion;$old.agent_version=$PreviousVersion;$old.agent_sha256=(Get-FileHash (Join-Path $oldPackage 'jarvis-mcp.exe')).Hash.ToLowerInvariant()
  $old.files=@(Get-ChildItem $oldPackage -File|Where-Object {$_.Name -ne 'package.json'}|ForEach-Object {@{path=$_.Name;sha256=(Get-FileHash $_.FullName).Hash.ToLowerInvariant();size_bytes=$_.Length}})
  [IO.File]::WriteAllText((Join-Path $oldPackage 'package.json'),($old|ConvertTo-Json -Depth 12),(New-Object Text.UTF8Encoding($false)))
- & $install -NonInteractive -DeviceName 'Bootstrap update test' -InstallDir $testHome -Connection local -Port 19865 -PeerPort 19866
+ & $install -NonInteractive -DeviceName 'Bootstrap update test' -InstallDir $testHome -Connection local -Port 19865 -PeerPort 19866 -NoStart
  . (Join-Path $testHome 'Scripts\Common.ps1')
+ $listenerPath=Join-Path $testHome 'Config\peer-listener.json'
+ $listener=Get-Content $listenerPath -Raw|ConvertFrom-Json;$listener.listen='127.0.0.1:19866'
+ [IO.File]::WriteAllText($listenerPath,($listener|ConvertTo-Json),(New-Object Text.UTF8Encoding($false)))
+ $fixtureSettings=Get-Content (Join-Path $testHome 'Config\installation.json') -Raw|ConvertFrom-Json
+ Remove-NetFirewallRule -Name $fixtureSettings.task_name -ErrorAction SilentlyContinue
+ Start-ScheduledTask -TaskName $fixtureSettings.task_name
  $before=$null
  for($i=0;$i -lt 100;$i++){try{$before=Invoke-LocalTool $testHome 'machine_info';break}catch{Start-Sleep -Milliseconds 200}}
  if(-not $before -or $before.version -ne $PreviousVersion){throw 'old_fixture_not_ready'}

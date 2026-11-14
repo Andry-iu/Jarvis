@@ -1,3 +1,5 @@
+Prima di scegliere strumenti o diagnosi, leggere [problemi e metodi gia riusciti](../docs/mcp-agent/KNOWN-BUILD-UPDATE-PROBLEMS.md).
+
 # Agente 0.8.4 — procedura uniforme in validazione
 
 agent_update e agent_update_status implementati: stessi parametri e runner sul
