@@ -5,7 +5,8 @@ param(
  [string]$ExpectedVersion='0.8.3',
  [string]$SourceDirectory=(Split-Path $PSScriptRoot -Parent),
  [string]$TaskName='',
- [string]$DeviceName=''
+ [string]$DeviceName='',
+ [int]$Port=8765
 )
 $ErrorActionPreference='Stop'
 $root=[IO.Path]::GetFullPath($HomeDir).TrimEnd('\')
@@ -17,7 +18,7 @@ $target=Join-Path $root 'Agent\jarvis-mcp.exe'
 $legacy=Join-Path $root 'jarvis-mcp.exe'
 $backup=Join-Path $root ('Backups\layout-'+[guid]::NewGuid().ToString('N'))
 $log=Join-Path $root 'Logs\diagnostics\layout-alignment.log'
-$port=8765;$oldPath=$null;$stopped=$false;$registered=$false;$taskExisted=$false;$rules=@();$prior=$null;$lock=$null;$created=@()
+$oldPath=$null;$stopped=$false;$registered=$false;$taskExisted=$false;$rules=@();$prior=$null;$lock=$null;$created=@()
 function Report([string]$text){$text|Add-Content $log -Encoding UTF8}
 function Hash([string]$path){(Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash.ToLowerInvariant()}
 function Call([string]$name,[hashtable]$a=@{}){
@@ -25,7 +26,7 @@ function Call([string]$name,[hashtable]$a=@{}){
  if(-not $token){$line=[IO.File]::ReadAllLines((Join-Path $root 'Config\secrets.env'))|Where-Object {$_ -match '^JARVIS_MCP_TOKEN='};if(@($line).Count -ne 1){throw 'credential_unavailable'};$token=$line.Substring('JARVIS_MCP_TOKEN='.Length)}
  $body=@{jsonrpc='2.0';id=1;method='tools/call';params=@{name=$name;arguments=$a}}|ConvertTo-Json -Depth 12 -Compress
  $r=Invoke-RestMethod ('http://127.0.0.1:'+$port+'/mcp') -Method Post -ContentType 'application/json' -Headers @{Authorization=('Bearer '+$token);Accept='application/json, text/event-stream'} -Body ([Text.Encoding]::UTF8.GetBytes($body)) -TimeoutSec 10
- if($r.error -or $r.result.isError){throw ('mcp_failed_'+$name)}
+ if($r.PSObject.Properties['error'] -or $r.result.isError){throw ('mcp_failed_'+$name)}
  $r.result.content[0].text|ConvertFrom-Json
 }
 function WaitRunner{
