@@ -1,15 +1,21 @@
-# Candidato 0.8.3 — 14 novembre 2026
+# Stato corrente 0.8.3 — 14 novembre 2026
 
-Autorizzato inserimento obbligatorio sul nuovo PC del codice ricevuto in chat,
-con conto alla rovescia visibile. Implementazione completata; test e pubblicazione
-in corso, nessun agente operativo ancora sostituito per questa release.
+Inserimento obbligatorio del codice ricevuto in chat e conto alla rovescia 1:50
+implementati, testati e pubblicati. Desktop1 e Desktop2 aggiornati e riconnessi
+alla 0.8.3; identita/configurazioni e collegamenti salvati conservati.
 La finestra non mostra il valore atteso, il launcher Go verifica anche l'output;
 vuoto/errato/ALLOW legacy/scaduto non approvano. Timer 110 secondi, tre errori.
-Versione unica sorgenti/agente/installer 0.8.3. AGGIORNA include 0.8.2.
-Branch feature/pairing-code-required-20261114, base remota 4215ffd.
-Leggere PAIRING-0.8.3.md e VALIDATION-0.8.3-20261114.md in docs/mcp-agent.
-Precedenti collegamenti conservati; nessuna nuova conferma per PC gia associati.
-Il destinatario deve essere aggiornato: un target 0.8.2 mantiene il confronto a vista.
+Suite Linux/race/vet e Windows nativa/vet/build PASS. Su entrambi Windows anche
+installazioni isolate e upgrade 0.8.2->0.8.3 con backup/rollback/cleanup PASS.
+Runtime pubblicato 50edce2c868664fb9ad2c040746284642a0e555c; istruzioni installer
+aggiornate in 2a7ae7613f1ea3603976cd2eec6f314c882cd082, Go/GUI invariati.
+Branch feature/pairing-code-required-20261114. Versione unica 0.8.3.
+Pacchetto Jarvis-Agent-Setup-0.8.3.zip, Library libfile_2d76bfedae888191a05dad1676ccbb65.
+Leggere PAIRING-0.8.3.md, VALIDATION-0.8.3-20261114.md e CHECKSUMS-0.8.3.json.
+I PC gia associati non richiedono nuovo consenso. Il destinatario deve essere
+aggiornato per la nuova finestra: target 0.8.2 mantiene il confronto a vista.
+Nessun inserimento umano corretto o nuovo abbinamento fisico certificato in questa
+release; prova GUI dummy senza trust, matching corretto verificato in isolamento.
 
 ## Stato precedente
 

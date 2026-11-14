@@ -8,7 +8,10 @@ rifiuto di semplice ALLOW, input errato e risposte scadute. Tre errori chiudono.
 La verifica evita il solo clic distratto; il codice deriva da dati pubblici del
 protocollo, non e una password o un secondo fattore segreto. Collegamenti salvati
 invariati; target precedenti richiedono aggiornamento per la nuova UI.
-Stato effettivo delle prove in VALIDATION-0.8.3-20261114.md.
+Sorgenti pubblicati, suite native e installer/upgrade isolati PASS su entrambi;
+Desktop1/Desktop2 aggiornati e riconnessi 0.8.3 con backup/rollback e identita
+conservati. Pacchetto finale verificato. Nessun nuovo consenso umano automatizzato.
+Stato effettivo e limiti delle prove in VALIDATION-0.8.3-20261114.md.
 
 ## 2026-11-05 — 0.7.4 pubblicata, installata e collaudata
 

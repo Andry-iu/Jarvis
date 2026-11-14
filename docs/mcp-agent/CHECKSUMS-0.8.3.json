@@ -1,0 +1,25 @@
+{
+  "release": "0.8.3",
+  "runtime_source_commit": "50edce2c868664fb9ad2c040746284642a0e555c",
+  "installer_source_commit": "2a7ae7613f1ea3603976cd2eec6f314c882cd082",
+  "installer": {
+    "filename": "Jarvis-Agent-Setup-0.8.3.zip",
+    "sha256": "1b16671f5e3c5f92ea608ab24b378c4ec52b30fa75543c88ac9b9bc70c6f806a",
+    "size_bytes": 7446880,
+    "library_file_id": "libfile_2d76bfedae888191a05dad1676ccbb65",
+    "candidate_sha256": "3ae622d0348fb038c549a052e8093e0a31c22ee66f9da4327e582fb2fa324719",
+    "candidate_size_bytes": 13442560
+  },
+  "installed": {
+    "Desktop1": {
+      "sha256": "76e05315055ba3b2c2cc61ae97e17de9082c19c85fe6ec6592743a06ba858b29",
+      "bytes": 13424128,
+      "backup": "self-update-c881c1ef4c914698b6fa95347430835c"
+    },
+    "Desktop2": {
+      "sha256": "b5ccb6e38841f51135ab2f123d493d139fb3a0dfbac7cc68616630957b881441",
+      "bytes": 13460992,
+      "backup": "self-update-53abf7c7a5cc414fa1008c1624d81e10"
+    }
+  }
+}
