@@ -17,7 +17,7 @@ ripetere. Gli appunti privati mantengono inventario e ricevute per ogni computer
 | SoftPlcTest1: token della shell elevato, test di avvio standard fallito | Test controlla il token reale e richiede il rifiuto sicuro se manca un token standard. Successiva suite nativa PASS; nessun allentamento del codice di avvio applicazioni. |
 | Processo riavviato con ambiente di build temporaneo | Ripristino TEMP/TMP/PATH e variabili Git/test prima dell'updater. Audit Desktop2 conferma ambiente ripristinato e assenza dei checkout temporanei propri. |
 | Catalogo client Desktop2 vecchio dopo aggiornamento server | Impostazioni app ChatGPT, Refresh tools, poi scheda strumenti: nuovi tool e descrizione inoltro osservati. Una chiamata al solo server non prova il refresh client. |
-| Desktop1: ricevuta locale completed ma MCP esterno -32603; rinnovo login Cloudflare HTTP403 | Canale ancora indisponibile, causa non isolata. Non ripetere credenziali/deploy alla cieca. Conservare ricevute; audit e appunti del gateway/target da completare alla riconnessione. |
+| Desktop1: ricevuta locale completed ma MCP esterno -32603; rinnovo login Cloudflare HTTP403 | Accesso autenticato tornato disponibile alle20:02UTC senza ulteriori rinnovi o deploy da questa ripresa; causa non isolata. Audit gateway/target e appunti poi completati. Non attribuire il recupero a un intervento non provato, ne ripetere credenziali/deploy alla cieca. |
 
 Il comando nuovo usa scripts/build-runtime.ps1, cioe il profilo gia riuscito,
 e scripts/update-agent.ps1, cioe il motore gia collaudato. Non scegliere un SDK

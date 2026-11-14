@@ -1,12 +1,13 @@
-# Agente 0.8.4 — aggiornamento uniforme installato, verifiche di chiusura parziali
+# Agente 0.8.4 — installato e verificato sui tre PC
 
 La chat invia lo stesso agent_update a ogni destinatario, diretto o tramite piu
 gateway: download del commit Git esatto, test/build locali e updater canonico.
-Pacchetto conservato se il destinatario non raggiunge Git. Build native e deploy
-0.8.4 acquisiti sui tre PC; Desktop2 riconnesso e audit finale PASS. Desktop1 ha
-ricevuta locale completed ma il connettore esterno e indisponibile: audit finale,
-appunti Desktop1/target e catalogo client Desktop1 ancora pendenti. Non rilanciare
-i deploy completati. Catalogo client Desktop2 aggiornato e osservato.
+Pacchetto conservato se il destinatario non raggiunge Git. Desktop1, Desktop2 e
+il target LAN rispondono 0.8.4 con identita conservate e amministratore. Audit
+finali PASS su tutti: ricevute/hash/versione, ambiente, manutenzione e pulizia.
+Appunti dei tre PC salvati e riletti; cataloghi client Desktop1/Desktop2 aggiornati
+e osservati. Indisponibilita esterna Desktop1 superata, causa non accertata.
+Nessun nuovo deploy alla ripresa; nessun reboot fisico certificato.
 [Specifica](UPDATE-FROM-GIT-0.8.4.md), [validazione](VALIDATION-0.8.4-20261114.md).
 
 ## Stato precedente

@@ -49,9 +49,10 @@ KNOWN-BUILD-UPDATE-PROBLEMS.md. Prove: VALIDATION-0.8.4-20261114.md.
 
 ## Riscontro client del 14 novembre 2026
 
-Desktop2: Refresh tools eseguito dalle impostazioni dell'app ChatGPT; la scheda
+Desktop1 e Desktop2: Refresh tools eseguito dalle impostazioni dell'app ChatGPT; la scheda
 strumenti espone agent_update/agent_update_status e la descrizione device_call
-include agent_update e i batch offline. Desktop1: refresh non riuscito per il
-canale esterno indisponibile; non attribuire al client lo stato del server.
+include agent_update e i batch offline. Desktop1 verificato dopo il ripristino
+del collegamento; anche agent_update_status del target e stato letto con successo
+attraverso il gateway aggiornato. Non attribuire al client lo stato del solo server.
 Il catalogo della chat corrente puo restare quello caricato all'avvio: la
 compatibilita task_start/runtime resta utilizzabile.
