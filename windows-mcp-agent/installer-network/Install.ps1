@@ -25,7 +25,7 @@ if($ProjectsRoot -ieq $InstallDir -or $InstallDir.StartsWith($ProjectsRoot+'\',[
 if((Test-Path $InstallDir) -and @(Get-ChildItem $InstallDir -Force).Count){throw 'Cartella non vuota: nessuna installazione esistente viene sovrascritta. Aggiornare tramite agente.'}
 foreach($p in @($Port,$PeerPort)){if(Get-NetTCPConnection -LocalPort $p -State Listen -ErrorAction SilentlyContinue){throw 'Porta occupata; nessun processo viene fermato'}}
 $package=Get-Content (Join-Path $PSScriptRoot 'package.json') -Raw|ConvertFrom-Json
-if($package.installer_version -ne '0.8.3' -or $package.agent_version -ne '0.8.3'){throw 'Pacchetto inatteso'}
+if($package.installer_version -ne '0.8.4' -or $package.agent_version -ne '0.8.4'){throw 'Pacchetto inatteso'}
 foreach($file in $package.files){if($file.path -notmatch '^[A-Za-z0-9_.-]+$' -or (Get-FileHash (Join-Path $PSScriptRoot $file.path)).Hash -ine $file.sha256){throw 'Pacchetto incompleto o alterato'}}
 $taskName='JarvisAgent-'+[guid]::NewGuid().ToString('N').Substring(0,12);$taskCreated=$false;$firewall=$false
 try{
@@ -39,7 +39,7 @@ try{
   Copy-Item (Join-Path $PSScriptRoot $file.path) $to
   if((Get-FileHash $to).Hash -ine $file.sha256){throw 'Copia payload non verificata'}
  }
- $settings=@{format=1;installer_version='0.8.3';device_name=$DeviceName;plugin_name=('Jarvis-'+$DeviceName);home=$InstallDir;port=$Port;projects_root=$ProjectsRoot;computer=$env:COMPUTERNAME;user_sid=$sid;task_name=$taskName;task_registered=$false;remote_configured=$false;public_endpoint='';agent_version=$package.agent_version;agent_sha256=$package.agent_sha256;source_commit=$package.source_commit;installed_at=[DateTime]::UtcNow.ToString('o');connection=$Connection}
+ $settings=@{format=1;installer_version='0.8.4';device_name=$DeviceName;plugin_name=('Jarvis-'+$DeviceName);home=$InstallDir;port=$Port;projects_root=$ProjectsRoot;computer=$env:COMPUTERNAME;user_sid=$sid;task_name=$taskName;task_registered=$false;remote_configured=$false;public_endpoint='';agent_version=$package.agent_version;agent_sha256=$package.agent_sha256;source_commit=$package.source_commit;installed_at=[DateTime]::UtcNow.ToString('o');connection=$Connection}
  Write-Utf8 (Join-Path $InstallDir 'Config\installation.json') ($settings|ConvertTo-Json -Depth 10)
  $bytes=New-Object byte[] 32;$rng=[Security.Cryptography.RandomNumberGenerator]::Create();try{$rng.GetBytes($bytes)}finally{$rng.Dispose()}
  Write-Utf8 (Join-Path $InstallDir 'Config\secrets.env') ('JARVIS_MCP_TOKEN='+[Convert]::ToBase64String($bytes)+"`r`n")
@@ -63,7 +63,7 @@ try{
  if($Connection -eq 'cloudflare'){
   try{& (Join-Path $InstallDir 'Scripts\Configure-Cloudflare.ps1') -HomeDir $InstallDir}catch{Write-Warning 'Cloudflare non completato: agente locale conservato. Riprendere da Configura-Cloudflare.cmd con agente fermo.'}
  }
- Write-Utf8 (Join-Path $InstallDir 'Config\install-complete.json') (@{installer_version='0.8.3';at=[DateTime]::UtcNow.ToString('o')}|ConvertTo-Json)
+ Write-Utf8 (Join-Path $InstallDir 'Config\install-complete.json') (@{installer_version='0.8.4';at=[DateTime]::UtcNow.ToString('o')}|ConvertTo-Json)
  if(-not $NoStart){if($taskCreated){Start-ScheduledTask $taskName}else{Start-Process powershell.exe -WindowStyle Hidden -ArgumentList ('-NoProfile -ExecutionPolicy Bypass -File "'+(Join-Path $InstallDir 'Scripts\Start.ps1')+'" -HomeDir "'+$InstallDir+'"')|Out-Null}}
  Write-Host ('Installazione completata: '+$DeviceName+'. Controllo e inoltro sempre disponibili, senza ruoli.')
  Write-Host 'Avvio automatico all accesso a Windows dopo ogni riavvio. Il controllo grafico richiede una sessione utente attiva.'

@@ -1,3 +1,15 @@
+# Agente 0.8.4 — procedura uniforme in validazione
+
+agent_update e agent_update_status implementati: stessi parametri e runner sul
+destinatario, tramite MCP diretto o piu gateway; Git e compilazione locali.
+Modalita pacchetto conservata per Git non raggiungibile. Suite Linux/race/vet e
+cross-build PASS; distribuzione Windows ancora da verificare.
+[Specifica](../docs/mcp-agent/UPDATE-FROM-GIT-0.8.4.md), [validazione](../docs/mcp-agent/VALIDATION-0.8.4-20261114.md).
+
+## Stato precedente
+
+La chat coordina: niente Desktop1 fisso o build delegata al gateway. Appunti di tutti i destinatari aggiornati dopo le verifiche.
+
 # Aggiornamenti remoti: regola operativa 14 novembre 2026
 
 Leggere ../docs/mcp-agent/MCP-CATALOG-0.8.3.md. `device_call` inoltra anche

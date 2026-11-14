@@ -1,4 +1,4 @@
-param([Parameter(Mandatory=$true)][string]$Package,[Parameter(Mandatory=$true)][string]$PreviousCandidate,[ValidateSet('0.8.0','0.8.1','0.8.2')][string]$PreviousVersion='0.8.0',[Parameter(Mandatory=$true)][string]$Log)
+param([Parameter(Mandatory=$true)][string]$Package,[Parameter(Mandatory=$true)][string]$PreviousCandidate,[ValidateSet('0.8.0','0.8.1','0.8.2','0.8.3')][string]$PreviousVersion='0.8.0',[Parameter(Mandatory=$true)][string]$Log)
 $ErrorActionPreference='Stop'
 $temp=Join-Path ([IO.Path]::GetTempPath()) ('jarvis-update-test-'+[guid]::NewGuid().ToString('N'))
 $testHome=Join-Path $temp 'Installed';$oldPackage=Join-Path $temp 'OldPackage'
@@ -8,7 +8,7 @@ try{
  Copy-Item -Path (Join-Path $Package '*') -Destination $oldPackage
  Copy-Item -LiteralPath $PreviousCandidate -Destination (Join-Path $oldPackage 'jarvis-mcp.exe') -Force
  $install=Join-Path $oldPackage 'Install.ps1'
- $text=[IO.File]::ReadAllText($install).Replace('0.8.3',$PreviousVersion)
+ $text=[IO.File]::ReadAllText($install).Replace('0.8.4',$PreviousVersion)
  [IO.File]::WriteAllText($install,$text,(New-Object Text.UTF8Encoding($false)))
  $old=Get-Content (Join-Path $oldPackage 'package.json') -Raw|ConvertFrom-Json
  $old.installer_version=$PreviousVersion;$old.agent_version=$PreviousVersion;$old.agent_sha256=(Get-FileHash (Join-Path $oldPackage 'jarvis-mcp.exe')).Hash.ToLowerInvariant()
@@ -25,7 +25,7 @@ try{
  & (Join-Path $Package 'Update.ps1') -HomeDir $testHome
  $after=Invoke-LocalTool $testHome 'machine_info'
  $now=Read-Install $testHome
- if($after.version -ne '0.8.3' -or $after.machine_id -cne $before.machine_id){throw 'updated_identity_version_invalid'}
+ if($after.version -ne '0.8.4' -or $after.machine_id -cne $before.machine_id){throw 'updated_identity_version_invalid'}
  if($settings.task_name -cne $now.task_name -or $settings.device_name -cne $now.device_name){throw 'startup_or_name_changed'}
  if((Get-FileHash (Join-Path $testHome 'State\runtime-v1\machine.json')).Hash -cne $identity -or (Get-FileHash (Join-Path $testHome 'Config\peer-token.txt')).Hash -cne $credential){throw 'identity_or_credentials_changed'}
  $receipt=[IO.File]::ReadAllText((Join-Path $testHome 'Logs\diagnostics\self-update.log'))

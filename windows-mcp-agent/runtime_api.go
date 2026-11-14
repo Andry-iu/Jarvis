@@ -15,6 +15,8 @@ import (
 )
 
 type runtimeRequest struct {
+	SourceCommit     string   `json:"source_commit,omitempty"`
+	TargetVersion    string   `json:"target_version,omitempty"`
 	PairingID        string   `json:"pairing_id,omitempty"`
 	Port             int      `json:"port,omitempty"`
 	UsageCategory    string   `json:"usage_category,omitempty"`
@@ -79,6 +81,8 @@ type runtimeTool struct {
 }
 
 var runtimeCatalog = []runtimeTool{
+	{"agent_update", "Update THIS agent from an exact published Git commit: download sources, bootstrap verified tools if needed, test/build locally and run the canonical detached updater. Same operation direct or through any gateway depth; no binary transfer. Requires idle elevated agent and unique request_id. Read agent_update_status, never replay uncertainty.", []string{"source_commit", "target_version", "request_id"}, []string{"source_commit", "target_version", "request_id"}, false},
+	{"agent_update_status", "Read durable target-owned Git update progress and verified result by request_id, including after agent restart. Completed requires live identity/version/hash and cleanup; gateways only forward the command/status.", []string{"request_id"}, []string{"request_id"}, true},
 	{"device_pair_begin", "Request first pairing with an untrusted LAN agent. Returns a comparison code; the user must match it in the native target dialog and approve locally. No credentials in chat. Keep request_id for status.", []string{"device", "label", "request_id"}, []string{"device", "request_id"}, false},
 	{"device_pair_status", "Read first-pairing state and comparison code for request_id. Never approves or returns credentials. Acknowledgement is not pairing completion.", []string{"request_id"}, []string{"request_id"}, true},
 	{"device_pair_complete", "After local approval, import encrypted credentials privately and verify target identity. Requires current device_list SHA and a new request_id; pairing_id is the original begin request_id.", []string{"pairing_id", "expected_sha256", "request_id"}, []string{"pairing_id", "expected_sha256", "request_id"}, false},
@@ -121,7 +125,7 @@ var runtimeCatalog = []runtimeTool{
 	{"codex_events", "Read durable bounded Codex events and pending approvals using the sequence cursor. After turn/completed, wait for jarvis/usage for that turn: final account-wide quota/credits snapshot or explicit unavailability.", []string{"project", "thread_id", "after", "limit"}, []string{"project", "thread_id"}, true},
 	{"codex_respond", "Answer one exact pending approval/user-input request. No session-wide grants; approvals require explicit user authorization for the presented action.", []string{"project", "thread_id", "approval_id", "decision", "answers", "request_id"}, []string{"project", "thread_id", "approval_id", "request_id"}, false},
 	{"device_list", "List this computer plus locally configured trusted peers; offline status is explicit. Does not scan the network.", nil, nil, true},
-	{"device_call", "Forward a public agent tool to a configured device, including updates, over authenticated gateway hops. Verify target identity; loops/retired peers refused. Keep target request_id/update_id on uncertainty.", []string{"device_id", "call"}, []string{"device_id", "call"}, false},
+	{"device_call", "Forward a public agent tool, including target-owned agent_update and verified offline update batches, over authenticated gateway hops. Verify target identity; loops/retired peers refused. Keep target request_id/update_id on uncertainty.", []string{"device_id", "call"}, []string{"device_id", "call"}, false},
 	{"device_configure", "Add or replace one trusted device using expected configuration SHA-256 from device_list (missing for a new file). Names are free; secrets are environment references only. Identity replacement requires retirement and a new device_id.", []string{"device", "expected_sha256", "request_id"}, []string{"device", "expected_sha256", "request_id"}, false},
 	{"device_retire", "Persistently retire one device on this gateway, preserving its record and history and blocking dependent routes. Does not change other gateways automatically.", []string{"device_id", "expected_sha256", "request_id"}, []string{"device_id", "expected_sha256", "request_id"}, false},
 }
@@ -317,6 +321,19 @@ func (a *Agent) invokeRuntime(name string, raw json.RawMessage) any {
 		v, e := a.restartAdmin(r, p)
 		if e != nil {
 			return toolResult(map[string]any{"error": e.Error(), "request_id": p.RequestID}, true)
+		}
+		return toolResult(v, false)
+	}
+	if p.Operation == "agent_update" || p.Operation == "agent_update_status" {
+		var v any
+		var err error
+		if p.Operation == "agent_update" {
+			v, err = a.startSourceUpdate(r, p)
+		} else {
+			v, err = a.sourceUpdateStatus(r, p.RequestID)
+		}
+		if err != nil {
+			return toolResult(map[string]any{"error": err.Error(), "request_id": p.RequestID}, true)
 		}
 		return toolResult(v, false)
 	}

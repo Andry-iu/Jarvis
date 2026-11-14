@@ -1,3 +1,11 @@
+## 0.8.4 — 2026-11-14
+
+- agent_update/agent_update_status: download Git, tool verificati, test/vet/build
+  e updater canonico eseguiti sul destinatario, diretto o attraverso piu gateway.
+- Stato durevole, stesso request_id senza replay, controlli idle/elevazione/hash.
+- Modalita pacchetto conservata quando il target non puo raggiungere Git.
+- Installer e agente condividono release 0.8.4; prove nel verbale dedicato.
+
 ## 0.8.3 — verifica operativa remota, 2026-11-14
 
 - Aggiornamento LAN 0.8.2→0.8.3 riuscito attraverso gateway e unico updater;

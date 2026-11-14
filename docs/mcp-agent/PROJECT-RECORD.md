@@ -1,3 +1,11 @@
+## 14 novembre 2026 — procedura uniforme approvata, 0.8.4
+
+Utente chiarisce: coordinamento nella chat, gateway solo inoltro del comando;
+stesso download Git/build/update su ogni destinatario, anche al quarto livello.
+Conferma successiva: conservare trasferimento pacchetto se Git non raggiungibile.
+Implementazione e test di instradamento completati; collaudo e rollout Windows
+in corso. Specifica UPDATE-FROM-GIT-0.8.4.md, esiti VALIDATION-0.8.4-20261114.md.
+
 ## 14 novembre 2026 — aggiornamento automatico attraverso gateway, verifica reale
 
 Completato aggiornamento LAN 0.8.2→0.8.3 senza passaggi manuali. Candidato

@@ -1,3 +1,14 @@
+# Procedura corrente 0.8.4 — aggiornamento uniforme dal destinatario
+
+Prevale [UPDATE-FROM-GIT-0.8.4.md](UPDATE-FROM-GIT-0.8.4.md): coordinamento nella
+chat, stesso agent_update diretto o inoltrato a qualsiasi livello, download Git e
+compilazione sul destinatario. Nessun nome o ruolo gateway cablato.
+Quando il destinatario non raggiunge Git resta disponibile il pacchetto verificato
+trasferito tramite MCP. Entrambe le modalita usano l'unico updater canonico.
+[Stato effettivo delle prove](VALIDATION-0.8.4-20261114.md).
+
+## Documentazione precedente
+
 ## Aggiornamenti remoti e catalogo client
 
 `device_call` inoltra anche `update_prepare`, `update_execute`, `update_status`

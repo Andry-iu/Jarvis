@@ -22,7 +22,7 @@ import (
 	"time"
 )
 
-const version = "0.8.3"
+const version = "0.8.4"
 
 type RPCRequest struct {
 	JSONRPC string          `json:"jsonrpc"`
@@ -51,24 +51,25 @@ type Task struct {
 	cancel     context.CancelFunc
 }
 type Agent struct {
-	peerMu            sync.Mutex
-	peerServer        *http.Server
-	controlMu         sync.RWMutex
-	restartPending    bool
-	listenAddress     string
-	shutdownRequest   func()
-	testPrivileges    func() agentPrivileges
-	testLaunchRestart func(*adminRestart) error
-	usageMu           sync.Mutex
-	usage             *toolUsageStore
-	uiMu              sync.Mutex
-	windows           map[string]json.RawMessage
-	runtimeMu         sync.Mutex
-	runtime           *Runtime
-	mu                sync.Mutex
-	task              *Task
-	next              int
-	desktop           *desktopSnapshot
+	peerMu                 sync.Mutex
+	peerServer             *http.Server
+	controlMu              sync.RWMutex
+	restartPending         bool
+	listenAddress          string
+	shutdownRequest        func()
+	testPrivileges         func() agentPrivileges
+	testLaunchRestart      func(*adminRestart) error
+	testLaunchSourceUpdate func(string) error
+	usageMu                sync.Mutex
+	usage                  *toolUsageStore
+	uiMu                   sync.Mutex
+	windows                map[string]json.RawMessage
+	runtimeMu              sync.Mutex
+	runtime                *Runtime
+	mu                     sync.Mutex
+	task                   *Task
+	next                   int
+	desktop                *desktopSnapshot
 }
 
 func (a *Agent) snapshot() any {

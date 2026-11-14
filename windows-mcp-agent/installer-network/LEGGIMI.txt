@@ -1,4 +1,10 @@
-JARVIS AGENT SETUP 0.8.3 / AGENTE 0.8.3 - Windows x64
+AGGIORNAMENTI DA CHAT
+Dalla 0.8.4 agent_update scarica il commit Git indicato, compila e aggiorna
+sul PC destinatario. Stessa procedura diretta o attraverso piu gateway.
+Se Git non e raggiungibile, resta disponibile il pacchetto verificato via MCP.
+Entrambe usano l'updater canonico con backup/rollback e ricevuta finale.
+
+JARVIS AGENT SETUP 0.8.4 / AGENTE 0.8.4 - Windows x64
 
 Estrarre lo ZIP in una cartella e avviare INSTALLA.cmd. Consentire UAC con lo
 stesso utente Windows. Scegliere il nome libero e univoco del computer, la cartella
@@ -34,7 +40,7 @@ AGGIORNA.cmd sul PC da aggiornare, con UAC dello stesso utente. Indicare la cart
 Jarvis esistente (es. C:\Jarvis). Non eseguire INSTALLA sopra l'installazione.
 AGGIORNA usa l'unico updater, con backup e prova di ripristino, conserva nome,
 identita, configurazione e avvio automatico. Non richiede Go o Cloudflare.
-Al termine attendere la conferma 0.8.3; tenere la sessione aperta e sbloccata.
+Al termine attendere la conferma 0.8.4; tenere la sessione aperta e sbloccata.
 
 Config\devices.json conserva nomi, identita, indirizzi, percorsi via altri agenti e
 stato active/retired. Dismesso e offline sono distinti. Ogni gateway conserva la

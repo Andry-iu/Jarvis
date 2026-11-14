@@ -1,3 +1,13 @@
+# Agente 0.8.4 — procedura uniforme in validazione
+
+agent_update e agent_update_status implementati: stessi parametri e runner sul
+destinatario, tramite MCP diretto o piu gateway; Git e compilazione locali.
+Modalita pacchetto conservata per Git non raggiungibile. Suite Linux/race/vet e
+cross-build PASS; distribuzione Windows ancora da verificare.
+[Specifica](../docs/mcp-agent/UPDATE-FROM-GIT-0.8.4.md), [validazione](../docs/mcp-agent/VALIDATION-0.8.4-20261114.md).
+
+## Stato precedente
+
 # Aggiornamento di PC gia associati
 
 L'inoltro `device_call` supporta anche aggiornamenti e ricevute. Nessuna copia
