@@ -1,25 +1,28 @@
 Prima di scegliere strumenti o diagnosi, leggere [problemi e metodi gia riusciti](../docs/mcp-agent/KNOWN-BUILD-UPDATE-PROBLEMS.md).
 
-# Agente 0.8.4 — procedura uniforme in validazione
+# Agente 0.8.4 — aggiornamento uniforme installato, verifiche di chiusura parziali
 
-agent_update e agent_update_status implementati: stessi parametri e runner sul
-destinatario, tramite MCP diretto o piu gateway; Git e compilazione locali.
-Modalita pacchetto conservata per Git non raggiungibile. Suite Linux/race/vet e
-cross-build PASS; distribuzione Windows ancora da verificare.
+La chat invia lo stesso agent_update a ogni destinatario, diretto o tramite piu
+gateway: download del commit Git esatto, test/build locali e updater canonico.
+Pacchetto conservato se il destinatario non raggiunge Git. Build native e deploy
+0.8.4 acquisiti sui tre PC; Desktop2 riconnesso e audit finale PASS. Desktop1 ha
+ricevuta locale completed ma il connettore esterno e indisponibile: audit finale,
+appunti Desktop1/target e catalogo client Desktop1 ancora pendenti. Non rilanciare
+i deploy completati. Catalogo client Desktop2 aggiornato e osservato.
 [Specifica](../docs/mcp-agent/UPDATE-FROM-GIT-0.8.4.md), [validazione](../docs/mcp-agent/VALIDATION-0.8.4-20261114.md).
 
 ## Stato precedente
 
-La chat coordina: niente Desktop1 fisso o build delegata al gateway. Appunti di tutti i destinatari aggiornati dopo le verifiche.
+La chat coordina: niente Desktop1 fisso o build delegata al gateway. Aggiornare gli appunti di ciascun destinatario dopo le verifiche; non attribuire salvataggi sui canali indisponibili.
 
 # Aggiornamenti remoti: regola operativa 14 novembre 2026
 
 Leggere ../docs/mcp-agent/MCP-CATALOG-0.8.3.md. `device_call` inoltra anche
 update_prepare/update_execute/update_status/log_read. Il testo storico del client
 che lo nega non descrive il runtime live. Verificare tools/list e sorgente prima
-di dichiarare limiti. Su PC gia associato trasferire automaticamente il candidato
-verificato e invocare lo stesso updater canonico, senza passaggi manuali o nuovo
-pairing. Separare preflight, dispatch, completamento e verifica con ricevuta/hash.
+di dichiarare limiti. Su PC gia associato usare agent_update da Git; trasferire il candidato verificato
+solo quando Git non e raggiungibile. Invocare sempre lo stesso updater canonico,
+senza passaggi manuali o nuovo pairing. Separare preflight, dispatch, completamento e verifica con ricevuta/hash.
 Registrare esito e causa di precedenti indicazioni errate in Git e negli appunti.
 
 ## Regole utente — 14 novembre 2026: layout, elevazione e pulizia

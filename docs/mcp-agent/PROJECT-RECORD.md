@@ -3,8 +3,10 @@
 Utente chiarisce: coordinamento nella chat, gateway solo inoltro del comando;
 stesso download Git/build/update su ogni destinatario, anche al quarto livello.
 Conferma successiva: conservare trasferimento pacchetto se Git non raggiungibile.
-Implementazione e test di instradamento completati; collaudo e rollout Windows
-in corso. Specifica UPDATE-FROM-GIT-0.8.4.md, esiti VALIDATION-0.8.4-20261114.md.
+Implementazione, test di instradamento e build native completati. Tre deploy
+0.8.4 con ricevute finali; audit e catalogo client Desktop2 PASS. Collegamento
+esterno Desktop1 indisponibile dopo il deploy locale: audit finale e salvataggio
+appunti su quel PC e sul suo target pendenti. Non ripetere i deploy completati. Specifica UPDATE-FROM-GIT-0.8.4.md, esiti VALIDATION-0.8.4-20261114.md.
 
 ## 14 novembre 2026 — aggiornamento automatico attraverso gateway, verifica reale
 

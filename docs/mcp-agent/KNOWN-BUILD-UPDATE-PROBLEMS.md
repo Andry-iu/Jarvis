@@ -13,6 +13,11 @@ ripetere. Gli appunti privati mantengono inventario e ricevute per ogni computer
 | Descrizione client di device_call obsoleta | Confrontare tools/list del server e sorgenti: inoltro aggiornamenti gia presente. Distinguere catalogo server e cache client, senza attribuire refresh non eseguiti. |
 | Preflight/dispatch riferiti come aggiornamento concluso | Conferma soltanto da ricevuta canonica, riconnessione autenticata e identita/versione/hash, manutenzione e pulizia. |
 | Primo collaudo 0.8.4: File.Replace con backup null rifiutato da Windows PowerShell | Percorso di backup esplicito per la scrittura atomica dello stato. Tentativo fermo prima della compilazione; agente0.8.3 preservato, stato originale conservato e fallimento verificato prima di un nuovo ID. Successiva preparazione 0.8.4 PASS. |
+| Stato bootstrap scritto da Windows PowerShell con UTF-8 BOM | Parser accetta il BOM dei record precedenti e runner scrive senza BOM. Conservare ricevute e non rilanciare un bootstrap completato. |
+| SoftPlcTest1: token della shell elevato, test di avvio standard fallito | Test controlla il token reale e richiede il rifiuto sicuro se manca un token standard. Successiva suite nativa PASS; nessun allentamento del codice di avvio applicazioni. |
+| Processo riavviato con ambiente di build temporaneo | Ripristino TEMP/TMP/PATH e variabili Git/test prima dell'updater. Audit Desktop2 conferma ambiente ripristinato e assenza dei checkout temporanei propri. |
+| Catalogo client Desktop2 vecchio dopo aggiornamento server | Impostazioni app ChatGPT, Refresh tools, poi scheda strumenti: nuovi tool e descrizione inoltro osservati. Una chiamata al solo server non prova il refresh client. |
+| Desktop1: ricevuta locale completed ma MCP esterno -32603; rinnovo login Cloudflare HTTP403 | Canale ancora indisponibile, causa non isolata. Non ripetere credenziali/deploy alla cieca. Conservare ricevute; audit e appunti del gateway/target da completare alla riconnessione. |
 
 Il comando nuovo usa scripts/build-runtime.ps1, cioe il profilo gia riuscito,
 e scripts/update-agent.ps1, cioe il motore gia collaudato. Non scegliere un SDK

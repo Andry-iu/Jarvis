@@ -1,0 +1,33 @@
+{
+  "release": "0.8.4",
+  "runtime_source_commit": "ff2038d4b250c9d3e7e6590c2409ad55e5081380",
+  "installer_source_commit": "ff2038d4b250c9d3e7e6590c2409ad55e5081380",
+  "installer": {
+    "filename": "Jarvis-Agent-Setup-0.8.4.zip",
+    "sha256": "d10fa8e6d5e9d174660f0ca77e2d2ed1873ed9e8c4b305d66cb26c2494c2ccbe",
+    "size_bytes": 7472565,
+    "library_file_id": "libfile_2ca12ec4e4f88191a0fdf06130ad19d4",
+    "candidate_sha256": "ffc4a146f2e89f55f97d52dd71040340d35db2b7cdb29a9ba730b99cb27e2d58",
+    "build": "clean-source Go1.27.0 Windows cross-build; final cross candidate not executed in Windows fixture"
+  },
+  "installed": {
+    "Desktop1": {
+      "sha256": "85a4ea1517669458d4111c77a04535290d8a8897f1b2f2b224951690f52a8d6c",
+      "local_completed_at_utc": "2026-11-14T18:26:02.9580024Z",
+      "verification": "canonical local receipt, live identity/version/hash and cleanup; external MCP reconnection pending"
+    },
+    "Desktop2": {
+      "sha256": "eae6924c041550eb8dcc30b74ff12f9f8448c53e7cf6f7c530cbc0e0a6c1ff55",
+      "completed_at_utc": "2026-11-14T18:22:28.9506677Z",
+      "verification": "typed agent_update_status completed; external MCP final audit PASS"
+    },
+    "LAN_target_via_gateway": {
+      "sha256": "bc45bd2733be82adb173ce4cf92910210855b69079a27612d5af2d062c4e7bee",
+      "bytes": 13492736,
+      "completed_at_utc": "2026-11-14T18:23:23.0761399Z",
+      "verified_at_utc": "2026-11-14T18:23:55Z",
+      "verification": "locally built exact runtime source, canonical receipt and authenticated gateway live identity/version/elevation; later final audit pending gateway reconnection"
+    }
+  },
+  "details": "VALIDATION-0.8.4-20261114.md"
+}

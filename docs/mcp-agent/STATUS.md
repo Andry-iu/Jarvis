@@ -1,9 +1,12 @@
-# Agente 0.8.4 — procedura uniforme in validazione
+# Agente 0.8.4 — aggiornamento uniforme installato, verifiche di chiusura parziali
 
-agent_update e agent_update_status implementati: stessi parametri e runner sul
-destinatario, tramite MCP diretto o piu gateway; Git e compilazione locali.
-Modalita pacchetto conservata per Git non raggiungibile. Suite Linux/race/vet e
-cross-build PASS; distribuzione Windows ancora da verificare.
+La chat invia lo stesso agent_update a ogni destinatario, diretto o tramite piu
+gateway: download del commit Git esatto, test/build locali e updater canonico.
+Pacchetto conservato se il destinatario non raggiunge Git. Build native e deploy
+0.8.4 acquisiti sui tre PC; Desktop2 riconnesso e audit finale PASS. Desktop1 ha
+ricevuta locale completed ma il connettore esterno e indisponibile: audit finale,
+appunti Desktop1/target e catalogo client Desktop1 ancora pendenti. Non rilanciare
+i deploy completati. Catalogo client Desktop2 aggiornato e osservato.
 [Specifica](UPDATE-FROM-GIT-0.8.4.md), [validazione](VALIDATION-0.8.4-20261114.md).
 
 ## Stato precedente

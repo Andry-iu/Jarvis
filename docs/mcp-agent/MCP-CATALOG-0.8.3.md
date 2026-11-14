@@ -1,3 +1,5 @@
+Catalogo corrente: [MCP-CATALOG-0.8.4.md](MCP-CATALOG-0.8.4.md). Le sezioni successive conservano lo storico.
+
 # Procedura corrente 0.8.4 — aggiornamento uniforme dal destinatario
 
 Prevale [UPDATE-FROM-GIT-0.8.4.md](UPDATE-FROM-GIT-0.8.4.md): coordinamento nella

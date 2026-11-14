@@ -1,3 +1,16 @@
+# 14 novembre 2026 — aggiornamenti uniformi 0.8.4
+
+Implementato agent_update/status: la chat sceglie il commit, ogni destinatario
+scarica/testa/compila e usa lo stesso updater a ogni livello. Conservato il
+trasferimento pacchetto quando Git non e raggiungibile. Nessun gateway cablato.
+Runtime ff2038d4b250c9d3e7e6590c2409ad55e5081380 pubblicato sul branch
+feature/unified-agent-source-update-20261114. Suite Linux/race/vet, prove TLS
+su quattro livelli in isolamento, prove Windows e build native PASS. Deploy
+0.8.4 acquisiti su tre PC; audit e catalogo client Desktop2 PASS. Riconnessione
+esterna Desktop1 bloccata, quindi audit finale e appunti Desktop1/target pendenti.
+Installer 0.8.4 verificato e consegnato; limiti esatti delle prove nel verbale
+[VALIDATION-0.8.4-20261114.md](VALIDATION-0.8.4-20261114.md). Storico seguente.
+
 # 14 novembre 2026 — gateway universali 0.8.0 completati
 
 Richiesta: agenti sempre capaci di inoltro, percorsi LAN su piu reti/gateway,
