@@ -14,3 +14,10 @@ interni iniziali Desktop2 sono successivamente scomparsi; causa non accertata.
 Autorizzazione esplicita dell'utente a implementare, documentare, committare,
 pubblicare e aggiornare automaticamente entrambi i desktop, piu installer
 riutilizzabile. Nessuna nuova conferma necessaria per questi passaggi.
+
+Desktop1: suite Windows Go completa 16.300s, vet e build PASS. Candidato nativo
+13296128 byte, SHA256 5c64332616b08c0e74bd44503baaeafea609f23db8379487fcc6c0c651f3d46c.
+Il primo collaudo installer si e fermato nel solo script di prova: variabile
+PowerShell home riservata, prima della prima installazione. Rinominata la
+variabile di test; nessun cambiamento Go o nuovo test Go necessario per questo
+delta. Il collaudo installer va ripreso con il candidato gia verificato.
