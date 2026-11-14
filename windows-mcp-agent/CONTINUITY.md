@@ -7,8 +7,10 @@ backup/rollback e controllo finestra sugli agenti installati PASS su entrambi.
 Sorgente20a862a, branch feature/agent-gateway-20261114. Manifest/checksum e prove
 in docs/mcp-agent/{CHECKSUMS-0.8.2.json,VALIDATION-0.8.2-20261114.md,FIX-0.8.2.md}.
 Jarvis-Agent-Setup-0.8.2.zip, Library libfile_95fc00b0ebac81918eca7d9b917eecae.
-SoftPlcTest1 ancora0.8.1 non associato: AGGIORNA.cmd locale, poi nuova richiesta
-di abbinamento/codice/conferma locale. Due codici precedenti scaduti, non riusarli.
+Primo collegamento LAN reale0.8.2 completato: consenso locale, scambio privato,
+identita/TLS e letture autenticate tramite gateway verificati. Inventario, percorso
+e identita dei dispositivi nei rispettivi appunti privati; nessun nuovo consenso
+richiesto per operare su un collegamento gia associato.
 Nessuna approvazione UI automatizzata, nuovo tunnel o altro progetto ripreso.
 
 ## Storico0.8.1 — superato dalla0.8.2 per la visibilita della finestra

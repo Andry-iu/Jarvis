@@ -31,19 +31,19 @@ Correzione minima: CREATE_NO_WINDOW senza HideWindow sul solo helper GUI.
 Root e profili di avvio preesistenti conservati; nessun main/Android/force-push,
 turno Codex, costo o cambio delle guardie economiche. Test su sessioni sbloccate,
 nessun reboot/login fisico certificato. Il confronto codice e il consenso umano
-su SoftPlcTest1 rimangono da eseguire dopo il suo aggiornamento locale0.8.2.
+sul primo nuovo agente reale sono poi riusciti: completamento e controllo
+autenticato tramite gateway verificati, come sotto.
 
-## Ripresa
+## Primo collegamento LAN reale completato
 
-SoftPlcTest1:192.168.1.101, identita e803423d08ab396b98262b3cf55df658,0.8.1 non
-associato. SessioneJarvis6888 e PowerShell9580 entrambe1 nel primo riscontro;
-nessuna finestra vista da utente via Supremo o monitor. Due richieste precedenti
-scadute, nessun completamento o trust creato. Non riutilizzare codici scaduti.
-Utente: estrarre Jarvis-Agent-Setup-0.8.2.zip e AGGIORNA.cmd stesso utente/admin
-indicando la cartella esistente. Non serve reboot: viene riavviato l'agente.
-Poi nuovo begin, codice mostrato, confronto e Consenti locale, status e complete
-con SHA corrente e nuovo request_id, infine verifica innocua. Non automatizzare
-l'approvazione sul target. Protocollo PAIRING-0.8.1.md valido dalla0.8.2.
+Utente ha aggiornato il nuovo PC alla0.8.2 e approvato localmente il codice della
+richiesta. Stato approved verificato, importazione privata con CAS saved;
+identita e certificato corretti, device_list online e machine_info0.8.2
+attraverso il gateway. Letture project_catalog/file_list riuscite. Configurazione
+persistente del collegamento salvata; nessun file di credenziali passato in chat.
+Appunti privati del gateway e del destinatario conservano inventario e percorso.
+Non ripetere il primo consenso gia riuscito. Nessun reboot fisico o nuovo servizio
+di progetto provato da questo collaudo.
 
 ## Diagnosi da conservare
 
