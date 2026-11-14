@@ -1,6 +1,12 @@
+# Percorso canonico Procedures
+
+Le procedure permanenti sono in `<Jarvis>\Procedures`. Usare questo nome in
+comandi, script, cataloghi, documentazione e appunti; dopo una modifica agli
+script aggiornare e verificare gli hash dei cataloghi. [Uso e verifiche](../docs/mcp-agent/PROCEDURES.md).
+
 # Pulizia permanente — 14 novembre 2026
 
-Alla richiesta di pulizia riusare ProcedurePermanenti/Invoke-JarvisCleanup.ps1
+Alla richiesta di pulizia riusare Procedures/Invoke-JarvisCleanup.ps1
 sul destinatario. [Uso, ambito e protezioni](../docs/mcp-agent/CLEANUP.md).
 Conservare un solo backup verificato per PC; Projects e area Jarvis separate.
 Releases non conserva vecchi eseguibili o obbligatoriamente l'ultima copia;

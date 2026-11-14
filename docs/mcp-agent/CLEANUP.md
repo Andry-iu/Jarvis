@@ -2,7 +2,7 @@
 
 Regole concordate il 14 novembre 2026. Procedura autonoma PowerShell 5.1,
 sorgente `windows-mcp-agent/procedures/Invoke-JarvisCleanup.ps1`, installata come
-`<Jarvis>\ProcedurePermanenti\Invoke-JarvisCleanup.ps1` sul destinatario.
+`<Jarvis>\Procedures\Invoke-JarvisCleanup.ps1` sul destinatario.
 Nessun nome macchina, ruolo gateway o percorso di banco nel codice.
 
 Quando l'utente dice "fai pulizia", richiamare questo script tramite il batch
@@ -10,7 +10,7 @@ MCP autorizzato, diretto o inoltrato, con un RequestId nuovo e conservato:
 
 ```powershell
 powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass `
- -File '<Jarvis>\ProcedurePermanenti\Invoke-JarvisCleanup.ps1' `
+ -File '<Jarvis>\Procedures\Invoke-JarvisCleanup.ps1' `
  -HomeDir '<Jarvis>' -ExpectedMachine '<machine_id verificato>' `
  -RequestId '<GUID32>' -Execute
 ```

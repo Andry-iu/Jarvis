@@ -1,3 +1,10 @@
+# Procedures — percorso corrente, 14 novembre 2026
+
+Cartella canonica `<Jarvis>\Procedures`, rinominata e verificata sui tre PC.
+Riferimenti operativi, script condiviso, cataloghi hash e appunti allineati;
+test esistenti PASS. [Percorsi, uso e prove](PROCEDURES.md).
+Nessuna modifica al binario agente o ai progetti di lavoro.
+
 # Agente 0.8.4 — installato e verificato sui tre PC
 
 La chat invia lo stesso agent_update a ogni destinatario, diretto o tramite piu

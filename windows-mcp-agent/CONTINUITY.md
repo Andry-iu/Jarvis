@@ -1,6 +1,13 @@
+# Procedures — percorso corrente, 14 novembre 2026
+
+Cartella canonica `<Jarvis>\Procedures`, rinominata e verificata sui tre PC.
+Riferimenti operativi, script condiviso, cataloghi hash e appunti allineati;
+test esistenti PASS. [Percorsi, uso e prove](../docs/mcp-agent/PROCEDURES.md).
+Nessuna modifica al binario agente o ai progetti di lavoro.
+
 # Pulizia permanente — 14 novembre 2026
 
-Alla richiesta di pulizia riusare ProcedurePermanenti/Invoke-JarvisCleanup.ps1
+Alla richiesta di pulizia riusare Procedures/Invoke-JarvisCleanup.ps1
 sul destinatario. [Uso, ambito e protezioni](../docs/mcp-agent/CLEANUP.md).
 Conservare un solo backup verificato per PC; Projects e area Jarvis separate.
 Releases non conserva vecchi eseguibili o obbligatoriamente l'ultima copia;

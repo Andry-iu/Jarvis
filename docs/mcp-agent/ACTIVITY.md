@@ -1,3 +1,9 @@
+## 14 novembre 2026 — cartella Procedures
+
+Rinomina richiesta dall'utente applicata a Desktop1, Desktop2 e SoftPlcTest1.
+Aggiornati appunti, riferimenti operativi, documentazione e cataloghi; parsing e
+suite esistenti superati. [Dettagli e limiti](PROCEDURES.md).
+
 # 14 novembre 2026 — aggiornamenti uniformi 0.8.4
 
 Implementato agent_update/status: la chat sceglie il commit, ogni destinatario
