@@ -1,9 +1,19 @@
-# Stato corrente — abbinamento0.8.1
+# Stato corrente — release0.8.1, 14 novembre2026
 
-Protocollo con confronto codice e conferma locale implementato; nessuna copia file.
-Installer0.8.1: INSTALLA.cmd oppure AGGIORNA.cmd per agenti0.8.0.
-Prove e distribuzione: [VALIDATION](VALIDATION-0.8.1-20261114.md).
-Uso: [PAIRING](PAIRING-0.8.1.md).
+Desktop1 e Desktop2 aggiornati e verificati via MCP alla0.8.1. Backup, rollback
+rehearsal, test Windows e prove di installazione/aggiornamento locale PASS.
+Sorgente runtime aa2f2cb; pacchetto/updater definitivo8ed7743, ramo
+feature/agent-gateway-20261114. Stessa release per sorgenti, agente e installer.
+Jarvis-Agent-Setup-0.8.1.zip: Library libfile_03e14735ba00819189378f110c7b970e.
+Procedura PAIRING-0.8.1.md, prove VALIDATION-0.8.1-20261114.md e checksum JSON
+sotto docs/mcp-agent dalla root del repository.
+SoftPlcTest1,192.168.1.101, identita e803423d08ab396b98262b3cf55df658:0.8.0 non
+associato. Prossimo passo dell'utente: AGGIORNA.cmd nella cartella estratta,
+indicare la cartella Jarvis esistente; poi chiedere collegamento tramiteDesktop1.
+Begin -> confronto codice/conferma locale -> status -> complete CAS, nessuna
+copia di file. Non automatizzare la conferma tramite UI remota.
+Avvio all'accesso Windows preservato, non servizio headless; nessun reboot fisico
+o clic umano di conferma certificato. Nessun altro progetto ripreso.
 
 ## Storico precedente
 

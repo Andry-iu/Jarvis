@@ -1,0 +1,26 @@
+{
+  "release": "0.8.1",
+  "source_commit": "8ed7743900ee82529fcf40073fbe9e789ee4021e",
+  "runtime_commit": "aa2f2cbd454c8efe4df2dbbfefe9ed31d6e06733",
+  "branch": "feature/agent-gateway-20261114",
+  "installer": {
+    "file": "Jarvis-Agent-Setup-0.8.1.zip",
+    "sha256": "0bd137c49a166229329d6f625762acd2c6e1ef81a7c00e0054351e0e45a960f9",
+    "size_bytes": 7439429,
+    "library_file_id": "libfile_03e14735ba00819189378f110c7b970e",
+    "candidate_sha256": "0b74e9cc9a63e0efc0e2f83291d6c3d8ed8ac2890838f515e2b18ecc9f287b60",
+    "candidate_size_bytes": 13393408
+  },
+  "installed": {
+    "Desktop1": {
+      "sha256": "cb647bd29459637244759deda040690ee3fed61cb1f367fba065f4da677f7158",
+      "size_bytes": 13417984,
+      "backup": "self-update-23747391db5d417fb7c1f77eade7b19f"
+    },
+    "Desktop2": {
+      "sha256": "95000010de223ae3f2f091bf86ba5332fedaefabfe4bc6279f877acfdf502b04",
+      "size_bytes": 13455360,
+      "backup": "self-update-6de11ac1b6814669ab83849cf240850e"
+    }
+  }
+}
