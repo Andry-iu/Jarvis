@@ -239,3 +239,22 @@ func TestGatewayDiscoveryAndPairing(t *testing.T) {
 		t.Fatal("unbounded discovery accepted")
 	}
 }
+
+func TestGatewayLegacyOperationArgumentPreserved(t *testing.T) {
+	target, _, targetPeer := testGateway(t)
+	middle, _, middlePeer := testGateway(t)
+	entry, _ := fixtureRuntime(t)
+	saveTestPeers(t, middle, []peerDevice{targetPeer})
+	middlePeer.ID = "middle"
+	saveTestPeers(t, entry, []peerDevice{middlePeer, {ID: "target", MachineID: target.MachineID, Via: "middle"}})
+	// This must select the legacy fixed runner (which refuses this profile),
+	// never silently turn into a generic diagnostic by losing its operation.
+	raw := testCall("task_start", map[string]any{"arguments": map[string]any{"operation": "invalid-test-profile", "project": "sample"}})
+	result, e := entry.deviceCall(runtimeRequest{DeviceID: "target", Call: raw})
+	if e != nil || !toolFailed(result) {
+		t.Fatal("legacy argument lost across gateways", e, result)
+	}
+	if _, _, e = forwardArguments(testCall("task_start", map[string]any{"arguments": map[string]any{"operation": "runtime", "request": map[string]any{"operation": "device_call"}}}), target.MachineID); e == nil {
+		t.Fatal("nested routing through compatibility alias accepted")
+	}
+}

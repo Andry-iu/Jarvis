@@ -116,3 +116,9 @@ installazioni isolate reali, task di avvio, identita/chiavi distinte, assenza da
 Cloudflare nel locale, abbinamento/controllo MCP e pulizia. Prove fisiche di
 piu sottoreti, reboot, login e Cloudflare nuovo restano distinte dai test isolati.
 Stato effettivo aggiornato in VALIDATION-0.8.0-20261114.md.
+
+Per strumenti legacy con un proprio campo operation (es. task_start) usare
+call={operation:"task_start",arguments:{operation:"go_test",project:"..."}}.
+Il formato piatto precedente rimane valido per gli altri strumenti. I gateway
+preservano l intero oggetto arguments anche nei passaggi successivi; il wrapper
+runtime di task_start non va annidato nel trasporto: usare il nome runtime diretto.

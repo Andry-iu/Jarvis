@@ -322,7 +322,18 @@ func forwardArguments(raw json.RawMessage, target string) (string, map[string]an
 		return "", nil, errors.New("call must be an object")
 	}
 	op, _ := args["operation"].(string)
-	delete(args, "operation")
+	if rawArguments, ok := args["arguments"]; ok {
+		if len(args) != 2 {
+			return "", nil, errors.New("use either flat call fields or operation+arguments")
+		}
+		nested, ok := rawArguments.(map[string]any)
+		if !ok {
+			return "", nil, errors.New("arguments must be an object")
+		}
+		args = nested
+	} else {
+		delete(args, "operation")
+	}
 	if !toolDeclared(op) || op == "device_call" || op == "task_start" && args["operation"] == "runtime" {
 		return "", nil, errors.New("unknown operation or raw nested forwarding; use configured via routes")
 	}
@@ -593,11 +604,7 @@ func (r *Runtime) deviceCallTrace(p runtimeRequest, visited []string) (any, erro
 		if u == nil || u.Path != "/gateway" {
 			return nil, errors.New("multi-hop requires the authenticated gateway endpoint")
 		}
-		normalized := map[string]any{}
-		for k, v := range args {
-			normalized[k] = v
-		}
-		normalized["operation"] = method
+		normalized := map[string]any{"operation": method, "arguments": args}
 		method = "device_call"
 		args = map[string]any{"machine_id": dest.MachineID, "device_id": selected.ID, "call": normalized}
 	}

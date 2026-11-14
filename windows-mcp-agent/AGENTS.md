@@ -1,3 +1,17 @@
+# Gateway universali — 14 novembre 2026
+
+Per la 0.8.0 leggere docs/mcp-agent/GATEWAY-0.8.0.md,
+CLIENT-INSTRUCTIONS-0.8.0.md e VALIDATION-0.8.0-20261114.md dalla root Git.
+Ogni agente ha controllo e inoltro; nessun ruolo gateway da selezionare. Nomi
+liberi univoci; configurazione persistente su ogni gateway, retired distinto da
+offline. Installer chiede nome e ingresso locale oppure diretto Cloudflare;
+locale senza dati Cloudflare. Avvio automatico all'accesso Windows.
+Via esplicito dell'utente a implementare, documentare, committare/pubblicare e
+aggiornare automaticamente Desktop1 e Desktop2, con installer riutilizzabile.
+Non richiedere un altro via per la stessa distribuzione. Usare sempre il comune
+update-agent.ps1 dopo test, hash, backup e rehearsal; verificare esiti reali.
+Le istruzioni successive restano valide; i dettagli 0.8.0 prevalgono sullo storico.
+
 # Jarvis Windows MCP Agent — istruzioni di progetto
 
 ## Autorizzazione permanente — 5 novembre 2026
