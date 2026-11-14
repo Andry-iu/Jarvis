@@ -89,6 +89,7 @@ function StartProbe([string]$exe,[string]$probeHome){
  return @{process=$p;out=$o;err=$e;out_task=$p.StandardOutput.BaseStream.CopyToAsync($o);err_task=$p.StandardError.BaseStream.CopyToAsync($e)}
 }
 try{
+	New-Item -ItemType Directory -Force (Split-Path $log -Parent)|Out-Null
  'START '+[DateTime]::UtcNow.ToString('o')|Set-Content $log -Encoding UTF8
  if(!$HomeDir -or $SourceCommit -notmatch '^[a-f0-9]{40}$' -or $ExpectedHash -notmatch '^[a-fA-F0-9]{64}$' -or $ExpectedPreviousHash -notmatch '^[a-fA-F0-9]{64}$'){throw 'invalid_update_contract'}
  if((Hash $Candidate) -ine $ExpectedHash){throw 'candidate_hash_mismatch'}
