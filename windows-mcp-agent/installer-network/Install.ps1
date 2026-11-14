@@ -67,7 +67,7 @@ try{
  if(-not $NoStart){if($taskCreated){Start-ScheduledTask $taskName}else{Start-Process powershell.exe -WindowStyle Hidden -ArgumentList ('-NoProfile -ExecutionPolicy Bypass -File "'+(Join-Path $InstallDir 'Scripts\Start.ps1')+'" -HomeDir "'+$InstallDir+'"')|Out-Null}}
  Write-Host ('Installazione completata: '+$DeviceName+'. Controllo e inoltro sempre disponibili, senza ruoli.')
  Write-Host 'Avvio automatico all accesso a Windows dopo ogni riavvio. Il controllo grafico richiede una sessione utente attiva.'
- Write-Host 'Ora chiedi in chat di collegare questo agente tramite un gateway. Conferma sul nuovo PC solo dopo aver confrontato il codice mostrato in chat. Nessun file da copiare.'
+ Write-Host 'Ora chiedi in chat di collegare questo agente tramite un gateway. Inserisci sul nuovo PC il codice ricevuto in chat, poi premi Consenti prima della scadenza. Nessun file da copiare.'
 }catch{
  if($taskCreated){Unregister-ScheduledTask $taskName -Confirm:$false -ErrorAction SilentlyContinue}
  if($firewall){Remove-NetFirewallRule -Name $taskName -ErrorAction SilentlyContinue}
