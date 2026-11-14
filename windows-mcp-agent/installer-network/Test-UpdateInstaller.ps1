@@ -37,12 +37,15 @@ try{
  if(Test-Path $prompt){$null=[Management.Automation.Language.Parser]::ParseFile($prompt,[ref]$tokens,[ref]$parseErrors);if($parseErrors.Count){throw 'native_prompt_parse_failed'}}
  Report 'PASS UPDATE_INSTALLER_COMPLETE'
 }finally{
+ $receiptPath=Join-Path $testHome 'Logs\diagnostics\self-update.log'
+ if(Test-Path $receiptPath){Get-Content $receiptPath -Tail 40|ForEach-Object {Report $_}}
  if(Test-Path (Join-Path $testHome 'Config\installation.json')){
-  try{& (Join-Path $testHome 'Scripts\Stop.ps1') -HomeDir $testHome}catch{Report ('cleanup_stop_failed '+$_.Exception.Message);throw}
+  try{& (Join-Path $testHome 'Scripts\Stop.ps1') -HomeDir $testHome -Force}catch{Report ('cleanup_stop_failed '+$_.Exception.Message);throw}
   $settings=Get-Content (Join-Path $testHome 'Config\installation.json') -Raw|ConvertFrom-Json
   Unregister-ScheduledTask $settings.task_name -Confirm:$false -ErrorAction SilentlyContinue
   Remove-NetFirewallRule -Name $settings.task_name -ErrorAction SilentlyContinue
  }
+ for($i=0;$i -lt 100;$i++){if(-not (Get-NetTCPConnection -LocalPort 19865 -State Listen -ErrorAction SilentlyContinue)){break};Start-Sleep -Milliseconds 100}
  if(Test-Path $temp){Remove-Item -LiteralPath $temp -Recurse -Force}
  if(Test-Path $temp){throw 'update_test_cleanup_failed'}
  Report 'PASS update_installer_cleanup'
