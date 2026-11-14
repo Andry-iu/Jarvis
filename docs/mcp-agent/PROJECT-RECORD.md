@@ -1,3 +1,14 @@
+## 14 novembre 2026 — aggiornamento automatico attraverso gateway, verifica reale
+
+Completato aggiornamento LAN 0.8.2→0.8.3 senza passaggi manuali. Candidato
+Desktop1 gia validato, trasferito in blocchi con hash/ricevute, poi unico updater
+canonico con backup e rehearsal. Identita/versione/hash/elevazione/manutenzione
+e pulizia verificati; appunti dei tre PC allineati. Corretto l'errore operativo:
+descrizione client obsoleta scambiata per limite runtime e avvio scambiato per
+esito. Cataloghi server corretti, cache client ancora vecchia e non dichiarata
+aggiornata. Procedura, prove e limiti in REMOTE-UPDATE-0.8.3-20261114.md e
+MCP-CATALOG-0.8.3.md. Nessun nuovo binario, build o cambio di versione.
+
 ## 14 novembre 2026 — codice obbligatorio e conto alla rovescia, candidato 0.8.3
 
 Utente ha approvato implementazione, commit e aggiornamento documentale. Il codice

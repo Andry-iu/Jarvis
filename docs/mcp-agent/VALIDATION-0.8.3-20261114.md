@@ -1,3 +1,8 @@
+> Riscontro successivo: il destinatario LAN e stato aggiornato automaticamente
+> alla 0.8.3 attraverso Desktop1, con ricevuta/hash/identita e pulizia verificati.
+> Vedere [verbale remoto](REMOTE-UPDATE-0.8.3-20261114.md). I limiti sull'update
+> LAN e il percorso storico Desktop1 descritti sotto appartengono al primo rollout.
+
 # Validazione 0.8.3 — 14 novembre 2026
 
 ## Implementazione e pubblicazione

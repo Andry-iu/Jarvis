@@ -98,7 +98,9 @@ dispatch, PID ed eventuale uscita; dopo un riavvio una partenza non conclusa e
 incerta e non viene rilanciata. Batch uscito non significa agente installato.
 Verificare ricevuta/hash/versione/identita dell'unico scripts/update-agent.ps1,
 backup e rehearsal rollback. Nessun task di aggiornamento e mai taskkill /T
-sull'agente. Mantenere i percorsi storici diversi Desktop1/Desktop2.
+sull'agente. Per il layout corrente prevale la successiva richiesta esplicita
+del 14 novembre: eseguibile sotto Agent su tutte le installazioni.
+Vedere MCP-CATALOG-0.8.3.md per descrizioni client obsolete e trasferimento remoto.
 
 ## Ripresa e prove
 

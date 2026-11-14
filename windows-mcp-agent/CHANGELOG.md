@@ -1,3 +1,12 @@
+## 0.8.3 — verifica operativa remota, 2026-11-14
+
+- Aggiornamento LAN 0.8.2→0.8.3 riuscito attraverso gateway e unico updater;
+  candidato gia validato, nessuna modifica runtime o nuova versione.
+- Catalogo operativo/istruzioni corretti rispetto alla vecchia descrizione
+  client che negava gli aggiornamenti inoltrati. Cache client non aggiornata.
+- Ricevuta, hash, identita, manutenzione e pulizia verificati; verbale
+  docs/mcp-agent/REMOTE-UPDATE-0.8.3-20261114.md.
+
 ## 0.8.3 — 2026-11-14
 
 - Il nuovo PC richiede il codice ricevuto in chat, senza mostrarlo nella finestra.

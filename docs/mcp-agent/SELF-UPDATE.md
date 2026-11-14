@@ -1,3 +1,13 @@
+## Aggiornamenti remoti e catalogo client
+
+`device_call` inoltra anche `update_prepare`, `update_execute`, `update_status`
+e `log_read` ai dispositivi gia associati. La descrizione storica del client che
+nega i batch di aggiornamento e obsoleta; il catalogo server e gia corretto.
+Prima di dichiarare una capacita assente confrontare `tools/list`, sorgente e
+ricevute. Non chiedere copia manuale o nuovo pairing quando il canale esiste.
+Usare l'unico updater canonico e verificare risultato, non il solo dispatch.
+[Catalogo operativo e formato delle chiamate](MCP-CATALOG-0.8.3.md).
+
 # Aggiornamento agente — procedura unica con batch separato
 
 Richiesta esplicita dell'utente: stessa procedura sui due computer, avviata dall'agente stesso, sempre mediante batch in processo separato. Non creare attivita Windows d'aggiornamento, broker o percorsi alternativi per singolo computer.

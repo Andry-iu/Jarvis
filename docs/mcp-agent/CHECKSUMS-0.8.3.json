@@ -20,6 +20,16 @@
       "sha256": "b5ccb6e38841f51135ab2f123d493d139fb3a0dfbac7cc68616630957b881441",
       "bytes": 13460992,
       "backup": "self-update-53abf7c7a5cc414fa1008c1624d81e10"
+    },
+    "LAN_target_via_Desktop1": {
+      "version": "0.8.3",
+      "previous_version": "0.8.2",
+      "sha256": "76e05315055ba3b2c2cc61ae97e17de9082c19c85fe6ec6592743a06ba858b29",
+      "bytes": 13424128,
+      "runtime_source_commit": "50edce2c868664fb9ad2c040746284642a0e555c",
+      "verified_at_utc": "2026-11-14T17:20:23Z",
+      "verification": "canonical receipt, live identity/version/hash, maintenance and cleanup",
+      "details": "REMOTE-UPDATE-0.8.3-20261114.md"
     }
   }
 }

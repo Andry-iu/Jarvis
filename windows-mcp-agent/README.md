@@ -1,3 +1,11 @@
+# Aggiornamento di PC gia associati
+
+L'inoltro `device_call` supporta anche aggiornamenti e ricevute. Nessuna copia
+manuale o nuovo abbinamento per un agente gia collegato; stesso updater canonico.
+[Catalogo operativo](../docs/mcp-agent/MCP-CATALOG-0.8.3.md) e
+[verifica del trasferimento remoto](../docs/mcp-agent/REMOTE-UPDATE-0.8.3-20261114.md).
+La descrizione client storica che nega l'inoltro degli aggiornamenti e obsoleta.
+
 # Abbinamento con codice da inserire — 0.8.3
 
 Il gateway fornisce il codice alla chat. Il nuovo PC mostra una casella vuota,

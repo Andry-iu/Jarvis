@@ -1,3 +1,13 @@
+# Aggiornamenti remoti: regola operativa 14 novembre 2026
+
+Leggere ../docs/mcp-agent/MCP-CATALOG-0.8.3.md. `device_call` inoltra anche
+update_prepare/update_execute/update_status/log_read. Il testo storico del client
+che lo nega non descrive il runtime live. Verificare tools/list e sorgente prima
+di dichiarare limiti. Su PC gia associato trasferire automaticamente il candidato
+verificato e invocare lo stesso updater canonico, senza passaggi manuali o nuovo
+pairing. Separare preflight, dispatch, completamento e verifica con ricevuta/hash.
+Registrare esito e causa di precedenti indicazioni errate in Git e negli appunti.
+
 ## Regole utente — 14 novembre 2026: layout, elevazione e pulizia
 
 - Percorso unico per tutte le installazioni: <Jarvis>\Agent\jarvis-mcp.exe.

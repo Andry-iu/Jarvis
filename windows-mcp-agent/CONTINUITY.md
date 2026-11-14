@@ -1,3 +1,18 @@
+# Stato corrente — aggiornamento LAN automatico verificato, 14 novembre 2026
+
+Desktop1, Desktop2 e il PC LAN gia associato rispondono 0.8.3 con identita
+conservate e privilegi elevati. Aggiornamento del target 0.8.2→0.8.3 attraverso
+Desktop1 completato con trasferimento automatico, unico updater, backup,
+rehearsal rollback, ricevuta/hash/versione e pulizia verificati. Nessun passaggio
+manuale o nuovo pairing. [Verbale](../docs/mcp-agent/REMOTE-UPDATE-0.8.3-20261114.md).
+Il catalogo server di entrambi i desktop e corretto; il testo del client che
+nega l'inoltro update e obsoleto, refresh della cache non certificato.
+[Catalogo operativo](../docs/mcp-agent/MCP-CATALOG-0.8.3.md). Non ripetere il deploy: l'esito e provato.
+Desktop1 osservato sotto Agent; le descrizioni storiche della root non indicano
+piu il percorso attivo. Nessun reboot fisico o nuovo consenso umano certificato.
+
+## Stato documentato prima di questo intervento
+
 # Stato corrente 0.8.3 — 14 novembre 2026
 
 Inserimento obbligatorio del codice ricevuto in chat e conto alla rovescia 1:50
