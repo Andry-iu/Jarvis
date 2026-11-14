@@ -17,6 +17,9 @@ $statusDir=Join-Path $root ('State\source-updates\'+$RequestId);$statusFile=Join
 $work=Join-Path $root ('Temp\source-update-'+$RequestId);$release=Join-Path $root ('Releases\'+$TargetVersion+'-'+$RequestId)
 $log=Join-Path $root ('Logs\diagnostics\source-update-'+$RequestId+'.log');$buildLog=Join-Path $root ('Logs\diagnostics\source-build-'+$RequestId+'.log')
 $lock=$null;$phase='starting';$backup='';$installedHash='';$failure='';$cleanup=$false;$ownsWork=$false;$admitted=$false
+$originalEnvironment=@{}
+foreach($key in @('TEMP','TMP','PATH','GIT_TERMINAL_PROMPT','GCM_INTERACTIVE','GIT_CONFIG_NOSYSTEM','GIT_CONFIG_GLOBAL','JARVIS_TEST_PAIRING_UI')){$originalEnvironment[$key]=[Environment]::GetEnvironmentVariable($key,'Process')}
+function Restore-BuildEnvironment{foreach($key in $originalEnvironment.Keys){[Environment]::SetEnvironmentVariable($key,$originalEnvironment[$key],'Process')}}
 $record=@{request_id=$RequestId;machine_id=$ExpectedMachine;source_commit=$SourceCommit;target_version=$TargetVersion;phase=$phase;updated_at='';installed_sha256='';backup='';error='';cleanup_verified=$false}
 function Hash([string]$p){(Get-FileHash -LiteralPath $p -Algorithm SHA256).Hash.ToLowerInvariant()}
 function Report([string]$text){$text|Add-Content -LiteralPath $log -Encoding UTF8}
@@ -151,6 +154,9 @@ try{
  Copy-Item -LiteralPath (Join-Path $agent 'scripts\update-agent.ps1') -Destination $updater
  if((Hash $updater) -cne (Hash (Join-Path $agent 'scripts\update-agent.ps1'))){throw 'updater_copy_changed'}
  if($PrepareOnly){Save-Status 'prepared';return}
+ # The restarted agent must inherit its original environment, not a work folder
+ # that the runner is about to delete or the build-only Git/SDK configuration.
+ Restore-BuildEnvironment
  Save-Status 'promoting'
  & "$PSHOME\powershell.exe" -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $updater -HomeDir $root -Candidate $candidate -ExpectedHash $candidateHash -ExpectedMachine $ExpectedMachine -ExpectedPreviousVersion $ExpectedPreviousVersion -ExpectedPreviousHash $ExpectedPreviousHash -TargetVersion $TargetVersion -SourceCommit $SourceCommit
  $updaterExit=$LASTEXITCODE
@@ -163,6 +169,7 @@ try{
  $installedHash=$candidateHash;Save-Status 'verifying_cleanup'
 }catch{$failure=$_.Exception.Message;Report ('ERROR '+$failure);$phase='failed'}
 finally{
+ Restore-BuildEnvironment
  if($lock){
   if($admitted){
    try{

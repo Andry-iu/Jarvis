@@ -29,6 +29,7 @@ try{
  $harness=Join-Path $fixture 'offline-harness.ps1'
  $literal={param($s) "'"+$s.Replace("'","''")+"'"}
  $command='function Invoke-WebRequest { throw "fixture_git_unreachable" }'+"`r`n"+'& '+(& $literal $runner)+' -HomeDir '+(& $literal $fixture)+' -SourceCommit '+('a'*40)+' -TargetVersion '+$info.version+' -RequestId '+$id+' -ExpectedMachine '+$info.machine_id+' -ExpectedPreviousVersion '+$info.version+' -ExpectedPreviousHash '+$sha
+ $command+="`r`nexit `$LASTEXITCODE"
  [IO.File]::WriteAllText($harness,$command)
  & "$PSHOME\powershell.exe" -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $harness
  if($LASTEXITCODE -eq 0){throw 'offline_probe_unexpected_success'}

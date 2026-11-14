@@ -92,6 +92,31 @@ func TestSourceUpdateRefusesInvalidOrBusy(t *testing.T) {
 		t.Fatal("non elevated update")
 	}
 }
+
+func TestSourceUpdateDoesNotReplayCompatibilityBootstrap(t *testing.T) {
+	a, r, n := sourceUpdateFixture(t)
+	p := sourceUpdateRequest(r)
+	path, _ := sourceUpdatePath(r.home, p.RequestID)
+	if e := os.MkdirAll(filepath.Dir(path), 0700); e != nil {
+		t.Fatal(e)
+	}
+	v := &sourceUpdateRecord{RequestID: p.RequestID, MachineID: r.MachineID, SourceCommit: p.SourceCommit, TargetVersion: p.TargetVersion, Phase: "completed", CleanupVerified: true}
+	if e := atomicJSON(path, v); e != nil {
+		t.Fatal(e)
+	}
+	before, _ := os.ReadFile(path)
+	if toolFailed(invokeSource(a, p)) || *n != 0 {
+		t.Fatal("compatibility bootstrap replayed")
+	}
+	after, _ := os.ReadFile(path)
+	if string(before) != string(after) {
+		t.Fatal("bootstrap receipt overwritten")
+	}
+	p.SourceCommit = strings.Repeat("b", 40)
+	if !toolFailed(invokeSource(a, p)) {
+		t.Fatal("bootstrap ID rebound")
+	}
+}
 func TestSourceUpdateBatchDoesNotInterpolateShell(t *testing.T) {
 	p := runtimeRequest{RequestID: newID(), MachineID: newID(), SourceCommit: strings.Repeat("a", 40), TargetVersion: version}
 	home := `C:\Test & percent%\O'Brian`

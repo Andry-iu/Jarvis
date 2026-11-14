@@ -64,7 +64,7 @@ func terminalSourceUpdate(v *sourceUpdateRecord) bool {
 }
 func psLiteral(s string) string { return "'" + strings.ReplaceAll(s, "'", "''") + "'" }
 func sourceUpdateBatch(id, script, home string, p runtimeRequest, previousHash string) string {
-	command := "& " + psLiteral(script) + " -HomeDir " + psLiteral(home) + " -SourceCommit " + psLiteral(p.SourceCommit) + " -TargetVersion " + psLiteral(p.TargetVersion) + " -RequestId " + psLiteral(p.RequestID) + " -ExpectedMachine " + psLiteral(p.MachineID) + " -ExpectedPreviousVersion " + psLiteral(version) + " -ExpectedPreviousHash " + psLiteral(previousHash)
+	command := "& " + psLiteral(script) + " -HomeDir " + psLiteral(home) + " -SourceCommit " + psLiteral(p.SourceCommit) + " -TargetVersion " + psLiteral(p.TargetVersion) + " -RequestId " + psLiteral(p.RequestID) + " -ExpectedMachine " + psLiteral(p.MachineID) + " -ExpectedPreviousVersion " + psLiteral(version) + " -ExpectedPreviousHash " + psLiteral(previousHash) + "; exit $LASTEXITCODE"
 	units := utf16.Encode([]rune(command))
 	b := make([]byte, len(units)*2)
 	for i, v := range units {
@@ -84,6 +84,16 @@ func (a *Agent) startSourceUpdate(r *Runtime, p runtimeRequest) (any, error) {
 	// Repeated requests go through the immutable request receipt, never relaunch.
 	if _, e := os.Stat(filepath.Join(r.dir, "requests", p.RequestID+".json")); e == nil {
 		return r.mutation(p, func(_ *Receipt) (any, error) { return nil, errors.New("unreachable replay") })
+	}
+	// An older agent's compatibility bootstrap has this same durable record,
+	// but no runtime request receipt. Never overwrite it or launch it again.
+	if old, e := readSourceUpdate(r.home, p.RequestID); e == nil {
+		if old.MachineID != r.MachineID || old.SourceCommit != p.SourceCommit || old.TargetVersion != p.TargetVersion {
+			return nil, errors.New("update request_id already bound to different arguments")
+		}
+		return map[string]any{"state": "already_recorded", "request_id": p.RequestID, "message": "Read agent_update_status; this request will not be relaunched."}, nil
+	} else if !os.IsNotExist(e) {
+		return nil, e
 	}
 	priv := currentAgentPrivileges()
 	if a.testPrivileges != nil {
