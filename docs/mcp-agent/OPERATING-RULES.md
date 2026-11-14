@@ -1,3 +1,21 @@
+## Regole utente — 14 novembre 2026: layout, elevazione e pulizia
+
+- Percorso unico per tutte le installazioni: <Jarvis>\Agent\jarvis-mcp.exe.
+  Indicazione iniziale root corretta dall'utente prima delle modifiche: non applicarla.
+  Allineare Desktop1 e verificare anche Desktop2; migrazione ora esplicitamente autorizzata.
+- Agente sempre amministratore al termine degli interventi. Avvio automatico dopo
+  riavvio, all'accesso dell'utente, con attivita pianificata Interactive/Highest,
+  come SoftPlcTest1. Verificare percorso e token elevato effettivi dopo il riavvio
+  dell'agente; registrare il test di task separatamente da un reboot fisico.
+- Dopo ogni prova/elaborazione, anche fallita o interrotta, arrestare i processi
+  di test e rimuovere/verificare cartelle temporanee e regole firewall provvisorie
+  proprie. Non lasciare residui nei percorsi operativi o in Projects; tutelare
+  altre elaborazioni, stato, progetti, appunti, backup e ricevute definitive.
+- Aggiornare anche D:\Jarvis\Projects\appunti.txt su entrambi i desktop,
+  oltre a documentazione/continuita Git. Non dichiarare pulito o riavviato senza
+  verifica. Non disabilitare globalmente firewall/notifiche o cambiare il profilo
+  di rete per eliminare i prompt dei test.
+
 # Regole operative consolidate — 1 novembre 2026
 
 ## Autorizzazione permanente — 5 novembre 2026
