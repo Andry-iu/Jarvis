@@ -28,3 +28,15 @@ Leggere il corrente State/cleanup-receipts e gli appunti per l'esito di ciascuna
 esecuzione. Non ripetere request_id completati o incerti. La procedura non cambia
 l'agente, l'avvio, configurazioni o stato dei progetti e non aggiunge un hook
 automatico all'updater 0.8.4; il passo dopo un aggiornamento e del coordinatore.
+
+## Chiusura operativa della 1.0.1
+
+Installazione dello stesso script sui tre destinatari ed esecuzione successiva
+completate senza errori. Seconda passata: 211, 16 e 5 elementi rimossi,
+rispettivamente 612749, 111534 e 12000 byte. Totale delle due passate: 877
+operazioni di rimozione e 16983851 byte, oltre ai 32 backup gia rimossi.
+Ogni esecuzione ha verificato l'hash invariato dell'agente e del backup mantenuto.
+Un solo backup per PC verificato nella prima chiusura; nessuna modifica a
+Projects, configurazioni, avvio o runtime. Gli elementi conservati includono
+file in uso, scritture recenti e batch con ricevuta non terminale: non dichiarare
+che tutte le cartelle script o log siano vuote.
