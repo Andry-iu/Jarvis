@@ -1,3 +1,12 @@
+# Stato corrente — abbinamento0.8.1
+
+Protocollo con confronto codice e conferma locale implementato; nessuna copia file.
+Installer2.1.0: INSTALLA.cmd oppure AGGIORNA.cmd per agenti0.8.0.
+Prove e distribuzione: [VALIDATION](VALIDATION-0.8.1-20261114.md).
+Uso: [PAIRING](PAIRING-0.8.1.md).
+
+## Storico precedente
+
 # 0.8.0 — installata e verificata su Desktop1 e Desktop2
 
 14 novembre 2026. Runtime definitivo 07760a3eb212bb63f9919e2702a46f1f0d290338,

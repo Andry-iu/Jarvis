@@ -15,6 +15,7 @@ import (
 )
 
 type runtimeRequest struct {
+	PairingID        string   `json:"pairing_id,omitempty"`
 	Port             int      `json:"port,omitempty"`
 	UsageCategory    string   `json:"usage_category,omitempty"`
 	WindowID         string   `json:"window_id,omitempty"`
@@ -78,6 +79,9 @@ type runtimeTool struct {
 }
 
 var runtimeCatalog = []runtimeTool{
+	{"device_pair_begin", "Request first pairing with an untrusted LAN agent. Returns a comparison code; the user must match it in the native target dialog and approve locally. No credentials in chat. Keep request_id for status.", []string{"device", "label", "request_id"}, []string{"device", "request_id"}, false},
+	{"device_pair_status", "Read first-pairing state and comparison code for request_id. Never approves or returns credentials. Acknowledgement is not pairing completion.", []string{"request_id"}, []string{"request_id"}, true},
+	{"device_pair_complete", "After local approval, import encrypted credentials privately and verify target identity. Requires current device_list SHA and a new request_id; pairing_id is the original begin request_id.", []string{"pairing_id", "expected_sha256", "request_id"}, []string{"pairing_id", "expected_sha256", "request_id"}, false},
 	{"network_setup", "Provision the same authenticated LAN capabilities on an existing agent without changing its external connection or role. Default auto private-interface listeners; existing credentials/config preserved.", []string{"port", "request_id"}, []string{"request_id"}, false},
 	{"device_discover", "Find agent identities on attached private IPv4 networks or one explicit CIDR, bounded to /24 or narrower. Sends no credentials; unknown agents are never automatically trusted. No role switch required.", []string{"query", "port"}, nil, true},
 	{"device_pair", "Import a private enrollment JSON from Config/enrollments/<path>. Verify certificate/target before saving credentials and configuration. Never return secrets.", []string{"path", "device_id", "label", "expected_sha256", "request_id"}, []string{"path", "device_id", "expected_sha256", "request_id"}, false},
@@ -363,6 +367,8 @@ func (a *Agent) invokeRuntime(name string, raw json.RawMessage) any {
 }
 func (r *Runtime) call(p runtimeRequest) (any, error) {
 	switch p.Operation {
+	case "device_pair_begin", "device_pair_status", "device_pair_complete":
+		return r.interactivePair(p)
 	case "codex_token_usage":
 		return r.tokenUsageReport(p)
 	case "maintenance_status":

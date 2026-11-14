@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
@@ -53,14 +54,22 @@ func privateListen(address string) error {
 }
 func gatewayError(message string) any { return toolResult(map[string]any{"error": message}, true) }
 func gatewayHandler(a *Agent, token string) http.Handler {
+	return gatewayHandlerWithConfirmation(a, token, confirmPeerPair)
+}
+func gatewayHandlerWithConfirmation(a *Agent, token string, confirm func(context.Context, pairPrompt) (bool, error)) http.Handler {
+	pairing := &pairingServer{agent: a, token: token, confirm: confirm}
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		w.Header().Set("Cache-Control", "no-store")
-		if req.URL.Path != "/gateway" && req.URL.Path != "/gateway/identity" {
+		if req.URL.Path != "/gateway" && req.URL.Path != "/gateway/identity" && req.URL.Path != "/gateway/pair" {
 			http.NotFound(w, req)
 			return
 		}
 		if req.TLS == nil || req.Header.Get("Origin") != "" {
 			http.Error(w, "TLS/non-browser request required", 403)
+			return
+		}
+		if req.URL.Path == "/gateway/pair" {
+			pairing.serveHTTP(w, req)
 			return
 		}
 		if req.URL.Path == "/gateway/identity" {

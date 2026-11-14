@@ -1,3 +1,10 @@
+# Abbinamento0.8.1
+
+Leggere docs/mcp-agent/PAIRING-0.8.1.md. Usare begin, confronto codice e conferma
+locale, status e complete CAS; nessun file da trasferire. Non automatizzare la
+conferma via UI remota. PC0.8.0 non associato: AGGIORNA.cmd del pacchetto2.1.0.
+Stato reale in VALIDATION-0.8.1-20261114.md; niente promesse di collaudo fisico.
+
 # Gateway universali — 14 novembre 2026
 
 Per la 0.8.0 leggere docs/mcp-agent/GATEWAY-0.8.0.md,

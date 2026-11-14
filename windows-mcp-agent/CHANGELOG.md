@@ -1,3 +1,10 @@
+## 0.8.1 — 2026-11-14
+
+- Primo abbinamento da chat con codice e conferma locale, scambio privato automatico.
+- TLS pin, prova RSA-PSS e credenziale RSA-OAEP; nessuna approvazione remota.
+- Installer2.1.0 e AGGIORNA.cmd per agenti0.8.0, stesso updater/backup/rollback.
+- Procedura: docs/mcp-agent/PAIRING-0.8.1.md.
+
 ## 0.8.0 — 2026-11-14
 
 - Agente universale: TLS LAN separato, tutti gli strumenti pubblici e aggiornamenti su piu gateway, con identita e limiti/cicli verificati.
