@@ -5,6 +5,7 @@ ripetere. Gli appunti privati mantengono inventario e ricevute per ogni computer
 
 | Problema osservato | Metodo riuscito e vincolo corrente |
 |---|---|
+| Vecchi pacchetti con data di modifica futura vengono protetti come recenti | Non cambiare timestamp o dedurre uso dal solo LastWriteTime. Dopo inventario esatto, creazione precedente e assenza di riferimenti/lavori, usare Scope=Releases e KeepRecentMinutes=0; disattiva solo la recenza, con tutte le altre guardie conservate. Caso verificato nella pulizia1.1.1; test dedicato su timestamp futuro. |
 | Desktop2: arresto interno del compilatore Go1.27.3, codice 0xc0000005; errori package not in std non provavano file assenti | Go1.27.0 ufficiale con hash verificato, cache isolata, GOMAXPROCS=1, GOGC=25, -p1; test, vet e build Windows superati. SDK di sistema preservato. Causa interna del compilatore non isolata. |
 | Updater Desktop2 terminato con il genitore da taskkill /T | Batch CMD separato e stop del solo PID agente verificato; stesso updater canonico su tutti i PC, mai task di aggiornamento. |
 | Riavvio su installazione con supervisore | Start.ps1 esistente, proprietario/percorso del manifest verificati, attesa rilascio runner.lock prima del nuovo avvio; conservare identita, configurazione e token elevato. |

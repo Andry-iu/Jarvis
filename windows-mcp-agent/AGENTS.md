@@ -3,7 +3,9 @@
 Alla richiesta di pulizia riusare ProcedurePermanenti/Invoke-JarvisCleanup.ps1
 sul destinatario. [Uso, ambito e protezioni](../docs/mcp-agent/CLEANUP.md).
 Conservare un solo backup verificato per PC; Projects e area Jarvis separate.
-Dopo ogni aggiornamento verificato il coordinatore esegue Scope=Backups.
+Releases non conserva vecchi eseguibili o obbligatoriamente l'ultima copia;
+rimuoverla quando vuota, preservando solo materiale ancora in uso.
+Dopo ogni aggiornamento verificato il coordinatore esegue Scope=Backups,Releases.
 Nessun hook autonomo aggiunto all'updater 0.8.4; non confondere regola ed esecuzione.
 Le ricevute restano in State/cleanup-receipts; niente replay degli ID esistenti.
 

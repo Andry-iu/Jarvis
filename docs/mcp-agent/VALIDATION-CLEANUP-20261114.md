@@ -1,3 +1,38 @@
+# Stato corrente — pulizia 1.1.1, 14 novembre 2026
+
+La pulizia permanente include Releases per default e dopo gli aggiornamenti
+verificati il coordinatore esegue Scope=Backups,Releases. Releases non conserva
+un archivio storico o obbligatoriamente l'ultima copia: agente attivo in Agent,
+ripristino nell'ultimo backup verificato. Radice Releases rimossa se vuota.
+Nessun hook autonomo aggiunto al runtime 0.8.4.
+
+Script SHA-256: becc173694134ed8dc1a17c79bcefa6f8d9af7840fdd94e53cafeecb7e35afe0.
+Parser e fixture Windows PASS: 18 controlli, inclusi aggiornamento sorgente
+preparato, lavoro runtime attivo, anteprima, release recente/bloccata, worktree
+Git, rimozione e radice vuota, agente/backup e regressioni batch/anti-replay.
+Fixture e staging del trasferimento rimossi nel finally.
+
+| Postazione | Cartelle release rimosse | Byte rimossi |
+|---|---:|---:|
+| Desktop1 | 10 | 193767848 |
+| Desktop2 | 3 | 61532837 |
+| SoftPlcTest1 | 5 | 53758559 |
+| Totale | 18 | 309059244 |
+
+Prima dell'esecuzione: inventario e riferimenti processi/task/servizi verificati,
+nessun riferimento trovato nei 18 bersagli. Esecuzioni completed senza errori;
+Releases assente e stesso script verificato sulle tre postazioni. Agente e backup
+mantenuto con hash invariati. Inventari/ricevute grezzi restano privati.
+
+Tre vecchi pacchetti sul target avevano LastWriteTimeUtc futuro nonostante la
+creazione precedente e nessun uso corrente. Il default5min li ha correttamente
+preservati. Dopo verifica esatta dei tre nomi e inattivita, una seconda passata
+Scope=Releases, KeepRecentMinutes=0 ha disattivato soltanto la recenza: controlli
+su aggiornamenti, lavori, riferimenti, lock, link e sorgenti conservati. Nessun
+timestamp modificato. Il test copre l'override0 anche per un timestamp futuro.
+
+## Storico validazione 1.0.1
+
 # Pulizia permanente — 14 novembre 2026
 
 Procedura PowerShell autonoma 1.0.1, runtime agente invariato 0.8.4.

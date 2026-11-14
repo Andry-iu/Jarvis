@@ -2,7 +2,7 @@ param(
  [Parameter(Mandatory=$true)][string]$HomeDir,
  [Parameter(Mandatory=$true)][string]$ExpectedMachine,
  [Parameter(Mandatory=$true)][ValidatePattern('^[a-f0-9]{32}$')][string]$RequestId,
- [ValidateSet('Backups','Logs','Temp','Scripts')][string[]]$Scope=@('Backups','Logs','Temp','Scripts'),
+ [ValidateSet('Backups','Logs','Temp','Scripts','Releases')][string[]]$Scope=@('Backups','Logs','Temp','Scripts','Releases'),
  [ValidateRange(0,1440)][int]$KeepRecentMinutes=5,
  [switch]$Execute
 )
@@ -50,15 +50,15 @@ function Candidate([string]$path,[string]$kind){
  try {
   $full=[IO.Path]::GetFullPath($path)
   $relative=$full.Substring($root.Length).TrimStart('\')
-  if(!$full.StartsWith($root+'\',[StringComparison]::OrdinalIgnoreCase) -or $relative -notmatch '^(Backups|Logs|Temp|Scratch|Staging|Scripts\\(updates|Temporary))\\'){throw 'outside_cleanup_scope'}
+  if(!$full.StartsWith($root+'\',[StringComparison]::OrdinalIgnoreCase) -or $relative -notmatch '^(Backups|Logs|Temp|Scratch|Staging|Releases|Scripts\\(updates|Temporary))\\'){throw 'outside_cleanup_scope'}
   NoLinks $full
   if(Referenced $full){Preserve $full 'process_task_or_service_reference';return}
   $item=Get-Item -LiteralPath $full -Force
   $files=if($item.PSIsContainer){@(Get-ChildItem -LiteralPath $full -File -Recurse -Force)}else{@($item)}
-  if($kind -eq 'temporary' -and @(Get-ChildItem -LiteralPath $full -Directory -Recurse -Force -ErrorAction SilentlyContinue|Where-Object Name -eq '.git').Count){Preserve $full 'source_tree_requires_review';return}
+  if($kind -in @('temporary','release') -and $item.PSIsContainer -and @(Get-ChildItem -LiteralPath $full -Recurse -Force -ErrorAction SilentlyContinue|Where-Object Name -eq '.git').Count){Preserve $full 'source_tree_requires_review';return}
   $bytes=0L
   foreach($f in $files){
-   if($kind -ne 'backup' -and $f.LastWriteTimeUtc -gt $script:cutoff){Preserve $full 'recent_work';return}
+   if($kind -ne 'backup' -and $KeepRecentMinutes -gt 0 -and $f.LastWriteTimeUtc -gt $script:cutoff){Preserve $full 'recent_work';return}
    $handle=[IO.File]::Open($f.FullName,[IO.FileMode]::Open,[IO.FileAccess]::Read,[IO.FileShare]::None);$handle.Dispose()
    $bytes+=$f.Length
   }
@@ -78,7 +78,7 @@ try {
  if(Test-Path -LiteralPath $active){
   $a=Get-Content -LiteralPath $active -Raw|ConvertFrom-Json
   $s=Get-Content -LiteralPath (Join-Path $root ('State\source-updates\'+$a.request_id+'\status.json')) -Raw|ConvertFrom-Json
-  if($s.phase -notin @('completed','failed','prepared') -or !$s.cleanup_verified){throw 'source_update_active_or_uncertain'}
+  if($s.phase -notin @('completed','failed') -or !$s.cleanup_verified){throw 'source_update_active_or_uncertain'}
  }
  # Runtime jobs are metadata only; an active job keeps its log/temp area intact.
  $busy=$false
@@ -128,6 +128,9 @@ try {
   }
   foreach($f in @(Children (Join-Path $root 'Scripts\Temporary'))){if($busy){Preserve $f.FullName 'runtime_work_active'}else{Candidate $f.FullName 'temporary_script'}}
  }
+ if($Scope -contains 'Releases'){
+  foreach($d in @(Children (Join-Path $root 'Releases'))){if($busy){Preserve $d.FullName 'runtime_work_active'}else{Candidate $d.FullName 'release'}}
+ }
  SaveReport
  if($Execute){
   foreach($entry in $report.candidates){
@@ -140,6 +143,12 @@ try {
     if(Test-Path -LiteralPath $entry.path){throw 'removal_not_verified'}
     $report.removed+=$entry;$report.bytes_removed+=$entry.bytes;SaveReport
    }catch{$report.errors+=@{path=$entry.path;reason=$_.Exception.Message}}
+  }
+ }
+ if($Execute -and $Scope -contains 'Releases' -and !$busy){
+  $releaseRoot=Join-Path $root 'Releases'
+  if((Test-Path -LiteralPath $releaseRoot) -and @(Children $releaseRoot).Count -eq 0 -and !(Referenced $releaseRoot)){
+   try{NoLinks $releaseRoot;Remove-Item -LiteralPath $releaseRoot -Force;if(Test-Path -LiteralPath $releaseRoot){throw 'removal_not_verified'};$report.removed+=@{path=$releaseRoot;kind='empty_release_root';bytes=0L}}catch{$report.errors+=@{path=$releaseRoot;reason=$_.Exception.Message}}
   }
  }
  if((Hash $agent) -ne $initialHash -or (Hash (Join-Path $keeper.dir.FullName 'jarvis-mcp-previous.exe')) -ne $keepHash){throw 'agent_or_retained_backup_changed'}
