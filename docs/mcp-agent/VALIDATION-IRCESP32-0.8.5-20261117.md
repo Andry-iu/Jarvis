@@ -35,3 +35,11 @@ Nessun test Windows nativo o nuova installazione/upgrade/rollback 0.8.5; nessun 
 Per una release operativa restano i controlli Windows/banco e la procedura canonica di distribuzione, con backup/rollback e verifica per ogni PC. La pubblicazione Git del candidato non costituisce un rilascio installato. Non consegnare un pacchetto come collaudato dalla sola cross-compilazione.
 
 Firmware/protocollo esatto verificato: [`25ffa8a94dd45117dd50d4c65d2b32a077935815`](https://github.com/Andry-iu/Autech-IRCESP32/commit/25ffa8a94dd45117dd50d4c65d2b32a077935815). Include DHCP senza annuncio gateway/DNS; collaudo Windows delle route ancora aperto.
+
+## Aggiornamento successivo: diagramma fornito dall'utente
+
+Profilo firmware aggiornato al commit [`54c00028e15076479813e5fdee6761b83cbc7593`](https://github.com/Andry-iu/Autech-IRCESP32/commit/54c00028e15076479813e5fdee6761b83cbc7593). I 14 GPIO camera sono trascritti dall'immagine del pinout della scheda dual USB-C fornita dall'utente. GPIO38 è SD_CMD; PWDN/RESET della camera non mostrati vengono lasciati a -1 senza pilotare GPIO. Il flag di verifica indica riscontro documentale, non collaudo elettrico. Il disegno raffigura OV2640; il progetto resta configurato per OV3660, con rifiuto di un PID diverso.
+
+Build firmware pulita Arduino CLI1.6.0/core3.3.3 con flash16MB/PSRAM OPI: PASS, 1.070.055byte programma e79.616byte globali. Test configurazioni host PASS (profilo standard, override pin non implicitamente verificato, disabilitazione esplicita). Nessuna scheda programmata o prova fisica. Nuova lettura Desktop2 ancora con errore MCP interno; nessun test Windows nativo o aggiornamento operativo dichiarato.
+
+Questa è una modifica del profilo firmware e della documentazione: sorgente/candidato binario Jarvis 0.8.5 e checksum precedenti restano invariati. Nessuna nuova release agente o distribuzione implicita. Il precedente riferimento firmware resta storico.

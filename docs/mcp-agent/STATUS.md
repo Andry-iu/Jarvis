@@ -4,7 +4,8 @@ Implementati adattatore MCP per AP Wi-Fi ESP32, foto JPEG con provenienza e
 verifica integrità/freschezza, input HID senza replay, configurazione locale
 facoltativa e sorgenti installer con esempio senza segreti. Il ponte mantiene
 Internet via Ethernet o secondo adattatore Wi-Fi. Firmware nel repository
-Andry-iu/Autech-IRCESP32; camera bloccata fino a pinout esatto verificato.
+Andry-iu/Autech-IRCESP32; GPIO camera ora trascritti dal diagramma utente,
+con profilo N16R8. PWDN/RESET non mostrati non vengono pilotati; collaudo aperto.
 [Protocollo e ripresa](IRCESP32-0.8.5.md),
 [prove e limiti](VALIDATION-IRCESP32-0.8.5-20261117.md).
 Nessun agente installato/aggiornato, nessuna scheda programmata o prova fisica.

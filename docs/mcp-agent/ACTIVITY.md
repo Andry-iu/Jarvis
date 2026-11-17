@@ -160,3 +160,7 @@ Preparati adattatore e sorgenti installer 0.8.5 su branch dedicato, senza deploy
 Camera bloccata fino a pinout esatto verificato; firmware nell'altro repository.
 Suite Linux/race/vet e cross-build Windows passate; test Windows nativi e banco
 aperti. Ripresa e limiti in IRCESP32-0.8.5.md e relativo verbale.
+
+## 17 novembre 2026 — diagramma camera fornito dall’utente
+
+Aggiornato il riferimento al firmware: 14 GPIO camera dal diagramma della scheda dual USB-C, profilo N16R8 compilato; PWDN/RESET non mostrati non pilotati. Disegno con OV2640 distinto dal sensore OV3660 richiesto e verificato dal PID a runtime. Test di configurazione PASS, nessun flash. Canale Desktop2 ancora con errore MCP interno, nessun aggiornamento remoto dichiarato. Candidato binario agente invariato.

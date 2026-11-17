@@ -53,7 +53,7 @@ La foto viene accettata soltanto se JPEG entro 1 MiB, dimensioni effettive corri
 
 ## Stato effettivo e ripresa
 
-- Driver/API e adattatore implementati; fotocamera disabilitata fino a pinout diymore esatto verificato e PSRAM configurata. Nessun pinout di una scheda simile usato come configurazione reale.
+- Driver/API e adattatore implementati; il successivo diagramma fornito dall’utente documenta i 14 GPIO camera della scheda dual USB-C. Profilo N16R8 selezionato nel firmware, PWDN/RESET non indicati lasciati a -1 senza pilotarli. Il disegno mostra OV2640, il progetto mantiene il controllo PID OV3660 richiesto: sensore ricevuto e funzionamento restano da collaudare.
 - Sorgenti dell'installer aggiornati alla stessa 0.8.5; esempio opzionale incluso nel payload. Updater canonico invariato, upgrade assistito ammette anche 0.8.4.
 - Suite Go Linux, race, vet, cross-compilazione Windows e compilazione dei test Windows verificate; dettagli nel verbale `VALIDATION-IRCESP32-0.8.5-20261117.md`.
 - Non eseguiti: test Windows nativi, nuova installazione/upgrade/rollback 0.8.5, trasferimento Wi-Fi reale, collaudo HID/camera, aggiornamento PC o refresh del catalogo client. Desktop2 machine_info restituisce errore interno in questa ripresa; nessuna deduzione su credenziali o consenso e nessuna modifica remota effettuata.
@@ -61,3 +61,11 @@ La foto viene accettata soltanto se JPEG entro 1 MiB, dimensioni effettive corri
 Prossimi passi: verificare schema/revisione PCB, memoria e VBUS; collaudare la scheda su banco controllato; riprendere i test Windows tramite la procedura già riuscita e installer isolato; solo dopo i controlli obbligatori usare agent_update/updater canonico, inventario corrente, backup/rollback e verifica di ogni PC. Aggiornare gli appunti privati sul destinatario quando il canale è disponibile. Non sostituire gli agenti operativi dalla sola cross-compilazione.
 
 Firmware/protocollo esatto verificato: [`25ffa8a94dd45117dd50d4c65d2b32a077935815`](https://github.com/Andry-iu/Autech-IRCESP32/commit/25ffa8a94dd45117dd50d4c65d2b32a077935815). Include DHCP senza annuncio gateway/DNS; collaudo Windows delle route ancora aperto.
+
+## Aggiornamento successivo: diagramma fornito dall'utente
+
+Profilo firmware aggiornato al commit [`54c00028e15076479813e5fdee6761b83cbc7593`](https://github.com/Andry-iu/Autech-IRCESP32/commit/54c00028e15076479813e5fdee6761b83cbc7593). I 14 GPIO camera sono trascritti dall'immagine del pinout della scheda dual USB-C fornita dall'utente. GPIO38 è SD_CMD; PWDN/RESET della camera non mostrati vengono lasciati a -1 senza pilotare GPIO. Il flag di verifica indica riscontro documentale, non collaudo elettrico. Il disegno raffigura OV2640; il progetto resta configurato per OV3660, con rifiuto di un PID diverso.
+
+Build firmware pulita Arduino CLI1.6.0/core3.3.3 con flash16MB/PSRAM OPI: PASS, 1.070.055byte programma e79.616byte globali. Test configurazioni host PASS (profilo standard, override pin non implicitamente verificato, disabilitazione esplicita). Nessuna scheda programmata o prova fisica. Nuova lettura Desktop2 ancora con errore MCP interno; nessun test Windows nativo o aggiornamento operativo dichiarato.
+
+Questa è una modifica del profilo firmware e della documentazione: sorgente/candidato binario Jarvis 0.8.5 e checksum precedenti restano invariati. Nessuna nuova release agente o distribuzione implicita. Il precedente riferimento firmware resta storico.
