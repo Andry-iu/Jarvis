@@ -1,0 +1,17 @@
+{
+  "source_commit": "784ffee47190ad56fc80f3409cabc3e2a0e5f3ef",
+  "target_version": "0.8.5",
+  "candidate_only": true,
+  "installed": false,
+  "platform": "windows/amd64",
+  "go_version": "1.27.0",
+  "profile": "cache-isolated/GOMAXPROCS=1/GOGC=25/-p1",
+  "go_test": "PASS",
+  "go_test_seconds": 29.61,
+  "go_vet": "PASS",
+  "go_build": "PASS",
+  "candidate_sha256": "3d46f692b4ee4a11e1575b2182519f6d3d529a407a8e0b34e56a19453eb71e2f",
+  "candidate_size_bytes": 13632000,
+  "cleanup_verified": true,
+  "verified_at_utc": "2026-11-17T21:26:35.6407307Z"
+}

@@ -43,3 +43,11 @@ Profilo firmware aggiornato al commit [`54c00028e15076479813e5fdee6761b83cbc7593
 Build firmware pulita Arduino CLI1.6.0/core3.3.3 con flash16MB/PSRAM OPI: PASS, 1.070.055byte programma e79.616byte globali. Test configurazioni host PASS (profilo standard, override pin non implicitamente verificato, disabilitazione esplicita). Nessuna scheda programmata o prova fisica. Nuova lettura Desktop2 ancora con errore MCP interno; nessun test Windows nativo o aggiornamento operativo dichiarato.
 
 Questa è una modifica del profilo firmware e della documentazione: sorgente/candidato binario Jarvis 0.8.5 e checksum precedenti restano invariati. Nessuna nuova release agente o distribuzione implicita. Il precedente riferimento firmware resta storico.
+
+## Ripresa Desktop2 — verifiche native completate
+
+Il 17 novembre 2026 alle21:20UTC il collegamento diretto è tornato utilizzabile: identità Desktop2 verificata, agente0.8.4 elevato e coda libera. Eseguita preparazione **PrepareOnly**, senza aggiornare il processo operativo, dal sorgente esatto784ffee47190ad56fc80f3409cabc3e2a0e5f3ef. Profilo già documentato Go1.27.0/cache isolata/GOMAXPROCS1/GOGC25/-p1: suite completa **PASS29.610s**, vet **PASS**, build Windows nativa **PASS**. Stato finale prepared e cleanup_verified=true alle21:26:35UTC. Dati curati in [NATIVE-IRCESP32-0.8.5.json](NATIVE-IRCESP32-0.8.5.json); ricevute e log grezzi restano privati.
+
+Un primo bootstrap generato nella chat si è fermato prima del runner per un overload Split non compatibile con Windows PowerShell. Dopo esito terminale, corretto il parser con IndexOf/Substring e usato un nuovo ID; nessun replay o modifica del processo agente. Il runner ha ripulito checkout/cache temporanei; candidato e SDK gestiti sono conservati.
+
+L’agente operativo resta0.8.4; nessun firmware programmato. Restano da eseguire test installer/upgrade/rollback0.8.5 isolati, collaudo hardware e distribuzione canonica sui PC conosciuti. Gli appunti privati Desktop2 vengono aggiornati con la ricevuta di questa ripresa. Le precedenti dichiarazioni di indisponibilità e di test Windows mancanti sono storiche.

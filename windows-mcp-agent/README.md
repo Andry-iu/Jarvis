@@ -9,7 +9,8 @@ con profilo N16R8. PWDN/RESET non mostrati non vengono pilotati; collaudo aperto
 [Protocollo e ripresa](../docs/mcp-agent/IRCESP32-0.8.5.md),
 [prove e limiti](../docs/mcp-agent/VALIDATION-IRCESP32-0.8.5-20261117.md).
 Nessun agente installato/aggiornato, nessuna scheda programmata o prova fisica.
-Test Windows nativi e rilascio operativo restano da completare; non confondere
+Test/vet/build Windows nativi ora PASS su Desktop2; installer/upgrade e
+rilascio operativo restano da completare; non confondere
 cross-compilazione con collaudo. Le sezioni seguenti sono storiche.
 
 # Procedures — percorso corrente, 14 novembre 2026

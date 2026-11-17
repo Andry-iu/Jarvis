@@ -164,3 +164,12 @@ aperti. Ripresa e limiti in IRCESP32-0.8.5.md e relativo verbale.
 ## 17 novembre 2026 — diagramma camera fornito dall’utente
 
 Aggiornato il riferimento al firmware: 14 GPIO camera dal diagramma della scheda dual USB-C, profilo N16R8 compilato; PWDN/RESET non mostrati non pilotati. Disegno con OV2640 distinto dal sensore OV3660 richiesto e verificato dal PID a runtime. Test di configurazione PASS, nessun flash. Canale Desktop2 ancora con errore MCP interno, nessun aggiornamento remoto dichiarato. Candidato binario agente invariato.
+
+## 17 novembre 2026 — Desktop2 raggiungibile, candidato nativo preparato
+
+Ripristinata lettura diretta identità, agente0.8.4 elevato/coda libera.
+Preparazione0.8.5 senza promozione: test nativi29.610s/vet/build PASS,
+Go1.27.0/profilo documentato, stato prepared e cleanup verificato.
+Appunti privati Desktop2 aggiornati con CAS e backup. Nessun flash o agente
+aggiornato; installer/upgrade isolati e collaudo fisico restano aperti.
+Verbale e NATIVE-IRCESP32-0.8.5.json contengono i dati curati del candidato.
