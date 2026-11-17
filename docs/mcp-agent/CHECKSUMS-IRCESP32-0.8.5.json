@@ -1,0 +1,156 @@
+{
+  "candidate_only": true,
+  "native_windows_tests": false,
+  "installed": false,
+  "source_commit": "991a5872ba4a243929df4a6c552cb55e302d3453",
+  "agent_sha256": "b94f6adaa3f0bef144842f3afa71eb46f2aeff88f021d5ce6e75f8282422c656",
+  "package_sha256": "993080e65c3382176fa3191e94530a197cd01b31f49ff14c1c2b6e1fc949976c",
+  "package_size_bytes": 7549834,
+  "files": [
+    {
+      "path": "AGGIORNA.cmd",
+      "sha256": "9557e1fb2c5a5ccc361c59df24fcb6579d2e3bcbf84c074ecd651496c6327c08",
+      "size_bytes": 477
+    },
+    {
+      "path": "Check.ps1",
+      "sha256": "c181fdea7830c9fe204f8953b261ccc045b3ddad21ffd17e3c15ea6968752a2c",
+      "size_bytes": 720
+    },
+    {
+      "path": "Cloudflare-Client.ps1",
+      "sha256": "e30d9dacf136a46ea642c7bf9f6beda40f3a3ee12dc1220848cc521e6fe05515",
+      "size_bytes": 2860
+    },
+    {
+      "path": "Cloudflare-Provision.cjs",
+      "sha256": "5274271872b55c33f68f43d46f1ad807dfb3ccf7fc25f215f33b8307cb58be84",
+      "size_bytes": 24131
+    },
+    {
+      "path": "Common.ps1",
+      "sha256": "188144d8679f2a2962b8d1737deeb6d3e98953f0d404a70815207830663369d2",
+      "size_bytes": 10053
+    },
+    {
+      "path": "Configure-Cloudflare-Auto.ps1",
+      "sha256": "7b13f904e02f12f1c4aff3e60b8e5da0bb3c038698dedfd837d48e3011ac9528",
+      "size_bytes": 2892
+    },
+    {
+      "path": "Configure-Cloudflare-Names.ps1",
+      "sha256": "8d1aff7fb1f8dce48c708eb8f1563378e903791dbfb5a19366110c3152cb7c0b",
+      "size_bytes": 2790
+    },
+    {
+      "path": "Configure-Cloudflare.ps1",
+      "sha256": "4dce5cb8a43edd9aad0570f9c3996d37ede7596a3a66fa4c50f18f35c683c710",
+      "size_bytes": 6056
+    },
+    {
+      "path": "Connect-Codex.ps1",
+      "sha256": "ad0a59114d369750485673127aa6c28efe3eb3f3f928f9229b553cdccc214c28",
+      "size_bytes": 3212
+    },
+    {
+      "path": "Disable-Startup.ps1",
+      "sha256": "22b30cf006b1cc5c81a21c9a17567b6967d988e7d27af72ff3182dfdaacabe33",
+      "size_bytes": 747
+    },
+    {
+      "path": "Enable-Codex.ps1",
+      "sha256": "4ee552cc1bb69e3a75bea9f31107af832c7ffd1d06420ebf0f91c5749d4a214f",
+      "size_bytes": 711
+    },
+    {
+      "path": "INSTALLA.cmd",
+      "sha256": "6e41474954713975fa1c0bfd0deb6958395bd92fdc330e9ca8ac52b1a1432045",
+      "size_bytes": 485
+    },
+    {
+      "path": "Install.ps1",
+      "sha256": "4ce4b68f7f96b528733ddbfdd2ad9015a33c28a4adfc02fad4124ae83bdb56b2",
+      "size_bytes": 8671
+    },
+    {
+      "path": "LEGGIMI.txt",
+      "sha256": "5e4188e4fcada47ec6c865674dfc921696d4735f9b91f4caf18a9b1e516dc19f",
+      "size_bytes": 3942
+    },
+    {
+      "path": "Pair-Agent.ps1",
+      "sha256": "73d535b0ca48eb5ec045ab95b85bedb7fea16bd47e5ddf6f6761075fdc3e6f2e",
+      "size_bytes": 1384
+    },
+    {
+      "path": "Prerequisites.ps1",
+      "sha256": "4ef4f9bc39cbb9ad602b40183b830f854761f92ee127d2cadb079f677353d974",
+      "size_bytes": 22004
+    },
+    {
+      "path": "Repair.ps1",
+      "sha256": "d51e786f00fade4fc75a8cad3820eaef8b9dbad770405e4612f1b92ff68a9791",
+      "size_bytes": 7585
+    },
+    {
+      "path": "Setup-Settings.ps1",
+      "sha256": "a9f4a7f575dbac8c7c70731836a5ae56131ec94854ba2274f87d2c65a29aa19d",
+      "size_bytes": 8975
+    },
+    {
+      "path": "Setup-Worker.ps1",
+      "sha256": "0a7a91bfe73c9db4a99b5dea16fec2fb9d35b4ee4698c1e227f060be026059e7",
+      "size_bytes": 3814
+    },
+    {
+      "path": "Setup.ps1",
+      "sha256": "0dc253bbc0e35bb4aeda6e221fe80432b734cb4fead6780424c32f431fffd60c",
+      "size_bytes": 10792
+    },
+    {
+      "path": "Start.ps1",
+      "sha256": "c348b7a3845c2ca8ea3f37221f3cf3f530a8fa0838701bb9b5aaf02907bf2a0b",
+      "size_bytes": 3942
+    },
+    {
+      "path": "Stop.ps1",
+      "sha256": "a4101ac310a2b997cd3f08beb0ff7fd08d269f5d4b3df8af2b7c3f2246a113cf",
+      "size_bytes": 747
+    },
+    {
+      "path": "Test-NetworkInstaller.ps1",
+      "sha256": "bb817e9ba1e143d662ebf2f3b37201ab04c6d8d7becde9bb6bd3811446565bcd",
+      "size_bytes": 4534
+    },
+    {
+      "path": "Test-UpdateInstaller.ps1",
+      "sha256": "e3b4f26e1bae82b84492062089add8fab145d59740f93ff19c377609b49afb03",
+      "size_bytes": 5040
+    },
+    {
+      "path": "Update.ps1",
+      "sha256": "069dc38cd1dac1d245d292345b62bc2740b0c67bc8fc143ed5f31568908d24ac",
+      "size_bytes": 6254
+    },
+    {
+      "path": "ircesp32.example.json",
+      "sha256": "8a2927624c21561079dfe98f6c381044df26c0702aa7544baa61ccb22e6ce723",
+      "size_bytes": 229
+    },
+    {
+      "path": "jarvis-mcp.exe",
+      "sha256": "b94f6adaa3f0bef144842f3afa71eb46f2aeff88f021d5ce6e75f8282422c656",
+      "size_bytes": 13587456
+    },
+    {
+      "path": "update-agent.ps1",
+      "sha256": "e815957813fafd3cdde95271355b72033029fd3df6d2d27650c4c1cc0724ac1f",
+      "size_bytes": 12822
+    },
+    {
+      "path": "update-from-git.ps1",
+      "sha256": "e70b0bb4c7782e6941c997d5296750a69168837339f0fdf815140f7000e8d54d",
+      "size_bytes": 15645
+    }
+  ]
+}

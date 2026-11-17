@@ -59,3 +59,5 @@ La foto viene accettata soltanto se JPEG entro 1 MiB, dimensioni effettive corri
 - Non eseguiti: test Windows nativi, nuova installazione/upgrade/rollback 0.8.5, trasferimento Wi-Fi reale, collaudo HID/camera, aggiornamento PC o refresh del catalogo client. Desktop2 machine_info restituisce errore interno in questa ripresa; nessuna deduzione su credenziali o consenso e nessuna modifica remota effettuata.
 
 Prossimi passi: verificare schema/revisione PCB, memoria e VBUS; collaudare la scheda su banco controllato; riprendere i test Windows tramite la procedura già riuscita e installer isolato; solo dopo i controlli obbligatori usare agent_update/updater canonico, inventario corrente, backup/rollback e verifica di ogni PC. Aggiornare gli appunti privati sul destinatario quando il canale è disponibile. Non sostituire gli agenti operativi dalla sola cross-compilazione.
+
+Firmware/protocollo esatto verificato: [`25ffa8a94dd45117dd50d4c65d2b32a077935815`](https://github.com/Andry-iu/Autech-IRCESP32/commit/25ffa8a94dd45117dd50d4c65d2b32a077935815). Include DHCP senza annuncio gateway/DNS; collaudo Windows delle route ancora aperto.
