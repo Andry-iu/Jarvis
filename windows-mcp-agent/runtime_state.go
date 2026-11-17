@@ -18,6 +18,7 @@ import (
 // Runtime state is private to one agent instance. An OS lock prevents competing
 // instances from accepting the same request. A process crash releases the lock.
 type Runtime struct {
+	ircMu           sync.Mutex
 	mu              sync.Mutex
 	inflight        sync.WaitGroup
 	codexStarting   bool

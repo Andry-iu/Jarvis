@@ -1,0 +1,10 @@
+{
+  "devices": [
+    {
+      "device_id": "ircesp32-000000000000",
+      "label": "Sostituire con identita osservata via UART",
+      "endpoint": "http://192.168.4.1",
+      "token_env": "JARVIS_IRCESP32_TOKEN_BENCH"
+    }
+  ]
+}

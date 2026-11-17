@@ -151,3 +151,12 @@ Decisioni approvate: nessuno stop temporale e nessun avviso temporizzato; archiv
 Sorgenti binario 164cb980bd1a936749d41b8692979e98b929cb04, branch reconcile-windows-mcp-agent-20261031. Test/vet/build Windows passati. Prova RPC simulata di 310 secondi e collaudo MCP isolato passati. Backup verificato, rollback isolato e installazione 0.6.1 su Desktop1 riusciti. Turno Codex reale JARVIS_MCP_061_OK e quota finale archiviata. Nessuna modifica Android o ad altri progetti. Dettagli, checksum e limiti in VALIDATION-0.6.1-20261031.md.
 
 Prossimi collaudi distinti: altri PC, riavvio completo del computer e disponibilita dei nuovi strumenti diretti in altri client. Risorse esterne non dichiarate richiedono coordinamento; nessun controllo universale del sistema operativo.
+
+## 17 novembre 2026 — candidato IRCESP32 AP/camera
+
+Richiesta utente: foto e collegamento al connettore MCP esistente. Scelta finale:
+ESP32 AP, ponte client Wi-Fi con Ethernet/secondo adattatore per Internet.
+Preparati adattatore e sorgenti installer 0.8.5 su branch dedicato, senza deploy.
+Camera bloccata fino a pinout esatto verificato; firmware nell'altro repository.
+Suite Linux/race/vet e cross-build Windows passate; test Windows nativi e banco
+aperti. Ripresa e limiti in IRCESP32-0.8.5.md e relativo verbale.

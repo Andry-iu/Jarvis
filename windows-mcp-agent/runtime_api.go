@@ -367,7 +367,7 @@ func (a *Agent) invokeRuntime(name string, raw json.RawMessage) any {
 	if e != nil {
 		return toolResult(map[string]any{"error": e.Error(), "request_id": p.RequestID, "machine_id": r.MachineID}, true)
 	}
-	if p.Operation == "device_call" {
+	if p.Operation == "device_call" || p.Operation == "ircesp32_capture" {
 		return v
 	}
 	b, _ := json.Marshal(v)
@@ -384,6 +384,8 @@ func (a *Agent) invokeRuntime(name string, raw json.RawMessage) any {
 }
 func (r *Runtime) call(p runtimeRequest) (any, error) {
 	switch p.Operation {
+	case "ircesp32_list", "ircesp32_status", "ircesp32_capture", "ircesp32_input":
+		return r.ircCall(p)
 	case "device_pair_begin", "device_pair_status", "device_pair_complete":
 		return r.interactivePair(p)
 	case "codex_token_usage":

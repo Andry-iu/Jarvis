@@ -1,3 +1,16 @@
+# IRCESP32 — candidato 0.8.5, 17 novembre 2026
+
+Implementati adattatore MCP per AP Wi-Fi ESP32, foto JPEG con provenienza e
+verifica integrità/freschezza, input HID senza replay, configurazione locale
+facoltativa e sorgenti installer con esempio senza segreti. Il ponte mantiene
+Internet via Ethernet o secondo adattatore Wi-Fi. Firmware nel repository
+Andry-iu/Autech-IRCESP32; camera bloccata fino a pinout esatto verificato.
+[Protocollo e ripresa](IRCESP32-0.8.5.md),
+[prove e limiti](VALIDATION-IRCESP32-0.8.5-20261117.md).
+Nessun agente installato/aggiornato, nessuna scheda programmata o prova fisica.
+Test Windows nativi e rilascio operativo restano da completare; non confondere
+cross-compilazione con collaudo. Le sezioni seguenti sono storiche.
+
 # Procedures — percorso corrente, 14 novembre 2026
 
 Cartella canonica `<Jarvis>\Procedures`, rinominata e verificata sui tre PC.

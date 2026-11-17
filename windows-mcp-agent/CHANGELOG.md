@@ -1,3 +1,11 @@
+## 0.8.5 — candidato IRCESP32, 2026-11-17
+
+- Nuovi ircesp32_list/status/capture/input nel connettore esistente, AP locale.
+- Verifica identità/JPEG/hash/metadati, ricevute senza immagini e nessun replay.
+- Endpoint espliciti privati, token esterno al JSON, niente proxy/redirect.
+- Installer stessa versione, esempio facoltativo; nessun deploy operativo.
+- Test e limiti: docs/mcp-agent/VALIDATION-IRCESP32-0.8.5-20261117.md.
+
 ## 0.8.4 — 2026-11-14
 
 - agent_update/agent_update_status: download Git, tool verificati, test/vet/build
