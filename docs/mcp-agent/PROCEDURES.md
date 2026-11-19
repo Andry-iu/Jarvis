@@ -1,3 +1,7 @@
+## Regola di utilizzo permanente — 19 novembre 2026
+
+Jarvis e un **agente universale**: la logica dei singoli programmi non appartiene al runtime Go/MCP. Prima di creare un nuovo tool specifico, riutilizzare primitive UI, screenshot, mouse/tastiera, file, processi, rete, oppure eseguire batch e procedure esterne. Salvare le procedure permanenti in `<Jarvis>\Procedures` (Desktop1: `D:\Jarvis\Procedures`) e non in `<Jarvis>\Projects`. Se necessario usare CLI/API di applicazioni con script parametrici, con credenziali solo locali, controlli sul destinatario, ricevute, verifiche e nessun replay incerto. Solo funzionalita generiche e comprovate possono giustificare modifiche dell'agente. Regola completa: [HANDOFF-GENERIC-AGENT-PROCEDURES-20261119.md](HANDOFF-GENERIC-AGENT-PROCEDURES-20261119.md).
+
 # Procedures — percorso canonico
 
 Dal 14 novembre 2026 le procedure permanenti si trovano in
