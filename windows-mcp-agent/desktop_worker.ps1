@@ -117,16 +117,16 @@ public static class JarvisDesktopNative {
   $stack.Push($root);$seen=0;$cut=$false
   $walker=[Windows.Automation.TreeWalker]::ControlViewWalker
   while($stack.Count -gt 0){
-   if($seen -ge 512 -or $list.Count -ge 64){$cut=$true;break}
+   if($seen -ge 1024 -or $list.Count -ge 96){$cut=$true;break}
    $e=$stack.Pop();$seen++
    $s=ElementState $e
-   if($s.identity.pid -ne $root.Current.ProcessId){continue}
+   if($s.identity.pid -ne $root.Current.ProcessId -and $root.Current.ClassName -ne "Chrome_WidgetWin_1"){continue}
    if($s.identity.password){continue}
    if($s.patterns.Count -gt 0 -and $s.id){$list.Add($s)}
    $kind=$s.type
-   if($kind -eq 'ControlType.Edit' -or $kind -eq 'ControlType.Document'){continue}
+   if($kind -eq 'ControlType.Edit'){continue}
    $children=@();$child=$walker.GetFirstChild($e)
-   while($null -ne $child){$children+=,$child;if($children.Count -ge 512){$cut=$true;break};$child=$walker.GetNextSibling($child)}
+   while($null -ne $child){$children+=,$child;if($children.Count -ge 1024){$cut=$true;break};$child=$walker.GetNextSibling($child)}
    for($i=$children.Count-1;$i -ge 0;$i--){$stack.Push($children[$i])}
   }
   return @{items=$list.ToArray();truncated=$cut}
