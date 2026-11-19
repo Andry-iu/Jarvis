@@ -1,3 +1,7 @@
+## Regola architetturale permanente (19/11/2026)
+
+Per ogni sviluppo del Windows MCP Agent: **non integrare applicazioni specifiche nel runtime**. Usare primitive generiche MCP, interazione GUI e batch; conservare le procedure riutilizzabili in `<Jarvis>\Procedures`, separate dai progetti. La proposta di un modulo Proxmox nell'agente e stata ritirata. Leggere [handoff canonico nel ramo Windows](https://github.com/Andry-iu/Jarvis/blob/feature/unified-agent-source-update-20261114/docs/mcp-agent/HANDOFF-GENERIC-AGENT-PROCEDURES-20261119.md) prima di lavorare. La presenza di commit di sviluppo non modifica la release verificata 0.8.4, fino a collaudo e distribuzione.
+
 # Come trovare l'ultima versione di Jarvis Windows MCP Agent
 
 **Punto di accesso per le nuove chat e per gli strumenti che aprono il ramo predefinito `main`.**
