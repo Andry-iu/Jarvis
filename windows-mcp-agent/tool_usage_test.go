@@ -54,6 +54,7 @@ func TestToolUsagePersistentConcurrent(t *testing.T) {
 func TestToolUsageAliasNoDoubleCount(t *testing.T) {
 	t.Setenv("JARVIS_HOME", t.TempDir())
 	a := &Agent{}
+	t.Cleanup(a.closeRuntime) // Release Windows agent.lock before TempDir cleanup.
 	// Wrong identity intentionally fails before any operation; it must still count once.
 	a.invoke("task_start", json.RawMessage(`{"operation":"runtime","request":{"operation":"file_read","machine_id":"wrong","project":".","path":"missing"}}`))
 	s, e := a.usageStore()
