@@ -1,3 +1,7 @@
+## 19 novembre 2026 — memoria persistente delle release su Git
+
+Richiesta esplicita dell'utente: registrare su Git impostazioni, note e istruzioni per ritrovare il punto di sviluppo reale dell'agente Jarvis. Corretto l'errore di aver scambiato la 0.8.2 del branch gateway precedente per l'ultima release, ignorando il branch Windows MCP `feature/unified-agent-source-update-20261114` e la 0.8.4 gia pubblicata. Creato `CURRENT-RELEASE.md` come fonte canonica con branch/commit, manifest ZIP, collocazione della copia verificata, verifiche live contro storico, piano di aggiornamento e procedura obbligatoria a ogni ripresa. Desktop1 `machine_info`/`agent_status` oggi confermano 0.8.4 amministratore e idle; Desktop2 e target LAN restano confermati dai verbali del 14/11. Questa operazione e solo documentale: nessun deploy, riavvio, build, variazione di trust, merge su main o modifica dei segreti.
+
 ## 14 novembre 2026 — cartella Procedures
 
 Rinomina richiesta dall'utente applicata a Desktop1, Desktop2 e SoftPlcTest1.
