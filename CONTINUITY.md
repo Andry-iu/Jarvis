@@ -1,3 +1,7 @@
+## Handoff Jarvis Windows MCP — architettura universale (19/11/2026)
+
+Decisione permanente dell'utente: Jarvis Windows MCP non deve conoscere applicazioni specifiche; il nucleo espone controlli generici, mentre procedure/batch riutilizzabili sono conservati in `D:\Jarvis\Procedures`. Non introdurre moduli Proxmox nel core; preferire UI generica e script/API esterni quando necessari. Il lavoro su mouse/Edge e ancora soltanto sorgente di sviluppo, non release installata; ultima versione verificata Desktop1 0.8.4. Installer da aggiornare insieme al prossimo agente; Desktop2 e SoftPlcTest1 solo in fase successiva. Per nuove chat leggere [handoff canonico](https://github.com/Andry-iu/Jarvis/blob/feature/unified-agent-source-update-20261114/docs/mcp-agent/HANDOFF-GENERIC-AGENT-PROCEDURES-20261119.md) e [pointer Windows](docs/mcp-agent/WINDOWS-AGENT-POINTER.md).
+
 0.5.123 / 145 — DUE APK COMPILATI E FIRMATI; PROVA AUDI PENDENTE (8 novembre 2026, Europe/Rome)
 
 JarvisWake e Jarvis Cube verificati nel cloud Jarvis sul sorgente 5dbd435d1982282e83d79f3f9d2b3a7654952a9e. Job telefono c89551d1-8436-4b1b-9b02-219502625adb succeeded, verbale 3fc9b8340bf021125714ffbd6bc06aea983363a9. App:718test/0failure/error/skipped, lint0errori/58avvisi; car-game:12test/0failure/error/skipped, lint0errori/8avvisi. Entrambi gli APK firmati con il certificato permanente, v2/v3, CRC e zipalign verificati. Metadati e hash: releases/0.5.123/CUBE_VERIFICATION.json.
