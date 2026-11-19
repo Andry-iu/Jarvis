@@ -26,6 +26,9 @@ type runtimeRequest struct {
 	Action           string   `json:"action,omitempty"`
 	Keys             []string `json:"keys,omitempty"`
 	MouseAction      string   `json:"mouse_action,omitempty"`
+	Node             string   `json:"node,omitempty"`
+	VMID             int      `json:"vmid,omitempty"`
+	Command          string   `json:"command,omitempty"`
 	X                int      `json:"x,omitempty"`
 	Y                int      `json:"y,omitempty"`
 	WheelDelta       int      `json:"wheel_delta,omitempty"`
@@ -155,7 +158,7 @@ func toolsList() any {
 		for _, f := range t.Fields {
 			typ := "string"
 			switch f {
-			case "port", "offset", "limit", "timeout_seconds", "after", "monitor", "max_width", "quality", "x", "y", "wheel_delta":
+			case "port", "offset", "limit", "timeout_seconds", "after", "monitor", "max_width", "quality", "x", "y", "wheel_delta", "vmid":
 				typ = "integer"
 			case "recursive", "elevated", "overwrite":
 				typ = "boolean"
@@ -182,6 +185,9 @@ func toolsList() any {
 			}
 			if f == "action" {
 				s["enum"] = []string{"invoke", "set_text", "type_text", "focus", "toggle", "select"}
+			}
+			if f == "command" {
+				s["enum"] = []string{"start", "shutdown"}
 			}
 			if f == "mouse_action" {
 				s["enum"] = []string{"click", "double_click", "right_click", "wheel"}
@@ -306,6 +312,11 @@ func (a *Agent) invokeRuntime(name string, raw json.RawMessage) any {
 	}
 	if p.Operation != "machine_info" && p.MachineID != r.MachineID {
 		return toolResult(map[string]any{"error": "machine_id mismatch; read machine_info and select the intended computer"}, true)
+	}
+	if isProxmoxOperation(p.Operation) {
+		v, err := a.proxmoxDispatch(r, p)
+		if err != nil {return toolResult(map[string]any{"error":err.Error(),"machine_id":r.MachineID,"request_id":p.RequestID},true)}
+		return toolResult(v,false)
 	}
 	if p.Operation == "network_setup" {
 		v, e := r.mutation(p, func(_ *Receipt) (any, error) {
