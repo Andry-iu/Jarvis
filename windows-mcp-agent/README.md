@@ -1,3 +1,7 @@
+# Release attuale dell'agente Windows: verifica prima dell'uso
+
+**Ultima versione verificata al 19 novembre 2026: 0.8.4** (sorgenti, agente, installer), sul ramo `feature/unified-agent-source-update-20261114`. Desktop1 e stato verificato live oggi via MCP. Per versione, distribuzione, checksum, distinzioni rispetto alle release storiche e controlli obbligatori di ripresa, leggere sempre [CURRENT-RELEASE.md](../docs/mcp-agent/CURRENT-RELEASE.md). L'ultima versione futura va confermata su Git e, per i PC, via `machine_info`, non dedotta dallo storico sotto.
+
 # Procedures — percorso corrente, 14 novembre 2026
 
 Cartella canonica `<Jarvis>\Procedures`, rinominata e verificata sui tre PC.
