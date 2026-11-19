@@ -1,3 +1,19 @@
+## 19 novembre 2026 — registrazione della release di lavoro e rimando dal ramo main
+
+Su richiesta utente, creato [CURRENT-RELEASE.md](CURRENT-RELEASE.md) per riprendere
+sempre il corretto agente Windows MCP: 0.8.4 sul branch
+`feature/unified-agent-source-update-20261114`, commit runtime
+`ff2038d4b250c9d3e7e6590c2409ad55e5081380`, pacchetto verificato con
+`CHECKSUMS-0.8.4.json`. Live `machine_info`/`agent_status` Desktop1
+il 19/11: versione 0.8.4, elevato, idle. Desktop2 e target LAN documentati
+alla 0.8.4 dal collaudo del 14/11; nessuna nuova lettura live affermata.
+Aggiornati AGENTS, README, STATUS, CONTINUITY e PROJECT-RECORD sul ramo Windows.
+Nel ramo predefinito `main` aggiunto `WINDOWS-AGENT-POINTER.md` e avvisi nei
+documenti di accesso: i sorgenti Windows storici su main non rappresentano
+l'ultima release. Operazione esclusivamente documentale; nessuna modifica
+runtime, installazione o riavvio. Nuovi rilasci devono aggiornare entrambi
+i punti di ingresso. Evitare di dedurre l'ultima versione da un solo ramo.
+
 ## 14 novembre 2026 — cartella Procedures
 
 Rinomina richiesta dall'utente applicata a Desktop1, Desktop2 e SoftPlcTest1.
