@@ -1,3 +1,7 @@
+## Regola di ripresa architetturale (19 novembre 2026)
+
+Prima di introdurre un modulo MCP o predisporre un nuovo installer, leggere [HANDOFF-GENERIC-AGENT-PROCEDURES-20261119.md](HANDOFF-GENERIC-AGENT-PROCEDURES-20261119.md) e [PROCEDURES.md](PROCEDURES.md). Il core di Jarvis deve restare **indipendente dalle applicazioni**. Per azioni occasionali usare gli strumenti generici e batch/PowerShell in `<Jarvis>\Procedures`, non un modulo dedicato (es. Proxmox). Aggiornare agente/installer solo per primitive universali, con test e verifica distinta. I commit di sviluppo per input mouse/UI web non costituiscono una nuova release: ultima installata/verificata Desktop1 0.8.4.
+
 # Jarvis Windows MCP Agent — release corrente e ripresa obbligatoria
 
 > Stato osservato il **19 novembre 2026**. Questo documento e il punto di ingresso
