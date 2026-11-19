@@ -1,3 +1,7 @@
+# Handoff rapido: versione Jarvis Windows MCP (19 novembre 2026)
+
+Prima di ogni nuova chat o sviluppo dell'agente, leggere [CURRENT-RELEASE.md](../docs/mcp-agent/CURRENT-RELEASE.md), poi controllare i rami remoti e `machine_info` dei dispositivi. Ultima release e installer verificati: **0.8.4**, ramo `feature/unified-agent-source-update-20261114` (non `main`). Desktop1 verificato live alla 0.8.4 il 19/11/2026. La 0.8.2 appartiene allo storico del gateway: **non** presentarla come release attuale senza controllo. Aggiornare questa intestazione e il documento canonico ogni volta che cambia release, branch o stato verificato.
+
 # Procedures — percorso corrente, 14 novembre 2026
 
 Cartella canonica `<Jarvis>\Procedures`, rinominata e verificata sui tre PC.
