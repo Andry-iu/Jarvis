@@ -25,6 +25,10 @@ type runtimeRequest struct {
 	ElementID        string   `json:"element_id,omitempty"`
 	Action           string   `json:"action,omitempty"`
 	Keys             []string `json:"keys,omitempty"`
+	MouseAction      string   `json:"mouse_action,omitempty"`
+	X                int      `json:"x,omitempty"`
+	Y                int      `json:"y,omitempty"`
+	WheelDelta       int      `json:"wheel_delta,omitempty"`
 	Executable       string   `json:"executable,omitempty"`
 	Args             []string `json:"args,omitempty"`
 	WorkingDirectory string   `json:"working_directory,omitempty"`
@@ -151,7 +155,7 @@ func toolsList() any {
 		for _, f := range t.Fields {
 			typ := "string"
 			switch f {
-			case "port", "offset", "limit", "timeout_seconds", "after", "monitor", "max_width", "quality":
+			case "port", "offset", "limit", "timeout_seconds", "after", "monitor", "max_width", "quality", "x", "y", "wheel_delta":
 				typ = "integer"
 			case "recursive", "elevated", "overwrite":
 				typ = "boolean"
@@ -178,6 +182,9 @@ func toolsList() any {
 			}
 			if f == "action" {
 				s["enum"] = []string{"invoke", "set_text", "type_text", "focus", "toggle", "select"}
+			}
+			if f == "mouse_action" {
+				s["enum"] = []string{"click", "double_click", "right_click", "wheel"}
 			}
 			if f == "dialog_mode" {
 				s["enum"] = []string{"open", "save"}
@@ -266,6 +273,19 @@ func decodeRuntime(name string, b json.RawMessage) (runtimeRequest, error) {
 		}
 		if len([]rune(p.Text)) > 4096 {
 			return p, errors.New("text exceeds 4096 characters")
+		}
+	}
+	if p.Operation == "ui_mouse" {
+		if p.X < 0 || p.Y < 0 || p.X >= 32768 || p.Y >= 32768 {
+			return p, errors.New("mouse coordinates out of range")
+		}
+		switch p.MouseAction {
+		case "click", "double_click", "right_click":
+			if p.WheelDelta != 0 { return p, errors.New("wheel_delta is only for wheel") }
+		case "wheel":
+			if p.WheelDelta == 0 || p.WheelDelta < -1200 || p.WheelDelta > 1200 || p.WheelDelta % 120 != 0 { return p, errors.New("invalid wheel_delta") }
+		default:
+			return p, errors.New("invalid mouse_action")
 		}
 	}
 	if p.Limit < 0 || p.Limit > 200 || p.Offset < 0 || p.After < 0 {
