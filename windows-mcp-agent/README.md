@@ -1,3 +1,7 @@
+# Principio di progettazione: agente universale (19/11/2026)
+
+Jarvis non deve integrare codici per software specifici come Proxmox. Per lavorare in qualsiasi programma usare le primitive generiche MCP e le procedure/batch esterne di `<Jarvis>\Procedures`. Nuove primitive generali (ad esempio interazione mouse/browser) devono essere testate e poi rilasciate insieme all'installer; le procedure restano indipendenti dal ciclo release del binario, con versioni/hash verificati. Regole e handoff: [HANDOFF-GENERIC-AGENT-PROCEDURES-20261119.md](../docs/mcp-agent/HANDOFF-GENERIC-AGENT-PROCEDURES-20261119.md).
+
 # Release attuale dell'agente Windows: verifica prima dell'uso
 
 **Ultima versione verificata al 19 novembre 2026: 0.8.4** (sorgenti, agente, installer), sul ramo `feature/unified-agent-source-update-20261114`. Desktop1 e stato verificato live oggi via MCP. Per versione, distribuzione, checksum, distinzioni rispetto alle release storiche e controlli obbligatori di ripresa, leggere sempre [CURRENT-RELEASE.md](../docs/mcp-agent/CURRENT-RELEASE.md). L'ultima versione futura va confermata su Git e, per i PC, via `machine_info`, non dedotta dallo storico sotto.
