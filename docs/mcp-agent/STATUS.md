@@ -1,3 +1,5 @@
+> **NOTA SUL RAMO MAIN (19/11/2026): questo stato e STORICO.** Ultima release Windows MCP verificata **0.8.4** sul ramo `feature/unified-agent-source-update-20261114`, non 0.4.1 qui sotto. Leggere [WINDOWS-AGENT-POINTER.md](WINDOWS-AGENT-POINTER.md) e [stato canonico Windows](https://github.com/Andry-iu/Jarvis/blob/feature/unified-agent-source-update-20261114/docs/mcp-agent/CURRENT-RELEASE.md); poi verificare versioni su Git e agenti live. La sezione storica originale e conservata senza alterazioni.
+
 # Jarvis Windows MCP Agent — stato verificato (2026-10-31)
 
 ## Ambito
