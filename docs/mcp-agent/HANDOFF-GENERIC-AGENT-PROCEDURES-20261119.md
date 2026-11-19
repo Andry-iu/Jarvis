@@ -18,6 +18,10 @@ Jarvis Windows MCP Agent deve essere **indipendente dalle applicazioni**. Non in
 8. Se si modifica una procedura, allineare **sorgente, catalogo, hash, documentazione, test e appunti**; verificare il contenuto installato separatamente da quello su Git. Se si modifica l'agente, mantenere stessa versione di **sorgente + binario + installer**, backup/rollback, test e verifica di deploy; nessuna installazione implicita su altri PC.
 9. A ogni ripresa distinguere **progettato / codificato / testato / committato / installato / collaudato**. Scrivere nei documenti solo esiti realmente verificati.
 
+## Appunti Desktop1 e rinvii nella documentazione (19/11/2026)
+
+Nota permanente salvata e riletta su Desktop1 in `D:\\Jarvis\\Projects\\appunti-Jarvis-architettura-20261119.md` (SHA-256 `542b321819d29da03c7a3a85b90a38fd4065380086195256f8434fd7b2681534`). La scrittura diretta in `D:\\Jarvis\\Projects\\appunti.txt` **non e stata eseguita**: il tentativo di avviare un processo standard per aggiungere la sezione e stato rifiutato dal launcher; nessun contenuto storico e stato sovrascritto. La regola e rintracciabile anche da `AGENTS.md` e `CONTINUITY.md` su `main` e da `docs/mcp-agent/WINDOWS-AGENT-POINTER.md` su `main`. Non attribuire la scrittura degli appunti a Desktop2 o SoftPlcTest1: rinviata.
+
 ## Stato concreto al 19 novembre 2026
 
 - Ultima release verificata su Desktop1: `0.8.4`, non sostituita dai commit di sviluppo.
