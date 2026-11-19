@@ -1,3 +1,7 @@
+# REGOLA DI RIPRESA: LEGGERE LO STATO CORRENTE PRIMA DI RISPONDERE (19/11/2026)
+
+Fonte unica per la versione di lavoro e la consegna: [docs/mcp-agent/CURRENT-RELEASE.md](../docs/mcp-agent/CURRENT-RELEASE.md). Ultima release verificata **0.8.4**, branch `feature/unified-agent-source-update-20261114`, sorgente `ff2038d4b250c9d3e7e6590c2409ad55e5081380`. Desktop1 confermato live 0.8.4 il 19/11/2026. **Non assumere che `main` o `feature/agent-gateway-20261114` contengano l'ultima versione Windows; verificare tutte le branch piu recenti e lo stato degli agenti.** In caso di nuove release aggiornare CURRENT-RELEASE, STATUS, README, CONTINUITY, AGENTS, registro, manifest SHA-256 e prove live prima di dichiarare completato. Mai dedurre la versione installata dal solo Git; niente credenziali/ZIP/binari in Git.
+
 # Percorso canonico Procedures
 
 Le procedure permanenti sono in `<Jarvis>\Procedures`. Usare questo nome in
