@@ -21,10 +21,11 @@ var directToolSpecs=[]runtimeTool{
  {"window_close","Request ordinary closure of the exact window. Returns closed, needs_input or pending; never kills a process or discards a save prompt.",[]string{"window_id","request_id"},[]string{"window_id","request_id"},false},
  {"ui_action","Act on an exact inspected control: set_text replaces the complete field/document; type_text replaces using focused Unicode keyboard input; invoke/select/toggle/focus use supported patterns. Returns a fresh snapshot when available. Never use to replace unapproved existing content.",[]string{"snapshot_id","element_id","action","text","request_id"},[]string{"snapshot_id","element_id","action","request_id"},false},
  {"ui_keys","Send one key chord to the exact window from a fresh snapshot, after validating identity and foreground. Example keys=[CTRL,SHIFT,S]. No automatic replay of uncertain outcomes.",[]string{"snapshot_id","keys","request_id"},[]string{"snapshot_id","keys","request_id"},false},
+ {"ui_mouse","Send one mouse click, double click, right click or wheel scroll to the verified foreground window using a one-use snapshot and physical desktop coordinates. Refuses occluded or out-of-window points. Dispatch is not proof of the application action.",[]string{"snapshot_id","x","y","mouse_action","wheel_delta","request_id"},[]string{"snapshot_id","x","y","mouse_action","request_id"},false},
  {"ui_file_dialog","Drive a standard Windows Open/Save As dialog through the application UI, type an absolute path and invoke its button. mode=open/save; save verifies the actual resulting file and optional expected_text. Never creates the user's file directly. No overwrite by default; overwrite requires expected_sha256 and explicit user authorization.",[]string{"window_id","dialog_mode","path","overwrite","expected_sha256","expected_text","request_id"},[]string{"window_id","dialog_mode","path","request_id"},false},
 }
 func init(){runtimeCatalog=append(runtimeCatalog,directToolSpecs...)}
-func isDirectUI(name string)bool{switch name{case "window_list","window_inspect","window_focus","window_close","ui_action","ui_keys","ui_file_dialog":return true};return false}
+func isDirectUI(name string)bool{switch name{case "window_list","window_inspect","window_focus","window_close","ui_action","ui_keys","ui_mouse","ui_file_dialog":return true};return false}
 
 // UI/provider calls can block; reserve the durable receipt before dispatch, but
 // release Runtime.mu so status/history/other read-only calls remain responsive.
@@ -75,15 +76,17 @@ func (a *Agent) doDirectUI(p runtimeRequest)(any,error){
  a.uiMu.Lock();defer a.uiMu.Unlock()
  if os.Getenv("JARVIS_DESKTOP_ENABLED")!="1"{return nil,errors.New("desktop control disabled")}
  input:=map[string]any{"operation":p.Operation,"return_snapshot":true}
- if p.Operation!="window_list"&&p.Operation!="ui_action"&&p.Operation!="ui_keys"{
+ if p.Operation!="window_list"&&p.Operation!="ui_action"&&p.Operation!="ui_keys"&&p.Operation!="ui_mouse"{
   w,ok:=a.windows[p.WindowID];if !ok{return nil,errors.New("unknown window_id; list windows again")};input["target_window"]=w
  }
  if p.Operation=="window_inspect"{input["operation"]="desktop_inspect"}
- if p.Operation=="ui_action"||p.Operation=="ui_keys"{
+ if p.Operation=="ui_action"||p.Operation=="ui_keys"||p.Operation=="ui_mouse"{
   a.mu.Lock();s:=a.desktop;a.desktop=nil;a.mu.Unlock()
   if s==nil||s.ID!=p.SnapshotID||time.Since(s.Created)>90*time.Second{return nil,errors.New("unknown, consumed or expired snapshot; inspect again")}
   input["window"]=s.Window;input["target_window"]=s.Window
-  if p.Operation=="ui_action"{
+  if p.Operation=="ui_mouse"{
+   input["mouse_action"]=p.MouseAction;input["x"]=p.X;input["y"]=p.Y;input["wheel_delta"]=p.WheelDelta
+  }else if p.Operation=="ui_action"{
    d:=desktopRequest{SnapshotID:p.SnapshotID,ElementID:p.ElementID,Action:p.Action}
    if p.Action=="set_text"||p.Action=="type_text"{d.Text=&p.Text;input["text"]=p.Text}
    target,e:=desktopTarget(s,d,time.Now());if e!=nil{return nil,e}
