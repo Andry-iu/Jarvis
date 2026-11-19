@@ -1,3 +1,7 @@
+# HANDOFF PRIORITARIO (19/11/2026) — CORE GENERICO + PROCEDURES
+
+Decisione permanente: niente integrazioni per singoli software nel binario Jarvis. Usare MCP generico, GUI, controllo mouse/tastiera, batch e `D:\Jarvis\Procedures`; codificare nuove primitive solo se riutilizzabili. Le procedure esterne possono usare API/CLI dei programmi. La proposta di modulo Proxmox e stata revocata e rimossa dal ramo. Sono presenti modifiche generiche mouse/Edge nei sorgenti, **non ancora collaudate o distribuite**; ultimo agente installato e verificato su Desktop1: 0.8.4. Prima di proseguire leggere [HANDOFF-GENERIC-AGENT-PROCEDURES-20261119.md](../docs/mcp-agent/HANDOFF-GENERIC-AGENT-PROCEDURES-20261119.md), [CURRENT-RELEASE.md](../docs/mcp-agent/CURRENT-RELEASE.md) e [PROCEDURES.md](../docs/mcp-agent/PROCEDURES.md). Desktop2 e SoftPlcTest1 saranno aggiornati successivamente; aggiornare anche l'installer con la stessa versione dell'agente.
+
 # Handoff rapido: versione Jarvis Windows MCP (19 novembre 2026)
 
 Prima di ogni nuova chat o sviluppo dell'agente, leggere [CURRENT-RELEASE.md](../docs/mcp-agent/CURRENT-RELEASE.md), poi controllare i rami remoti e `machine_info` dei dispositivi. Ultima release e installer verificati: **0.8.4**, ramo `feature/unified-agent-source-update-20261114` (non `main`). Desktop1 verificato live alla 0.8.4 il 19/11/2026. La 0.8.2 appartiene allo storico del gateway: **non** presentarla come release attuale senza controllo. Aggiornare questa intestazione e il documento canonico ogni volta che cambia release, branch o stato verificato.
