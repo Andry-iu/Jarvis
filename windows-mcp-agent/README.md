@@ -1,3 +1,5 @@
+> **DOCUMENTO STORICO su `main`.** Per la release operativa Jarvis Windows MCP Agent non utilizzare la 0.4.1 descritta qui come versione corrente. Ultima release verificata al 19/11/2026: **0.8.4**, sul ramo `feature/unified-agent-source-update-20261114`. Prima di ogni risposta leggere [WINDOWS-AGENT-POINTER.md](../docs/mcp-agent/WINDOWS-AGENT-POINTER.md) e [CURRENT-RELEASE.md nel ramo Windows](https://github.com/Andry-iu/Jarvis/blob/feature/unified-agent-source-update-20261114/docs/mcp-agent/CURRENT-RELEASE.md), poi verificare nuove release e agenti live. Nessun sorgente Windows e stato spostato su main da questa nota.
+
 # Jarvis Windows MCP Agent
 
 Sottoprogetto dell'ecosistema Jarvis, separato dall'app Android.
