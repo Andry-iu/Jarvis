@@ -30,6 +30,29 @@ public static class JarvisWindowNative {
  [StructLayout(LayoutKind.Explicit)]public struct U {[FieldOffset(0)]public K key;[FieldOffset(0)]public M mouse;}
  [StructLayout(LayoutKind.Sequential)]public struct I {public uint type;public U data;}
  [DllImport("user32.dll",SetLastError=true)]static extern uint SendInput(uint n,I[] inputs,int size);
+ [StructLayout(LayoutKind.Sequential)]public struct P {public int X,Y;}
+ [StructLayout(LayoutKind.Sequential)]public struct R {public int Left,Top,Right,Bottom;}
+ [DllImport("user32.dll")]static extern bool GetWindowRect(IntPtr h,out R rect);
+ [DllImport("user32.dll")]static extern IntPtr WindowFromPoint(P p);
+ [DllImport("user32.dll")]static extern IntPtr GetAncestor(IntPtr h,uint flags);
+ [DllImport("user32.dll")]static extern bool SetCursorPos(int x,int y);
+ static I MouseSignal(uint flags,uint data=0){return new I{type=0,data=new U{mouse=new M{flags=flags,data=data}}};}
+ public static void Mouse(IntPtr target,int x,int y,string action,int wheelDelta){
+  IdleModifiers();
+  R r;if(!GetWindowRect(target,out r)||x<r.Left||y<r.Top||x>=r.Right||y>=r.Bottom)throw new Exception("point_outside_window");
+  IntPtr hit=WindowFromPoint(new P{X=x,Y=y});
+  if(hit==IntPtr.Zero||GetAncestor(hit,2)!=target)throw new Exception("point_occluded_or_window_changed");
+  if(!SetCursorPos(x,y))throw new Exception("mouse_position_failed");
+  var a=new List<I>();
+  if(action=="wheel"){if(wheelDelta==0||wheelDelta<-1200||wheelDelta>1200||wheelDelta%120!=0)throw new Exception("invalid_wheel_delta");a.Add(MouseSignal(0x0800,unchecked((uint)wheelDelta)));}
+  else{
+   uint down=action=="right_click"?0x0008u:0x0002u,up=action=="right_click"?0x0010u:0x0004u;
+   if(action!="click"&&action!="double_click"&&action!="right_click")throw new Exception("invalid_mouse_action");
+   a.Add(MouseSignal(down));a.Add(MouseSignal(up));
+   if(action=="double_click"){a.Add(MouseSignal(down));a.Add(MouseSignal(up));}
+  }
+  Send(a);
+ }
  public static IntPtr[] Windows(){var list=new List<IntPtr>();EnumWindows((h,l)=>{if(IsWindowVisible(h))list.Add(h);return list.Count<256;},IntPtr.Zero);return list.ToArray();}
  public static string Class(IntPtr h){var b=new StringBuilder(128);GetClassName(h,b,128);return b.ToString();}
  public static string Title(IntPtr h){var b=new StringBuilder(512);GetWindowText(h,b,512);return b.ToString();}
@@ -104,6 +127,13 @@ function DirectOperation($req){
    if($fg -ne $h -and [JarvisWindowNative]::Pid($fg) -eq $req.target_window.pid -and [JarvisWindowNative]::OwnedBy($fg,$h)){$state='needs_input';$prompt=[JarvisWindowNative]::Title($fg);break}
   }
   [Console]::Write((Json @{ok=$true;dispatched=$true;verified=($state -eq 'closed');data=@{status=$state;prompt_title=$prompt;forced=$false}}));return $true
+ }
+ if($req.operation -eq 'ui_mouse'){
+  $h=ValidateWindow $req.window;RequireForeground $h
+  $w=WindowState;if((Json $w.identity) -cne (Json $req.window)){Refuse 'window_changed'}
+  [JarvisWindowNative]::Mouse($h,[int]$req.x,[int]$req.y,[string]$req.mouse_action,[int]$req.wheel_delta)
+  Start-Sleep -Milliseconds 120
+  FreshResponse @{ok=$true;dispatched=$true;verified=$false;data=@{status='mouse_dispatched';mouse_action=[string]$req.mouse_action}};return $true
  }
  if($req.operation -eq 'ui_keys'){
   $h=ValidateWindow $req.window;RequireForeground $h
