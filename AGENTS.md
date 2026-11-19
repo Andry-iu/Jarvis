@@ -1,3 +1,7 @@
+# Nota per le nuove chat: Jarvis Windows MCP Agent (19 novembre 2026)
+
+**Se la richiesta riguarda l'agente Jarvis Windows, il gateway LAN, il connettore MCP o un installer Jarvis Agent**, non dedurre la release corrente da `main` o dal README di JarvisWake. Il punto di partenza e [docs/mcp-agent/CURRENT-RELEASE.md](docs/mcp-agent/CURRENT-RELEASE.md) sul ramo Windows `feature/unified-agent-source-update-20261114`; poi verificare i rami GitHub piu recenti e la versione live con `machine_info` quando raggiungibile. Ultima release verificata al 19/11/2026: **0.8.4**, installer `Jarvis-Agent-Setup-0.8.4.zip`. La registrazione e storica e non sostituisce una nuova verifica. Questo paragrafo non cambia le regole di sviluppo Android sottostanti.
+
 # Istruzioni per lavorare su JarvisWake
 
 Prima di modificare il progetto leggere `README.md`, `CONTINUITY.md` e `VERIFICATION.md`. `PROMPT_CONTINUITA.txt` è il testo breve per riprendere il lavoro in una nuova conversazione; `docs/ROADMAP.md` distingue le decisioni approvate dalle funzioni implementate.
