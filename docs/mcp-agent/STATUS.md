@@ -1,3 +1,7 @@
+# Decisione permanente (19 novembre 2026): Jarvis applicazione-agnostico
+
+L'agente non deve avere moduli specifici Proxmox o di altre applicazioni; usare UI generica, batch e `D:\Jarvis\Procedures`. Le modifiche generiche mouse/Edge sono solo sorgenti di sviluppo e **non una release gia collaudata**. La proposta Proxmox nel runtime e stata ritirata e rimossa. Il riferimento per le prossime chat e [HANDOFF-GENERIC-AGENT-PROCEDURES-20261119.md](HANDOFF-GENERIC-AGENT-PROCEDURES-20261119.md). Desktop1 installato ancora 0.8.4; Desktop2 e SoftPlcTest1 non aggiornati in questo intervento. Non alterare i dati di release esistenti.
+
 # Stato di riferimento (19 novembre 2026)
 
 **Release Windows MCP piu recente verificata: 0.8.4**; ramo `feature/unified-agent-source-update-20261114`. **Desktop1 verificato live oggi via MCP a versione 0.8.4, elevated=true, idle.** Desktop2 e target LAN documentati alla 0.8.4 nell'audit del 14/11, senza nuova lettura live oggi. La procedura obbligatoria per verificare l'ultima versione, il branch, il commit, l'installer e lo stato installato e in **[CURRENT-RELEASE.md](CURRENT-RELEASE.md)**. Tutti gli stati successivi nello storico sono cronologici, non una fonte prioritaria se la release evolve.
