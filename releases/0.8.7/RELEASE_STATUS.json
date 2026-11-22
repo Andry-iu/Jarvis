@@ -1,7 +1,7 @@
 {
   "project": "Jarvis",
   "version": "0.8.7",
-  "status": "candidate_not_released",
+  "status": "candidate_sources_integrated_main_binary_release_pending",
   "prepared_at": "2026-11-22",
   "source_main_before_integration": "139cf885d4b52af9447b2dc682e538679d0dc98c",
   "source_windows_0_8_6": "95e2866178377c6529e6911104d79b6970901e50",
@@ -46,10 +46,11 @@
       "id": "windows_agent",
       "source": "windows-mcp-agent/",
       "version": "0.8.7",
-      "go_test_verified": false,
+      "go_test_verified": true,
       "installer_verified": false,
       "installed_verified": false,
-      "previous_installed_0_8_6": true
+      "previous_installed_0_8_6": true,
+      "source_build_verified": true
     },
     {
       "id": "esp32_bridge",
@@ -80,5 +81,19 @@
     "secrets_not_copied": true,
     "firmware_not_deployed": true
   },
-  "notes": "The manifest describes source integration only. Nothing about v0.8.7 is a signed or installed production release until independently verified."
+  "notes": "The manifest describes source integration only. Nothing about v0.8.7 is a signed or installed production release until independently verified.",
+  "integration": {
+    "main_merge_sha": "f0408ac4a2d1826bc74b71319462cc638fc33a28",
+    "pull_request": 1,
+    "pull_request_merged": true,
+    "ci_run_id": 45040466751,
+    "ci_head_sha": "af5378c07d4662b197c370574301d00412251d4b",
+    "go_test_repeat_count": 3,
+    "go_test_result": "passed",
+    "go_vet_result": "passed",
+    "go_linux_build_result": "passed",
+    "go_windows_cross_build_result": "passed",
+    "powershell_parse_result": "passed",
+    "binary_distribution": "not_performed"
+  }
 }

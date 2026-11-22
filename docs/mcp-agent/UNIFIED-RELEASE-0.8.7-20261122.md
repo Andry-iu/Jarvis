@@ -22,3 +22,13 @@ La 0.8.6 e una versione Windows gia distribuita: per modificare ulteriormente l'
 
 ## Sicurezza e conservazione
 Nessun codice Android obsoleto del ramo Windows deve sovrascrivere `app/`, `car-game/`, `wear/` o servizi di `main`. Nessun segreto in Git. I rami storici restano accessibili per verifiche; non cancellarli prima di averne controllato le differenze, incluso lo storico di firma.
+
+## Consolidamento su main e verifiche (22/11/2026)
+
+- PR [#1](https://github.com/Andry-iu/Jarvis/pull/1) integrata con merge commit `f0408ac4a2d1826bc74b71319462cc638fc33a28`.
+- GitHub Actions: esecuzione `45040466751` sul commit candidato `af5378c07d4662b197c370574301d00412251d4b`, esito **success** per `go` e `powershell`.
+- Il job Go ha completato `go test -count=3 ./...`, `go vet ./...`, compilazione Linux e cross-compilazione Windows; parser PowerShell per 7 script superato.
+- Durante i controlli e stato corretto un difetto di sincronizzazione fra chiusura del runtime e salvataggio dei risultati dei comandi, con test di regressione. Le esecuzioni CI precedenti fallite sono mantenute come storia.
+- Il `main` contiene i sorgenti Android precedentemente piu avanzati, il Windows MCP Agent 0.8.7 candidato con camera/HID ESP32 opzionale, i servizi non alterati e i documenti storici.
+- **Non completato:** build/firma/distribuzione APK 0.8.7, packaging/collaudo installer 0.8.7, collaudo fisico ESP32, refresh `ui_mouse` nel connettore ChatGPT, test puntatore e clic sul desktop. Non distribuire la 0.8.7 in produzione come conseguenza automatica del merge.
+- Il vecchio agente Windows 0.8.6 rimane l'ultima installazione effettivamente verificata su Desktop1; il collegamento ChatGPT Desktop1 aveva restituito errori interni dopo il deploy.
