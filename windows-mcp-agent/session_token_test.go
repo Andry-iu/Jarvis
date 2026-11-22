@@ -106,7 +106,7 @@ func TestVerifiedJWTCachedActivityAndAbsoluteJWTExpiry(t *testing.T) {
 }
 
 func TestLegacyTaskStartRuntimeSessionToken(t *testing.T) {
-    nested := json.RawMessage(`{"operation":"task_start","request":{"operation":"machine_info","session_token":"0"}}`)
+    nested := json.RawMessage(`{"operation":"runtime","request":{"operation":"machine_info","session_token":"0"}}`)
     tokenInput := sessionTokenArguments("task_start", nested)
     if value, supplied := suppliedSessionToken(tokenInput); value != "0" || !supplied {
         t.Fatal("legacy compatibility bridge must transmit the session token")
