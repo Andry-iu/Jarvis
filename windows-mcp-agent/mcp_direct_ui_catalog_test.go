@@ -1,6 +1,9 @@
 package main
 
-import "testing"
+import (
+    "strings"
+    "testing"
+)
 
 // A regression test for the external MCP catalog (not merely the internal
 // runtime tool registry). If these tests pass but the ChatGPT connector does
@@ -73,5 +76,11 @@ func TestPublicMCPDirectUITools(t *testing.T) {
     }
     if byName["task_start"] == nil {
         t.Fatal("legacy compatibility wrapper must remain published")
+    }
+    description := strings.ToLower(byName["task_start"]["description"].(string))
+    for _, keyword := range []string{"fallback", "prefer", "dedicated", "ui_sequence"} {
+        if !strings.Contains(description, keyword) {
+            t.Errorf("task_start description must discourage use when dedicated tools exist: missing %q", keyword)
+        }
     }
 }
