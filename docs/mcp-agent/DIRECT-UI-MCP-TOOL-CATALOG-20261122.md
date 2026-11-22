@@ -1,3 +1,5 @@
+> **Aggiornamento 0.9.5:** il token conversazionale `session_token` e stato rimosso. Il problema di esposizione degli strumenti UI in ChatGPT e indipendente dal token: il catalogo MCP server continua a esporre le operazioni autonome e il client potrebbe richiedere un refresh. Nella diagnostica usare chiamate senza `session_token`.
+
 # MCP direct UI tools — diagnosi catalogo ChatGPT (22 novembre 2026)
 
 ## Risultato osservato

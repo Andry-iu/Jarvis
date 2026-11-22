@@ -22,7 +22,7 @@ import (
 	"time"
 )
 
-const version = "0.9.4"
+const version = "0.9.5"
 
 type RPCRequest struct {
 	JSONRPC string          `json:"jsonrpc"`
@@ -60,7 +60,6 @@ type Agent struct {
 	testPrivileges         func() agentPrivileges
 	testLaunchRestart      func(*adminRestart) error
 	testLaunchSourceUpdate func(string) error
-	sessions               sessionState
 	usageMu                sync.Mutex
 	usage                  *toolUsageStore
 	uiMu                   sync.Mutex
@@ -306,7 +305,7 @@ func legacyToolsList() any {
 		map[string]any{"name": "project_clone", "description": "Clone a GitHub HTTPS repository from approved owner Andry-iu into JARVIS_PROJECTS_ROOT without overwriting an existing directory. Runs as a cancellable task; use agent_status to monitor. Requires Git credentials preconfigured on the notebook.", "inputSchema": map[string]any{"type": "object", "properties": map[string]any{"repository_url": map[string]any{"type": "string"}, "project": map[string]any{"type": "string"}}, "required": []string{"repository_url"}}},
 		map[string]any{"name": "project_status", "description": "Read current Git branch, commit and tracked dirty file count for a repository within the authorized projects root (read-only)", "inputSchema": map[string]any{"type": "object", "properties": map[string]any{"project": map[string]any{"type": "string"}}, "required": []string{"project"}}},
 		map[string]any{"name": "agent_status", "description": "Read Windows agent status and most recent task", "inputSchema": map[string]any{"type": "object", "properties": map[string]any{}}},
-		map[string]any{"name": "task_start", "description": "Start a cancellable diagnostic or restricted Go test/build task in an authorized module directory. No arbitrary commands.", "inputSchema": map[string]any{"type": "object", "properties": map[string]any{"name": map[string]any{"type": "string"}, "duration_seconds": map[string]any{"type": "integer", "minimum": 1, "maximum": 300}, "operation": map[string]any{"type": "string", "enum": []string{"go_test", "go_build", "desktop_inspect", "desktop_action"}}, "project": map[string]any{"type": "string"}, "desktop": map[string]any{"type": "object", "additionalProperties": false, "properties": map[string]any{"snapshot_id": map[string]any{"type": "string"}, "element_id": map[string]any{"type": "string"}, "action": map[string]any{"type": "string", "enum": []string{"invoke", "set_text", "select", "toggle"}}, "text": map[string]any{"type": "string", "maxLength": 4096}}}}}},
+		map[string]any{"name": "task_start", "description": "COMPATIBILITY FALLBACK ONLY. Prefer dedicated named MCP tools when available; avoid task_start for normal work. Use only for legacy diagnostic or restricted Go test/build without direct equivalents. No arbitrary commands.", "inputSchema": map[string]any{"type": "object", "properties": map[string]any{"name": map[string]any{"type": "string"}, "duration_seconds": map[string]any{"type": "integer", "minimum": 1, "maximum": 300}, "operation": map[string]any{"type": "string", "enum": []string{"go_test", "go_build", "desktop_inspect", "desktop_action"}}, "project": map[string]any{"type": "string"}, "desktop": map[string]any{"type": "object", "additionalProperties": false, "properties": map[string]any{"snapshot_id": map[string]any{"type": "string"}, "element_id": map[string]any{"type": "string"}, "action": map[string]any{"type": "string", "enum": []string{"invoke", "set_text", "select", "toggle"}}, "text": map[string]any{"type": "string", "maxLength": 4096}}}}}},
 		map[string]any{"name": "update_prepare", "description": "Stage a single-use Windows update batch; requires Cloudflare Access authentication. Submit exact UTF-8 CRLF content, 32-hex update ID in first REM line, SHA-256 of bytes. Does not execute.", "inputSchema": map[string]any{"type": "object", "properties": map[string]any{"update_id": map[string]any{"type": "string"}, "sha256": map[string]any{"type": "string"}, "content": map[string]any{"type": "string"}}, "required": []string{"update_id", "sha256", "content"}}},
 		map[string]any{"name": "update_execute", "description": "Rehash and start a previously staged batch as separate Windows process; requires Cloudflare Access authentication. Does not report completed deployment.", "inputSchema": map[string]any{"type": "object", "properties": map[string]any{"update_id": map[string]any{"type": "string"}, "sha256": map[string]any{"type": "string"}}, "required": []string{"update_id", "sha256"}}},
 		map[string]any{"name": "update_status", "description": "Read durable update preparation/launch/exit status by update_id. Never replays; batch exit is not proof of successful installation. Cloudflare Access or paired peer listener required.", "inputSchema": map[string]any{"type": "object", "properties": map[string]any{"update_id": map[string]any{"type": "string"}}, "required": []string{"update_id"}}},
@@ -436,11 +435,7 @@ func handler(a *Agent, token string, access *AccessVerifier) http.Handler {
 				if (p.Name == "update_prepare" || p.Name == "update_execute" || p.Name == "update_status" || p.Name == "log_list" || p.Name == "log_read" || p.Name == "diagnostic_status") && !validAccess {
 					res = response(q.ID, toolResult(map[string]string{"error": "Cloudflare Access authentication required for update tools"}, true), nil)
 				} else {
-					principal := "mcp:local"
-					if !validLocal && validAccess {
-						principal = verifiedAccessPrincipal(r.Header.Get("Cf-Access-Jwt-Assertion"))
-					}
-					res = response(q.ID, a.invokeScoped(p.Name, p.Arguments, principal), nil)
+					res = response(q.ID, a.invoke(p.Name, p.Arguments), nil)
 				}
 			}
 		default:

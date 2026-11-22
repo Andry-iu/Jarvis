@@ -1,7 +1,6 @@
 package main
 
 import (
-	"time"
 	"encoding/json"
 	"errors"
 	"log"
@@ -135,15 +134,6 @@ func toolFailed(result any) bool {
 	return v.IsError
 }
 func (a *Agent) invoke(name string, args json.RawMessage) (result any) {
-	return a.invokeScoped(name, args, "internal")
-}
-
-func (a *Agent) invokeScoped(name string, args json.RawMessage, principal string) (result any) {
-	token, reused, supplied := "", false, false
-	if toolDeclared(name) {
-		token, reused, supplied = a.sessions.begin(sessionTokenArguments(name, args), principal, time.Now())
-	}
-	defer func() { result = a.finishSession(result, principal, token, reused, supplied) }()
 	s, err := a.usageStore()
 	if err != nil {
 		// Telemetry must never turn a completed mutation into a retryable failure.
