@@ -1,3 +1,12 @@
+## Desktop1 0.8.8 — aggiornamento completato, riconnessione da verificare (22/11/2026)
+
+- L'utente ha verificato in PowerShell su Desktop1 il processo `jarvis-mcp` attivo con PID `158788`, avviato alle 18:03:31 locali dopo il comando `Start-ScheduledTask` (lo script precedente avviava l'attività solo in assenza di updater ancora in esecuzione).
+- Il file locale `D:\Jarvis\Logs\diagnostics\self-update.log` riporta `START 2026-11-22T16:57:10.3199909Z`, `BACKUP_VERIFIED D:\Jarvis\Backups\self-update-1ec26428affa4969907734ce67938ff2`, `ROLLBACK_REHEARSAL_PASS`, `INSTALLED_SHA256 fe0300155de37747907ddbfbe6efa09a65f40559ec146729dc98cafaf95278bf`, `PASS common_batch_update_identity_config_maintenance`.
+- Queste evidenze attestano esito positivo del batch di aggiornamento e processo Jarvis nuovamente in esecuzione, ma **non** confermano ancora la raggiungibilità del connettore MCP esterno o una nuova lettura live di `machine_info.version=0.8.8`. Dopo questa segnalazione, `machine_info`, `agent_status` e `agent_update_status` continuano infatti a restituire `The tool failed internally` da ChatGPT.
+- Diagnosi successiva: verificare servizio health localhost sulla porta 8765, processo `cloudflared` e stato dell'attività pianificata, senza reinstallare o ripetere l'aggiornamento. Soltanto dopo la riconnessione provare `screen_capture` → `ui_mouse_screen` su Desktop1.
+
+---
+
 ## Stato operativo 0.8.8 — 22 novembre 2026 (rilevamento post-distribuzione)
 
 - Sorgente integrato in `main` con pull request #2, merge `10175433558d48f35ef15674be6962c5134f3e29`; CI sul commit candidato `573298d4f9d8a2071f3ef2ec99391b9dcfc20b82` conclusa con successo. Nuovo tool `ui_mouse_screen`: coordinate JPEG della cattura `screen_capture`, `capture_id` monouso 45 s, conversione automatica e accesso taskbar/anteprime con desktop interattivo verificato. Dettagli in [IMAGE-SPACE-MOUSE-0.8.8-20261122.md](IMAGE-SPACE-MOUSE-0.8.8-20261122.md).
