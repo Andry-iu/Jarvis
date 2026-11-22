@@ -45,14 +45,14 @@ func TestSessionIdleExpiryAndPrincipalIsolation(t *testing.T) {
     if known,reused,_ := sessions.begin(raw,"cf:two",now.Add(time.Second)); known != "" || reused {
         t.Fatal("token from another principal accepted")
     }
-    if known,reused,_ := sessions.begin(raw,"cf:one",now.Add(299*time.Second)); known != token || !reused {
-        t.Fatal("lease must renew before 300 seconds")
+    if known,reused,_ := sessions.begin(raw,"cf:one",now.Add(1799*time.Second)); known != token || !reused {
+        t.Fatal("lease must renew before 1800 seconds")
     }
-    if known,reused,_ := sessions.begin(raw,"cf:one",now.Add(598*time.Second)); known != token || !reused {
+    if known,reused,_ := sessions.begin(raw,"cf:one",now.Add(3598*time.Second)); known != token || !reused {
         t.Fatal("every valid command renews idle deadline")
     }
-    if known,reused,_ := sessions.begin(raw,"cf:one",now.Add(898*time.Second)); known != "" || reused {
-        t.Fatal("lease must expire after 300 seconds idle")
+    if known,reused,_ := sessions.begin(raw,"cf:one",now.Add(5398*time.Second)); known != "" || reused {
+        t.Fatal("lease must expire after 1800 seconds idle")
     }
 }
 
