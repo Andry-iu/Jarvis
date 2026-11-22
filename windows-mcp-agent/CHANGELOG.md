@@ -1,3 +1,10 @@
+## 0.9.6 — 2026-11-22 (implicit local machine for all runtime tools)
+
+- All dedicated runtime MCP tools now inherit the local machine identity from their **authenticated connection** rather than requiring/disclosing persistent `machine_id` in each tool call. This covers file, process, job, Codex, queue, device forwarding, UI, maintenance and agent update operations.
+- Backward compatibility: old clients may still provide matching `machine_id`; mismatches are rejected and remote device forwarding continues using `device_id`.
+- Preserve all authentication, anti-replay, UI target, Windows privilege and Cloudflare Access protections. The new client schema may reduce sensitive-field sharing, but cannot suppress ChatGPT's own consent UI. No conversational token is restored.
+- See `docs/mcp-agent/ALL-TOOLS-IMPLICIT-MACHINE-0.9.6-20261122.md`.
+
 ## 0.9.5 — 2026-11-22 (no conversational token, retain optimizations)
 
 - MCP catalog description for `task_start` now explicitly marks it as **fallback only**: prefer direct named tools (particularly UI functions) whenever available; preserve legacy diagnostics and cached-client compatibility.
