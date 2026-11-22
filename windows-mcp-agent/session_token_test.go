@@ -64,7 +64,7 @@ func TestSessionDoesNotIssueAfterFailedInitialCall(t *testing.T) {
 
 func TestSessionTokenRuntimeSchemaAndDecoder(t *testing.T) {
     p, err := decodeRuntime("machine_info",json.RawMessage(`{"session_token":"0"}`))
-    if err != nil || p.SessionToken != "0" {t.Fatalf("runtime token: %+v, %v",p,err)}
+    if err != nil || string(p.SessionToken) != `"0"` {t.Fatalf("runtime token: %+v, %v",p,err)}
     if _, err := decodeRuntime("machine_info",json.RawMessage(`{"session_token":null}`)); err == nil {
         t.Fatal("null token must not be accepted")
     }
