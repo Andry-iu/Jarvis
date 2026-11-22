@@ -1,3 +1,12 @@
+## 0.9.3 — 2026-11-22 (candidato: rolling session 30 minuti; non ancora distribuita)
+
+- Parametro facoltativo `session_token` su tutti gli strumenti MCP: `0`, token scaduto, perso o sconosciuto aprono una nuova sessione; il primo comando viene eseguito senza round-trip aggiuntivo e restituisce il token se ha successo.
+- Token casuale a 256 bit, hash solo in memoria e per identita autenticata; sessione rinnovata a ogni richiesta valida, 30 minuti di inattivita. I client precedenti senza token restano supportati.
+- Cache di JWT Cloudflare gia verificati con rinnovo per attivita di 30 minuti, ma sempre invalidata all'exp originaria del JWT; chiavi JWKS ricaricate dopo 30 minuti (senza nuovo login).
+- Il token Jarvis non sostituisce l'autenticazione richiesta da Cloudflare Access, i permessi host, l'identita computer, anti-replay o i controlli per operazione. Sessioni globali/applicazione/policy Cloudflare richiedono una configurazione separata nel dashboard.
+- Test e decisioni: `docs/mcp-agent/SESSION-TOKEN-0.9.3-20261122.md`.
+- Stato di sviluppo: branch `feature/agent-session-token-093-20261122`, nessuna installazione attestata fino a verifica live.
+
 ## 0.9.2 — 2026-11-22 (optimizzazione latenza; in verifica, non ancora installata)
 
 - Riuso delle connessioni TCP/TLS per peer con chiave composta da endpoint e fingerprint del certificato, evitando handshake completo a ogni `device_call`. Pool limitato e scadenza delle connessioni inattive a 5 minuti; token/autenticazione ricostruiti e verificati su ogni comando.

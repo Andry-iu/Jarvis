@@ -150,7 +150,7 @@ func gatewayHandlerWithConfirmation(a *Agent, token string, confirm func(context
 			} else {
 				// The peer listener grants the paired gateway the same operations as the
 				// external entry, retaining each tool's identity/permission/idempotency gates.
-				result = a.invoke(p.Method, p.Arguments)
+				result = a.invokeScoped(p.Method, p.Arguments, "gateway:paired-peer")
 			}
 		}
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
