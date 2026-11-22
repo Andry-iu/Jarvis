@@ -27,7 +27,66 @@ type AccessVerifier struct {
 	mu         sync.Mutex
 	keys       map[string]*rsa.PublicKey
 	fetched    time.Time
+    verified  map[[32]byte]accessJWTCacheEntry
 }
+
+type accessJWTCacheEntry struct {
+    expires time.Time
+    lastUse time.Time
+}
+
+// Positive JWT verification is cached for active requests, bounded by BOTH
+// 30 minutes of inactivity and the issuer's immutable exp claim. Cloudflare's
+// own session policy and edge verification remain outside this cache.
+const accessVerifiedIdle = 30 * time.Minute
+const accessJWTCacheLimit = 256
+
+func (v *AccessVerifier) cachedJWT(jwt string, at time.Time) bool {
+    sum := sha256.Sum256([]byte(jwt))
+    v.mu.Lock()
+    defer v.mu.Unlock()
+    entry, ok := v.verified[sum]
+    if !ok {
+        return false
+    }
+    if !at.Before(entry.expires) || at.Before(entry.lastUse) || at.Sub(entry.lastUse) >= accessVerifiedIdle {
+        delete(v.verified, sum)
+        return false
+    }
+    entry.lastUse = at
+    v.verified[sum] = entry
+    return true
+}
+
+func (v *AccessVerifier) cacheVerifiedJWT(jwt string, expires time.Time, at time.Time) {
+    if !at.Before(expires) {
+        return
+    }
+    sum := sha256.Sum256([]byte(jwt))
+    v.mu.Lock()
+    defer v.mu.Unlock()
+    if v.verified == nil {
+        v.verified = make(map[[32]byte]accessJWTCacheEntry)
+    }
+    for k, entry := range v.verified {
+        if !at.Before(entry.expires) || at.Sub(entry.lastUse) >= accessVerifiedIdle {
+            delete(v.verified, k)
+        }
+    }
+    if len(v.verified) >= accessJWTCacheLimit {
+        var oldest [32]byte
+        var oldestAt time.Time
+        for key, entry := range v.verified {
+            if oldestAt.IsZero() || entry.lastUse.Before(oldestAt) {
+                oldest = key
+                oldestAt = entry.lastUse
+            }
+        }
+        delete(v.verified, oldest)
+    }
+    v.verified[sum] = accessJWTCacheEntry{expires: expires, lastUse: at}
+}
+
 
 type accessJWKS struct {
 	Keys []struct {
@@ -100,6 +159,10 @@ func (v *AccessVerifier) Verify(ctx context.Context, jwt string) error {
 	if len(jwt) > 16384 {
 		return errors.New("JWT too long")
 	}
+    nowTime := time.Now()
+    if v.cachedJWT(jwt, nowTime) {
+        return nil
+    }
 	parts := strings.Split(jwt, ".")
 	if len(parts) != 3 {
 		return errors.New("invalid JWT")
@@ -160,6 +223,9 @@ func (v *AccessVerifier) Verify(ctx context.Context, jwt string) error {
 	if claims.Sub == "" {
 		return errors.New("missing subject")
 	}
+    // Reuse the validated JWT identity for repeated requests. A session token
+    // never substitutes for a valid transport credential.
+    v.cacheVerifiedJWT(jwt, time.Unix(claims.Exp, 0), nowTime)
 	return nil
 }
 
