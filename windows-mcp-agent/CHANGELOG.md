@@ -1,3 +1,13 @@
+## 0.9.2 — 2026-11-22 (optimizzazione latenza; in verifica, non ancora installata)
+
+- Riuso delle connessioni TCP/TLS per peer con chiave composta da endpoint e fingerprint del certificato, evitando handshake completo a ogni `device_call`. Pool limitato e scadenza delle connessioni inattive a 5 minuti; token/autenticazione ricostruiti e verificati su ogni comando.
+- `peerIdentity` resta una verifica live sui collegamenti HTTPS senza certificate pin. Solo per endpoint TLS pinned, una prova positiva di identita macchina viene riutilizzata per al massimo 300 secondi, legata a endpoint, fingerprint e machine_id. La destinazione continua a controllare l'identita indicata a ogni comando.
+- Gateway: il catalogo immutabile dei nomi di tool viene costruito una volta, anziche ricreare gli schemi JSON a ogni invocazione.
+- Telemetria: `toolFailed` e `usageName` evitano conversioni e costruzioni ripetitive; persistono contatori, ricevute, guardie di autenticazione, protezione replay e check dei parametri.
+- Test: connessione TLS riutilizzata, credenziali aggiornate senza riusare il bearer, rifiuto fingerprint errata, cache identita isolata e scadenza esatta di 300 secondi. Non confondere il TTL della cache con un permesso di chat.
+- **Non implementa il consenso generale della chat**: manca ancora un'identita chat attestata dal connettore e ChatGPT puo richiedere proprie conferme. Resta valido `CHAT-WIDE-AUTHORIZATION-20261122.md`.
+- Rilascio su Desktop1 e Desktop2 solo dopo CI, test Go e verifica di update/versione/hash; misure di latenza end-to-end ancora da rilevare.
+
 ## 0.9.1 — 2026-11-22 (installata su Desktop1 e Desktop2; collaudo sequenza Paint ancora non superato)
 
 - Corretto difetto osservato nel primo collaudo reale 0.9.0 in Paint: tutte le 12 azioni risultavano inviate, ma Paint processava solo parte dei passaggi, lasciando un rettangolo mancante e soltanto 3 cerchi.

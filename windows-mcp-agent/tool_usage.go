@@ -107,17 +107,20 @@ func usageName(name string, args json.RawMessage) string {
 			}
 		}
 	}
-	if isRuntimeTool(name) {
+	if toolDeclared(name) {
 		return name
-	}
-	for _, raw := range legacyToolsList().(map[string]any)["tools"].([]any) {
-		if raw.(map[string]any)["name"] == name {
-			return name
-		}
 	}
 	return "_unknown"
 }
+
 func toolFailed(result any) bool {
+	// The normal MCP result is already a typed map. Avoid a JSON round-trip
+	// on every command; retain the decoder for alternate/legacy result types.
+	if resultMap, ok := result.(map[string]any); ok {
+		if failed, ok := resultMap["isError"].(bool); ok {
+			return failed
+		}
+	}
 	b, err := json.Marshal(result)
 	if err != nil {
 		return true

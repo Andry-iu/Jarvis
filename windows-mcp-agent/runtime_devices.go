@@ -22,6 +22,96 @@ const maxGatewayHops = 8
 
 var devicesMu sync.Mutex
 
+// A pooled transport avoids a full TCP/TLS handshake for each forwarded command.
+// The pin and endpoint are part of the key; changes cannot inherit an old TLS pool.
+// Credentials are deliberately NOT cached: the Authorization headers are rebuilt
+// and verified by the destination on every request.
+type peerTransportKey struct {
+	endpoint string
+	certificatePin string
+}
+var peerTransports = struct {
+	sync.Mutex
+	entries map[peerTransportKey]*http.Transport
+}{entries: make(map[peerTransportKey]*http.Transport)}
+
+func transportForPeer(p peerDevice) *http.Transport {
+	key := peerTransportKey{endpoint: p.Endpoint, certificatePin: strings.ToLower(p.CertificateSHA256)}
+	peerTransports.Lock()
+	defer peerTransports.Unlock()
+	if existing := peerTransports.entries[key]; existing != nil {
+		return existing
+	}
+	// Configurations are bounded to 128 devices, but prune stale pools after
+	// repeated configuration changes rather than holding connections indefinitely.
+	if len(peerTransports.entries) >= 256 {
+		for oldKey, old := range peerTransports.entries {
+			old.CloseIdleConnections()
+			delete(peerTransports.entries, oldKey)
+		}
+	}
+	tr := http.DefaultTransport.(*http.Transport).Clone()
+	tr.MaxIdleConnsPerHost = 8
+	tr.IdleConnTimeout = 5 * time.Minute
+	if key.certificatePin != "" {
+		pin := key.certificatePin
+		// The certificate pin is a mandatory trust anchor for self-signed peers.
+		// Validation remains active on every new TLS connection.
+		tr.TLSClientConfig = &tls.Config{MinVersion: tls.VersionTLS12, InsecureSkipVerify: true, VerifyConnection: func(cs tls.ConnectionState) error {
+			if len(cs.PeerCertificates) == 0 {
+				return errors.New("missing peer certificate")
+			}
+			sum := sha256.Sum256(cs.PeerCertificates[0].Raw)
+			if hex.EncodeToString(sum[:]) != pin {
+				return errors.New("gateway certificate mismatch")
+			}
+			cert := cs.PeerCertificates[0]
+			now := time.Now()
+			if now.Before(cert.NotBefore) || now.After(cert.NotAfter) {
+				return errors.New("gateway certificate expired")
+			}
+			return nil
+		}}
+	}
+	peerTransports.entries[key] = tr
+	return tr
+}
+
+// A positive identity observation is reusable only for a pinned TLS endpoint;
+// Cloudflare/ordinary public HTTPS routes still require live identity checks.
+type peerIdentityKey struct {
+	endpoint string
+	machineID string
+	certificatePin string
+}
+var verifiedPeerIdentities = struct {
+	sync.Mutex
+	checked map[peerIdentityKey]time.Time
+}{checked: make(map[peerIdentityKey]time.Time)}
+
+func cachedPeerIdentity(p peerDevice) bool {
+	if p.CertificateSHA256 == "" {
+		return false
+	}
+	key := peerIdentityKey{p.Endpoint, p.MachineID, strings.ToLower(p.CertificateSHA256)}
+	verifiedPeerIdentities.Lock()
+	defer verifiedPeerIdentities.Unlock()
+	checked, ok := verifiedPeerIdentities.checked[key]
+	return ok && time.Since(checked) >= 0 && time.Since(checked) < 5*time.Minute
+}
+func rememberPeerIdentity(p peerDevice) {
+	if p.CertificateSHA256 == "" {
+		return
+	}
+	key := peerIdentityKey{p.Endpoint, p.MachineID, strings.ToLower(p.CertificateSHA256)}
+	verifiedPeerIdentities.Lock()
+	defer verifiedPeerIdentities.Unlock()
+	if len(verifiedPeerIdentities.checked) >= 256 {
+		clear(verifiedPeerIdentities.checked)
+	}
+	verifiedPeerIdentities.checked[key] = time.Now()
+}
+
 type peerDevice struct {
 	home              string
 	ID                string `json:"device_id"`
@@ -233,29 +323,7 @@ func peerRPCTrace(p peerDevice, method string, args any, visited []string) (map[
 	if p.TokenEnv == "" && p.AccessIDEnv == "" {
 		return nil, errors.New("authenticated peer configuration required")
 	}
-	tr := http.DefaultTransport.(*http.Transport).Clone()
-	if p.CertificateSHA256 != "" {
-		pin := strings.ToLower(p.CertificateSHA256)
-		// Exact certificate pin is an explicit trust anchor, including self-signed LAN
-		// certificates. Never disable verification without this mandatory comparison.
-		tr.TLSClientConfig = &tls.Config{MinVersion: tls.VersionTLS12, InsecureSkipVerify: true, VerifyConnection: func(cs tls.ConnectionState) error {
-			if len(cs.PeerCertificates) == 0 {
-				return errors.New("missing peer certificate")
-			}
-			sum := sha256.Sum256(cs.PeerCertificates[0].Raw)
-			if hex.EncodeToString(sum[:]) != pin {
-				return errors.New("gateway certificate mismatch")
-			}
-			cert := cs.PeerCertificates[0]
-			now := time.Now()
-			if now.Before(cert.NotBefore) || now.After(cert.NotAfter) {
-				return errors.New("gateway certificate expired")
-			}
-			return nil
-		}}
-	}
-	defer tr.CloseIdleConnections()
-	client := &http.Client{Timeout: timeout, Transport: tr, CheckRedirect: func(*http.Request, []*http.Request) error { return errors.New("peer redirects refused") }}
+	client := &http.Client{Timeout: timeout, Transport: transportForPeer(p), CheckRedirect: func(*http.Request, []*http.Request) error { return errors.New("peer redirects refused") }}
 	res, e := client.Do(req)
 	if e != nil {
 		return nil, errors.New("peer connection failed or timed out; execution may be uncertain; inspect target request_id/update_id before further action")
@@ -285,6 +353,9 @@ func peerRPCTrace(p peerDevice, method string, args any, visited []string) (map[
 	return rpc.Result, nil
 }
 func peerIdentity(p peerDevice) error {
+	if cachedPeerIdentity(p) {
+		return nil
+	}
 	v, e := peerRPC(p, "machine_info", map[string]any{})
 	if e != nil {
 		return e
@@ -303,18 +374,24 @@ func peerIdentity(p peerDevice) error {
 			MachineID string `json:"machine_id"`
 		}
 		if json.Unmarshal([]byte(s), &id) == nil && id.MachineID == p.MachineID {
+			rememberPeerIdentity(p)
 			return nil
 		}
 	}
 	return errors.New("peer identity mismatch; operation blocked")
 }
-func toolDeclared(name string) bool {
+// The public schema is immutable after startup. Avoid rebuilding dozens of
+// JSON Schema entries on every gateway command just to check a method name.
+var declaredToolNames = sync.OnceValue(func() map[string]bool {
+	names := map[string]bool{}
 	for _, v := range toolsList().(map[string]any)["tools"].([]any) {
-		if v.(map[string]any)["name"] == name {
-			return true
-		}
+		names[v.(map[string]any)["name"].(string)] = true
 	}
-	return false
+	return names
+})
+
+func toolDeclared(name string) bool {
+	return declaredToolNames()[name]
 }
 func forwardArguments(raw json.RawMessage, target string) (string, map[string]any, error) {
 	var args map[string]any
