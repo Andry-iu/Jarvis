@@ -18,7 +18,27 @@ jobs:
           go-version-file: windows-mcp-agent/go.mod
           cache-dependency-path: windows-mcp-agent/go.mod
       - name: Check installer manifest and hashes
-        run: python3 windows-mcp-agent/installer/Test-PackageContract.py
+        run: |
+          python3 - <<'PY'
+          import hashlib, json
+          from pathlib import Path
+          root=Path("windows-mcp-agent/installer")
+          module=root.parent
+          manifest=json.loads((root/"package.json").read_text())
+          for f in manifest["files"]:
+              name=f["path"]
+              if name == "jarvis-mcp.exe":
+                  continue
+              p=(module/"scripts"/name) if name=="update-agent.ps1" else (root/name)
+              if not p.is_file():
+                  print("MISSING",name)
+                  continue
+              data=p.read_text(encoding="utf-8").replace("\r\n","\n").encode("utf-8")
+              digest=hashlib.sha256(data).hexdigest()
+              if len(data)!=f["bytes"] or digest!=f["sha256"]:
+                  print("STALE_MANIFEST",name,"actual_bytes",len(data),"actual_sha256",digest)
+          PY
+          python3 windows-mcp-agent/installer/Test-PackageContract.py
       - name: Test, vet, native build and Windows cross-build
         working-directory: windows-mcp-agent
         run: |
