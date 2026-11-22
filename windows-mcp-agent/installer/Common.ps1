@@ -74,9 +74,174 @@ function Assert-Stopped([string]$HomeDir) {
     }
 }
 function Get-LocalToken([string]$HomeDir) {
-    $line = [IO.File]::ReadAllText((Join-Path $HomeDir 'Config\secrets.env')).Trim()
-    if ($line -notmatch '^JARVIS_MCP_TOKEN=([A-Za-z0-9+/=]{40,})$') { throw 'Credenziale locale non valida.' }
-    return $matches[1]
+    # Read the same line-oriented environment format as the agent. Legacy installations
+    # may contain additional variables and a BOM at the start of individual lines.
+    $token = $null
+    foreach ($rawLine in [IO.File]::ReadAllLines((Join-Path $HomeDir 'Config\secrets.env'))) {
+        $line = $rawLine.Trim().TrimStart([char]0xFEFF).Trim()
+        if (-not $line -or $line.StartsWith('#')) { continue }
+        if ($line -notmatch '^([A-Za-z_][A-Za-z0-9_]*)=(.*)
+function Invoke-LocalTool([string]$HomeDir,[string]$Name,[hashtable]$Arguments=@{}) {
+    $s = Read-Install $HomeDir
+    $body = @{jsonrpc='2.0';id=1;method='tools/call';params=@{name=$Name;arguments=$Arguments}} | ConvertTo-Json -Depth 12 -Compress
+    $r = Invoke-RestMethod ('http://127.0.0.1:'+$s.port+'/mcp') -Method Post -ContentType 'application/json' -Headers @{Authorization=('Bearer '+(Get-LocalToken $HomeDir));Accept='application/json, text/event-stream'} -Body ([Text.Encoding]::UTF8.GetBytes($body)) -TimeoutSec 15
+    if ($r.PSObject.Properties['error'] -or $r.result.isError) { throw ('Strumento non disponibile: '+$Name) }
+    return $r.result.content[0].text | ConvertFrom-Json
+}
+function Get-Record($Process) {
+    return @{pid=$Process.Id;started_ticks=$Process.StartTime.ToUniversalTime().Ticks.ToString()}
+}
+function Find-Codex([string]$PreferredExecutable='') {
+    $candidates=New-Object Collections.Generic.List[string]
+    if ($PreferredExecutable) {
+        if (-not [IO.Path]::IsPathRooted($PreferredExecutable) -or $PreferredExecutable -match '[\r\n"\x00]' -or [IO.Path]::GetExtension($PreferredExecutable) -ine '.exe') { throw 'Percorso CLI Codex non valido.' }
+        $candidates.Add($PreferredExecutable)
+    } else {
+        try { foreach ($cmd in @(Get-Command codex.exe -CommandType Application -All -ErrorAction SilentlyContinue)) { if ($cmd.Source) { $candidates.Add($cmd.Source) } } } catch {}
+        if ($env:LOCALAPPDATA) { $candidates.Add((Join-Path $env:LOCALAPPDATA 'Programs\OpenAI\Codex\bin\codex.exe')) }
+    }
+    try {
+        $pkg = @(Get-AppxPackage -Name OpenAI.Codex -ErrorAction Stop)
+        if (-not $PreferredExecutable -and $pkg.Count -eq 1) { $candidates.Add((Join-Path $pkg[0].InstallLocation 'app\resources\codex.exe')) }
+    } catch {}
+    foreach ($exe in @($candidates | Select-Object -Unique)) {
+        try {
+            if (-not (Test-Path -LiteralPath $exe -PathType Leaf)) { continue }
+            $version = & $exe --version 2>$null
+            if ($LASTEXITCODE -eq 0 -and "$version" -eq 'codex-cli 0.165.0-alpha.1.2') { return [IO.Path]::GetFullPath($exe) }
+        } catch { continue }
+    }
+    Write-Warning 'CLI Codex 0.165.0-alpha.1.2 non trovata o non accessibile. Collegamento Codex non completato; nessun permesso viene modificato.'
+    return ''
+}
+function Start-Child([string]$Exe,[string]$Arguments,[string]$HomeDir,[string]$LogName) {
+    $psi=New-Object Diagnostics.ProcessStartInfo
+    $psi.FileName=$Exe;$psi.Arguments=$Arguments;$psi.WorkingDirectory=$HomeDir
+    $psi.UseShellExecute=$false;$psi.CreateNoWindow=$true
+    $psi.RedirectStandardOutput=$true;$psi.RedirectStandardError=$true
+    foreach ($key in @($psi.EnvironmentVariables.Keys)) {
+        if ($key -match '^(JARVIS_|OPENAI_|CODEX_|CF_|TUNNEL_)') { $psi.EnvironmentVariables.Remove($key) }
+    }
+    $toolFile=Join-Path $HomeDir 'Config\toolchain.json'
+    if(Test-Path -LiteralPath $toolFile){
+        $tools=Get-Content -LiteralPath $toolFile -Raw|ConvertFrom-Json
+        if($tools.format -ne 1 -or @($tools.paths).Count -gt 8){throw 'Configurazione strumenti non valida.'}
+        $bins=@($tools.paths|ForEach-Object {Get-FullPath $_})
+        $psi.EnvironmentVariables['PATH']=($bins -join ';')+';'+$psi.EnvironmentVariables['PATH']
+    }
+    $psi.EnvironmentVariables['JARVIS_HOME']=$HomeDir
+    $p=[Diagnostics.Process]::Start($psi)
+    $stamp=[DateTime]::UtcNow.ToString('yyyyMMdd-HHmmss')+'-'+$p.Id
+    $out=[IO.File]::Open((Join-Path $HomeDir ('Logs\'+$LogName+'-'+$stamp+'.log')),[IO.FileMode]::CreateNew,[IO.FileAccess]::Write,[IO.FileShare]::Read)
+    $err=[IO.File]::Open((Join-Path $HomeDir ('Logs\'+$LogName+'-error-'+$stamp+'.log')),[IO.FileMode]::CreateNew,[IO.FileAccess]::Write,[IO.FileShare]::Read)
+    return @{process=$p;out=$out;err=$err;out_task=$p.StandardOutput.BaseStream.CopyToAsync($out);err_task=$p.StandardError.BaseStream.CopyToAsync($err)}
+}
+function Stop-OwnedTree($Record,[string]$Path) {
+    $p=Get-OwnedProcess $Record $Path
+    if (-not $p) { return }
+    $info=New-Object Diagnostics.ProcessStartInfo
+    $info.FileName=Join-Path $env:SystemRoot 'System32\taskkill.exe'
+    $info.Arguments='/PID '+$p.Id+' /T /F';$info.UseShellExecute=$false;$info.CreateNoWindow=$true
+    $info.RedirectStandardOutput=$true;$info.RedirectStandardError=$true
+    $killer=[Diagnostics.Process]::Start($info)
+    $out=$killer.StandardOutput.ReadToEndAsync();$err=$killer.StandardError.ReadToEndAsync()
+    if (-not $killer.WaitForExit(10000)) { throw 'Arresto albero processi non verificato.' }
+    $null=$out.Result;$null=$err.Result
+    if (-not $p.WaitForExit(5000)) { throw 'Processo ancora attivo.' }
+    $killer.Dispose()
+}
+function Assert-CloudflareInputs([string]$Team,[string]$Audience,[string]$Hostname,[string]$TunnelID) {
+    if ($Team -notmatch '^https://[a-zA-Z0-9-]+\.cloudflareaccess\.com/?$') { throw 'Team domain richiesto: https://nome.cloudflareaccess.com' }
+    if ($Audience -notmatch '^[a-fA-F0-9]{64}$') { throw 'AUD Access non valido: attesi 64 caratteri esadecimali.' }
+    if ($Hostname -notmatch '^https://[a-zA-Z0-9](?:[a-zA-Z0-9.-]*[a-zA-Z0-9])?\.[a-zA-Z]{2,}/?$') { throw 'Indirizzo richiesto: https://desktop2.dominio, senza percorso o parametri.' }
+    if ($TunnelID -notmatch '^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$') { throw 'ID del nuovo tunnel non valido.' }
+}
+) { throw 'Configurazione credenziali non valida.' }
+        if ($matches[1] -ceq 'JARVIS_MCP_TOKEN') {
+            if ($null -ne $token) { throw 'Credenziale locale duplicata.' }
+            $token = $matches[2]
+        }
+    }
+    # The Go agent accepts 24+ character bearer secrets, not only 40+ base64.
+    # Reject whitespace/control/non-ASCII characters to keep HTTP headers safe.
+    if ($null -eq $token -or $token -cnotmatch '^[\x21-\x7E]{24,4096}
+function Invoke-LocalTool([string]$HomeDir,[string]$Name,[hashtable]$Arguments=@{}) {
+    $s = Read-Install $HomeDir
+    $body = @{jsonrpc='2.0';id=1;method='tools/call';params=@{name=$Name;arguments=$Arguments}} | ConvertTo-Json -Depth 12 -Compress
+    $r = Invoke-RestMethod ('http://127.0.0.1:'+$s.port+'/mcp') -Method Post -ContentType 'application/json' -Headers @{Authorization=('Bearer '+(Get-LocalToken $HomeDir));Accept='application/json, text/event-stream'} -Body ([Text.Encoding]::UTF8.GetBytes($body)) -TimeoutSec 15
+    if ($r.PSObject.Properties['error'] -or $r.result.isError) { throw ('Strumento non disponibile: '+$Name) }
+    return $r.result.content[0].text | ConvertFrom-Json
+}
+function Get-Record($Process) {
+    return @{pid=$Process.Id;started_ticks=$Process.StartTime.ToUniversalTime().Ticks.ToString()}
+}
+function Find-Codex([string]$PreferredExecutable='') {
+    $candidates=New-Object Collections.Generic.List[string]
+    if ($PreferredExecutable) {
+        if (-not [IO.Path]::IsPathRooted($PreferredExecutable) -or $PreferredExecutable -match '[\r\n"\x00]' -or [IO.Path]::GetExtension($PreferredExecutable) -ine '.exe') { throw 'Percorso CLI Codex non valido.' }
+        $candidates.Add($PreferredExecutable)
+    } else {
+        try { foreach ($cmd in @(Get-Command codex.exe -CommandType Application -All -ErrorAction SilentlyContinue)) { if ($cmd.Source) { $candidates.Add($cmd.Source) } } } catch {}
+        if ($env:LOCALAPPDATA) { $candidates.Add((Join-Path $env:LOCALAPPDATA 'Programs\OpenAI\Codex\bin\codex.exe')) }
+    }
+    try {
+        $pkg = @(Get-AppxPackage -Name OpenAI.Codex -ErrorAction Stop)
+        if (-not $PreferredExecutable -and $pkg.Count -eq 1) { $candidates.Add((Join-Path $pkg[0].InstallLocation 'app\resources\codex.exe')) }
+    } catch {}
+    foreach ($exe in @($candidates | Select-Object -Unique)) {
+        try {
+            if (-not (Test-Path -LiteralPath $exe -PathType Leaf)) { continue }
+            $version = & $exe --version 2>$null
+            if ($LASTEXITCODE -eq 0 -and "$version" -eq 'codex-cli 0.165.0-alpha.1.2') { return [IO.Path]::GetFullPath($exe) }
+        } catch { continue }
+    }
+    Write-Warning 'CLI Codex 0.165.0-alpha.1.2 non trovata o non accessibile. Collegamento Codex non completato; nessun permesso viene modificato.'
+    return ''
+}
+function Start-Child([string]$Exe,[string]$Arguments,[string]$HomeDir,[string]$LogName) {
+    $psi=New-Object Diagnostics.ProcessStartInfo
+    $psi.FileName=$Exe;$psi.Arguments=$Arguments;$psi.WorkingDirectory=$HomeDir
+    $psi.UseShellExecute=$false;$psi.CreateNoWindow=$true
+    $psi.RedirectStandardOutput=$true;$psi.RedirectStandardError=$true
+    foreach ($key in @($psi.EnvironmentVariables.Keys)) {
+        if ($key -match '^(JARVIS_|OPENAI_|CODEX_|CF_|TUNNEL_)') { $psi.EnvironmentVariables.Remove($key) }
+    }
+    $toolFile=Join-Path $HomeDir 'Config\toolchain.json'
+    if(Test-Path -LiteralPath $toolFile){
+        $tools=Get-Content -LiteralPath $toolFile -Raw|ConvertFrom-Json
+        if($tools.format -ne 1 -or @($tools.paths).Count -gt 8){throw 'Configurazione strumenti non valida.'}
+        $bins=@($tools.paths|ForEach-Object {Get-FullPath $_})
+        $psi.EnvironmentVariables['PATH']=($bins -join ';')+';'+$psi.EnvironmentVariables['PATH']
+    }
+    $psi.EnvironmentVariables['JARVIS_HOME']=$HomeDir
+    $p=[Diagnostics.Process]::Start($psi)
+    $stamp=[DateTime]::UtcNow.ToString('yyyyMMdd-HHmmss')+'-'+$p.Id
+    $out=[IO.File]::Open((Join-Path $HomeDir ('Logs\'+$LogName+'-'+$stamp+'.log')),[IO.FileMode]::CreateNew,[IO.FileAccess]::Write,[IO.FileShare]::Read)
+    $err=[IO.File]::Open((Join-Path $HomeDir ('Logs\'+$LogName+'-error-'+$stamp+'.log')),[IO.FileMode]::CreateNew,[IO.FileAccess]::Write,[IO.FileShare]::Read)
+    return @{process=$p;out=$out;err=$err;out_task=$p.StandardOutput.BaseStream.CopyToAsync($out);err_task=$p.StandardError.BaseStream.CopyToAsync($err)}
+}
+function Stop-OwnedTree($Record,[string]$Path) {
+    $p=Get-OwnedProcess $Record $Path
+    if (-not $p) { return }
+    $info=New-Object Diagnostics.ProcessStartInfo
+    $info.FileName=Join-Path $env:SystemRoot 'System32\taskkill.exe'
+    $info.Arguments='/PID '+$p.Id+' /T /F';$info.UseShellExecute=$false;$info.CreateNoWindow=$true
+    $info.RedirectStandardOutput=$true;$info.RedirectStandardError=$true
+    $killer=[Diagnostics.Process]::Start($info)
+    $out=$killer.StandardOutput.ReadToEndAsync();$err=$killer.StandardError.ReadToEndAsync()
+    if (-not $killer.WaitForExit(10000)) { throw 'Arresto albero processi non verificato.' }
+    $null=$out.Result;$null=$err.Result
+    if (-not $p.WaitForExit(5000)) { throw 'Processo ancora attivo.' }
+    $killer.Dispose()
+}
+function Assert-CloudflareInputs([string]$Team,[string]$Audience,[string]$Hostname,[string]$TunnelID) {
+    if ($Team -notmatch '^https://[a-zA-Z0-9-]+\.cloudflareaccess\.com/?$') { throw 'Team domain richiesto: https://nome.cloudflareaccess.com' }
+    if ($Audience -notmatch '^[a-fA-F0-9]{64}$') { throw 'AUD Access non valido: attesi 64 caratteri esadecimali.' }
+    if ($Hostname -notmatch '^https://[a-zA-Z0-9](?:[a-zA-Z0-9.-]*[a-zA-Z0-9])?\.[a-zA-Z]{2,}/?$') { throw 'Indirizzo richiesto: https://desktop2.dominio, senza percorso o parametri.' }
+    if ($TunnelID -notmatch '^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$') { throw 'ID del nuovo tunnel non valido.' }
+}
+) { throw 'Credenziale locale non valida.' }
+    return $token
 }
 function Invoke-LocalTool([string]$HomeDir,[string]$Name,[hashtable]$Arguments=@{}) {
     $s = Read-Install $HomeDir
