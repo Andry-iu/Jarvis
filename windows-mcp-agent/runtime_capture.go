@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"math"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -24,6 +25,36 @@ type captureOutput struct {
 	Image    string          `json:"image"`
 	Metadata json.RawMessage `json:"metadata"`
 }
+// imageCaptureSnapshot binds one screenshot's image-pixel space to the real
+// desktop.  It is private, short-lived and consumed by a single mouse action.
+type captureGeometry struct {
+ OriginX int `json:"origin_x"`
+ OriginY int `json:"origin_y"`
+ OriginalWidth int `json:"original_width"`
+ OriginalHeight int `json:"original_height"`
+ ImageWidth int `json:"image_width"`
+ ImageHeight int `json:"image_height"`
+}
+type imageCaptureSnapshot struct {
+ ID string
+ Created time.Time
+ Geometry captureGeometry
+}
+// Convert a pixel centre, not a pixel edge.  This avoids a rounding bias at
+// non-integral scale factors and supports negative-origin secondary monitors.
+func (g captureGeometry) physical(x, y int) (int, int, error) {
+ if g.ImageWidth < 1 || g.ImageHeight < 1 || g.OriginalWidth < 1 || g.OriginalHeight < 1 ||
+    g.OriginalWidth > 16384 || g.OriginalHeight > 16384 ||
+    x < 0 || y < 0 || x >= g.ImageWidth || y >= g.ImageHeight {
+  return 0, 0, errors.New("point_outside_captured_image")
+ }
+ xx := g.OriginX + int(math.Floor((float64(x)+0.5)*float64(g.OriginalWidth)/float64(g.ImageWidth)))
+ yy := g.OriginY + int(math.Floor((float64(y)+0.5)*float64(g.OriginalHeight)/float64(g.ImageHeight)))
+ if xx < g.OriginX || xx >= g.OriginX+g.OriginalWidth || yy < g.OriginY || yy >= g.OriginY+g.OriginalHeight {
+  return 0, 0, errors.New("coordinate_transform_out_of_bounds")
+ }
+ return xx, yy, nil
+}
 type captureBuffer struct {
 	bytes.Buffer
 	overflow bool
@@ -39,7 +70,7 @@ func (b *captureBuffer) Write(p []byte) (int, error) {
 	b.Buffer.Write(p)
 	return n, nil
 }
-func screenCapture(p runtimeRequest) (any, error) {
+func (a *Agent) screenCapture(p runtimeRequest) (any, error) {
 	if runtime.GOOS != "windows" || os.Getenv("JARVIS_DESKTOP_ENABLED") != "1" {
 		return nil, errors.New("screen capture requires enabled Windows interactive desktop")
 	}
@@ -88,7 +119,20 @@ func screenCapture(p runtimeRequest) (any, error) {
 	if json.Unmarshal(v.Metadata, &metadata) != nil {
 		return nil, errors.New("invalid capture metadata")
 	}
+	var geometry captureGeometry
+	if json.Unmarshal(v.Metadata, &geometry) != nil {
+		return nil, errors.New("invalid capture geometry")
+	}
+	if _, _, e = geometry.physical(0, 0); e != nil {
+		return nil, e
+	}
+	id := newID()
+	a.mu.Lock()
+	a.capture = &imageCaptureSnapshot{ID: id, Created: time.Now(), Geometry: geometry}
+	a.mu.Unlock()
 	metadata["machine_id"] = p.MachineID
+	metadata["capture_id"] = id
+	metadata["capture_expires_seconds"] = 45
 	text, _ := json.Marshal(metadata)
 	return map[string]any{"isError": false, "content": []any{map[string]any{"type": "text", "text": string(text)}, map[string]any{"type": "image", "mimeType": "image/jpeg", "data": v.Image}}}, nil
 }
