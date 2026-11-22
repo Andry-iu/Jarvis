@@ -37,6 +37,10 @@ public static class JarvisWindowNative {
  [DllImport("user32.dll")]static extern IntPtr GetAncestor(IntPtr h,uint flags);
  [DllImport("user32.dll")]static extern bool SetCursorPos(int x,int y);
  [DllImport("user32.dll")]static extern int GetSystemMetrics(int which);
+ public static int[] Bounds(IntPtr target) {
+  R r;if(!GetWindowRect(target,out r))throw new Exception("window_bounds_unavailable");
+  return new int[]{r.Left,r.Top,r.Right,r.Bottom};
+ }
  static I MouseSignal(uint flags,uint data=0){return new I{type=0,data=new U{mouse=new M{flags=flags,data=data}}};}
 
  // Atomic drag: mouse button down, motion, release, all in this one request.
@@ -206,6 +210,41 @@ function DirectOperation($req){
    if($fg -ne $h -and [JarvisWindowNative]::Pid($fg) -eq $req.target_window.pid -and [JarvisWindowNative]::OwnedBy($fg,$h)){$state='needs_input';$prompt=[JarvisWindowNative]::Title($fg);break}
   }
   [Console]::Write((Json @{ok=$true;dispatched=$true;verified=($state -eq 'closed');data=@{status=$state;prompt_title=$prompt;forced=$false}}));return $true
+ }
+ if($req.operation -eq 'ui_session_open'){
+  $h=ValidateWindow $req.target_window;RequireForeground $h
+  $rect=[JarvisWindowNative]::Bounds($h)
+  [Console]::Write((Json @{ok=$true;dispatched=$false;verified=$true;data=@{status='ui_session_opened';window_bounds=@($rect)}}));return $true
+ }
+ if($req.operation -eq 'ui_sequence'){
+  if(-not [Environment]::UserInteractive -or -not [JarvisDesktopNative]::DefaultInputDesktop()){Refuse 'desktop_unavailable_or_locked'}
+  $h=ValidateWindow $req.target_window;RequireForeground $h
+  $rect=[JarvisWindowNative]::Bounds($h)
+  if($req.expected_bounds.Count -ne 4){Refuse 'invalid_session_window_bounds'}
+  for($k=0;$k -lt 4;$k++){
+   if([int]$rect[$k] -ne [int]$req.expected_bounds[$k]){Refuse 'window_moved_since_initial_screenshot'}
+  }
+  $done=0
+  for($n=0;$n -lt $req.steps.Count;$n++){
+   $step=$req.steps[$n]
+   try{
+    RequireForeground $h
+    switch([string]$step.kind){
+     'mouse' {
+      if($step.mouse_action -eq 'drag'){
+       [JarvisWindowNative]::MouseDrag($h,[int]$step.x,[int]$step.y,[int]$step.end_x,[int]$step.end_y)
+      }else{
+       [JarvisWindowNative]::Mouse($h,[int]$step.x,[int]$step.y,[string]$step.mouse_action,[int]$step.wheel_delta)
+      }
+     }
+     'keys' { [JarvisWindowNative]::Chord([string[]]$step.keys) }
+     'text' { [JarvisWindowNative]::TypeText([string]$step.text) }
+     default { Refuse 'unsupported_sequence_step' }
+    }
+    $done++
+   }catch{throw ("sequence_interrupted_at_step_" + $n + "_after_" + $done + "_actions: " + $_.Exception.Message)}
+  }
+  [Console]::Write((Json @{ok=$true;dispatched=$true;verified=$false;data=@{status='ui_sequence_dispatched';steps_dispatched=$done;steps_requested=$req.steps.Count}}));return $true
  }
  if($req.operation -eq 'ui_mouse'){
   $h=ValidateWindow $req.window;RequireForeground $h
