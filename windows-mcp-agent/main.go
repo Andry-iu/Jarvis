@@ -22,7 +22,7 @@ import (
 	"time"
 )
 
-const version = "0.8.9"
+const version = "0.9.0"
 
 type RPCRequest struct {
 	JSONRPC string          `json:"jsonrpc"`
@@ -63,6 +63,9 @@ type Agent struct {
 	usageMu                sync.Mutex
 	usage                  *toolUsageStore
 	uiMu                   sync.Mutex
+	captureMu              sync.Mutex
+	lastScreenCapture       time.Time
+	uiSession              *uiSession
 	windows                map[string]json.RawMessage
 	runtimeMu              sync.Mutex
 	runtime                *Runtime
