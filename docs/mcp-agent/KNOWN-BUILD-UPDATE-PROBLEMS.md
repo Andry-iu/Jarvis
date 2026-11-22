@@ -26,3 +26,21 @@ nuovo perche appare in PATH o ricostruire ogni volta una procedura diversa.
 Modalita da Git ordinaria; se Git non e raggiungibile dal destinatario, mantenere
 il pacchetto verificato via MCP. Le due acquisizioni convergono sullo stesso
 updater e sulle stesse verifiche. Dettagli UPDATE-FROM-GIT-0.8.4.md.
+
+## Caso 22/11/2026 — avvio automatico Desktop1/Desktop2 dopo agente 0.8.8
+
+**Causa verificata:** l'eseguibile lanciato direttamente con `jarvis-mcp-as-admin.bat` funzionava, ma la catena di avvio gestita `Start.ps1 -> Common.ps1 -> Invoke-LocalTool` falliva. `Get-LocalToken` leggeva `secrets.env` come una sola stringa e pretendeva un token base64 di almeno 40 caratteri, mentre l'agente Go supportava chiavi di almeno 24 caratteri e file env con piu variabili; alcuni file legacy hanno BOM anche all'inizio di righe successive. Non attribuire questa differenza ai privilegi: entrambi gli avvii erano elevati. Non rigenerare o alterare i segreti per aggirare l'incompatibilita.
+
+**Correzione sorgente:** leggere il file per righe, riconoscere il token senza esporlo, gestire BOM e configurazioni legacy, rifiutare token mancanti/duplicati o caratteri di controllo; aggiornare anche il parser Go per BOM su righe successive. PR [#3](https://github.com/Andry-iu/Jarvis/pull/3), merge commit `d90a00c2bc98b4417307bb431930a8604e1a1a22`. CI Windows PowerShell 5.1, Go (test/vet/build) e controllo integrita pacchetto: PASS.
+
+**Ostacoli e procedura riutilizzabile:**
+- **Avvio manuale e avvio automatico non equivalenti.** Il batch manuale esegue direttamente `Agent\jarvis-mcp.exe`; il task usa `Scripts\Start.ps1`, supervisore, controlli di hash, chiamata MCP locale e tunnel Cloudflare. Confrontare l'intera catena, non sostituire semplicemente il task con il batch. Il file `running.json` puo contenere PID obsoleti: verificare listener, percorso del processo e `runner.lock` live.
+- **PowerShell ExecutionPolicy.** Una prova diagnostica che importa `Common.ps1` senza `-ExecutionPolicy Bypass` produce `PSSecurityException`; e un errore del metodo di test, non prova di un difetto dell'agente o della correzione. Replicare le opzioni del task.
+- **Distribuzione remota.** `update_prepare` verifica ID univoco di 32 caratteri esadecimali, prima riga `REM JARVIS-UPDATE-ID`, CRLF e SHA-256; `update_execute` avvia soltanto. Il primo batch su Desktop1 e fallito (exit 1) per uso accidentale di `$home`, variabile PowerShell riservata; correggere in `$root`, usare **nuovo** ID e consultare ricevuta, log e hash. Non dedurre successo dal solo dispatch; non ripetere un ID con risultato incerto.
+- **Manifest installatore incoerente.** Il controllo introdotto ha trovato hash/dimensioni superati per `Start.ps1` e `update-agent.ps1`. Riallineare `package.json` e `script-history.json` ai sorgenti effettivi, conservare hash storici autorizzati, aggiungere test di contratto alla CI. Non modificare `secrets.env`.
+- **Dipendenze di sviluppo locali non affidabili.** Su Desktop2 Codex non avviava la sessione per errore nel `config.toml`; su Desktop1 risultava non disponibile l'eseguibile Codex configurato. Nessuna riparazione Codex e stata fatta: usare GitHub Actions per test e compilazione, senza attribuire il blocco alla modifica Jarvis.
+- **Handoff e tunnel:** non interrompere simultaneamente entrambi i desktop. Confermare backup, una sola istanza, appartenenza del PID, task, proprieta elevate, risposta MCP, stato supervisore e tunnel dopo ciascun riavvio; prevedere fallback controllato.
+
+**Stato fisico verificato al termine dell'intervento:** `Common.ps1` e stato sostituito con backup su Desktop1 (receipt `a792bec6d4204fce9702f798ce242a31`) e Desktop2 (receipt `90dac1131ebd40df8b158a7c9f283c12`); entrambe exit 0, hash della patch e parser token controllati; agenti 0.8.8 ancora raggiungibili. Nessun token, configurazione Cloudflare o eseguibile installato e stato modificato. **Non ancora dimostrato** il cold start da task su entrambi i desktop: Desktop1 era ancora avviato manualmente e Desktop2 aveva supervisore attivo. Non dichiarare completata la correzione dell'avvio automatico senza prova dopo stop/login o riavvio.
+
+Nota procedurale: utilizzare le procedure gia collaudate, preferire diagnosi mirate e registrare in Git i problemi incontrati e i loro rimedi; evitare prove ripetute e messaggi di avanzamento non sostanziali.
