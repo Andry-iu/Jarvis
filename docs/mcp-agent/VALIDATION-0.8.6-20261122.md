@@ -21,3 +21,9 @@
 - Resta da realizzare e collaudare il pacchetto ZIP installer 0.8.6, che non va confuso con il deploy dell'agente da Git.
 
 Questo documento distingue modifiche di sorgente, test, deployment reale e funzionalita effettivamente richiamabili in ChatGPT.
+
+## Stato finale del collegamento ChatGPT nello stesso turno
+- Dopo la risposta live `machine_info.version=0.8.6` e `agent_update_status.phase=completed`, il connettore `mcp__Jarvis_Desktop1__*` ha cominciato a restituire `The tool failed internally` per `machine_info`, `agent_update_status` e `tool_usage`. Un errore del connettore non prova che l'agente installato sia offline; non e stato verificabile il recupero del canale nella stessa sessione.
+- La funzione `ui_mouse` non risulta ancora in `ALL_TOOLS` della sessione (69 tool esposti, nessuno con nome `mcp__Jarvis_Desktop1__ui_mouse`). E quindi in sospeso la pubblicazione/riconnessione del plugin e la prova reale di puntatore e clic.
+- Il tentativo di eliminare la worktree temporanea `D:\Jarvis\Projects\JarvisMouseQA` ha prodotto un errore interno del connettore, **non conferma un'eliminazione**. Restano da verificare ed eventualmente pulire **solo** le cartelle QA create in questo intervento: `D:\Jarvis\Projects\JarvisMouseQA` e `D:\Jarvis\Projects\JarvisReleaseQA` (la seconda contiene marcatori temporanei di test); non toccare il repository ordinario `D:\Jarvis\Projects\Jarvis` o i file preesistenti `pve_*`.
+- Nessun aggiornamento a Desktop2 o alle VM. Non eseguire un secondo `agent_update` per risolvere un problema del connettore: l'aggiornamento 0.8.6 e gia stato verificato completato.
