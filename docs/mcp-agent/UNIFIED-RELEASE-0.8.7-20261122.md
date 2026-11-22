@@ -32,3 +32,13 @@ Nessun codice Android obsoleto del ramo Windows deve sovrascrivere `app/`, `car-
 - Il `main` contiene i sorgenti Android precedentemente piu avanzati, il Windows MCP Agent 0.8.7 candidato con camera/HID ESP32 opzionale, i servizi non alterati e i documenti storici.
 - **Non completato:** build/firma/distribuzione APK 0.8.7, packaging/collaudo installer 0.8.7, collaudo fisico ESP32, refresh `ui_mouse` nel connettore ChatGPT, test puntatore e clic sul desktop. Non distribuire la 0.8.7 in produzione come conseguenza automatica del merge.
 - Il vecchio agente Windows 0.8.6 rimane l'ultima installazione effettivamente verificata su Desktop1; il collegamento ChatGPT Desktop1 aveva restituito errori interni dopo il deploy.
+
+## Rettifica operativa del 22 novembre 2026: Desktop1
+
+**Desktop1 e stato gia modificato durante questa conversazione:** il deploy 0.8.6 e stato eseguito e verificato tramite `agent_update` (`jarvis-mouse-086-desktop1-20261122-152330`), con versione live 0.8.6, backup, hash installato e pulizia verificati. Solo **in seguito** il connettore Desktop1 ha iniziato a restituire `The tool failed internally`. Non confondere questo errore successivo con il mancato intervento iniziale.
+
+Il successivo ordine di aggiornare Desktop1 alla **0.8.7** e stato ricevuto ma **non eseguito**: il comando `agent_update` 0.8.7 non e stato inviato, perche la connessione diretta risultava indisponibile. Non esistono quindi ricevute che dimostrino una 0.8.7 installata.
+
+L'utente ha chiesto espressamente di **non toccare Desktop2**. Nel tentativo precedente sono state compiute interrogazioni di sola lettura su Desktop2 per cercare una via di comunicazione verso Desktop1; non sono state inviate modifiche, accoppiamenti o aggiornamenti a Desktop2. Dopo la correzione dell'utente, **non contattare ulteriormente Desktop2, neppure come gateway, per questa attivita**.
+
+Il ripristino del collegamento diretto Desktop1 resta necessario per procedere all'aggiornamento alla 0.8.7 e per controllare i comandi mouse. Nessun aggiornamento di un computer deve essere inferito da test Git o compilazioni.

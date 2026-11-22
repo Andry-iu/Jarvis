@@ -1,3 +1,15 @@
+## Rettifica operativa del 22 novembre 2026: Desktop1
+
+**Desktop1 e stato gia modificato durante questa conversazione:** il deploy 0.8.6 e stato eseguito e verificato tramite `agent_update` (`jarvis-mouse-086-desktop1-20261122-152330`), con versione live 0.8.6, backup, hash installato e pulizia verificati. Solo **in seguito** il connettore Desktop1 ha iniziato a restituire `The tool failed internally`. Non confondere questo errore successivo con il mancato intervento iniziale.
+
+Il successivo ordine di aggiornare Desktop1 alla **0.8.7** e stato ricevuto ma **non eseguito**: il comando `agent_update` 0.8.7 non e stato inviato, perche la connessione diretta risultava indisponibile. Non esistono quindi ricevute che dimostrino una 0.8.7 installata.
+
+L'utente ha chiesto espressamente di **non toccare Desktop2**. Nel tentativo precedente sono state compiute interrogazioni di sola lettura su Desktop2 per cercare una via di comunicazione verso Desktop1; non sono state inviate modifiche, accoppiamenti o aggiornamenti a Desktop2. Dopo la correzione dell'utente, **non contattare ulteriormente Desktop2, neppure come gateway, per questa attivita**.
+
+Il ripristino del collegamento diretto Desktop1 resta necessario per procedere all'aggiornamento alla 0.8.7 e per controllare i comandi mouse. Nessun aggiornamento di un computer deve essere inferito da test Git o compilazioni.
+
+---
+
 # Punto di continuita (22 novembre 2026): integrazione 0.8.7 candidata
 
 Si prepara una numerazione Jarvis comune 0.8.7 e un `main` autorevole; il codice Android resta quello di `main` (0.5.123 verificato storicamente), il Windows 0.8.6 viene incorporato e il supporto ESP32 sperimentale e opzionale. I numeri app e installer del nuovo candidato **non implicano rilascio di binari**. Non perdere la storia dei test gia riusciti; riprendere dai dettagli in `docs/mcp-agent/UNIFIED-RELEASE-0.8.7-20261122.md`. La chiave cifrata sul branch di handoff firma non viene duplicata in `main`. Il blocco `ui_mouse` nel connettore resta aperto e separato dall'aggiornamento dell'agente.

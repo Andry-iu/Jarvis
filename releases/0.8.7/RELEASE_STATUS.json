@@ -95,5 +95,16 @@
     "go_windows_cross_build_result": "passed",
     "powershell_parse_result": "passed",
     "binary_distribution": "not_performed"
+  },
+  "desktop1_update_status": {
+    "last_verified_installed_version": "0.8.6",
+    "previous_update_request_id": "jarvis-mouse-086-desktop1-20261122-152330",
+    "previous_update_completed_verified": true,
+    "target_requested_version": "0.8.7",
+    "target_update_started": false,
+    "target_update_verified": false,
+    "direct_connector": "unavailable: internal tool error",
+    "desktop2": "not authorized for this activity; no further calls",
+    "note": "The successful 0.8.6 deployment must not be confused with the separate, not-started 0.8.7 request. No additional Desktop1 changes could be confirmed after the connector failed."
   }
 }
