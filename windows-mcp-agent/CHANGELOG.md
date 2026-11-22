@@ -1,4 +1,4 @@
-## 0.9.1 — 2026-11-22 (candidato: sincronizzazione sequenze UI)
+## 0.9.1 — 2026-11-22 (installata su Desktop1 e Desktop2; collaudo sequenza Paint ancora non superato)
 
 - Corretto difetto osservato nel primo collaudo reale 0.9.0 in Paint: tutte le 12 azioni risultavano inviate, ma Paint processava solo parte dei passaggi, lasciando un rettangolo mancante e soltanto 3 cerchi.
 - `ui_sequence` attende ora 90 ms dopo ogni passo per permettere alla coda eventi dell'app di processare selezioni, scorciatoie e input; opzionale `settle_ms` (0..500) per adattare il ritardo alle transizioni piu lente, senza nuove chiamate MCP.
