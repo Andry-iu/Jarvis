@@ -380,13 +380,18 @@ func peerIdentity(p peerDevice) error {
 	}
 	return errors.New("peer identity mismatch; operation blocked")
 }
-func toolDeclared(name string) bool {
+// The public schema is immutable after startup. Avoid rebuilding dozens of
+// JSON Schema entries on every gateway command just to check a method name.
+var declaredToolNames = sync.OnceValue(func() map[string]bool {
+	names := map[string]bool{}
 	for _, v := range toolsList().(map[string]any)["tools"].([]any) {
-		if v.(map[string]any)["name"] == name {
-			return true
-		}
+		names[v.(map[string]any)["name"].(string)] = true
 	}
-	return false
+	return names
+})
+
+func toolDeclared(name string) bool {
+	return declaredToolNames()[name]
 }
 func forwardArguments(raw json.RawMessage, target string) (string, map[string]any, error) {
 	var args map[string]any
