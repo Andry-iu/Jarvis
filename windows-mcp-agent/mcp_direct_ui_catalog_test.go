@@ -49,8 +49,8 @@ func TestPublicMCPDirectUITools(t *testing.T) {
             if props[field] == nil {t.Errorf("%s missing property %s", name, field)}
             if !required[field] {t.Errorf("%s does not require %s", name, field)}
         }
-        if name != "screen_capture" && name != "window_list" && !required["machine_id"] {
-            t.Errorf("%s must identify its target machine", name)
+        if _, exists := props["machine_id"]; exists || required["machine_id"] {
+            t.Errorf("%s must use connected agent identity instead of publishing machine_id", name)
         }
         if _, exists := props["session_token"]; exists {
             t.Errorf("%s must not expose a conversational session token", name)
