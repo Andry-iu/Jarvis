@@ -114,18 +114,19 @@ func (a *Agent) finishSession(result any, principal, known string, reused, suppl
     if !supplied {
         return result
     }
-    token := known
-    if !reused {
-        if toolFailed(result) {
-            return result
-        }
-        var err error
-        token, err = a.sessions.create(principal, time.Now())
-        if err != nil {
-            return result
-        }
+    // The client already holds reused tokens. Avoid decoding/re-encoding
+    // command output (possibly large screenshots) on every hot-path call.
+    if reused {
+        return result
     }
-    return addSessionMetadata(result, token, reused)
+    if toolFailed(result) {
+        return result
+    }
+    token, err := a.sessions.create(principal, time.Now())
+    if err != nil {
+        return result
+    }
+    return addSessionMetadata(result, token, false)
 }
 
 func addSessionMetadata(result any, token string, reused bool) any {
