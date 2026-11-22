@@ -1,3 +1,11 @@
+## 0.8.9 — 2026-11-22 (sorgente candidato; deploy non ancora attestato)
+
+- Trascinamento sinistro atomico in `ui_mouse` e `ui_mouse_screen`: azione `drag` con `x/y` e `end_x/end_y`. La pressione, i passi intermedi e il rilascio avvengono in una sola operazione mouse, senza lasciare pulsanti premuti tra richieste MCP.
+- Controlli su finestra in primo piano, coordinate e occlusione lungo il percorso; rifiuto in presenza del tasto sinistro gia premuto; rilascio di sicurezza nel blocco `finally`, anche se l'esito del gesto e incerto.
+- Per screenshot le coordinate finali sono espresse nei pixel dello stesso JPEG, poi convertite automaticamente; una singola acquisizione, scadenza 45 secondi. La modalita finestra usa coordinate fisiche e snapshot monouso.
+- Aggiunti test Go per convalida e compatibilita con click/move/wheel, oltre alla compilazione C# nativa su Windows PowerShell 5.1 in CI.
+- Da validare prima di considerare rilasciato: workflow CI, aggiornamento effettivo su PC, trascinamento in Paint e verifica del rilascio del pulsante. Nessun aggiornamento agent o installer ancora attribuibile a questo commit.
+
 ## 0.8.7 — 2026-11-22 (agente Windows installato e verificato su Desktop1 e Desktop2)
 
 - Desktop1: `jarvis-d1-update-087-20261122-155814`, `completed`, backup e cleanup verificati, versione live 0.8.7.

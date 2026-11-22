@@ -29,6 +29,8 @@ type runtimeRequest struct {
 	MouseAction      string   `json:"mouse_action,omitempty"`
 	X                int      `json:"x,omitempty"`
 	Y                int      `json:"y,omitempty"`
+	EndX             *int     `json:"end_x,omitempty"`
+	EndY             *int     `json:"end_y,omitempty"`
 	WheelDelta       int      `json:"wheel_delta,omitempty"`
 	Executable       string   `json:"executable,omitempty"`
 	Args             []string `json:"args,omitempty"`
@@ -156,7 +158,7 @@ func toolsList() any {
 		for _, f := range t.Fields {
 			typ := "string"
 			switch f {
-			case "port", "offset", "limit", "timeout_seconds", "after", "monitor", "max_width", "quality", "x", "y", "wheel_delta":
+			case "port", "offset", "limit", "timeout_seconds", "after", "monitor", "max_width", "quality", "x", "y", "end_x", "end_y", "wheel_delta":
 				typ = "integer"
 			case "recursive", "elevated", "overwrite":
 				typ = "boolean"
@@ -185,7 +187,7 @@ func toolsList() any {
 				s["enum"] = []string{"invoke", "set_text", "type_text", "focus", "toggle", "select"}
 			}
 			if f == "mouse_action" {
-				s["enum"] = []string{"move", "click", "double_click", "right_click", "wheel"}
+				s["enum"] = []string{"move", "click", "double_click", "right_click", "wheel", "drag"}
 			}
 			if f == "dialog_mode" {
 				s["enum"] = []string{"open", "save"}
@@ -280,8 +282,18 @@ func decodeRuntime(name string, b json.RawMessage) (runtimeRequest, error) {
 		if p.X < 0 || p.Y < 0 || p.X >= 32768 || p.Y >= 32768 {
 			return p, errors.New("mouse coordinates out of range")
 		}
+		if p.MouseAction == "drag" {
+			if p.EndX == nil || p.EndY == nil {
+				return p, errors.New("drag requires both end_x and end_y")
+			}
+			if *p.EndX < 0 || *p.EndY < 0 || *p.EndX >= 32768 || *p.EndY >= 32768 {
+				return p, errors.New("drag end coordinates out of range")
+			}
+		} else if p.EndX != nil || p.EndY != nil {
+			return p, errors.New("end_x/end_y are only valid for drag")
+		}
 		switch p.MouseAction {
-		case "move", "click", "double_click", "right_click":
+		case "move", "click", "double_click", "right_click", "drag":
 			if p.WheelDelta != 0 { return p, errors.New("wheel_delta is only for wheel") }
 		case "wheel":
 			if p.WheelDelta == 0 || p.WheelDelta < -1200 || p.WheelDelta > 1200 || p.WheelDelta % 120 != 0 { return p, errors.New("invalid wheel_delta") }

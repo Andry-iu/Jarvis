@@ -32,6 +32,10 @@ func TestImageMouseRequiresCaptureAndUniqueRequest(t *testing.T){
  cases:=[]struct{name,json string;ok bool}{
   {"click",`{"machine_id":"x","capture_id":"fresh","x":300,"y":250,"mouse_action":"click","request_id":"screen-mouse-click-test-001"}`,true},
   {"move",`{"machine_id":"x","capture_id":"fresh","x":0,"y":0,"mouse_action":"move","request_id":"screen-mouse-move-test-002"}`,true},
+  {"drag",`{"machine_id":"x","capture_id":"fresh","x":300,"y":250,"end_x":650,"end_y":470,"mouse_action":"drag","request_id":"screen-mouse-drag-test-009"}`,true},
+  {"drag_missing_end",`{"machine_id":"x","capture_id":"fresh","x":300,"y":250,"end_x":650,"mouse_action":"drag","request_id":"screen-mouse-drag-test-010"}`,false},
+  {"drag_wheel_rejected",`{"machine_id":"x","capture_id":"fresh","x":300,"y":250,"end_x":650,"end_y":470,"mouse_action":"drag","wheel_delta":120,"request_id":"screen-mouse-drag-test-011"}`,false},
+  {"move_with_endpoint_rejected",`{"machine_id":"x","capture_id":"fresh","x":300,"y":250,"end_x":650,"end_y":470,"mouse_action":"move","request_id":"screen-mouse-drag-test-012"}`,false},
   {"no_capture",`{"machine_id":"x","x":300,"y":250,"mouse_action":"click","request_id":"screen-mouse-nocap-test-003"}`,false},
   {"old_snapshot_instead",`{"machine_id":"x","snapshot_id":"old","x":300,"y":250,"mouse_action":"click","request_id":"screen-mouse-old-id-test-004"}`,false},
   {"invalid_extra",`{"machine_id":"x","capture_id":"fresh","x":300,"y":250,"mouse_action":"click","arbitrary_execution":true,"request_id":"screen-mouse-bad-extra-005"}`,false},
