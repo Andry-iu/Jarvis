@@ -38,6 +38,58 @@ public static class JarvisWindowNative {
  [DllImport("user32.dll")]static extern bool SetCursorPos(int x,int y);
  [DllImport("user32.dll")]static extern int GetSystemMetrics(int which);
  static I MouseSignal(uint flags,uint data=0){return new I{type=0,data=new U{mouse=new M{flags=flags,data=data}}};}
+
+ // Atomic drag: mouse button down, motion, release, all in this one request.
+ // A button must never stay down across separate MCP requests or retries.
+ static void CheckDragPoint(IntPtr root,int x,int y){
+  IntPtr hit=WindowFromPoint(new P{X=x,Y=y});
+  if(hit==IntPtr.Zero||GetAncestor(hit,2)!=root)throw new Exception("drag_point_occluded_or_window_changed");
+ }
+ static void DragInRoot(IntPtr root,int x,int y,int endX,int endY){
+  IdleModifiers();
+  if((GetAsyncKeyState(1)&0x8000)!=0)throw new Exception("left_mouse_button_already_pressed");
+  if(GetForegroundWindow()!=root)throw new Exception("foreground_changed");
+  CheckDragPoint(root,x,y);CheckDragPoint(root,endX,endY);
+  if(!SetCursorPos(x,y))throw new Exception("mouse_position_failed");
+  System.Threading.Thread.Sleep(35);
+  bool downAttempted=false;
+  try {
+   downAttempted=true;
+   Send(new List<I>{MouseSignal(0x0002)});
+   System.Threading.Thread.Sleep(35);
+   for(int step=1;step<=16;step++){
+    if(GetForegroundWindow()!=root)throw new Exception("foreground_changed_during_drag");
+    int nextX=x+(int)(((long)endX-x)*step/16);
+    int nextY=y+(int)(((long)endY-y)*step/16);
+    CheckDragPoint(root,nextX,nextY);
+    if(!SetCursorPos(nextX,nextY))throw new Exception("mouse_position_failed_during_drag");
+    System.Threading.Thread.Sleep(20);
+   }
+  } finally {
+   // Even if DOWN dispatch was uncertain, release before this request ends.
+   if(downAttempted){
+    I[] release=new I[]{MouseSignal(0x0004)};
+    if(SendInput(1,release,Marshal.SizeOf(typeof(I)))!=1)throw new Exception("mouse_release_uncertain");
+   }
+  }
+ }
+ public static void MouseDrag(IntPtr target,int x,int y,int endX,int endY){
+  R rect;
+  if(!GetWindowRect(target,out rect)||x<rect.Left||x>=rect.Right||y<rect.Top||y>=rect.Bottom||
+     endX<rect.Left||endX>=rect.Right||endY<rect.Top||endY>=rect.Bottom)
+   throw new Exception("drag_point_outside_window");
+  DragInRoot(target,x,y,endX,endY);
+ }
+ public static void MouseScreenDrag(int x,int y,int endX,int endY){
+  int left=GetSystemMetrics(76),top=GetSystemMetrics(77);
+  int width=GetSystemMetrics(78),height=GetSystemMetrics(79);
+  if(width<1||height<1||x<left||x>=left+width||y<top||y>=top+height||
+     endX<left||endX>=left+width||endY<top||endY>=top+height)
+   throw new Exception("drag_point_outside_desktop");
+  IntPtr hit=WindowFromPoint(new P{X=x,Y=y});
+  if(hit==IntPtr.Zero)throw new Exception("drag_point_without_visible_window");
+  DragInRoot(GetAncestor(hit,2),x,y,endX,endY);
+ }
  public static void Mouse(IntPtr target,int x,int y,string action,int wheelDelta){
   IdleModifiers();
   R r;if(!GetWindowRect(target,out r)||x<r.Left||y<r.Top||x>=r.Right||y>=r.Bottom)throw new Exception("point_outside_window");
@@ -158,13 +210,21 @@ function DirectOperation($req){
  if($req.operation -eq 'ui_mouse'){
   $h=ValidateWindow $req.window;RequireForeground $h
   $w=WindowState;if((Json $w.identity) -cne (Json $req.window)){Refuse 'window_changed'}
-  [JarvisWindowNative]::Mouse($h,[int]$req.x,[int]$req.y,[string]$req.mouse_action,[int]$req.wheel_delta)
+  if($req.mouse_action -eq 'drag'){
+   [JarvisWindowNative]::MouseDrag($h,[int]$req.x,[int]$req.y,[int]$req.end_x,[int]$req.end_y)
+  }else{
+   [JarvisWindowNative]::Mouse($h,[int]$req.x,[int]$req.y,[string]$req.mouse_action,[int]$req.wheel_delta)
+  }
   Start-Sleep -Milliseconds 120
   FreshResponse @{ok=$true;dispatched=$true;verified=$false;data=@{status=$(if($req.mouse_action -eq 'move'){'mouse_move_dispatched'}else{'mouse_dispatched'});mouse_action=[string]$req.mouse_action}};return $true
  }
  if($req.operation -eq 'ui_mouse_screen'){
   if(-not [Environment]::UserInteractive -or -not [JarvisDesktopNative]::DefaultInputDesktop() -or [JarvisWindowNative]::GetForegroundWindow() -eq [IntPtr]::Zero){Refuse 'desktop_unavailable_or_locked'}
-  [JarvisWindowNative]::MouseScreen([int]$req.x,[int]$req.y,[string]$req.mouse_action,[int]$req.wheel_delta)
+  if($req.mouse_action -eq 'drag'){
+   [JarvisWindowNative]::MouseScreenDrag([int]$req.x,[int]$req.y,[int]$req.end_x,[int]$req.end_y)
+  }else{
+   [JarvisWindowNative]::MouseScreen([int]$req.x,[int]$req.y,[string]$req.mouse_action,[int]$req.wheel_delta)
+  }
   [Console]::Write((Json @{ok=$true;dispatched=$true;verified=$false;data=@{status='mouse_screen_dispatched';mouse_action=[string]$req.mouse_action;x=[int]$req.x;y=[int]$req.y}}));return $true
  }
  if($req.operation -eq 'ui_keys'){
