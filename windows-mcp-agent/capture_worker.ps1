@@ -20,8 +20,9 @@ public static class CaptureDesktop {
  [CaptureDesktop]::SetProcessDPIAware()|Out-Null
  $desktop=[CaptureDesktop]::OpenInputDesktop(0,$false,1)
  if($desktop -eq [IntPtr]::Zero){throw 'interactive_desktop_unavailable'}
+ $foreground=[CaptureDesktop]::GetForegroundWindow()
  $name=New-Object System.Text.StringBuilder 256;[uint32]$needed=0
- if(-not [CaptureDesktop]::GetUserObjectInformation($desktop,2,$name,512,[ref]$needed) -or $name.ToString() -ne 'Default' -or [CaptureDesktop]::GetForegroundWindow() -eq [IntPtr]::Zero){throw 'locked_or_secure_desktop'}
+ if(-not [CaptureDesktop]::GetUserObjectInformation($desktop,2,$name,512,[ref]$needed) -or $name.ToString() -ne 'Default' -or $foreground -eq [IntPtr]::Zero){throw 'locked_or_secure_desktop'}
  $screens=@([System.Windows.Forms.Screen]::AllScreens|Sort-Object DeviceName)
  $monitors=@();for($i=0;$i -lt $screens.Count;$i++){$s=$screens[$i];$monitors+=@{index=$i+1;name=$s.DeviceName;primary=$s.Primary;x=$s.Bounds.X;y=$s.Bounds.Y;width=$s.Bounds.Width;height=$s.Bounds.Height}}
  $bounds=[System.Windows.Forms.SystemInformation]::VirtualScreen
@@ -37,6 +38,6 @@ public static class CaptureDesktop {
  $ep=New-Object System.Drawing.Imaging.EncoderParameters 1;$ep.Param[0]=New-Object System.Drawing.Imaging.EncoderParameter([System.Drawing.Imaging.Encoder]::Quality,[long]$p.quality)
  $small.Save($stream,$codec,$ep);$ep.Dispose()
  if($stream.Length -gt 2097152){throw 'encoded_image_too_large'}
- @{ok=$true;image=[Convert]::ToBase64String($stream.ToArray());metadata=@{captured_at=[DateTime]::UtcNow.ToString('o');origin_x=$bounds.X;origin_y=$bounds.Y;original_width=$bounds.Width;original_height=$bounds.Height;image_width=$w;image_height=$h;scale_x=[double]$w/$bounds.Width;scale_y=[double]$h/$bounds.Height;monitors=$monitors;mime_type='image/jpeg'}}|ConvertTo-Json -Compress -Depth 8|ForEach-Object{[Console]::Write($_)}
+ @{ok=$true;image=[Convert]::ToBase64String($stream.ToArray());metadata=@{captured_at=[DateTime]::UtcNow.ToString('o');foreground_hwnd=$foreground.ToInt64();origin_x=$bounds.X;origin_y=$bounds.Y;original_width=$bounds.Width;original_height=$bounds.Height;image_width=$w;image_height=$h;scale_x=[double]$w/$bounds.Width;scale_y=[double]$h/$bounds.Height;monitors=$monitors;mime_type='image/jpeg'}}|ConvertTo-Json -Compress -Depth 8|ForEach-Object{[Console]::Write($_)}
 }catch{@{ok=$false;error=$_.Exception.Message}|ConvertTo-Json -Compress|ForEach-Object{[Console]::Write($_)}}
 finally{if($graphics){$graphics.Dispose()};if($scaled){$scaled.Dispose()};if($bitmap){$bitmap.Dispose()};if($small){$small.Dispose()};if($stream){$stream.Dispose()};if($desktop -ne [IntPtr]::Zero){[CaptureDesktop]::CloseDesktop($desktop)|Out-Null}}
