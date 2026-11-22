@@ -79,11 +79,52 @@ func (a *Agent) snapshotDirect(out desktopOutput)(map[string]any,error){
 func (a *Agent) doDirectUI(p runtimeRequest)(any,error){
  a.uiMu.Lock();defer a.uiMu.Unlock()
  if os.Getenv("JARVIS_DESKTOP_ENABLED")!="1"{return nil,errors.New("desktop control disabled")}
+ if p.Operation=="ui_session_close"{
+  if a.uiSession==nil||a.uiSession.ID!=p.SessionID{return nil,errUISessionExpired}
+  a.uiSession=nil
+  return map[string]any{"status":"ui_session_closed","verified":true},nil
+ }
+ sequenceOK:=false
+ if p.Operation=="ui_sequence" {
+  // A partial or uncertain UI sequence must never be replayed with stale state.
+  defer func(){
+   if !sequenceOK&&a.uiSession!=nil&&a.uiSession.ID==p.SessionID{a.uiSession=nil}
+  }()
+ }
  input:=map[string]any{"operation":p.Operation,"return_snapshot":true}
- if p.Operation!="window_list"&&p.Operation!="ui_action"&&p.Operation!="ui_keys"&&p.Operation!="ui_mouse"&&p.Operation!="ui_mouse_screen"{
+ var openedCapture *imageCaptureSnapshot
+ if p.Operation!="window_list"&&p.Operation!="ui_action"&&p.Operation!="ui_keys"&&p.Operation!="ui_mouse"&&p.Operation!="ui_mouse_screen"&&p.Operation!="ui_sequence"{
   w,ok:=a.windows[p.WindowID];if !ok{return nil,errors.New("unknown window_id; list windows again")};input["target_window"]=w
  }
  if p.Operation=="window_inspect"{input["operation"]="desktop_inspect"}
+ if p.Operation=="ui_session_open" {
+  a.mu.Lock()
+  snap:=a.capture
+  a.capture=nil // one-use screenshot for opening exactly one session
+  a.mu.Unlock()
+  if snap==nil||snap.ID!=p.CaptureID||time.Since(snap.Created)<0||time.Since(snap.Created)>45*time.Second {
+   return nil,errors.New("unknown, consumed or expired capture_id; capture again")
+  }
+  var identity struct{ Hwnd int64 `json:"hwnd"` }
+  if json.Unmarshal(input["target_window"].(json.RawMessage),&identity)!=nil||identity.Hwnd==0||identity.Hwnd!=snap.ForegroundHWND {
+   return nil,errors.New("capture foreground does not match selected window")
+  }
+  openedCapture=snap
+  input["return_snapshot"]=false
+ }
+ if p.Operation=="ui_sequence" {
+  session:=a.uiSession
+  if session==nil||session.ID!=p.SessionID||!uiSessionValid(session,time.Now()){
+   a.uiSession=nil
+   return nil,errUISessionExpired
+  }
+  steps,err:=physicalUISequence(p.Steps,session.Geometry)
+  if err!=nil{return nil,err}
+  input["target_window"]=session.Window
+  input["expected_bounds"]=session.Bounds
+  input["steps"]=steps
+  input["return_snapshot"]=false
+ }
  if p.Operation=="ui_action"||p.Operation=="ui_keys"||p.Operation=="ui_mouse"{
   a.mu.Lock();s:=a.desktop;a.desktop=nil;a.mu.Unlock()
   if s==nil||s.ID!=p.SnapshotID||time.Since(s.Created)>90*time.Second{return nil,errors.New("unknown, consumed or expired snapshot; inspect again")}
@@ -128,6 +169,21 @@ func (a *Agent) doDirectUI(p runtimeRequest)(any,error){
  ctx,cancel:=context.WithTimeout(context.Background(),25*time.Second);defer cancel()
  out,e:=runDesktopWorker(ctx,input);if e!=nil{return nil,fmt.Errorf("UI outcome uncertain; inspect before another action: %w",e)}
  if !out.OK{return nil,errors.New("UI refused or uncertain: "+out.Error)}
+ if p.Operation=="ui_session_open" {
+  rawBounds,ok:=out.Data["window_bounds"].([]any)
+  if !ok||len(rawBounds)!=4{return nil,errors.New("session opening missing verified bounds")}
+  var bounds [4]int
+  for i,v:=range rawBounds{n,ok:=v.(float64);if !ok{return nil,errors.New("invalid window bounds")};bounds[i]=int(n)}
+  session:=&uiSession{ID:newID(),Window:input["target_window"].(json.RawMessage),Geometry:openedCapture.Geometry,Bounds:bounds,LastActivity:time.Now()}
+  a.uiSession=session // one active UI session per agent; opening replaces any older session
+  out.Data["session_id"]=session.ID
+  out.Data["idle_expires_seconds"]=int(uiSessionIdleLimit/time.Second)
+  out.Data["capture_reused"]=true
+ }
+ if p.Operation=="ui_sequence"{
+  a.uiSession.LastActivity=time.Now()
+  sequenceOK=true
+ }
  result:=map[string]any{"dispatched":out.Dispatched,"verified":out.Verified}
  for k,v:=range out.Data{result[k]=v}
  if len(out.Windows)>0{
