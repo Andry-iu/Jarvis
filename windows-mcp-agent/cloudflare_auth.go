@@ -42,7 +42,7 @@ type accessJWKS struct {
 func (v *AccessVerifier) loadKeys(ctx context.Context) (map[string]*rsa.PublicKey, error) {
 	v.mu.Lock()
 	defer v.mu.Unlock()
-	if v.keys != nil && time.Since(v.fetched) < 10*time.Minute {
+	if v.keys != nil && time.Since(v.fetched) < 30*time.Minute {
 		return v.keys, nil
 	}
 	u, e := url.Parse(v.TeamDomain)
