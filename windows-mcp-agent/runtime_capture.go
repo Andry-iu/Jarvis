@@ -39,6 +39,7 @@ type imageCaptureSnapshot struct {
  ID string
  Created time.Time
  Geometry captureGeometry
+ ForegroundHWND int64
 }
 // Convert a pixel centre, not a pixel edge.  This avoids a rounding bias at
 // non-integral scale factors and supports negative-origin secondary monitors.
@@ -83,6 +84,14 @@ func (a *Agent) screenCapture(p runtimeRequest) (any, error) {
 	if p.MaxWidth < 320 || p.MaxWidth > 2560 || p.Quality < 20 || p.Quality > 90 || p.Monitor < 0 || len(p.Region) != 0 && len(p.Region) != 4 {
 		return nil, errors.New("invalid capture size, quality, monitor or region")
 	}
+	// Enforced at the agent, not in ChatGPT: no more than one screenshot per second.
+	a.captureMu.Lock()
+	defer a.captureMu.Unlock()
+	now := time.Now()
+	if !captureRateAllowed(a.lastScreenCapture, now) {
+		return nil, errors.New("screen_capture rate limit: at most one image per second")
+	}
+	a.lastScreenCapture = now
 	dir, e := os.MkdirTemp("", "jarvis-capture-")
 	if e != nil {
 		return nil, e
@@ -126,9 +135,11 @@ func (a *Agent) screenCapture(p runtimeRequest) (any, error) {
 	if _, _, e = geometry.physical(0, 0); e != nil {
 		return nil, e
 	}
+	foreground, ok := metadata["foreground_hwnd"].(float64)
+	if !ok || foreground <= 0 {return nil, errors.New("screenshot missing foreground identity")}
 	id := newID()
 	a.mu.Lock()
-	a.capture = &imageCaptureSnapshot{ID: id, Created: time.Now(), Geometry: geometry}
+	a.capture = &imageCaptureSnapshot{ID: id, Created: time.Now(), Geometry: geometry, ForegroundHWND: int64(foreground)}
 	a.mu.Unlock()
 	metadata["machine_id"] = p.MachineID
 	metadata["capture_id"] = id
