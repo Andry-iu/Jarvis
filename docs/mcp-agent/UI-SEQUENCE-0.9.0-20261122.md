@@ -1,3 +1,5 @@
+> **NOTA DI COMPATIBILITA 0.9.6 (22/11/2026):** questa e la **specifica storica della versione 0.9.0**. Le funzioni `ui_session_open` e `ui_sequence` sono tuttora disponibili, ma negli schemi MCP **correnti 0.9.6** il campo `machine_id` **non e piu richiesto**: l'agente deduce il computer locale dalla connessione autenticata. Restano obbligatori `window_id`, `capture_id`, `session_id` e `request_id` dove previsti; la UI session di cinque minuti **non e** un permesso per-chat. Paint e stato disegnato correttamente **solo dopo azioni di recupero**. Per lo stato aggiornato e i limiti leggere [STATUS-CONSOLIDATO-0.9.6-20261122.md](STATUS-CONSOLIDATO-0.9.6-20261122.md); le istruzioni API seguenti sono da interpretare nel contesto della 0.9.0, senza sovrascriverne la storia.
+
 # Jarvis UI session and sequence (0.9.0)
 
 ## Purpose
