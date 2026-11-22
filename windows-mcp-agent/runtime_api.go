@@ -326,6 +326,22 @@ func decodeRuntime(name string, b json.RawMessage) (runtimeRequest, error) {
 	p.Destination = filepath.FromSlash(p.Destination)
 	return p, nil
 }
+// bindConnectedMachine resolves the implicit local target for all dedicated
+// runtime tools. Old clients may send an explicit machine_id; never permit that
+// value to override the authenticated endpoint's local identity.
+func bindConnectedMachine(p *runtimeRequest, localID string) error {
+	if localID == "" {
+		return errors.New("local machine identity unavailable")
+	}
+	if p.MachineID != "" && p.MachineID != localID {
+		return errors.New("machine_id mismatch; requested computer is not this agent")
+	}
+	if p.Operation != "machine_info" {
+		p.MachineID = localID
+	}
+	return nil
+}
+
 func (a *Agent) invokeRuntime(name string, raw json.RawMessage) any {
 	p, e := decodeRuntime(name, raw)
 	if e != nil {
@@ -335,14 +351,8 @@ func (a *Agent) invokeRuntime(name string, raw json.RawMessage) any {
 	if e != nil {
 		return toolResult(map[string]any{"error": e.Error()}, true)
 	}
-	if p.Operation != "machine_info" {
-		if p.MachineID == "" {
-			// Do not require a persistent identifier in each ChatGPT tool call.
-			// Device forwarding still selects targets explicitly via device_id.
-			p.MachineID = r.MachineID
-		} else if p.MachineID != r.MachineID {
-			return toolResult(map[string]any{"error": "machine_id mismatch; requested computer is not this agent"}, true)
-		}
+	if err := bindConnectedMachine(&p, r.MachineID); err != nil {
+		return toolResult(map[string]any{"error": err.Error()}, true)
 	}
 	if p.Operation == "network_setup" {
 		v, e := r.mutation(p, func(_ *Receipt) (any, error) {
