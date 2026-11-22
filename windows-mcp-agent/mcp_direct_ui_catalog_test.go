@@ -49,8 +49,8 @@ func TestPublicMCPDirectUITools(t *testing.T) {
         if name != "screen_capture" && name != "window_list" && !required["machine_id"] {
             t.Errorf("%s must identify its target machine", name)
         }
-        if _, exists := props["session_token"]; !exists {
-            t.Errorf("%s missing optional rolling token", name)
+        if _, exists := props["session_token"]; exists {
+            t.Errorf("%s must not expose a conversational session token", name)
         }
         if schema["additionalProperties"] != false {
             t.Errorf("%s must not accept arbitrary top-level fields", name)
