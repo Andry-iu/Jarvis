@@ -229,9 +229,13 @@ func TestQueuePreservesCodexFinalStatus(t *testing.T) {
 }
 
 
-func TestRuntimeCloseWaitsForQueuedJobPersistence(t *testing.T) {
+func TestRuntimeCloseWaitsForActiveCommandPersistence(t *testing.T) {
 	r, _ := fixtureRuntime(t)
-	v, err := r.call(runtimeRequest{Operation: "command_start", MachineID: r.MachineID, Project: "sample", Profile: "git_status", RequestID: newID()})
+	// Direct execution validates the job lifecycle; r.call(command_start)
+	// returns a queue_id and may defer the actual process dispatch.
+	r.mu.Lock()
+	v, err := r.startCommand(runtimeRequest{Operation: "command_start", MachineID: r.MachineID, Project: "sample", Profile: "git_status", RequestID: newID()})
+	r.mu.Unlock()
 	if err != nil {
 		t.Fatal(err)
 	}
