@@ -227,3 +227,28 @@ func TestQueuePreservesCodexFinalStatus(t *testing.T) {
 		})
 	}
 }
+
+
+func TestRuntimeCloseWaitsForQueuedJobPersistence(t *testing.T) {
+	r, _ := fixtureRuntime(t)
+	v, err := r.call(runtimeRequest{Operation: "command_start", MachineID: r.MachineID, Project: "sample", Profile: "git_status", RequestID: newID()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	id, ok := v.(map[string]any)["job_id"].(string)
+	if !ok || id == "" {
+		t.Fatal("command did not produce a job ID")
+	}
+	r.Close()
+	b, err := os.ReadFile(filepath.Join(r.dir, "jobs", id+".json"))
+	if err != nil {
+		t.Fatal("final job state was not persisted before Close returned:", err)
+	}
+	var job Job
+	if err := json.Unmarshal(b, &job); err != nil {
+		t.Fatal(err)
+	}
+	if job.Status == "running" || job.FinishedAt == "" || job.ExitCode == nil {
+		t.Fatalf("Close returned before the command finished: %+v", job)
+	}
+}

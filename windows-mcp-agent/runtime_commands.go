@@ -120,6 +120,8 @@ func (r *Runtime) startCommand(p runtimeRequest) (any, error) {
 		return nil, e
 	}
 	r.Jobs[id] = j
+	// Close must wait for the job to finish persisting its final result.
+	r.inflight.Add(1)
 	go r.runCommand(ctx, cancel, j, dir, exe, args)
 	return map[string]any{"job_id": id, "machine_id": r.MachineID, "project": p.Project, "status": "running"}, nil
 }
@@ -156,6 +158,7 @@ func (w jobWriter) Write(b []byte) (int, error) {
 	return n, nil
 }
 func (r *Runtime) runCommand(ctx context.Context, cancel context.CancelFunc, j *Job, dir, exe string, args []string) {
+	defer r.inflight.Done()
 	defer cancel()
 	c := exec.CommandContext(ctx, exe, args...)
 	c.Dir = dir
@@ -165,7 +168,9 @@ func (r *Runtime) runCommand(ctx context.Context, cancel context.CancelFunc, j *
 	configureTreeCancellation(c)
 	configureDesktopCommand(c)
 	done := make(chan struct{})
+	tickerDone := make(chan struct{})
 	go func() {
+		defer close(tickerDone)
 		ticker := time.NewTicker(time.Second)
 		defer ticker.Stop()
 		for {
@@ -185,6 +190,7 @@ func (r *Runtime) runCommand(ctx context.Context, cancel context.CancelFunc, j *
 	}()
 	err := runManagedCommand(c)
 	close(done)
+	<-tickerDone // No periodic persistence may outlive the final job receipt.
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	j.FinishedAt = utcNow()
