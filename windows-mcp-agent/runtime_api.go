@@ -199,6 +199,7 @@ func toolsList() any {
 					"end_x":map[string]any{"type":"integer"},"end_y":map[string]any{"type":"integer"},
 					"wheel_delta":map[string]any{"type":"integer"},"keys":map[string]any{"type":"array","items":map[string]any{"type":"string"},"minItems":1,"maxItems":5},
 					"text":map[string]any{"type":"string","maxLength":1024},
+					"settle_ms":map[string]any{"type":"integer","minimum":0,"maximum":500},
 				}, "required":[]string{"kind"}, "additionalProperties":false}
 				s["minItems"]=1
 				s["maxItems"]=24
