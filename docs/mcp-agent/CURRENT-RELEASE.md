@@ -1,3 +1,18 @@
+## Jarvis Windows MCP 0.9.5 — token conversazionale rimosso; Desktop1 e Desktop2 verificati (22/11/2026)
+
+**Versione distribuita:** `0.9.5` dal commit `c8887f01298f3ec10ad3ee5ca3f8f44fca020186` su `main` (PR #12). GitHub Actions `45070664311`: **Go success**, **PowerShell success**. Include descrizione del tool `task_start` nel catalogo MCP server: **compatibility fallback only**, preferire funzioni dedicate (in particolare `ui_session_open`, `ui_sequence`, `ui_mouse`, `ui_mouse_screen`, `ui_keys`) e ricorrere al wrapper solo in assenza di equivalenti.
+
+- **Desktop1 / DESKTOP-1ESSB0K:** aggiornamento `jarvis-d1-no-token-095-20261122-01` **completed**, `cleanup_verified=true`, versione live `0.9.5`, `elevated=true`, PID `181628`, hash SHA-256 dell'eseguibile installato `84990406b753dfc4c3381b0f9bfeb2ed82aa4902e4153c262f5b3aa093b70cef`; backup `D:\\Jarvis\\Backups\\self-update-6fae2eb5b550477ca4f367c6af2b92a3`.
+- **Desktop2 / AUTECHVPC2:** aggiornamento `jarvis-d2-no-token-095-20261122-01` **completed**, `cleanup_verified=true`, versione live `0.9.5`, `elevated=true`, PID `8440`, hash SHA-256 dell'eseguibile installato `259c3f92f0f2a3e66032fb33e900af24e340bd7a9da55606b20a64e14429ead0`; backup `D:\\Jarvis\\Backups\\self-update-36566f1a9f0b4c2a85531ff641159a8e`.
+- **Smoke test diretto senza `session_token`:** `project_catalog(machine_id)` su Desktop1 e Desktop2 **riuscito**; rispettivamente 7 e 5 progetti. Nessuna risposta contiene `session_token` o `session_idle_timeout_seconds`. `machine_info` ha confermato versione e privilegi su entrambi.
+- **Conservate** le ottimizzazioni delle versioni 0.9.2–0.9.4: riuso TLS/peer, cache identita pinned, cache JWT gia verificati con inattivita mobile di 30 minuti e tetto assoluto `exp`, cache JWKS 30 minuti, `ui_sequence` con pause e controlli UI. Restano tutti i controlli Cloudflare/Windows/per operazione; **nessuna** modifica delle policy Cloudflare Zero Trust.
+- **Limite lato ChatGPT:** il client puo tenere in cache la vecchia descrizione e i vecchi schemi dei tool MCP, incluso il parametro facoltativo `session_token`. L'agente **non lo pubblica e non lo accetta piu**: omettere sempre il campo. La descrizione `task_start` e' pubblicata nel `tools/list` di Jarvis, ma la visibilita nel collegamento ChatGPT richiede il refresh del catalogo; questo non e' stato eseguito direttamente dall'agente Windows. L'aggiornamento del server da solo non annulla approvazioni obbligatorie del plugin host.
+- **Stato test Paint:** non e' incluso un nuovo collaudo grafico nel rilascio 0.9.5; il collaudo Paint + quattro cerchi rossi + scritta blu `Jarvis` e la baseline temporale completa rimangono da verificare con strumenti UI effettivamente esposti dal client.
+
+Decisioni: [AUTH-OPTIMIZATIONS-NO-TOKEN-0.9.5-20261122.md](AUTH-OPTIMIZATIONS-NO-TOKEN-0.9.5-20261122.md).
+
+---
+
 ## Jarvis Windows MCP 0.9.4 - distribuita e collaudata su Desktop1 e Desktop2 (22/11/2026)
 
 **Fonte certificata:** repository `Andry-iu/Jarvis`, branch `main`, PR #9 (sessione/caching), PR #10 (compatibilita con schema MCP vecchio), commit di rilascio **`fc4ecf67e7654ab2a1d0f85f0e037edb0ba5802f`**. Verifica CI candidato PR #10: GitHub Actions `45061676910`, job **Go success** (test, vet, build nativa e Windows) e **PowerShell success**. CI 0.9.3 sul candidato finale `45061147733` anch'essa superata.
