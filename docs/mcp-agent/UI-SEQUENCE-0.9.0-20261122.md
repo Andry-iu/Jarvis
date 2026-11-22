@@ -26,6 +26,10 @@ Example sequence steps:
 
 `kind=mouse` supports `move`, `click`, `double_click`, `right_click`, `wheel` (wheel_delta multiple of 120 within ±1200), and `drag` (both end_x/end_y mandatory). `kind=keys` accepts a single valid chord of 1–5 keys; `kind=text` types 1–1024 Unicode characters. Text across the sequence is limited to 4096 characters. Unknown actions and extra fields are refused. Commands execute in order and stop on error; never replay a partly executed or uncertain sequence.
 
+## Distinct from chat-wide authorization
+
+The `ui_session_open` timeout is only a *window/screenshot-scoped convenience*, not the user's intended overall Jarvis authorization. The separate requirement is one authorization for all permitted agent tools for a single verified ChatGPT conversation, renewing with each command and expiring after five minutes with no Jarvis commands. See [chat-wide authorization specification](CHAT-WIDE-AUTHORIZATION-20261122.md). The current MCP connector does not provide a trustworthy conversation ID or a grant signal, so this requirement is **not yet implemented**; do not describe the UI session as fulfillment of it.
+
 ## Security and timeout
 
 - The session is bound to the exact foreground window identity (HWND/PID/process start) and initial window bounds, as well as the screenshot's physical geometry. It cannot silently switch windows. Window movement invalidates the geometry until a new screenshot/session is opened.
