@@ -14,7 +14,7 @@ import (
 // Session tokens are temporary conversational hints, NOT authentication or
 // authorization. Transport identity, grants, machine identity, request receipts,
 // idempotency, OS privileges and all per-command gates stay mandatory.
-const sessionIdleTimeout = 5 * time.Minute
+const sessionIdleTimeout = 30 * time.Minute
 const maxSessionLeases = 256
 
 type sessionLease struct {
