@@ -27,6 +27,22 @@ type sessionState struct {
     leases map[[32]byte]sessionLease
 }
 
+// Cached MCP tool catalogs may not allow a new top-level session_token field.
+// The existing task_start runtime compatibility bridge has an unrestricted
+// request object, so read the token from that nested request. This still goes
+// through the normal authenticated and authorized MCP tools/call endpoint.
+func sessionTokenArguments(name string, raw json.RawMessage) json.RawMessage {
+    if name != "task_start" { return raw }
+    var bridge struct {
+        Operation string          `json:"operation"`
+        Request   json.RawMessage `json:"request"`
+    }
+    if json.Unmarshal(raw, &bridge) != nil || bridge.Operation != "runtime" || len(bridge.Request) == 0 {
+        return raw
+    }
+    return bridge.Request
+}
+
 func suppliedSessionToken(raw json.RawMessage) (string, bool) {
     var fields map[string]json.RawMessage
     if json.Unmarshal(raw, &fields) != nil {
