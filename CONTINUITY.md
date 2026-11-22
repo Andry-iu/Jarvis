@@ -1,3 +1,13 @@
+## Stato operativo verificato: Desktop1 e Desktop2 aggiornati alla 0.8.7 (22/11/2026)
+
+**Desktop1**: installazione 0.8.7 eseguita e verificata con `agent_update` request_id `jarvis-d1-update-087-20261122-155814`, sorgente `d8936a750c9c8513342b5a699941486105838faf`. Esito `completed` alle 16:00:44 UTC, `cleanup_verified=true`, versione live `0.8.7`, PID `147264`, SHA256 installato `4364e65959c2955a0094fec5a2c737bfc05ac4fe4ae8bf0da865bba15cb12fd4`. Backup `D:\Jarvis\Backups\self-update-5dd8dbf312f348ea9e88b70c69728efd`. Un tentativo successivo di interrogare il connettore ha restituito errore interno; non annulla la ricevuta precedente.
+
+**Desktop2**: partenza confermata da `0.8.4` con agente amministratore inattivo. Il vecchio aggiornamento alla `0.8.5` (`jarvis-source-update-d2-085-20261119-01`) risultava da oltre 48 ore in `building`; runner lock libero e nessun processo corrispondente. Solo il riferimento `active.json` del vecchio tentativo e stato **archiviato**, senza cancellare la ricevuta del precedente aggiornamento ne reinstallare la 0.8.5. Nuova richiesta separata `jarvis-d2-update-087-20261122-170630` dal commit `d8936a750c9c8513342b5a699941486105838faf`: `completed` alle 16:08:11 UTC, `cleanup_verified=true`, `machine_info.version=0.8.7`, PID `5476`, SHA256 `072277d7ef9f04481f344b469d14accb83f8030ff62db90d3f2666316fa7c789`. Backup `D:\Jarvis\Backups\self-update-83cea8fcba0f4cc48b490cb66ed80d76`. Dopo il riavvio `agent_status.state=idle`; rimossi i quattro file diagnostici temporanei dalla root progetti di Desktop2.
+
+**Release complessiva:** il codice coordinato 0.8.7 e in `main`; le due installazioni Windows sono verificate. Rimangono **non completati** il pacchetto ZIP installer 0.8.7, gli APK Android firmati/da distribuire, il collaudo hardware ESP32 e l'esposizione del tool `ui_mouse` nel connettore ChatGPT con prova reale di spostamento e clic. Non presentare questi controlli come gia superati. Le annotazioni inferiori, con stato precedente dei desktop, sono storico e non il quadro corrente.
+
+---
+
 ## Rettifica operativa del 22 novembre 2026: Desktop1
 
 **Desktop1 e stato gia modificato durante questa conversazione:** il deploy 0.8.6 e stato eseguito e verificato tramite `agent_update` (`jarvis-mouse-086-desktop1-20261122-152330`), con versione live 0.8.6, backup, hash installato e pulizia verificati. Solo **in seguito** il connettore Desktop1 ha iniziato a restituire `The tool failed internally`. Non confondere questo errore successivo con il mancato intervento iniziale.

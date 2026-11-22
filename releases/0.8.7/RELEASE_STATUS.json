@@ -1,7 +1,7 @@
 {
   "project": "Jarvis",
   "version": "0.8.7",
-  "status": "candidate_sources_integrated_main_binary_release_pending",
+  "status": "source_integrated_and_windows_agent_0_8_7_verified_on_desktop1_desktop2_other_binaries_pending",
   "prepared_at": "2026-11-22",
   "source_main_before_integration": "139cf885d4b52af9447b2dc682e538679d0dc98c",
   "source_windows_0_8_6": "95e2866178377c6529e6911104d79b6970901e50",
@@ -48,9 +48,13 @@
       "version": "0.8.7",
       "go_test_verified": true,
       "installer_verified": false,
-      "installed_verified": false,
+      "installed_verified": true,
       "previous_installed_0_8_6": true,
-      "source_build_verified": true
+      "source_build_verified": true,
+      "installed_verified_on": [
+        "Desktop1",
+        "Desktop2"
+      ]
     },
     {
       "id": "esp32_bridge",
@@ -97,14 +101,54 @@
     "binary_distribution": "not_performed"
   },
   "desktop1_update_status": {
-    "last_verified_installed_version": "0.8.6",
+    "last_verified_installed_version": "0.8.7",
+    "previous_verified_version": "0.8.6",
     "previous_update_request_id": "jarvis-mouse-086-desktop1-20261122-152330",
-    "previous_update_completed_verified": true,
-    "target_requested_version": "0.8.7",
-    "target_update_started": false,
-    "target_update_verified": false,
-    "direct_connector": "unavailable: internal tool error",
-    "desktop2": "not authorized for this activity; no further calls",
-    "note": "The successful 0.8.6 deployment must not be confused with the separate, not-started 0.8.7 request. No additional Desktop1 changes could be confirmed after the connector failed."
-  }
+    "update_request_id": "jarvis-d1-update-087-20261122-155814",
+    "source_commit": "d8936a750c9c8513342b5a699941486105838faf",
+    "target_version": "0.8.7",
+    "phase": "completed",
+    "updated_at": "2026-11-22T16:00:44.2856383Z",
+    "verified_live_at": "2026-11-22T16:00:46.6560344Z",
+    "machine_id": "1b927a030fa3b7dfa15c40cfccb4ff60",
+    "pid": 147264,
+    "installed_sha256": "4364e65959c2955a0094fec5a2c737bfc05ac4fe4ae8bf0da865bba15cb12fd4",
+    "backup": "D:\\Jarvis\\Backups\\self-update-5dd8dbf312f348ea9e88b70c69728efd",
+    "cleanup_verified": true,
+    "verified": true,
+    "postverification_connector_note": "A later machine_info attempt failed internally; the earlier completed update receipt and version were verified."
+  },
+  "desktop2_update_status": {
+    "previous_installed_version": "0.8.4",
+    "last_verified_installed_version": "0.8.7",
+    "update_request_id": "jarvis-d2-update-087-20261122-170630",
+    "source_commit": "d8936a750c9c8513342b5a699941486105838faf",
+    "target_version": "0.8.7",
+    "phase": "completed",
+    "updated_at": "2026-11-22T16:08:11.3635624Z",
+    "verified_live_at": "2026-11-22T16:08:18.4751305Z",
+    "machine_id": "d41455adf8721c205183224d3c69a1a5",
+    "pid": 5476,
+    "installed_sha256": "072277d7ef9f04481f344b469d14accb83f8030ff62db90d3f2666316fa7c789",
+    "backup": "D:\\Jarvis\\Backups\\self-update-83cea8fcba0f4cc48b490cb66ed80d76",
+    "cleanup_verified": true,
+    "verified": true,
+    "agent_idle_after_update": true,
+    "stale_previous_update": {
+      "request_id": "jarvis-source-update-d2-085-20261119-01",
+      "target_version": "0.8.5",
+      "recorded_phase": "building",
+      "status_record_preserved": true,
+      "active_pointer_archived_as": "D:\\Jarvis\\State\\source-updates\\stale-active-jarvis-source-update-d2-085-20261119-01-20261122.json",
+      "reason": "record older than 48 hours, runner.lock free, no matching update process, machine still v0.8.4",
+      "replayed": false
+    },
+    "temporary_project_probe_files_removed": true
+  },
+  "remaining_verifications": [
+    "Installer ZIP 0.8.7 not built or validated",
+    "Android JarvisWake/Cube/Wear 0.8.7 binaries not signed or distributed",
+    "ESP32 physical device not tested",
+    "ChatGPT connector ui_mouse tool exposure and real move/click not verified"
+  ]
 }

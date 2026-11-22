@@ -1,7 +1,10 @@
-## 0.8.7 — 2026-11-22 (sorgente di integrazione, collaudo richiesto)
+## 0.8.7 — 2026-11-22 (agente Windows installato e verificato su Desktop1 e Desktop2)
+
+- Desktop1: `jarvis-d1-update-087-20261122-155814`, `completed`, backup e cleanup verificati, versione live 0.8.7.
+- Desktop2: `jarvis-d2-update-087-20261122-170630`, `completed`, backup e cleanup verificati, versione live 0.8.7. Precedente riferimento di update 0.8.5 bloccato archiviato senza riesecuzione; storico conservato.
 
 - Portati su una base comune il runtime Windows 0.8.6 (mouse `move`, input, gateway e updater) e i tool ESP32 camera/HID della precedente sperimentazione, con configurazione esplicita e nessuna attivazione automatica dei dispositivi.
-- Allineati il codice agente e la versione degli script dell'installer, inclusi quelli di packaging Python e PowerShell. Il numero 0.8.7 e un **candidato**: nessun pacchetto verificato/firmato o deploy 0.8.7 e implicito.
+- Allineati il codice agente e gli script dell'installer. **Installazioni Windows 0.8.7 verificate su Desktop1 e Desktop2** il 22/11/2026 da commit `d8936a750c9c8513342b5a699941486105838faf`; non ancora prodotto/validato lo ZIP installer 0.8.7, ne firmati i nuovi APK.
 - Il connettore ChatGPT continua a richiedere un refresh/esposizione per `ui_mouse`; il passaggio a 0.8.7 non costituisce il collaudo del mouse da ChatGPT.
 
 ## 0.8.6 — 2026-11-22 (installata e verificata su Desktop1)
