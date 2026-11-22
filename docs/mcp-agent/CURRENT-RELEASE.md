@@ -1,3 +1,12 @@
+## Stato operativo 0.8.8 — 22 novembre 2026 (rilevamento post-distribuzione)
+
+- Sorgente integrato in `main` con pull request #2, merge `10175433558d48f35ef15674be6962c5134f3e29`; CI sul commit candidato `573298d4f9d8a2071f3ef2ec99391b9dcfc20b82` conclusa con successo. Nuovo tool `ui_mouse_screen`: coordinate JPEG della cattura `screen_capture`, `capture_id` monouso 45 s, conversione automatica e accesso taskbar/anteprime con desktop interattivo verificato. Dettagli in [IMAGE-SPACE-MOUSE-0.8.8-20261122.md](IMAGE-SPACE-MOUSE-0.8.8-20261122.md).
+- Desktop2 (AUTECHVPC2): richiesta `jarvis-d2-update-088-20261122-image-mouse-01` **completed** (16:57:05 UTC), `cleanup_verified=true`, SHA256 `5dc6e3e4ebd0d404570918a6dc1ac945ec6e0ed7b02579db20fbf1b4fe8524c5`, backup `D:\\Jarvis\\Backups\\self-update-f22431e48e12483ca37b95c22f0bf91e`; `machine_info.version=0.8.8`, nuovo PID 1704 e capacità `ui_mouse_screen` presente. **Installazione verificata**, non equivale a collaudo mouse.
+- Desktop1 (DESKTOP-1ESSB0K): richiesta separata `jarvis-d1-update-088-20261122-image-mouse-01` accettata e osservata in fase `promoting` alle 16:57:10 UTC. Dopo il passaggio, il connettore diretto ha restituito `The tool failed internally` a `machine_info`, `agent_status`, `agent_update_status`, `window_list`. **Non attribuire fase completed, versione live 0.8.8 o risultato del collaudo**, finché una nuova lettura non lo conferma. Non ripetere lo stesso update_id; esaminare prima la ricevuta e la situazione dell'avvio su Desktop1.
+- Prossimo controllo: ripristinare il collegamento a Desktop1 preservando la procedura di avvio gestita, verificare `agent_update_status` e versione live, quindi test screenshot → `ui_mouse_screen` su bersaglio innocuo nel desktop, un'azione alla volta su ordine dell'utente. L'installer ZIP e i componenti Android coordinati sono lavoro separato, non testati qui.
+
+---
+
 ## Sviluppo Windows MCP 0.8.8 — screenshot → mouse (22/11/2026)
 
 - **Ramo**: `feature/desktop-image-mouse-088-20261122`, PR #2, partito da `main`. La 0.8.8 è nuova versione binaria dell'agente Windows, non una nuova distribuzione Android.
