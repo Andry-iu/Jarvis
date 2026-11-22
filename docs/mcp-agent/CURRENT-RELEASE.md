@@ -1,3 +1,14 @@
+## Sviluppo Windows MCP 0.8.8 — screenshot → mouse (22/11/2026)
+
+- **Ramo**: `feature/desktop-image-mouse-088-20261122`, PR #2, partito da `main`. La 0.8.8 è nuova versione binaria dell'agente Windows, non una nuova distribuzione Android.
+- **Funzione**: nuovo `ui_mouse_screen` con coordinate immagine JPEG, `capture_id` unico e monouso valido 45 s, trasformazione automatica verso pixel reali inclusi origine e display secondari; supporta taskbar/anteprime, mantenendo i controlli sul desktop interattivo e ricevute anti-replay. Il vecchio `ui_mouse` rimane compatibile.
+- **Convalida sviluppatore**: su Desktop1 nella worktree Git temporanea, `go test -count=1 ./...` **PASS**, `go vet ./...` **PASS**, `go build` Windows **PASS**, parsing PowerShell **PASS** (log locale `D:\Jarvis\Projects\JarvisMouseQA\_verify088_results3.log`). Non confondere questa build di test con l'installazione del nuovo agente.
+- **Distribuzione**: resta da eseguire e attestare con `agent_update_status` e `machine_info` su Desktop1 e Desktop2. Al momento dell'elaborazione di questa voce entrambe le macchine erano ancora alla **0.8.7**.
+- **Installatore**: la versione storica del pacchetto installer (1.3.1 con manifest 0.7.1) non è stato automaticamente portato a 0.8.8 e non va presentato come ZIP 0.8.8 pronto. Packaging e allineamento successivo da collaudare separatamente.
+- **Documentazione tecnica**: [IMAGE-SPACE-MOUSE-0.8.8-20261122.md](IMAGE-SPACE-MOUSE-0.8.8-20261122.md).
+
+---
+
 ## Stato operativo verificato: Desktop1 e Desktop2 aggiornati alla 0.8.7 (22/11/2026)
 
 **Desktop1**: installazione 0.8.7 eseguita e verificata con `agent_update` request_id `jarvis-d1-update-087-20261122-155814`, sorgente `d8936a750c9c8513342b5a699941486105838faf`. Esito `completed` alle 16:00:44 UTC, `cleanup_verified=true`, versione live `0.8.7`, PID `147264`, SHA256 installato `4364e65959c2955a0094fec5a2c737bfc05ac4fe4ae8bf0da865bba15cb12fd4`. Backup `D:\Jarvis\Backups\self-update-5dd8dbf312f348ea9e88b70c69728efd`. Un tentativo successivo di interrogare il connettore ha restituito errore interno; non annulla la ricevuta precedente.

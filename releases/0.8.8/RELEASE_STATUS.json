@@ -1,0 +1,43 @@
+{
+  "project": "Jarvis",
+  "version": "0.8.8",
+  "date": "2026-11-22",
+  "status": "windows_mouse_source_tested_pending_merge_install_live_mouse_test",
+  "base_version": "0.8.7",
+  "branch": "feature/desktop-image-mouse-088-20261122",
+  "windows_agent": {
+    "source": "windows-mcp-agent/",
+    "version": "0.8.8",
+    "change": "ui_mouse_screen capture_id to JPEG coordinate transform with 45s one-use token; usable on taskbar, thumbnail previews",
+    "validation": {
+      "desktop": "Desktop1",
+      "go_test": "passed",
+      "go_vet": "passed",
+      "go_build_windows": "passed",
+      "powershell_parse": "passed",
+      "log_local": "D:\\Jarvis\\Projects\\JarvisMouseQA\\_verify088_results3.log"
+    },
+    "deployment": {
+      "desktop1": "pending",
+      "desktop2": "pending",
+      "live_mouse_test": "pending"
+    }
+  },
+  "android": {
+    "jarviswake": "unchanged 0.8.7",
+    "cube": "unchanged 0.8.7",
+    "wear": "unchanged 0.8.7",
+    "binary": "not rebuilt"
+  },
+  "installer": {
+    "source_manifest": "historic 1.3.1/0.7.1",
+    "version_0_8_8_package": "not yet produced"
+  },
+  "safety": {
+    "no_secrets_on_git": true,
+    "no_binary_on_git": true,
+    "desktop_secure_ui_refused": true,
+    "receipt_unique_request_id": true
+  },
+  "doc": "docs/mcp-agent/IMAGE-SPACE-MOUSE-0.8.8-20261122.md"
+}

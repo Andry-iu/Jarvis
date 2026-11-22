@@ -215,7 +215,7 @@ public static class JarvisDesktopNative {
 }catch{
  # Never include provider exceptions (which can contain entered text) in diagnostics.
  $allowed=@('desktop_unavailable_or_locked','no_visible_foreground_window','window_changed','target_missing_or_ambiguous','target_changed','target_not_actionable','empty_target_bounds','pattern_not_supported','window_changed_during_inspect','text_requires_edit_control','read_only_target','unsupported_action','unsupported_operation','editable_content_too_large','native_parent_changed')
- $allowed+=@('wrong_interactive_session','foreground_changed','focus_failed','modifier_pressed','keyboard_outcome_uncertain','invalid_key_chord','close_dispatch_failed','destination_exists','destination_changed','source_file_missing','standard_file_dialog_not_found','filename_verification_failed','save_dispatch_failed','file_dialog_outcome_uncertain','file_verification_limit')
+ $allowed+=@('wrong_interactive_session','foreground_changed','focus_failed','modifier_pressed','keyboard_outcome_uncertain','invalid_key_chord','close_dispatch_failed','destination_exists','destination_changed','source_file_missing','standard_file_dialog_not_found','filename_verification_failed','save_dispatch_failed','file_dialog_outcome_uncertain','file_verification_limit','point_outside_desktop','point_without_visible_window','mouse_position_failed','invalid_mouse_action','invalid_wheel_delta')
  $code=$_.Exception.Message
  if($allowed -notcontains $code){$code='provider_error_or_uncertain_outcome'}
  [Console]::Write((ConvertTo-Json -Compress @{ok=$false;error=$code}))
