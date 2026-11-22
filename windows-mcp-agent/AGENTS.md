@@ -1,3 +1,7 @@
+# Correzione requisito sessione: autorizzazione chat globale — 22 novembre 2026
+
+La sessione di autorizzazione richiesta dall'utente **non** riguarda soltanto la UI. L'obiettivo e **una sola conferma iniziale per chat per usare tutti gli strumenti Jarvis consentiti**, riutilizzata dalla stessa chat e scaduta dopo cinque minuti di **inattivita complessiva dell'agente** nella chat. Ogni comando aggiorna il termine di scadenza. Non confondere `ui_session_open` con questa autorizzazione generale. Mantenere i controlli per-comando essenziali, i consensi ad alto rischio e le conferme imposte dall'host ChatGPT. Non fingere che Cloudflare, il token MCP o un ID fornito liberamente dal modello identifichino una chat. **Non dichiarare implementata** la concessione generale finche non esiste una prova verificabile dell'identita della chat/consenso a livello integrazione host. Specifica: [CHAT-WIDE-AUTHORIZATION-20261122.md](../docs/mcp-agent/CHAT-WIDE-AUTHORIZATION-20261122.md).
+
 # Regole operative aggiuntive — 22 novembre 2026
 
 - Per comandi remoti usare anzitutto le primitive MCP gia disponibili nell'agente. Richiamare batch/CMD/PowerShell soltanto in assenza di un comando equivalente; se il fallback e ripetuto, proporre all'utente una primitiva generale incorporata nell'agente e non continuare automaticamente a duplicare script.
