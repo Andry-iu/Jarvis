@@ -1,5 +1,6 @@
 ## 0.9.5 — 2026-11-22 (no conversational token, retain optimizations)
 
+- MCP catalog description for `task_start` now explicitly marks it as **fallback only**: prefer direct named tools (particularly UI functions) whenever available; preserve legacy diagnostics and cached-client compatibility.
 - **Removed `session_token` end-to-end**: no MCP schema field, runtime decoder field, session store, token issuing/echoing, client token requirement or identity extraction for session leases. `task_start(operation=runtime)` remains compatible without a token.
 - Retained peer TLS keep-alive, pinned-peer identity cache, precomputed tool catalog, telemetry optimizations, Cloudflare JWKS refresh every 30 minutes and 30-minute sliding cache of **verified** JWTs (never past `exp`).
 - Retained Windows/Cloudflare authentication and all operation permissions, request receipts, machine matching and UI guards; no policy bypass.
