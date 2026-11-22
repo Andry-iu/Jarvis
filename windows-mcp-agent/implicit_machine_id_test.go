@@ -53,7 +53,7 @@ func TestConnectedMachineLegacyAndNewCalls(t *testing.T) {
 		`{"operation":"project_catalog"}`,
 		`{"operation":"screen_capture"}`,
 		`{"operation":"ui_sequence","session_id":"ui-test","request_id":"test-implicit-target-1234","steps":[{"kind":"keys","keys":["ESC"]}]}`,
-		`{"operation":"device_call","device_id":"paired-target"}`,
+		`{"operation":"device_call","device_id":"paired-target","call":{}}`,
 		`{"operation":"project_catalog","machine_id":"desktop-1"}`,
 	} {
 		p, err := decodeRuntime("", json.RawMessage(input))
