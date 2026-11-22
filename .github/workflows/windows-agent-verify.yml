@@ -17,6 +17,8 @@ jobs:
         with:
           go-version-file: windows-mcp-agent/go.mod
           cache-dependency-path: windows-mcp-agent/go.mod
+      - name: Check installer manifest and hashes
+        run: python3 windows-mcp-agent/installer/Test-PackageContract.py
       - name: Test, vet, native build and Windows cross-build
         working-directory: windows-mcp-agent
         run: |
