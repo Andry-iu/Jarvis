@@ -22,6 +22,7 @@ type runtimeRequest struct {
 	UsageCategory    string   `json:"usage_category,omitempty"`
 	WindowID         string   `json:"window_id,omitempty"`
 	SnapshotID       string   `json:"snapshot_id,omitempty"`
+	CaptureID        string   `json:"capture_id,omitempty"`
 	ElementID        string   `json:"element_id,omitempty"`
 	Action           string   `json:"action,omitempty"`
 	Keys             []string `json:"keys,omitempty"`
@@ -275,7 +276,7 @@ func decodeRuntime(name string, b json.RawMessage) (runtimeRequest, error) {
 			return p, errors.New("text exceeds 4096 characters")
 		}
 	}
-	if p.Operation == "ui_mouse" {
+	if p.Operation == "ui_mouse" || p.Operation == "ui_mouse_screen" {
 		if p.X < 0 || p.Y < 0 || p.X >= 32768 || p.Y >= 32768 {
 			return p, errors.New("mouse coordinates out of range")
 		}
@@ -372,7 +373,7 @@ func (a *Agent) invokeRuntime(name string, raw json.RawMessage) any {
 		return toolResult(map[string]any{"machine_id": r.MachineID, "operation": "tool_usage", "usage": v}, false)
 	}
 	if p.Operation == "screen_capture" {
-		v, e := screenCapture(p)
+		v, e := a.screenCapture(p)
 		if e != nil {
 			return toolResult(map[string]any{"error": e.Error()}, true)
 		}
