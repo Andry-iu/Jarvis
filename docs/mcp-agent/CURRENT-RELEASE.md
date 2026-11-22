@@ -1,3 +1,15 @@
+## Jarvis Windows MCP 0.9.2 - distribuita su entrambi i desktop (22/11/2026)
+
+- **Fonte**: `main` di `Andry-iu/Jarvis`, merge PR #8, commit esatto `7705886eef8703a3770b35c8d84ec195abf68de2`. CI sul candidato `5b2d180d2683d3ba1d422d48628101f443089fcb`: job Go e PowerShell entrambi `success` (test, vet, build Linux e cross-build Windows).
+- **Desktop1**: `jarvis-d1-update-092-20261122-speed-01`, `completed` alle 19:09:36 UTC, `cleanup_verified=true`, SHA256 installato `45130731c35e360adfa850014d46b0425b8b6bf8b5bf2ea0380c522641db2e57`; lettura live `machine_info.version=0.9.2`, PID 171296, elevated true alle 19:09:52 UTC.
+- **Desktop2**: `jarvis-d2-update-092-20261122-speed-01`, `completed` alle 19:09:44 UTC, `cleanup_verified=true`, SHA256 installato `40b7c6e4708a2b7176e8a8d31c3a301ab052421d483b5d5cea8cf4f43fdb2556`; lettura live `machine_info.version=0.9.2`, PID 11132, elevated true alle 19:09:51 UTC.
+- **Smoke test**: `agent_status` e `project_catalog` hanno risposto correttamente su entrambe le macchine; la misura osservata dal coordinatore è circa 2,5 secondi per chiamata, **non** un confronto causale prima/dopo e non misura la sola latenza Go.
+- **Modifiche**: connessioni HTTPS/TLS peer riutilizzabili (pin e endpoint nella chiave), check positivo dell'identita macchina con scadenza 300 secondi soltanto con pin TLS verificato, catalogo tool immutabile precomputato, conversioni JSON evitabili eliminate dalla telemetria. Bearer e permessi, matching machine_id, parametri e ricevute continuano a essere controllati per ogni comando.
+- **Non implementato**: consenso generale della singola chat con inattivita 300s, in attesa di identita verificabile della chat e segnale di concessione da ChatGPT/plugin host; il timeout della cache di identita **non** e un consenso. Non alterati i permessi persistenti dei plugin.
+- **Da misurare**: latenza reale prima/dopo su percorsi gateway controllati, disponibilita del percorso chat-wide auth, eventuale overhead di orchestrazione e telemetria. Nessuna certificazione di un guadagno percentuale senza benchmark comparativo. Installer ZIP 0.9.2 non creato automaticamente da questa release.
+
+---
+
 ## Desktop1 0.8.8 — aggiornamento completato, riconnessione da verificare (22/11/2026)
 
 - L'utente ha verificato in PowerShell su Desktop1 il processo `jarvis-mcp` attivo con PID `158788`, avviato alle 18:03:31 locali dopo il comando `Start-ScheduledTask` (lo script precedente avviava l'attività solo in assenza di updater ancora in esecuzione).
