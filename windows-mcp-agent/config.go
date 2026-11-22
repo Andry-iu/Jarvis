@@ -57,9 +57,9 @@ func readEnvFile(path string, required bool) error {
 	for scanner.Scan() {
 		lineNum++
 		s := strings.TrimSpace(scanner.Text())
-		if lineNum == 1 {
-			s = strings.TrimPrefix(s, "\ufeff")
-		}
+		// Older env writers can prepend a UTF-8 BOM to each logical line.
+		// Strip it only from the start, preserving the actual variable value.
+		s = strings.TrimPrefix(s, "\ufeff")
 		if s == "" || strings.HasPrefix(s, "#") {
 			continue
 		}
