@@ -15,7 +15,6 @@ import (
 )
 
 type runtimeRequest struct {
-	SessionToken     json.RawMessage `json:"session_token,omitempty"`
 	SourceCommit     string   `json:"source_commit,omitempty"`
 	TargetVersion    string   `json:"target_version,omitempty"`
 	PairingID        string   `json:"pairing_id,omitempty"`
@@ -228,14 +227,6 @@ func toolsList() any {
 		}
 		ts = append(ts, map[string]any{"name": t.Name, "description": t.Description, "inputSchema": map[string]any{"type": "object", "properties": props, "required": required, "additionalProperties": false}, "annotations": map[string]any{"readOnlyHint": t.ReadOnly, "destructiveHint": !t.ReadOnly, "idempotentHint": t.ReadOnly}})
 	}
-	// All tools, including the legacy catalog, accept an optional rolling
-	// token. It is never an alternative to transport authentication or grants.
-	for _, raw := range ts {
-		m := raw.(map[string]any)
-		s := m["inputSchema"].(map[string]any)
-		props := s["properties"].(map[string]any)
-		props["session_token"] = map[string]any{"type": "string", "description": "Optional Jarvis rolling session token. Send 0 for initial, forgotten, expired, or unknown tokens; returns a new token with a successful command."}
-	}
 	// Compatibility route for a host that has cached the previous MCP catalog.
 	for _, t := range ts {
 		m := t.(map[string]any)
@@ -279,7 +270,7 @@ func decodeRuntime(name string, b json.RawMessage) (runtimeRequest, error) {
 		if spec.Name != p.Operation {
 			continue
 		}
-		allowed := map[string]bool{"operation": true, "machine_id": true, "session_token": true}
+		allowed := map[string]bool{"operation": true, "machine_id": true}
 		for _, key := range spec.Fields {
 			allowed[key] = true
 		}
