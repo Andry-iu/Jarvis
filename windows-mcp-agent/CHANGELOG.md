@@ -1,3 +1,11 @@
+## 0.9.5 — 2026-11-22 (no conversational token, retain optimizations)
+
+- **Removed `session_token` end-to-end**: no MCP schema field, runtime decoder field, session store, token issuing/echoing, client token requirement or identity extraction for session leases. `task_start(operation=runtime)` remains compatible without a token.
+- Retained peer TLS keep-alive, pinned-peer identity cache, precomputed tool catalog, telemetry optimizations, Cloudflare JWKS refresh every 30 minutes and 30-minute sliding cache of **verified** JWTs (never past `exp`).
+- Retained Windows/Cloudflare authentication and all operation permissions, request receipts, machine matching and UI guards; no policy bypass.
+- User-requested change to reduce unnecessary sensitive-field prompts in ChatGPT. Platform-managed approval prompts can still occur for other reasons.
+- Regression tests: removed-token MCP catalog, rejection of `session_token` in runtime, valid requests without token, intact JWT cache expiration. See `docs/mcp-agent/AUTH-OPTIMIZATIONS-NO-TOKEN-0.9.5-20261122.md`.
+
 ## 0.9.4 — 2026-11-22 (bridge compatibilita sessione)
 
 - Il percorso MCP `task_start` con `operation=runtime` accetta ora `session_token` anche nell'oggetto annidato `request`. Serve ai client ChatGPT che hanno memorizzato lo schema precedente e non accettano ancora `session_token` nelle chiamate dirette.
