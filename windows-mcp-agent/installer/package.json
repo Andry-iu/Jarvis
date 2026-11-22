@@ -136,8 +136,8 @@
                   },
                   {
                       "path":  "Start.ps1",
-                      "sha256":  "02fd1d824db6785240042c92a3c984063302f912989014effc86e4cba994b4e7",
-                      "bytes":  3935
+                      "sha256":  "c348b7a3845c2ca8ea3f37221f3cf3f530a8fa0838701bb9b5aaf02907bf2a0b",
+                      "bytes":  3942
                   },
                   {
                       "path":  "Stop.ps1",
@@ -176,8 +176,8 @@
                   },
                   {
                       "path":  "script-history.json",
-                      "sha256":  "3b03b1bd098e40efcef5c8248370a90f97ad8b61343e6376027816a017ed7c9c",
-                      "bytes":  9547
+                      "sha256":  "17da956b1596762372370b96d541fcaec5f1f79b9a2283837ab670ae92d23b04",
+                      "bytes":  9823
                   },
                   {
                       "path":  "setup.example.env",
@@ -186,8 +186,8 @@
                   },
                   {
                       "path":  "update-agent.ps1",
-                      "sha256":  "1d84e2b7109b4ff517c9acdff69f88f4dc4a6c8e7161e5efd7ad2262a66b25ab",
-                      "bytes":  12400
+                      "sha256":  "e815957813fafd3cdde95271355b72033029fd3df6d2d27650c4c1cc0724ac1f",
+                      "bytes":  12822
                   }
               ],
     "updater_source_commit":  "a00ba7e164bea83b35f6d4b1767ddb0d82d13b5d"
