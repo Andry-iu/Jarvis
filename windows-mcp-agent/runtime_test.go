@@ -140,18 +140,18 @@ func TestRuntimeMachineMismatchAndCatalog(t *testing.T) {
 	if out["isError"] != true {
 		t.Fatal("wrong machine accepted")
 	}
-	for _, t := range toolsList().(map[string]any)["tools"].([]any) {
-		m := t.(map[string]any)
-		if isRuntimeTool(m["name"].(string)) && m["name"] != "machine_info" {
-			s := m["inputSchema"].(map[string]any)
-			found := false
-			for _, p := range s["required"].([]string) {
-				if p == "machine_id" {
-					found = true
-				}
-			}
-			if !found {
-				panic("machine id missing from schema")
+	for _, tool := range toolsList().(map[string]any)["tools"].([]any) {
+		m := tool.(map[string]any)
+		if !isRuntimeTool(m["name"].(string)) {
+			continue
+		}
+		s := m["inputSchema"].(map[string]any)
+		if _, ok := s["properties"].(map[string]any)["machine_id"]; ok {
+			t.Fatalf("%s still exposes machine_id in input schema", m["name"])
+		}
+		for _, field := range s["required"].([]string) {
+			if field == "machine_id" {
+				t.Fatalf("%s still requires machine_id", m["name"])
 			}
 		}
 	}
