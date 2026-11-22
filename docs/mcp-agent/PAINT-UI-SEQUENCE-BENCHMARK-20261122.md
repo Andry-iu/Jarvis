@@ -1,3 +1,22 @@
+## Collaudo 0.9.5 con strumenti MCP diretti (22/11/2026, ore ~21:20–21:25 UTC)
+
+**Esito:** parziale. Strumenti `ui_session_open`, `ui_sequence`, `ui_mouse_screen`, `window_inspect`, `ui_action` esposti direttamente da ChatGPT, senza `task_start` e senza `session_token`. Desktop1 in versione `0.9.5`, Paint finestra attiva con geometria stabile. **Rettangolo nero e quattro cerchi rossi ottenuti e verificati visivamente**. **Testo blu centrale "Jarvis" NON ottenuto**, quindi non esiste una nuova baseline completa certificata.
+
+### Tempi misurati (singole prove, NON sommare in una falsa baseline)
+- Prova iniziale `ui_session_open` + `ui_sequence` di 2 step (click/drag) + screenshot: **7365 ms** complessivi, `ui_sequence` **3063 ms**, apertura **1989 ms**, screenshot finale **1125 ms**. Esito visivo: tela vuota.
+- Prova rettangolo con coordinate verificate da `window_inspect`, 7 step con `settle_ms=300` (2,1 s pause programmate): **6411 ms** dal primo screenshot al risultato finale, sequenza **5286 ms**, screenshot finale **1121 ms**. Esito visivo: nessuna forma visibile al termine della prova. Le misurazioni mostrano solo la latenza, non un successo.
+- Trascinamento diretto `ui_mouse_screen`: **2515 ms** per l'operazione, **4902 ms** incluso screenshot iniziale e finale. Dopo l'azione compare una forma rettangolare con maniglie di selezione, poi viene verificato il rettangolo nero effettivo.
+- Quattro cerchi: prima `ui_sequence` di 6 step (selezione ovale/rosso + 4 trascinamenti) **6182 ms**; **10708 ms** incluse apertura sessione, screenshot iniziale e finale. Screenshot ha mostrato **solo 3 cerchi**: un trascinamento aveva mancato il primo cerchio. Secondo tentativo sul solo angolo superiore sinistro: `ui_sequence` **2850 ms**, con **6385 ms** fino all'apertura della sessione; screenshot successivo ha confermato **4 cerchi rossi**.
+- Testo blu `Jarvis`: tentativo di 4 step (selezione testo, colore blu, drag textbox, Unicode text), `ui_sequence` **4032 ms**, **8407 ms** compreso setup e screenshot. Nessun testo visibile. Ulteriori tentativi isolati (selezione Testo poi click; drag textbox poi text Unicode) non hanno prodotto contenuto visibile. `window_inspect` ha trovato `EditableText` con bounds `[0,0,0,0]`; `ui_action(type_text)` ha restituito `target_not_actionable`.
+- **Le conferme ChatGPT di questo collaudo**: gli strumenti UI diretti sono disponibili, la nuova descrizione di `task_start` e' esposta, la rimozione del token non ha impedito screenshot/azioni. Non sono state rilevate richieste di consenso identiche alla schermata relativa al token all'interno di queste chiamate, ma questo non prova che non possano comparire in futuro.
+
+### Prossima indagine tecnica
+- Verificare in Paint Windows 11 come il widget `Testo` riceve focus e se `SendInput` Unicode viene inviato a un campo realmente attivo; distinguere creazione della casella da digitazione. Evitare retry di testo quando `ui_sequence` riferisce soltanto `verified=false`; verificare stato UI ed eventuali controlli editabili con `window_inspect`.
+- Correggere l'eventuale problema del primo drag immediatamente dopo il cambio forma/colore, oppure aggiungere checkpoint screenshot e pause di stabilizzazione. Un output `ui_sequence_dispatched` non prova visivamente il successo.
+- **Baseline completa richiesta:** partenza da tela vuota, rettangolo nero, 4 cerchi rossi, scritta `Jarvis` blu centrale, screenshot finale e successo visivo. Misurare `setup_ms`, somma `sequence_ms`, `capture_ms`, `total_ms` sull'intero run, annotando pause 300ms. Solo dopo successo confrontare riduzioni 200, 150 e 100ms.
+
+---
+
 # Benchmark UI Sequence Paint — Desktop1, 22 novembre 2026
 
 ## Scopo
