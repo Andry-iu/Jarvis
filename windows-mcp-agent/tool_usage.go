@@ -111,6 +111,7 @@ func usageName(name string, args json.RawMessage) string {
 		return name
 	}
 	return "_unknown"
+}
 
 func toolFailed(result any) bool {
 	// The normal MCP result is already a typed map. Avoid a JSON round-trip
