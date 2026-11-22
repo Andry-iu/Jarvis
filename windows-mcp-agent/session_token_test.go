@@ -82,3 +82,25 @@ func TestSessionTokenRuntimeSchemaAndDecoder(t *testing.T) {
     if value,supplied:=suppliedSessionToken(raw);value != "0" || !supplied {t.Fatal("numeric zero not accepted")}
     if strings.Contains(verifiedAccessPrincipal("a.b.c"),"user") {t.Fatal("raw claims surfaced")}
 }
+
+func TestVerifiedJWTCachedActivityAndAbsoluteJWTExpiry(t *testing.T) {
+    var v AccessVerifier
+    start := time.Now()
+    v.cacheVerifiedJWT("verified-opaque-jwt", start.Add(90*time.Minute), start)
+    if !v.cachedJWT("verified-opaque-jwt",start.Add(29*time.Minute)) {
+        t.Fatal("recently verified access token should remain cached")
+    }
+    if !v.cachedJWT("verified-opaque-jwt",start.Add(58*time.Minute)) {
+        t.Fatal("continued activity must extend 30-minute idle limit")
+    }
+    if v.cachedJWT("verified-opaque-jwt",start.Add(90*time.Minute)) {
+        t.Fatal("issuer expiry MUST override continued activity")
+    }
+    if v.cachedJWT("unverified-token",start.Add(2*time.Minute)) {
+        t.Fatal("cache must not trust arbitrary unverified tokens")
+    }
+    v.cacheVerifiedJWT("another-token",start.Add(3*time.Hour),start)
+    if v.cachedJWT("another-token",start.Add(31*time.Minute)) {
+        t.Fatal("cache must stop reusing an inactive token at 30 minutes")
+    }
+}
