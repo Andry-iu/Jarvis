@@ -22,7 +22,7 @@ import (
 	"time"
 )
 
-const version = "0.9.4"
+const version = "0.9.5"
 
 type RPCRequest struct {
 	JSONRPC string          `json:"jsonrpc"`
@@ -60,7 +60,6 @@ type Agent struct {
 	testPrivileges         func() agentPrivileges
 	testLaunchRestart      func(*adminRestart) error
 	testLaunchSourceUpdate func(string) error
-	sessions               sessionState
 	usageMu                sync.Mutex
 	usage                  *toolUsageStore
 	uiMu                   sync.Mutex
@@ -436,11 +435,7 @@ func handler(a *Agent, token string, access *AccessVerifier) http.Handler {
 				if (p.Name == "update_prepare" || p.Name == "update_execute" || p.Name == "update_status" || p.Name == "log_list" || p.Name == "log_read" || p.Name == "diagnostic_status") && !validAccess {
 					res = response(q.ID, toolResult(map[string]string{"error": "Cloudflare Access authentication required for update tools"}, true), nil)
 				} else {
-					principal := "mcp:local"
-					if !validLocal && validAccess {
-						principal = verifiedAccessPrincipal(r.Header.Get("Cf-Access-Jwt-Assertion"))
-					}
-					res = response(q.ID, a.invokeScoped(p.Name, p.Arguments, principal), nil)
+					res = response(q.ID, a.invoke(p.Name, p.Arguments), nil)
 				}
 			}
 		default:
