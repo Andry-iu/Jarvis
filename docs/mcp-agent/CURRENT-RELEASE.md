@@ -1,3 +1,18 @@
+## Jarvis Windows MCP 0.9.6 — identita locale implicita su tutti gli strumenti (22/11/2026)
+
+**Codice integrato:** commit `a6588c3590ce338aa127b3cfd1615a4481e592f1` (PR #13) su `main`. Test GitHub Actions `45072776302`: **Go e PowerShell passati** dopo aggiornamento test legacy `TestRuntimeMachineMismatchAndCatalog`.
+
+- **Desktop1:** `agent_update_status` **completed**, `cleanup_verified=true`, versione live **0.9.6**, privilegi elevati confermati. SHA-256 binario installato `fb48aa3c96c5fbc56a6d9681ed2624de804bffe92cca1801919ea2f951666aa6`. Request `jarvis-d1-096-implicit-id-20261122-01`.
+- **Desktop2:** `agent_update_status` **completed**, `cleanup_verified=true`, versione live **0.9.6**, privilegi elevati confermati. SHA-256 binario installato `1267019010f717fa4aef5d91596deb635f4f19a3f7a1ae8cea9628bb14202c71`. Request `jarvis-d2-096-implicit-id-20261122-01`.
+- **Smoke test senza machine_id:** `task_start(operation=runtime,request={operation:"project_catalog"})` riuscito su entrambi senza inviare l'identificatore: Desktop1 7 progetti, Desktop2 5. Il bridge e stato usato solo per provare il nuovo input contro lo **schema ChatGPT ancora precedente**: lo strumento `project_catalog` diretto nella sessione continuava a richiedere `machine_id`, e rifiutava l'omissione prima dell'invio. **Dopo il refresh del catalogo MCP il client potra usare direttamente lo schema nuovo**, senza wrapper. La conferma della disponibilita in ChatGPT resta pendente.
+- Tutti gli strumenti dedicati (file, processi, coda, Codex, gateway, aggiornamenti, UI) **non richiedono piu machine_id nello schema MCP pubblicato**: il server deriva la macchina locale dalla connessione autenticata. `machine_id` legacy corrispondente continua ad essere accettato e mismatch rifiutati. `device_call` conserva la selezione esplicita del computer remoto tramite `device_id`.
+- Restano autenticazione Cloudflare/Bearer, controllo destinatario, ricevute anti-replay e protezioni contro esecuzioni sulla finestra sbagliata. Cache JWT e JWKS e ottimizzazioni TLS precedenti conservate.
+- **Limite esplicito:** queste modifiche non equivalgono alla rimozione di tutte le verifiche e non sono in grado di disattivare o garantire la scomparsa dei popup `Consenti` di ChatGPT. Nessun confronto di performance end-to-end completo effettuato in questo rilascio.
+
+Dettagli: [ALL-TOOLS-IMPLICIT-MACHINE-0.9.6-20261122.md](ALL-TOOLS-IMPLICIT-MACHINE-0.9.6-20261122.md).
+
+---
+
 ## Jarvis Windows MCP 0.9.5 — token conversazionale rimosso; Desktop1 e Desktop2 verificati (22/11/2026)
 
 **Versione distribuita:** `0.9.5` dal commit `c8887f01298f3ec10ad3ee5ca3f8f44fca020186` su `main` (PR #12). GitHub Actions `45070664311`: **Go success**, **PowerShell success**. Include descrizione del tool `task_start` nel catalogo MCP server: **compatibility fallback only**, preferire funzioni dedicate (in particolare `ui_session_open`, `ui_sequence`, `ui_mouse`, `ui_mouse_screen`, `ui_keys`) e ricorrere al wrapper solo in assenza di equivalenti.
