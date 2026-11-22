@@ -24,7 +24,7 @@ Example sequence steps:
 ]
 ```
 
-`kind=mouse` supports `move`, `click`, `double_click`, `right_click`, `wheel` (wheel_delta multiple of 120 within ±1200), and `drag` (both end_x/end_y mandatory). `kind=keys` accepts a single valid chord of 1–5 keys; `kind=text` types 1–1024 Unicode characters. Text across the sequence is limited to 4096 characters. Unknown actions and extra fields are refused. Commands execute in order and stop on error; never replay a partly executed or uncertain sequence.
+`kind=mouse` supports `move`, `click`, `double_click`, `right_click`, `wheel` (wheel_delta multiple of 120 within ±1200), and `drag` (both end_x/end_y mandatory). `kind=keys` accepts a single valid chord of 1–5 keys; `kind=text` types 1–1024 Unicode characters. Text across the sequence is limited to 4096 characters. Each step optionally accepts `settle_ms` (0–500 ms) to allow the application to process queued events; the default is 90 ms. Use longer settling after changing tools, colors, clearing documents, or opening dialogs. Unknown actions and extra fields are refused. Commands execute in order and stop on error; never replay a partly executed or uncertain sequence.
 
 ## Distinct from chat-wide authorization
 

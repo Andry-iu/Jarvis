@@ -1,3 +1,10 @@
+## 0.9.1 — 2026-11-22 (candidato: sincronizzazione sequenze UI)
+
+- Corretto difetto osservato nel primo collaudo reale 0.9.0 in Paint: tutte le 12 azioni risultavano inviate, ma Paint processava solo parte dei passaggi, lasciando un rettangolo mancante e soltanto 3 cerchi.
+- `ui_sequence` attende ora 90 ms dopo ogni passo per permettere alla coda eventi dell'app di processare selezioni, scorciatoie e input; opzionale `settle_ms` (0..500) per adattare il ritardo alle transizioni piu lente, senza nuove chiamate MCP.
+- Il percorso continua ad usare un solo screenshot all'apertura della sessione e un solo worker PowerShell per tutta la sequenza.
+- Verificare sul PC l'esito del disegno completo e la versione agente/backup/pulizia prima di dichiarare il problema risolto.
+
 ## 0.9.0 — 2026-11-22 (candidato; collaudi e installazioni da verificare)
 
 - `ui_session_open`: screenshot iniziale monouso + finestra attiva verificata; sessione opaca con scadenza dopo 5 minuti di inattivita. La sessione non aggira autorizzazioni, controllo finestra, sicurezza desktop o UAC e non si presenta come identificazione della chat.

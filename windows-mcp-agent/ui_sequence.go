@@ -21,6 +21,7 @@ type uiSequenceStep struct {
  WheelDelta *int `json:"wheel_delta,omitempty"`
  Keys []string `json:"keys,omitempty"`
  Text *string `json:"text,omitempty"`
+ SettleMS *int `json:"settle_ms,omitempty"`
 }
 
 type uiSession struct {
@@ -80,6 +81,7 @@ func validateUISequence(steps []uiSequenceStep) error {
  totalText := 0
  for i, step := range steps {
   bad := func(reason string) error {return fmt.Errorf("steps[%d]: %s",i,reason)}
+  if step.SettleMS!=nil && (*step.SettleMS<0 || *step.SettleMS>500){return bad("settle_ms must be 0..500")}
   hasMouse := step.MouseAction!="" || step.X!=nil || step.Y!=nil || step.EndX!=nil || step.EndY!=nil || step.WheelDelta!=nil
   switch step.Kind {
   case "mouse":
@@ -140,6 +142,7 @@ func physicalUISequence(steps []uiSequenceStep, geometry captureGeometry) ([]map
   case "text":
    action["text"]=*step.Text
   }
+  if step.SettleMS!=nil {action["settle_ms"]=*step.SettleMS}
   out=append(out,action)
  }
  return out,nil

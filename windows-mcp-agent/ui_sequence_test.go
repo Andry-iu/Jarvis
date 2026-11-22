@@ -24,6 +24,9 @@ func TestUISequenceRequestValidation(t *testing.T){
   {"text_with_mouse",`{"machine_id":"pc","session_id":"active","steps":[{"kind":"text","text":"hi","x":2}],"request_id":"ui-sequence-extra"}`,false},
   {"mouse_with_keys",`{"machine_id":"pc","session_id":"active","steps":[{"kind":"mouse","mouse_action":"click","x":1,"y":2,"keys":["A"]}],"request_id":"ui-sequence-mixed"}`,false},
   {"text_too_long",`{"machine_id":"pc","session_id":"active","steps":[{"kind":"text","text":"`+strings.Repeat("X",1025)+`"}],"request_id":"ui-sequence-long-text"}`,false},
+  {"settle_500",`{"machine_id":"pc","session_id":"active","steps":[{"kind":"mouse","mouse_action":"click","x":1,"y":2,"settle_ms":500}],"request_id":"ui-sequence-settle-max"}`,true},
+  {"settle_negative",`{"machine_id":"pc","session_id":"active","steps":[{"kind":"mouse","mouse_action":"click","x":1,"y":2,"settle_ms":-1}],"request_id":"ui-sequence-settle-negative"}`,false},
+  {"settle_too_long",`{"machine_id":"pc","session_id":"active","steps":[{"kind":"keys","keys":["A"],"settle_ms":501}],"request_id":"ui-sequence-settle-too-long"}`,false},
   {"unknown_kind",`{"machine_id":"pc","session_id":"active","steps":[{"kind":"script","text":"hello"}],"request_id":"ui-sequence-script"}`,false},
  }
  for _,tc:=range cases{t.Run(tc.name,func(t *testing.T){_,err:=decodeRuntime("ui_sequence",json.RawMessage(tc.body));if (err==nil)!=tc.ok{t.Fatalf("valid=%v want=%v err=%v",err==nil,tc.ok,err)}})}
