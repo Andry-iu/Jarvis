@@ -21,8 +21,8 @@ var directToolSpecs=[]runtimeTool{
  {"window_close","Request ordinary closure of the exact window. Returns closed, needs_input or pending; never kills a process or discards a save prompt.",[]string{"window_id","request_id"},[]string{"window_id","request_id"},false},
  {"ui_action","Act on an exact inspected control: set_text replaces the complete field/document; type_text replaces using focused Unicode keyboard input; invoke/select/toggle/focus use supported patterns. Returns a fresh snapshot when available. Never use to replace unapproved existing content.",[]string{"snapshot_id","element_id","action","text","request_id"},[]string{"snapshot_id","element_id","action","request_id"},false},
  {"ui_keys","Send one key chord to the exact window from a fresh snapshot, after validating identity and foreground. Example keys=[CTRL,SHIFT,S]. No automatic replay of uncertain outcomes.",[]string{"snapshot_id","keys","request_id"},[]string{"snapshot_id","keys","request_id"},false},
- {"ui_mouse","Move the pointer without clicking, click, double click, right click or wheel scroll to the verified foreground window using a one-use snapshot and physical desktop coordinates. Refuses occluded or out-of-window points. Dispatch is not proof of the final application state.",[]string{"snapshot_id","x","y","mouse_action","wheel_delta","request_id"},[]string{"snapshot_id","x","y","mouse_action","request_id"},false},
-  {"ui_mouse_screen","Move/click on the visible interactive desktop using image pixels from one recent screen_capture. Supply its capture_id and the x/y coordinates IN THE RETURNED JPEG (not desktop pixels). The agent automatically maps origin and scale; works for taskbar and previews. One-use, expires after 45 seconds. Does not bypass secure desktop and no automatic retry.",[]string{"capture_id","x","y","mouse_action","wheel_delta","request_id"},[]string{"capture_id","x","y","mouse_action","request_id"},false},
+ {"ui_mouse","Move, click, wheel or drag with left button held and released in one guarded operation. For drag supply end_x/end_y in physical desktop coordinates; both endpoints must belong to the verified foreground window. One-use snapshot, no held mouse across requests.",[]string{"snapshot_id","x","y","end_x","end_y","mouse_action","wheel_delta","request_id"},[]string{"snapshot_id","x","y","mouse_action","request_id"},false},
+  {"ui_mouse_screen","Move/click or atomically drag on the visible interactive desktop using JPEG pixel coordinates from one recent screen_capture. For drag supply end_x/end_y in the same JPEG, not physical pixels; both points must be in the same foreground window. Button release is automatic even on failure. One-use capture expires after 45 seconds.",[]string{"capture_id","x","y","end_x","end_y","mouse_action","wheel_delta","request_id"},[]string{"capture_id","x","y","mouse_action","request_id"},false},
  {"ui_file_dialog","Drive a standard Windows Open/Save As dialog through the application UI, type an absolute path and invoke its button. mode=open/save; save verifies the actual resulting file and optional expected_text. Never creates the user's file directly. No overwrite by default; overwrite requires expected_sha256 and explicit user authorization.",[]string{"window_id","dialog_mode","path","overwrite","expected_sha256","expected_text","request_id"},[]string{"window_id","dialog_mode","path","request_id"},false},
 }
 func init(){runtimeCatalog=append(runtimeCatalog,directToolSpecs...)}
@@ -87,6 +87,7 @@ func (a *Agent) doDirectUI(p runtimeRequest)(any,error){
   input["window"]=s.Window;input["target_window"]=s.Window
   if p.Operation=="ui_mouse"{
    input["mouse_action"]=p.MouseAction;input["x"]=p.X;input["y"]=p.Y;input["wheel_delta"]=p.WheelDelta
+   if p.MouseAction=="drag"{input["end_x"]=*p.EndX;input["end_y"]=*p.EndY}
   }else if p.Operation=="ui_action"{
    d:=desktopRequest{SnapshotID:p.SnapshotID,ElementID:p.ElementID,Action:p.Action}
    if p.Action=="set_text"||p.Action=="type_text"{d.Text=&p.Text;input["text"]=p.Text}
@@ -109,6 +110,11 @@ func (a *Agent) doDirectUI(p runtimeRequest)(any,error){
   if e!=nil{return nil,e}
   input["return_snapshot"]=false
   input["x"]=px;input["y"]=py;input["mouse_action"]=p.MouseAction;input["wheel_delta"]=p.WheelDelta
+   if p.MouseAction=="drag"{
+    ex,ey,e:=snap.Geometry.physical(*p.EndX,*p.EndY)
+    if e!=nil{return nil,e}
+    input["end_x"]=ex;input["end_y"]=ey
+   }
  }
  if p.Operation=="ui_file_dialog"{
   if p.DialogMode!="open"&&p.DialogMode!="save"{return nil,errors.New("dialog_mode must be open or save")}
