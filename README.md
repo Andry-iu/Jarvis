@@ -1,3 +1,7 @@
+> **Jarvis Windows MCP Agent: stato attuale 0.9.6 (22 novembre 2026).** Installata e verificata su **Desktop1 e Desktop2**. Il runtime non richiede piu `session_token` conversazionale ne `machine_id` nel catalogo dei tool dedicati: usa l'identita della connessione autenticata; conservati controlli di autenticazione/destinazione e ottimizzazioni Cloudflare/TLS. Gli strumenti UI diretti su Desktop1 sono operativi e Paint e stato collaudato visivamente; **baseline ripetibile e ottimizzazione delle conferme ChatGPT ancora aperte**. Per riprendere questo filone leggere **[stato consolidato e limiti aperti](docs/mcp-agent/STATUS-CONSOLIDATO-0.9.6-20261122.md)** e [registro installazioni](docs/mcp-agent/CURRENT-RELEASE.md). La sezione seguente `versione coordinata 0.8.7` e **storica** e riguarda l'integrazione multi-componente, non la versione attuale dell'agente Windows. Non dedurre nuove build Android o nuovi installer da questo aggiornamento.
+
+---
+
 # Jarvis — versione coordinata 0.8.7 (candidato)
 
 Il repository contiene JarvisWake Android, Jarvis Cube, Wear, servizi/bridge e Windows MCP Agent. La nuova versione di sorgente coordinata **0.8.7** porta sul `main` l'Android 0.5.123 gia verificato, l'agente Windows 0.8.6 gia collaudato su Desktop1 e i sorgenti ESP32 camera/HID opzionali. I numeri Android vengono aggiornati a 0.8.7/146 senza modificare il comportamento applicativo; **APK/installer 0.8.7 non sono ancora firmati, distribuiti o verificati**. Gli esiti precedenti restano validi solo per i rispettivi commit.
