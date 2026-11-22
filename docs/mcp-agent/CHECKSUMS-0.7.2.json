@@ -1,0 +1,17 @@
+{
+  "agent_version": "0.7.2",
+  "source_base": "fbf8217b21cca497eac9d5e87ba037dcf5460f54",
+  "artifacts": [
+    {
+      "computer": "Desktop1",
+      "sha256": "1b8ee2a0b0354fd071fe2d71c5a6075f97dd43d3cd58a1152176ff1f16a3fe4f",
+      "bytes": 12217856
+    },
+    {
+      "computer": "Desktop2",
+      "sha256": "6f45785d52fe5ef87cc320ef1b7b6faac175c4ff221af8f5448524bee0848a72",
+      "bytes": 12251136
+    }
+  ],
+  "note": "Generated binaries remain outside Git. Runtime Go sources belong to the commit containing this manifest."
+}

@@ -1,3 +1,11 @@
+# Jarvis — versione coordinata 0.8.7 (candidato)
+
+Il repository contiene JarvisWake Android, Jarvis Cube, Wear, servizi/bridge e Windows MCP Agent. La nuova versione di sorgente coordinata **0.8.7** porta sul `main` l'Android 0.5.123 gia verificato, l'agente Windows 0.8.6 gia collaudato su Desktop1 e i sorgenti ESP32 camera/HID opzionali. I numeri Android vengono aggiornati a 0.8.7/146 senza modificare il comportamento applicativo; **APK/installer 0.8.7 non sono ancora firmati, distribuiti o verificati**. Gli esiti precedenti restano validi solo per i rispettivi commit.
+
+Leggere [registro dell'integrazione](docs/mcp-agent/UNIFIED-RELEASE-0.8.7-20261122.md) prima di considerare una nuova release. Il testo successivo conserva la cronologia Android e i report precedenti.
+
+---
+
 0.5.123 / 145 — DUE APK COMPILATI E FIRMATI; PROVA AUDI PENDENTE (8 novembre 2026, Europe/Rome)
 
 JarvisWake e Jarvis Cube verificati nel cloud Jarvis sul sorgente 5dbd435d1982282e83d79f3f9d2b3a7654952a9e. Job telefono c89551d1-8436-4b1b-9b02-219502625adb succeeded, verbale 3fc9b8340bf021125714ffbd6bc06aea983363a9. App:718test/0failure/error/skipped, lint0errori/58avvisi; car-game:12test/0failure/error/skipped, lint0errori/8avvisi. Entrambi gli APK firmati con il certificato permanente, v2/v3, CRC e zipalign verificati. Metadati e hash: releases/0.5.123/CUBE_VERIFICATION.json.

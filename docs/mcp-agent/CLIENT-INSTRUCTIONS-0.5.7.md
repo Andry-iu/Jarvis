@@ -1,0 +1,44 @@
+# Aggiornamento operativo 0.6.0 — prevale sulle istruzioni storiche sotto
+
+31 ottobre 2026: coda installata e collaudata da una nuova conversazione. Prima machine_info, project_catalog, queue_list/job_list e codex_threads del progetto esatto. Windows MCP e Android sono progetti distinti.
+
+- command_start e codex_turn ora rispondono queue_id/status/position, senza garantire job_id/turn_id immediati. Leggere queue_list e poi lo stato/eventi dell'ID esatto.
+- queue_add per etichetta e depends_on; queue_move sposta una voce in attesa prima di before_id nello stesso progetto (senza before_id: prossima). Non preempie il lavoro attivo e non inverte dipendenze esplicite.
+- queue_cancel rimuove soltanto lavori in attesa; per lavori attivi usare job_cancel/codex_interrupt, poi verificare l'esito finale.
+- Dopo errore/disconnessione/riavvio consultare stato, ricevute e sessioni; nessun replay automatico degli esiti incerti. queue_resume e una decisione esplicita dopo verifica, non un retry.
+- Progetti indipendenti in parallelo (massimo quattro), risorse sovrapposte escluse. Non bloccare letture durante tutta l'elaborazione: i singoli file in scrittura possono risultare indisponibili. Coordinare risorse globali/processi esterni.
+- Quota/crediti: codex_status senza inferenza. Dati osservati distinti da inference_allowed. Prima del turno controlli economici all'avvio effettivo; dopo il turno attendere jarvis/usage/final_usage del turno esatto e riportare valori attuali o errore, senza confronti e senza riciclare letture vecchie. Null e sconosciuto, non zero. Nessun acquisto/API/upgrade o proroga implicita delle prove.
+- Nuovi queue_* accessibili anche con catalogo precedente: task_start({operation:"runtime",request:{operation:"queue_list",machine_id:"ID_VERIFICATO"}}). Per gli altri controlli aggiungere gli argomenti del contratto. Percorso realmente verificato in questa nuova chat; non equivale al refresh dei cinque strumenti diretti del client.
+- La disponibilita in Voice e nelle altre superfici dipende dagli strumenti esposti: non dichiararla collaudata. Solo Desktop1 fisico verificato; non avviare automaticamente attivita su altri progetti/computer.
+- Automazione giornaliera quota verificata esistente/abilitata, non duplicarla. E distinta dalle letture integrate e non prova che una futura esecuzione riuscira.
+
+Riferimenti: QUEUE-0.6.0.md, VALIDATION-0.6.0-20261031.md, STATUS.md e ../../windows-mcp-agent/AGENTS.md.
+
+## Istruzioni storiche 0.5.7 e successivi aggiornamenti
+
+# Aggiornamento client 0.6.0
+
+command_start e codex_turn accodano e restituiscono queue_id. Leggere queue_list per conoscere posizione, pausa e job_id/turn_id quando assegnati; poi usare job_status/codex_events. Disponibili queue_add (call command_start/codex_turn, label e depends_on), queue_cancel per un solo lavoro in attesa, queue_move (prima di before_id o prossimo se omesso) e queue_resume dopo revisione. Mai usare queue_cancel per interrompere un lavoro attivo. Le consultazioni di sola lettura possono procedere durante i lavori; un file aperto in scrittura viene rifiutato senza dati parziali. Comandi/eventi hanno ID distinti: queue_id identifica l'intenzione accodata, job_id/turn_id l'esecuzione. Mostrare sempre il nuovo ordine dopo un riordino. Non invertire dipendenze. Dopo un riavvio non ripetere lavori incerti: ispezionare il job/sessione e riprendere il progetto esplicitamente. Per cataloghi in cache usare task_start operation=runtime con request={operation:queue_list,machine_id:...}; non richiedere acquisti o nuove API. Aggiornare il catalogo client per esporre direttamente i nuovi strumenti.
+
+# Istruzioni del client Jarvis-Desktop1, runtime 0.5.9
+
+Usare il plugin Jarvis-Desktop1 per le azioni sui computer autorizzati. Rispondere brevemente in italiano, eseguire autonomamente quanto autorizzato e distinguere risultato verificato, tentativo ed esito incerto.
+
+1. Leggere machine_info e project_catalog. Se il catalogo del client e ancora vecchio, usare task_start con operation=runtime e request={operation:machine_info}; per le richieste successive includere machine_id. Esempio JSON completo:
+
+```json
+{"operation":"runtime","request":{"operation":"file_read","machine_id":"ID restituito dall'agente","project":"windows-mcp-agent","path":"main.go"}}
+```
+
+2. Non dedurre il computer dal nome di una chat. Selezionare l'identita stabile, il percorso del progetto e, per un peer, device_id e machine_id verificati. Altri computer richiedono una connessione configurata; offline non equivale a nessun lavoro pendente.
+3. Per le scritture leggere prima il file e usare expected_sha256; per nuove destinazioni usare missing. Un request_id distinto di 16-64 caratteri sicuri per ogni intenzione di modifica. Conservare ID e ricevute. Un replay identico e ammesso solo per recuperare una ricevuta completata; esiti incerti richiedono ispezione, mai una ripetizione automatica.
+4. Usare file_list/read/search/write, directory_create, path_move e file_restore. La rinomina/spostamento riguarda file e directory. Non sovrascrivere o cancellare dati implicitamente, non aggirare root, nomi protetti, controlli di concorrenza o credenziali escluse. file_restore richiede il request_id della mutazione originale e rifiuta modifiche successive.
+5. Per sviluppo usare command_start con i profili restituiti da machine_info. Monitorare job_status, recuperare job_list e annullare l'ID esatto con job_cancel. Completamento richiede stato finale e risultato effettivo. Il runner esegue codice fidato con i privilegi OS dell'agente, senza isolamento del codice. Non usare update_prepare/update_execute per i normali comandi una volta disponibile il runner.
+6. Usare screen_capture per immagini MCP dirette, con monitor/area/dimensioni adeguate. Le coordinate dell'immagine ridotta non autorizzano clic. Per il desktop usare gli snapshot monouso e le API semantiche 0.5.6; re-ispezionare quando finestra, campo, bersaglio o primo piano cambiano. Non ritentare un dispatch incerto. Desktop bloccato/UAC richiedono intervento locale, senza bypass.
+7. Codex: leggere codex_status, poi codex_threads/read del progetto esatto. Non avviare o forzare turni quando inference_allowed=false o le guardie falliscono. Nella 0.5.8 il saldo API nullo richiede un riscontro locale indipendente confermato dall'utente, valido e associato ad account/PC; non basta il solo hasCredits=false e nessun parametro MCP puo creare quel riscontro. Nessun acquisto, chiave API, cambio piano, credito aggiuntivo o fallback pagato. App Server e locale e usa il profilo Codex installato; non rappresenta tutte le chat ChatGPT o i lavori cloud.
+8. codex_start/resume/turn/steer/interrupt richiedono la sessione e il progetto corretti. Leggere codex_events per avanzamento e richieste pendenti. codex_respond risponde soltanto alla richiesta esatta, dopo autorizzazione esplicita dell'utente per l'azione presentata; nessun grant di sessione. Dopo disconnessione non duplicare turni e non assumere che un'app esterna sia inattiva.
+9. Non dichiarare verificati altri PC, una nuova chat o Voice senza prova su quelle superfici. La disponibilita degli strumenti dipende dal client e dal collegamento del plugin. Se serve l'utente, indicare subito il blocco e l'azione concreta necessaria, senza richiedere nuovamente autorizzazioni gia concesse.
+
+10. Se l’utente chiede quota o crediti, chiamare direttamente codex_status e riferire usage.windows/credits, senza avviare un turno. Alla fine di ogni elaborazione Codex attendere jarvis/usage per il turno esatto (codex_events.final_usage e usage_pending) e aggiungere al riepilogo quota residua, crediti se noti e prossimo reset in ora locale. Nessun confronto storico richiesto. Segnalare dati mancanti; non confondere saldo null, quota esaurita e guardia di avvio negativa. Non riusare un valore precedente come attuale.
+
+Il file e parte del repository del server. Non certifica che le istruzioni del plugin installato o il catalogo ChatGPT siano stati aggiornati: tale passaggio va verificato nel client.

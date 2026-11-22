@@ -1,0 +1,49 @@
+name: Jarvis Windows agent source checks
+on:
+  pull_request:
+    paths:
+      - 'windows-mcp-agent/**'
+      - '.github/workflows/windows-agent-verify.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  go:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: windows-mcp-agent/go.mod
+          cache-dependency-path: windows-mcp-agent/go.mod
+      - name: Test, vet, native build and Windows cross-build
+        working-directory: windows-mcp-agent
+        run: |
+          go test ./...
+          go vet ./...
+          go build -o /tmp/jarvis-mcp .
+          GOOS=windows GOARCH=amd64 go build -o /tmp/jarvis-mcp.exe .
+  powershell:
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Parse the Windows scripts
+        shell: pwsh
+        run: |
+          $files = @(
+            'windows-mcp-agent/desktop_extensions.ps1',
+            'windows-mcp-agent/desktop_worker.ps1',
+            'windows-mcp-agent/installer-network/Install.ps1',
+            'windows-mcp-agent/installer-network/Update.ps1',
+            'windows-mcp-agent/installer-network/Test-NetworkInstaller.ps1',
+            'windows-mcp-agent/installer-network/Test-UpdateInstaller.ps1',
+            'windows-mcp-agent/scripts/build-network-installer.ps1'
+          )
+          foreach ($file in $files) {
+            $tokens = $null
+            $parseErrors = $null
+            [void][System.Management.Automation.Language.Parser]::ParseFile($file, [ref]$tokens, [ref]$parseErrors)
+            if ($null -ne $parseErrors -and $parseErrors.Count -gt 0) { throw "Parse error in $file" }
+          }

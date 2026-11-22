@@ -7,8 +7,8 @@ android {
         applicationId = "it.jarviswake.cube"
         minSdk = 31
         targetSdk = 36
-        versionCode = 145
-        versionName = "0.5.123"
+        versionCode = 146
+        versionName = "0.8.7"
     }
     buildTypes { getByName("debug") { signingConfig = null } }
     compileOptions { sourceCompatibility = JavaVersion.VERSION_17; targetCompatibility = JavaVersion.VERSION_17 }

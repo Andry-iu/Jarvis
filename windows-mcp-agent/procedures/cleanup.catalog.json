@@ -1,0 +1,9 @@
+{
+  "schema_version": 1,
+  "procedure": "Invoke-JarvisCleanup",
+  "version": "1.1.1",
+  "standalone": true,
+  "file": "Invoke-JarvisCleanup.ps1",
+  "sha256": "becc173694134ed8dc1a17c79bcefa6f8d9af7840fdd94e53cafeecb7e35afe0",
+  "source_path": "windows-mcp-agent/procedures/Invoke-JarvisCleanup.ps1"
+}

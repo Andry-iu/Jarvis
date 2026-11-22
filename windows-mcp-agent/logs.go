@@ -190,17 +190,10 @@ func cleanupOldLogs(now time.Time) (int, error) {
 }
 
 func startLogMaintenance() {
-	run := func() {
-		removed, err := cleanupOldLogs(time.Now())
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Log cleanup error: %v\n", err)
-		} else if removed > 0 {
-			fmt.Fprintf(os.Stderr, "Log cleanup removed %d old files\n", removed)
-		}
-	}
+	run := func() { runMaintenance(time.Now()) }
 	run()
 	go func() {
-		tick := time.NewTicker(24 * time.Hour)
+		tick := time.NewTicker(maintenanceInterval)
 		defer tick.Stop()
 		for range tick.C {
 			run()

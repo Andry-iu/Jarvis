@@ -1,0 +1,15 @@
+{
+  "version": "0.8.0",
+  "runtime_source_commit": "07760a3eb212bb63f9919e2702a46f1f0d290338",
+  "branch": "feature/agent-gateway-20261114",
+  "desktop1": {"sha256":"f0f6cab58cc411325094b890858507bc949becd132398036fe119dd8f80024d8","size_bytes":13296640},
+  "desktop2": {"sha256":"b4054379e1bcf84e3d2ad5551d9bc09478137a979d767a680746284796e37af6","size_bytes":13332992},
+  "installer": {
+    "version":"2.0.0",
+    "filename":"Jarvis-Agent-Setup-2.0.0.zip",
+    "sha256":"7d59c1d9a9bc960aca7e668976990d98f61075e1cfd2641d8ce9fffb0389e763",
+    "size_bytes":7365336,
+    "agent_sha256":"1a23444bfc7cba365c6a5c43c203e78bf1286b4bb9442ff93080e5d94bc682d9",
+    "build":"Go1.27.0 linux->windows/amd64 CGO_ENABLED=0 -trimpath -buildvcs=false"
+  }
+}

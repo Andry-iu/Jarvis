@@ -1,3 +1,11 @@
+# Jarvis — integrazione comune (22/11/2026)
+
+La base di tutti i componenti e il ramo `main`. Il candidato `0.8.7` unifica il codice Android recente di `main`, il runtime Windows 0.8.6 e i moduli ESP32 opzionali. **0.8.7 non e ancora una release firmata o installata**, fino a test/collaudi e manifest verificati. La documentazione storica qui sotto, inclusi vecchi riferimenti a rami Windows e versione 0.8.4, resta utile come cronologia ma non come stato corrente. Riferimento: `docs/mcp-agent/UNIFIED-RELEASE-0.8.7-20261122.md`.
+
+Workflow approvato: un ramo breve da `main`, test, merge in `main`, chiusura; non accumulare rami di sviluppo senza reintegrare. Mantenere `app/`, `car-game/`, `wear/`, `phone-bridge/` separati da `windows-mcp-agent/`. Non riportare in `main` archivi di credenziali cifrati o segreti. Le funzioni ESP32 senza configurazione non devono attivare hardware.
+
+---
+
 ## Regola permanente Jarvis Windows MCP — 19 novembre 2026
 
 **Jarvis deve restare un agente universale, indipendente dalle singole applicazioni.** Non integrare nel core Go/MCP moduli specifici per Proxmox o altri software occasionali; utilizzare primitive di UI, mouse, tastiera, file, processi, rete e la strategia di batch/script. Le procedure riutilizzabili vivono in `<Jarvis>\Procedures`, non in Projects. Il modello decide GUI, CLI, API o procedure esterne secondo il compito. Per operazioni critiche preservare identificazione del target, privilegi minimi, ricevute, verifica e no-replay in caso di esito incerto. Leggere il [documento canonico nel ramo Windows](https://github.com/Andry-iu/Jarvis/blob/feature/unified-agent-source-update-20261114/docs/mcp-agent/HANDOFF-GENERIC-AGENT-PROCEDURES-20261119.md) e [WINDOWS-AGENT-POINTER.md](docs/mcp-agent/WINDOWS-AGENT-POINTER.md) prima di sviluppare o aggiornare Jarvis Windows. La proposta di modulo Proxmox nel core e stata annullata.

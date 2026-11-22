@@ -3,7 +3,7 @@ android {
     namespace="it.jarviswake.watch"
     compileSdk=36
     buildToolsVersion="36.0.0"
-    defaultConfig { applicationId="it.jarviswake"; minSdk=30; targetSdk=36; versionCode=115; versionName="0.5.93" }
+    defaultConfig { applicationId="it.jarviswake"; minSdk=30; targetSdk=36; versionCode=146; versionName="0.8.7" }
     buildTypes { getByName("debug") { if(providers.gradleProperty("jarvisUnsigned").orNull=="true") signingConfig=null } }
     sourceSets.getByName("main").java.srcDir(rootProject.file("watch-common"))
     testOptions {
