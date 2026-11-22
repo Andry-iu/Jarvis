@@ -1,3 +1,10 @@
+# Regole operative aggiuntive — 22 novembre 2026
+
+- Per comandi remoti usare anzitutto le primitive MCP gia disponibili nell'agente. Richiamare batch/CMD/PowerShell soltanto in assenza di un comando equivalente; se il fallback e ripetuto, proporre all'utente una primitiva generale incorporata nell'agente e non continuare automaticamente a duplicare script.
+- Ottimizzare le interazioni UI con una sequenza ordinata di mouse/tastiera/testo invece di una chiamata per ogni clic. Un solo screenshot iniziale per una sequenza quando la disposizione a schermo e stabile. Non richiedere piu di una cattura al secondo: limite da applicare **lato agente**.
+- Reimpiegare un contesto UI verificato finche resta attivo, con scadenza di 5 minuti dall'ultima operazione riuscita. Non trattare questo periodo come esenzione dalle verifiche rapide di finestra/desktop, autenticazione, autorizzazione, o UAC. Se il layout cambia, riacquisire lo screenshot e la sessione.
+- Riferimento di progetto: [UI SEQUENCE 0.9.0](../docs/mcp-agent/UI-SEQUENCE-0.9.0-20261122.md). Il connettore attuale non espone un identificatore affidabile della chat: non dichiarare le sessioni vincolate alla chat.
+
 > NOTA DI INTEGRAZIONE 22/11/2026: questo ramo prepara la versione 0.8.7 senza dichiararla gia installata o testata. Conservare tutte le regole sottostanti; eseguire test Go e collaudi Windows/ESP32 prima di distribuire.
 
 # REGOLA ARCHITETTURALE PERMANENTE — GENERICO PRIMA DI TUTTO (19/11/2026)

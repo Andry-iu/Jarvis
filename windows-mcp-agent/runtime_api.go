@@ -23,6 +23,8 @@ type runtimeRequest struct {
 	WindowID         string   `json:"window_id,omitempty"`
 	SnapshotID       string   `json:"snapshot_id,omitempty"`
 	CaptureID        string   `json:"capture_id,omitempty"`
+	SessionID        string   `json:"session_id,omitempty"`
+	Steps            []uiSequenceStep `json:"steps,omitempty"`
 	ElementID        string   `json:"element_id,omitempty"`
 	Action           string   `json:"action,omitempty"`
 	Keys             []string `json:"keys,omitempty"`
@@ -162,7 +164,7 @@ func toolsList() any {
 				typ = "integer"
 			case "recursive", "elevated", "overwrite":
 				typ = "boolean"
-			case "region", "depends_on", "resources", "keys", "args":
+			case "region", "depends_on", "resources", "keys", "args", "steps":
 				typ = "array"
 			case "call", "answers", "device":
 				typ = "object"
@@ -188,6 +190,18 @@ func toolsList() any {
 			}
 			if f == "mouse_action" {
 				s["enum"] = []string{"move", "click", "double_click", "right_click", "wheel", "drag"}
+			}
+			if f == "steps" {
+				s["items"] = map[string]any{"type":"object", "properties":map[string]any{
+					"kind": map[string]any{"type":"string","enum":[]string{"mouse","keys","text"}},
+					"mouse_action":map[string]any{"type":"string","enum":[]string{"move","click","double_click","right_click","wheel","drag"}},
+					"x":map[string]any{"type":"integer"},"y":map[string]any{"type":"integer"},
+					"end_x":map[string]any{"type":"integer"},"end_y":map[string]any{"type":"integer"},
+					"wheel_delta":map[string]any{"type":"integer"},"keys":map[string]any{"type":"array","items":map[string]any{"type":"string"},"minItems":1,"maxItems":5},
+					"text":map[string]any{"type":"string","maxLength":1024},
+				}, "required":[]string{"kind"}, "additionalProperties":false}
+				s["minItems"]=1
+				s["maxItems"]=24
 			}
 			if f == "dialog_mode" {
 				s["enum"] = []string{"open", "save"}
@@ -300,6 +314,9 @@ func decodeRuntime(name string, b json.RawMessage) (runtimeRequest, error) {
 		default:
 			return p, errors.New("invalid mouse_action")
 		}
+	}
+	if p.Operation == "ui_sequence" {
+		if err := validateUISequence(p.Steps); err != nil {return p, err}
 	}
 	if p.Limit < 0 || p.Limit > 200 || p.Offset < 0 || p.After < 0 {
 		return p, errors.New("invalid pagination")

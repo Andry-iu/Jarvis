@@ -1,3 +1,13 @@
+## 0.9.0 — 2026-11-22 (candidato; collaudi e installazioni da verificare)
+
+- `ui_session_open`: screenshot iniziale monouso + finestra attiva verificata; sessione opaca con scadenza dopo 5 minuti di inattivita. La sessione non aggira autorizzazioni, controllo finestra, sicurezza desktop o UAC e non si presenta come identificazione della chat.
+- `ui_sequence`: un'unica richiesta MCP con fino a 24 operazioni nell'ordine (mouse/click/drag/rotella, combinazioni tastiera, testo Unicode). Coordinate mouse nel JPEG iniziale; conversione una volta per step. Esecuzione in un solo worker, senza nuovi screenshot, stop al primo errore, ricevuta duratura, nessun replay.
+- `ui_session_close`: revoca esplicita. Dopo esito incerto/fallimento della sequenza la sessione viene invalidata.
+- Cattura schermo limitata lato agente a una acquisizione al secondo, con legame alla finestra in primo piano.
+- Regola operativa: prima gli strumenti MCP dell'agente; batch/PowerShell soltanto come fallback, da valutare per una nuova primitiva generica riutilizzabile se ricorrente.
+- Permane una singola apertura PowerShell interna all'agente per sequenza. Worker UI persistente in Go/C# non ancora implementato.
+- Specifica e controlli: `docs/mcp-agent/UI-SEQUENCE-0.9.0-20261122.md`.
+
 ## 0.8.9 — 2026-11-22 (sorgente candidato; deploy non ancora attestato)
 
 - Trascinamento sinistro atomico in `ui_mouse` e `ui_mouse_screen`: azione `drag` con `x/y` e `end_x/end_y`. La pressione, i passi intermedi e il rilascio avvengono in una sola operazione mouse, senza lasciare pulsanti premuti tra richieste MCP.
