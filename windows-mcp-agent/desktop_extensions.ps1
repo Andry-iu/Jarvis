@@ -36,6 +36,7 @@ public static class JarvisWindowNative {
  [DllImport("user32.dll")]static extern IntPtr WindowFromPoint(P p);
  [DllImport("user32.dll")]static extern IntPtr GetAncestor(IntPtr h,uint flags);
  [DllImport("user32.dll")]static extern bool SetCursorPos(int x,int y);
+ [DllImport("user32.dll")]static extern int GetSystemMetrics(int which);
  static I MouseSignal(uint flags,uint data=0){return new I{type=0,data=new U{mouse=new M{flags=flags,data=data}}};}
  public static void Mouse(IntPtr target,int x,int y,string action,int wheelDelta){
   IdleModifiers();
@@ -49,6 +50,31 @@ public static class JarvisWindowNative {
   else{
    uint down=action=="right_click"?0x0008u:0x0002u,up=action=="right_click"?0x0010u:0x0004u;
    if(action!="click"&&action!="double_click"&&action!="right_click")throw new Exception("invalid_mouse_action");
+   a.Add(MouseSignal(down));a.Add(MouseSignal(up));
+   if(action=="double_click"){a.Add(MouseSignal(down));a.Add(MouseSignal(up));}
+  }
+  Send(a);
+ }
+ // Screen capture maps image pixels to physical x/y before invoking this
+ // method. Unlike Mouse(window,...), it intentionally permits visible
+ // taskbar/preview elements without a foreground-window snapshot.
+ public static void MouseScreen(int x,int y,string action,int wheelDelta){
+  IdleModifiers();
+  int left=GetSystemMetrics(76),top=GetSystemMetrics(77);
+  int width=GetSystemMetrics(78),height=GetSystemMetrics(79);
+  if(width<1||height<1||x<left||x>=left+width||y<top||y>=top+height)
+   throw new Exception("point_outside_desktop");
+  if(WindowFromPoint(new P{X=x,Y=y})==IntPtr.Zero)throw new Exception("point_without_visible_window");
+  if(!SetCursorPos(x,y))throw new Exception("mouse_position_failed");
+  if(action=="move")return;
+  var a=new List<I>();
+  if(action=="wheel"){
+   if(wheelDelta==0||wheelDelta<-1200||wheelDelta>1200||wheelDelta%120!=0)throw new Exception("invalid_wheel_delta");
+   a.Add(MouseSignal(0x0800,unchecked((uint)wheelDelta)));
+  }else{
+   if(action!="click"&&action!="double_click"&&action!="right_click")throw new Exception("invalid_mouse_action");
+   uint down=action=="right_click"?0x0008u:0x0002u;
+   uint up=action=="right_click"?0x0010u:0x0004u;
    a.Add(MouseSignal(down));a.Add(MouseSignal(up));
    if(action=="double_click"){a.Add(MouseSignal(down));a.Add(MouseSignal(up));}
   }
@@ -135,6 +161,11 @@ function DirectOperation($req){
   [JarvisWindowNative]::Mouse($h,[int]$req.x,[int]$req.y,[string]$req.mouse_action,[int]$req.wheel_delta)
   Start-Sleep -Milliseconds 120
   FreshResponse @{ok=$true;dispatched=$true;verified=$false;data=@{status=$(if($req.mouse_action -eq 'move'){'mouse_move_dispatched'}else{'mouse_dispatched'});mouse_action=[string]$req.mouse_action}};return $true
+ }
+ if($req.operation -eq 'ui_mouse_screen'){
+  if(-not [Environment]::UserInteractive -or -not [JarvisDesktopNative]::DefaultInputDesktop() -or [JarvisWindowNative]::GetForegroundWindow() -eq [IntPtr]::Zero){Refuse 'desktop_unavailable_or_locked'}
+  [JarvisWindowNative]::MouseScreen([int]$req.x,[int]$req.y,[string]$req.mouse_action,[int]$req.wheel_delta)
+  [Console]::Write((Json @{ok=$true;dispatched=$true;verified=$false;data=@{status='mouse_screen_dispatched';mouse_action=[string]$req.mouse_action;x=[int]$req.x;y=[int]$req.y}}));return $true
  }
  if($req.operation -eq 'ui_keys'){
   $h=ValidateWindow $req.window;RequireForeground $h
