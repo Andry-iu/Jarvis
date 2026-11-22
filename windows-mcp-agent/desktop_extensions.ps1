@@ -242,6 +242,9 @@ function DirectOperation($req){
      default { Refuse 'unsupported_sequence_step' }
     }
     $done++
+    $pauseMs=90
+    if($null -ne $step.settle_ms){$pauseMs=[int]$step.settle_ms}
+    if($pauseMs -gt 0){Start-Sleep -Milliseconds $pauseMs}
    }catch{throw ("sequence_interrupted_at_step_" + $n + "_after_" + $done + "_actions: " + $_.Exception.Message)}
   }
   [Console]::Write((Json @{ok=$true;dispatched=$true;verified=$false;data=@{status='ui_sequence_dispatched';steps_dispatched=$done;steps_requested=$req.steps.Count}}));return $true
