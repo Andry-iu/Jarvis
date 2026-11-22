@@ -12,6 +12,14 @@ Comportamento desiderato:
 4. Chat diverse non condividono autorizzazioni, anche se eseguite dallo stesso utente, dallo stesso plugin o attraverso lo stesso gateway.
 5. L'interazione UI puo, indipendentemente, usare screenshot riutilizzati e `ui_sequence` con mouse/tastiera/testo. Non confondere questo con l'autorizzazione dell'intera chat.
 
+## Chiarimento sui controlli interni, 22 novembre 2026
+
+Il riuso del consenso deve valere anche **dentro ogni tool e nelle funzioni interne di Jarvis**: i controlli onerosi gia superati per questa chat, agente e insieme di capacita non vanno riavviati a ogni comando. Esempi di operazioni da evitare a ogni richiesta: ricreare un contesto di consenso, rieseguire una procedura di riconoscimento iniziale, riproporre lo stesso prompt o ristabilire sessioni UI non cambiate. Per ciascun comando usare un accesso al lease in memoria (costante/rapido), aggiornare l'ultimo utilizzo e mantenere soltanto i controlli locali economici e necessari (autenticazione della richiesta, permessi richiesti, macchina e parametri, replay, stato live di finestra/desktop quando applicabile).
+
+Non introdurre un timer che interrompe un comando in corso: la durata e 300 secondi consecutivi **senza nuovi comandi** della stessa chat; una richiesta valida rinnova il lease. Non trasformare il risparmio di controlli in un bypass di autenticazione di trasporto, autorizzazioni imposte dal sistema ospitante, sicurezza Windows o conferme obbligatorie per azioni eccezionali.
+
+**Stato ChatGPT verificato il 22/11/2026:** Jarvis-Desktop1 e Jarvis-Desktop2 ereditano entrambi il permesso globale «Consenti azioni a basso rischio». Le conferme della piattaforma ChatGPT non sono controllabili dal solo server Jarvis. Il permesso plugin «Consenti tutte le azioni» e una scelta persistente, non una concessione temporanea di cinque minuti: **non abilitarla automaticamente** per simulare questo requisito.
+
 ## Contratto di sicurezza non eliminabile
 
 La sessione e una cache di consenso e di controlli onerosi **non** un permesso amministrativo illimitato:
