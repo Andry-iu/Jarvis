@@ -51,3 +51,19 @@ func TestExistingEnvironmentWins(t *testing.T) {
 		t.Fatal("env overwritten")
 	}
 }
+func TestEnvFileBOMOnMultipleLines(t *testing.T) {
+	// Each line can originate from a separately encoded legacy PowerShell value.
+	p := filepath.Join(t.TempDir(), "legacy.env")
+	data := "\ufeffJARVIS_TEST_BOM_TOKEN_088=legacy-compatible-value\r\n" +
+		"\ufeffJARVIS_TEST_BOM_AUD_088=audience\r\n"
+	if err := os.WriteFile(p, []byte(data), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err := readEnvFile(p, true); err != nil {
+		t.Fatal(err)
+	}
+	if os.Getenv("JARVIS_TEST_BOM_TOKEN_088") != "legacy-compatible-value" ||
+		os.Getenv("JARVIS_TEST_BOM_AUD_088") != "audience" {
+		t.Fatal("BOM-prefixed env lines were not loaded")
+	}
+}

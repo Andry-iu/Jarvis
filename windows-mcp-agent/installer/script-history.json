@@ -8,7 +8,8 @@
                        "2b4b934b693cefc2b8a638aa59a8b627e9ba500e6b705d9b82f8dd23aa9db842",
                        "44905b443489e71374da7c3395766a3f88c5028b63c8ce6d83d7ec866946d6a3",
                        "87e2e3463f0028cebf547b0636c876af4df89245d1580a9ed0d912e7f254c0c3",
-                       "9a5167cf191a193dd5cf7c15e15771a3b1ccde5bba36f22a1f8f87f964a5d468"
+                       "9a5167cf191a193dd5cf7c15e15771a3b1ccde5bba36f22a1f8f87f964a5d468",
+                       "b3e0022fa999520f03ee9001062ef27a64bf0501df0d678c6a1cd06bf71d2901"
                    ],
     "Configure-Cloudflare.ps1":  [
                                      "0df6d4ba12e5f94d914762101fbcb5832c83ad58e4a81acffd2dfc1f9fcbb2bb",
@@ -29,7 +30,8 @@
     "Start.ps1":  [
                       "02fd1d824db6785240042c92a3c984063302f912989014effc86e4cba994b4e7",
                       "55dc9b518be0f2658697ea4062285bd9bd7e56b9402bb1d31e7e4fac9a0191fa",
-                      "b9abd64d600db41c738a2f71e34109a4a367b7f5475d57e598f170c461f07844"
+                      "b9abd64d600db41c738a2f71e34109a4a367b7f5475d57e598f170c461f07844",
+                      "c348b7a3845c2ca8ea3f37221f3cf3f530a8fa0838701bb9b5aaf02907bf2a0b"
                   ],
     "Stop.ps1":  [
                      "a4101ac310a2b997cd3f08beb0ff7fd08d269f5d4b3df8af2b7c3f2246a113cf"
@@ -128,4 +130,9 @@
                                "b14763e57862ff296be3d4d0edc32b74d9d116754166121314eb77ab179dd9e6",
                                "276e9c25a61f1b76f914f242712365f9db7a5db5b40d77c8a738e0a0ead68662"
                            ]
+,
+    "update-agent.ps1": [
+        "1d84e2b7109b4ff517c9acdff69f88f4dc4a6c8e7161e5efd7ad2262a66b25ab",
+        "e815957813fafd3cdde95271355b72033029fd3df6d2d27650c4c1cc0724ac1f"
+    ]
 }

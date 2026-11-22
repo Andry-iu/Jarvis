@@ -74,9 +74,20 @@ function Assert-Stopped([string]$HomeDir) {
     }
 }
 function Get-LocalToken([string]$HomeDir) {
-    $line = [IO.File]::ReadAllText((Join-Path $HomeDir 'Config\secrets.env')).Trim()
-    if ($line -notmatch '^JARVIS_MCP_TOKEN=([A-Za-z0-9+/=]{40,})$') { throw 'Credenziale locale non valida.' }
-    return $matches[1]
+    # Parse the line-oriented env format. Preserve legacy credentials verbatim.
+    $token = $null
+    foreach ($rawLine in [IO.File]::ReadAllLines((Join-Path $HomeDir 'Config\secrets.env'))) {
+        $line = $rawLine.Trim().TrimStart([char]0xFEFF).Trim()
+        if (-not $line -or $line.StartsWith('#')) { continue }
+        if ($line -notmatch '^([A-Za-z_][A-Za-z0-9_]*)=(.*)$') { throw 'Configurazione credenziali non valida.' }
+        if ($matches[1] -ceq 'JARVIS_MCP_TOKEN') {
+            if ($null -ne $token) { throw 'Credenziale locale duplicata.' }
+            $token = $matches[2]
+        }
+    }
+    # The Go agent accepts printable bearer secrets of 24 or more characters.
+    if ($null -eq $token -or $token -cnotmatch '^[\x21-\x7E]{24,4096}$') { throw 'Credenziale locale non valida.' }
+    return $token
 }
 function Invoke-LocalTool([string]$HomeDir,[string]$Name,[hashtable]$Arguments=@{}) {
     $s = Read-Install $HomeDir
