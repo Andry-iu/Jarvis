@@ -22,7 +22,7 @@ import (
 	"time"
 )
 
-const version = "0.5.5"
+const version = "0.8.7"
 
 type RPCRequest struct {
 	JSONRPC string          `json:"jsonrpc"`
@@ -51,20 +51,36 @@ type Task struct {
 	cancel     context.CancelFunc
 }
 type Agent struct {
-	mu   sync.Mutex
-	task *Task
-	next int
+	peerMu                 sync.Mutex
+	peerServer             *http.Server
+	controlMu              sync.RWMutex
+	restartPending         bool
+	listenAddress          string
+	shutdownRequest        func()
+	testPrivileges         func() agentPrivileges
+	testLaunchRestart      func(*adminRestart) error
+	testLaunchSourceUpdate func(string) error
+	usageMu                sync.Mutex
+	usage                  *toolUsageStore
+	uiMu                   sync.Mutex
+	windows                map[string]json.RawMessage
+	runtimeMu              sync.Mutex
+	runtime                *Runtime
+	mu                     sync.Mutex
+	task                   *Task
+	next                   int
+	desktop                *desktopSnapshot
 }
 
 func (a *Agent) snapshot() any {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 	if a.task == nil {
-		return map[string]any{"version": version, "state": "idle", "task": nil}
+		return map[string]any{"version": version, "state": "idle", "task": nil, "privileges": currentAgentPrivileges()}
 	}
 	t := *a.task
 	t.cancel = nil
-	return map[string]any{"version": version, "state": t.Status, "task": t}
+	return map[string]any{"version": version, "state": t.Status, "task": t, "privileges": currentAgentPrivileges()}
 }
 func (a *Agent) start(name string, seconds int) (any, error) {
 	if seconds < 1 || seconds > 300 {
@@ -119,7 +135,24 @@ func toolResult(value any, isError bool) any {
 	b, _ := json.Marshal(value)
 	return map[string]any{"content": []any{map[string]any{"type": "text", "text": string(b)}}, "isError": isError}
 }
-func (a *Agent) invoke(name string, args json.RawMessage) any {
+func (a *Agent) invokeUncounted(name string, args json.RawMessage) any {
+	release, err := a.enterControlGate(name, args)
+	if err != nil {
+		return toolResult(map[string]any{"error": err.Error()}, true)
+	}
+	defer release()
+	if name == "task_start" {
+		var bridge struct {
+			Operation string          `json:"operation"`
+			Request   json.RawMessage `json:"request"`
+		}
+		if json.Unmarshal(args, &bridge) == nil && bridge.Operation == "runtime" {
+			return a.invokeRuntime("", bridge.Request)
+		}
+	}
+	if isRuntimeTool(name) {
+		return a.invokeRuntime(name, args)
+	}
 	switch name {
 	case "agent_status":
 		return toolResult(a.snapshot(), false)
@@ -131,7 +164,8 @@ func (a *Agent) invoke(name string, args json.RawMessage) any {
 		return toolResult(value, false)
 	case "project_status":
 		var p struct {
-			Project string `json:"project"`
+			Project string          `json:"project"`
+			Desktop json.RawMessage `json:"desktop"`
 		}
 		if err := json.Unmarshal(args, &p); err != nil {
 			return toolResult(map[string]string{"error": "invalid arguments"}, true)
@@ -156,8 +190,11 @@ func (a *Agent) invoke(name string, args json.RawMessage) any {
 		return toolResult(value, false)
 	case "task_start":
 		var p struct {
-			Name     string `json:"name"`
-			Duration int    `json:"duration_seconds"`
+			Name      string          `json:"name"`
+			Duration  int             `json:"duration_seconds"`
+			Operation string          `json:"operation"`
+			Project   string          `json:"project"`
+			Desktop   json.RawMessage `json:"desktop"`
 		}
 		if err := json.Unmarshal(args, &p); err != nil {
 			return toolResult(map[string]string{"error": "invalid arguments"}, true)
@@ -168,7 +205,20 @@ func (a *Agent) invoke(name string, args json.RawMessage) any {
 		if p.Duration == 0 {
 			p.Duration = 15
 		}
-		v, err := a.start(p.Name, p.Duration)
+		var v any
+		var err error
+		if p.Operation == "desktop_inspect" || p.Operation == "desktop_action" {
+			v, err = a.startDesktopTask(p.Operation, p.Desktop)
+		} else if p.Operation != "" {
+			r, runtimeErr := a.getRuntime()
+			if runtimeErr != nil {
+				err = runtimeErr
+			} else {
+				v, err = r.enqueueOperation(runtimeRequest{Operation: "command_start", MachineID: r.MachineID, Project: p.Project, RequestID: newID(), Profile: p.Operation}, "", nil)
+			}
+		} else {
+			v, err = a.start(p.Name, p.Duration)
+		}
 		if err != nil {
 			return toolResult(map[string]string{"error": err.Error()}, true)
 		}
@@ -192,6 +242,18 @@ func (a *Agent) invoke(name string, args json.RawMessage) any {
 			return toolResult(map[string]string{"error": "invalid update parameters"}, true)
 		}
 		v, err := executeUpdate(p.UpdateID, p.SHA256)
+		if err != nil {
+			return toolResult(map[string]string{"error": err.Error()}, true)
+		}
+		return toolResult(v, false)
+	case "update_status":
+		var p struct {
+			UpdateID string `json:"update_id"`
+		}
+		if json.Unmarshal(args, &p) != nil {
+			return toolResult(map[string]string{"error": "invalid update parameters"}, true)
+		}
+		v, err := readUpdateStatus(p.UpdateID)
 		if err != nil {
 			return toolResult(map[string]string{"error": err.Error()}, true)
 		}
@@ -233,15 +295,16 @@ func (a *Agent) invoke(name string, args json.RawMessage) any {
 	}
 	return toolResult(map[string]string{"error": "unknown tool"}, true)
 }
-func toolsList() any {
+func legacyToolsList() any {
 	return map[string]any{"tools": []any{
 		map[string]any{"name": "project_list", "description": "List immediate Git repositories within the explicitly authorized JARVIS_PROJECTS_ROOT (read-only)", "inputSchema": map[string]any{"type": "object", "properties": map[string]any{}}},
 		map[string]any{"name": "project_clone", "description": "Clone a GitHub HTTPS repository from approved owner Andry-iu into JARVIS_PROJECTS_ROOT without overwriting an existing directory. Runs as a cancellable task; use agent_status to monitor. Requires Git credentials preconfigured on the notebook.", "inputSchema": map[string]any{"type": "object", "properties": map[string]any{"repository_url": map[string]any{"type": "string"}, "project": map[string]any{"type": "string"}}, "required": []string{"repository_url"}}},
 		map[string]any{"name": "project_status", "description": "Read current Git branch, commit and tracked dirty file count for a repository within the authorized projects root (read-only)", "inputSchema": map[string]any{"type": "object", "properties": map[string]any{"project": map[string]any{"type": "string"}}, "required": []string{"project"}}},
 		map[string]any{"name": "agent_status", "description": "Read Windows agent status and most recent task", "inputSchema": map[string]any{"type": "object", "properties": map[string]any{}}},
-		map[string]any{"name": "task_start", "description": "Start a cancellable diagnostic task. This prototype does not execute shell commands or Codex.", "inputSchema": map[string]any{"type": "object", "properties": map[string]any{"name": map[string]any{"type": "string"}, "duration_seconds": map[string]any{"type": "integer", "minimum": 1, "maximum": 300}}}},
+		map[string]any{"name": "task_start", "description": "Start a cancellable diagnostic or restricted Go test/build task in an authorized module directory. No arbitrary commands.", "inputSchema": map[string]any{"type": "object", "properties": map[string]any{"name": map[string]any{"type": "string"}, "duration_seconds": map[string]any{"type": "integer", "minimum": 1, "maximum": 300}, "operation": map[string]any{"type": "string", "enum": []string{"go_test", "go_build", "desktop_inspect", "desktop_action"}}, "project": map[string]any{"type": "string"}, "desktop": map[string]any{"type": "object", "additionalProperties": false, "properties": map[string]any{"snapshot_id": map[string]any{"type": "string"}, "element_id": map[string]any{"type": "string"}, "action": map[string]any{"type": "string", "enum": []string{"invoke", "set_text", "select", "toggle"}}, "text": map[string]any{"type": "string", "maxLength": 4096}}}}}},
 		map[string]any{"name": "update_prepare", "description": "Stage a single-use Windows update batch; requires Cloudflare Access authentication. Submit exact UTF-8 CRLF content, 32-hex update ID in first REM line, SHA-256 of bytes. Does not execute.", "inputSchema": map[string]any{"type": "object", "properties": map[string]any{"update_id": map[string]any{"type": "string"}, "sha256": map[string]any{"type": "string"}, "content": map[string]any{"type": "string"}}, "required": []string{"update_id", "sha256", "content"}}},
 		map[string]any{"name": "update_execute", "description": "Rehash and start a previously staged batch as separate Windows process; requires Cloudflare Access authentication. Does not report completed deployment.", "inputSchema": map[string]any{"type": "object", "properties": map[string]any{"update_id": map[string]any{"type": "string"}, "sha256": map[string]any{"type": "string"}}, "required": []string{"update_id", "sha256"}}},
+		map[string]any{"name": "update_status", "description": "Read durable update preparation/launch/exit status by update_id. Never replays; batch exit is not proof of successful installation. Cloudflare Access or paired peer listener required.", "inputSchema": map[string]any{"type": "object", "properties": map[string]any{"update_id": map[string]any{"type": "string"}}, "required": []string{"update_id"}}},
 		map[string]any{"name": "diagnostic_status", "description": "Read bounded non-secret structured status of a diagnostic batch by 32-hex ID; no arbitrary file or log reading", "inputSchema": map[string]any{"type": "object", "properties": map[string]any{"id": map[string]any{"type": "string"}}, "required": []string{"id"}}},
 		map[string]any{"name": "log_list", "description": "List files under the restricted Jarvis Logs directory (maximum 300 records); Cloudflare Access required.", "inputSchema": map[string]any{"type": "object", "properties": map[string]any{}}},
 		map[string]any{"name": "log_read", "description": "Read the last N bytes of one .log within Jarvis Logs; no arbitrary path access. Cloudflare Access required.", "inputSchema": map[string]any{"type": "object", "properties": map[string]any{"path": map[string]any{"type": "string"}, "tail_bytes": map[string]any{"type": "integer", "minimum": 1, "maximum": 32768}}, "required": []string{"path"}}},
@@ -256,13 +319,14 @@ func response(id json.RawMessage, result any, e *RPCError) RPCResponse {
 }
 func handler(a *Agent, token string, access *AccessVerifier) http.Handler {
 	mux := http.NewServeMux()
+	mux.HandleFunc("/internal/agent-restart", func(w http.ResponseWriter, r *http.Request) { a.restartHandoff(w, r, token) })
 	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != "GET" {
 			http.Error(w, "method not allowed", 405)
 			return
 		}
-		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprint(w, `{"ok":true,"version":"0.5.5"}`)
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		_ = json.NewEncoder(w).Encode(map[string]any{"ok": true, "version": version})
 	})
 	mux.HandleFunc("/mcp", func(w http.ResponseWriter, r *http.Request) {
 		log.Printf("MCP request received method=%s access_assertion=%t", r.Method, r.Header.Get("Cf-Access-Jwt-Assertion") != "")
@@ -318,7 +382,8 @@ func handler(a *Agent, token string, access *AccessVerifier) http.Handler {
 			http.Error(w, "Accept must include application/json and text/event-stream", http.StatusNotAcceptable)
 			return
 		}
-		r.Body = http.MaxBytesReader(w, r.Body, 1024*1024)
+		// A 1 MiB file can need 4/3 base64 or up to 6x JSON escaping.
+		r.Body = http.MaxBytesReader(w, r.Body, 8*1024*1024)
 		data, err := io.ReadAll(r.Body)
 		if err != nil {
 			http.Error(w, "request too large", http.StatusRequestEntityTooLarge)
@@ -326,7 +391,7 @@ func handler(a *Agent, token string, access *AccessVerifier) http.Handler {
 		}
 		var q RPCRequest
 		if err := json.Unmarshal(data, &q); err != nil || q.JSONRPC != "2.0" || q.Method == "" {
-			w.Header().Set("Content-Type", "application/json")
+			w.Header().Set("Content-Type", "application/json; charset=utf-8")
 			w.WriteHeader(http.StatusBadRequest)
 			_ = json.NewEncoder(w).Encode(response(nil, nil, &RPCError{Code: -32700, Message: "invalid JSON-RPC request"}))
 			return
@@ -363,7 +428,7 @@ func handler(a *Agent, token string, access *AccessVerifier) http.Handler {
 			if err := json.Unmarshal(q.Params, &p); err != nil || p.Name == "" {
 				res = response(q.ID, nil, &RPCError{Code: -32602, Message: "invalid parameters"})
 			} else {
-				if (p.Name == "update_prepare" || p.Name == "update_execute" || p.Name == "log_list" || p.Name == "log_read" || p.Name == "diagnostic_status") && !validAccess {
+				if (p.Name == "update_prepare" || p.Name == "update_execute" || p.Name == "update_status" || p.Name == "log_list" || p.Name == "log_read" || p.Name == "diagnostic_status") && !validAccess {
 					res = response(q.ID, toolResult(map[string]string{"error": "Cloudflare Access authentication required for update tools"}, true), nil)
 				} else {
 					res = response(q.ID, a.invoke(p.Name, p.Arguments), nil)
@@ -372,7 +437,7 @@ func handler(a *Agent, token string, access *AccessVerifier) http.Handler {
 		default:
 			res = response(q.ID, nil, &RPCError{Code: -32601, Message: "method not found"})
 		}
-		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.Header().Set("MCP-Protocol-Version", "2025-03-26")
 		_ = json.NewEncoder(w).Encode(res)
 	})
@@ -381,9 +446,38 @@ func handler(a *Agent, token string, access *AccessVerifier) http.Handler {
 }
 func main() {
 	listen := flag.String("listen", "127.0.0.1:8765", "listen address (localhost by default)")
+	initPeer := flag.String("init-peer", "", "provision an authenticated TLS peer listener at a private IP:port, then exit")
+
+	restartID := flag.String("restart-admin-helper", "", "internal elevation handoff")
+	restartHome := flag.String("restart-home", "", "internal configured home")
 	flag.Parse()
+	if *restartID != "" {
+		if !filepath.IsAbs(*restartHome) {
+			os.Exit(2)
+		}
+		os.Setenv("JARVIS_HOME", *restartHome)
+	}
 	if err := loadLocalConfig(); err != nil {
 		log.Fatalf("Configuration error: %v", err)
+	}
+	if *restartID != "" {
+		if err := runAdminRestartHelper(*restartHome, *restartID); err != nil {
+			log.Print("Admin restart helper failed; inspect agent_restart_status")
+			os.Exit(1)
+		}
+		return
+	}
+	if *initPeer != "" {
+		a := &Agent{}
+		r, e := a.getRuntime()
+		if e != nil {
+			log.Fatal(e)
+		}
+		defer a.closeRuntime()
+		if e = initPeerListener(os.Getenv("JARVIS_HOME"), *initPeer, r); e != nil {
+			log.Fatal(e)
+		}
+		return
 	}
 	token := os.Getenv("JARVIS_MCP_TOKEN")
 	teamDomain := strings.TrimSuffix(os.Getenv("JARVIS_CF_TEAM_DOMAIN"), "/")
@@ -402,7 +496,17 @@ func main() {
 		os.Exit(2)
 	}
 	startLogMaintenance()
-	a := &Agent{}
+	shutdown := make(chan struct{}, 1)
+	a := &Agent{listenAddress: *listen, shutdownRequest: func() {
+		select {
+		case shutdown <- struct{}{}:
+		default:
+		}
+	}}
+	if _, err := a.getRuntime(); err != nil {
+		log.Fatalf("Runtime initialization failed: %v", err)
+	}
+	defer a.closeRuntime()
 	var access *AccessVerifier
 	if teamDomain != "" {
 		u, err := url.Parse(teamDomain)
@@ -411,13 +515,29 @@ func main() {
 		}
 		access = &AccessVerifier{TeamDomain: teamDomain, Audience: audience}
 	}
+	peerServer, err := startPeerListener(a)
+	a.peerMu.Lock()
+	a.peerServer = peerServer
+	a.peerMu.Unlock()
+	if err != nil {
+		log.Fatalf("Peer listener failed: %v", err)
+	}
 	server := &http.Server{Addr: *listen, Handler: handler(a, token, access), ReadHeaderTimeout: 5 * time.Second}
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 	go func() {
-		<-c
+		select {
+		case <-c:
+		case <-shutdown:
+		}
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
+		a.peerMu.Lock()
+		activePeer := a.peerServer
+		a.peerMu.Unlock()
+		if activePeer != nil {
+			_ = activePeer.Shutdown(ctx)
+		}
 		server.Shutdown(ctx)
 	}()
 	exe, _ := os.Executable()

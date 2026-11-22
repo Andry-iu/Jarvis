@@ -1,0 +1,52 @@
+AGGIORNAMENTI DA CHAT
+Dalla 0.8.4 agent_update scarica il commit Git indicato, compila e aggiorna
+sul PC destinatario. Stessa procedura diretta o attraverso piu gateway.
+Se Git non e raggiungibile, resta disponibile il pacchetto verificato via MCP.
+Entrambe usano l'updater canonico con backup/rollback e ricevuta finale.
+
+JARVIS AGENT SETUP 0.8.7 / AGENTE 0.8.7 - Windows x64
+
+Estrarre lo ZIP in una cartella e avviare INSTALLA.cmd. Consentire UAC con lo
+stesso utente Windows. Scegliere il nome libero e univoco del computer, la cartella
+e la modalita di collegamento:
+1. Rete locale tramite un altro agente: nessun dato Cloudflare necessario.
+2. Accesso diretto ChatGPT: procedura Cloudflare e dati per connettore MCP dedicato.
+
+Ogni installazione include sempre controllo e inoltro: nessun ruolo gateway.
+Avvio automatico all'accesso a Windows dopo il riavvio, con attivita pianificata
+persistente per l'utente. Non e un servizio headless prima dell'accesso; il
+controllo grafico richiede la sessione attiva e sbloccata. Cloudflare diretto e
+collaudo del connettore sono distinti dalla riuscita dell'installazione locale.
+
+Rete: porta TLS 8766, interfacce private rilevate automaticamente (anche adattatori
+aggiunti in seguito), firewall limitato a profili Privato/Dominio e sottorete locale.
+L'installazione su una rete Windows Pubblica non apre il firewall: configurare
+consapevolmente il profilo corretto. Identita e chiavi uniche vengono generate sul
+nuovo PC. Nessun segreto o stato Desktop1/Desktop2 e incluso in questo pacchetto.
+
+PRIMO ABBINAMENTO SENZA FILE: chiedere in chat "Collega <nome> tramite Desktop1".
+Il gateway scopre l'agente e avvia la richiesta. Sul nuovo PC appare una finestra
+con nome, indirizzo e identita del richiedente e una casella vuota. Inserire il
+codice ricevuto in chat, poi fare clic su Consenti: solo la corrispondenza esatta
+autorizza il collegamento. Il codice atteso non appare sul nuovo PC.
+Conto alla rovescia visibile da 1:50; tre errori chiudono la richiesta. Il nome da solo non autentica.
+Scadenza breve, rifiuto predefinito; chiusura, blocco schermo o timeout non abilitano
+il controllo. Credenziali scambiate automaticamente e conservate privatamente.
+Dopo la conferma il gateway completa e verifica il collegamento; poi basta il nome.
+Il vecchio percorso Abbina.cmd da file privato resta compatibile.
+
+AGENTI 0.8.0 / 0.8.1 / 0.8.2 GIA INSTALLATI: estrarre questo ZIP in una cartella distinta e avviare
+AGGIORNA.cmd sul PC da aggiornare, con UAC dello stesso utente. Indicare la cartella
+Jarvis esistente (es. C:\Jarvis). Non eseguire INSTALLA sopra l'installazione.
+AGGIORNA usa l'unico updater, con backup e prova di ripristino, conserva nome,
+identita, configurazione e avvio automatico. Non richiede Go o Cloudflare.
+Al termine attendere la conferma 0.8.7; tenere la sessione aperta e sbloccata.
+
+Config\devices.json conserva nomi, identita, indirizzi, percorsi via altri agenti e
+stato active/retired. Dismesso e offline sono distinti. Ogni gateway conserva la
+propria configurazione: aggiornare tutti i gateway coinvolti per dismettere un PC.
+
+Codex e i profili di sviluppo richiedono CLI, toolchain e account gia disponibili
+sul PC: l'installer non acquista servizi e non copia autorizzazioni economiche.
+Aggiornamenti: agente -> batch separato -> unico Scripts\update-agent.ps1,
+backup/rollback e verifica del risultato. Non reinstallare sopra un agente attivo.

@@ -1,3 +1,9 @@
+# Punto di continuita (22 novembre 2026): integrazione 0.8.7 candidata
+
+Si prepara una numerazione Jarvis comune 0.8.7 e un `main` autorevole; il codice Android resta quello di `main` (0.5.123 verificato storicamente), il Windows 0.8.6 viene incorporato e il supporto ESP32 sperimentale e opzionale. I numeri app e installer del nuovo candidato **non implicano rilascio di binari**. Non perdere la storia dei test gia riusciti; riprendere dai dettagli in `docs/mcp-agent/UNIFIED-RELEASE-0.8.7-20261122.md`. La chiave cifrata sul branch di handoff firma non viene duplicata in `main`. Il blocco `ui_mouse` nel connettore resta aperto e separato dall'aggiornamento dell'agente.
+
+---
+
 ## Handoff Jarvis Windows MCP — architettura universale (19/11/2026)
 
 Decisione permanente dell'utente: Jarvis Windows MCP non deve conoscere applicazioni specifiche; il nucleo espone controlli generici, mentre procedure/batch riutilizzabili sono conservati in `D:\Jarvis\Procedures`. Non introdurre moduli Proxmox nel core; preferire UI generica e script/API esterni quando necessari. Il lavoro su mouse/Edge e ancora soltanto sorgente di sviluppo, non release installata; ultima versione verificata Desktop1 0.8.4. Installer da aggiornare insieme al prossimo agente; Desktop2 e SoftPlcTest1 solo in fase successiva. Per nuove chat leggere [handoff canonico](https://github.com/Andry-iu/Jarvis/blob/feature/unified-agent-source-update-20261114/docs/mcp-agent/HANDOFF-GENERIC-AGENT-PROCEDURES-20261119.md) e [pointer Windows](docs/mcp-agent/WINDOWS-AGENT-POINTER.md).

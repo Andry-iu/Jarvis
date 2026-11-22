@@ -1,0 +1,258 @@
+package main
+
+import (
+	"encoding/json"
+	"os"
+	"path/filepath"
+	"testing"
+	"time"
+)
+
+func withQueue(r *Runtime, fn func()) { r.mu.Lock(); defer r.mu.Unlock(); fn() }
+func holdQueue(t *testing.T, r *Runtime, project string) string {
+	t.Helper()
+	resource := ""
+	withQueue(r, func() {
+		var err error
+		resource, err = r.projectResource(project)
+		if err != nil {
+			t.Fatal(err)
+		}
+		r.queue.Paused[resource] = "test hold"
+		if err = r.queueSaveLocked(); err != nil {
+			t.Fatal(err)
+		}
+	})
+	return resource
+}
+func addQueueTest(t *testing.T, r *Runtime, project, label string, deps []string) string {
+	t.Helper()
+	call, _ := json.Marshal(map[string]any{"operation": "command_start", "profile": "git_status"})
+	v, err := r.call(runtimeRequest{Operation: "queue_add", MachineID: r.MachineID, Project: project, RequestID: newID(), Label: label, DependsOn: deps, Call: call})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return v.(map[string]any)["queue_id"].(string)
+}
+func TestQueueOrderCancelDependenciesAndReceipt(t *testing.T) {
+	r, _ := fixtureRuntime(t)
+	holdQueue(t, r, "sample")
+	a := addQueueTest(t, r, "sample", "A", nil)
+	b := addQueueTest(t, r, "sample", "B", []string{a})
+	c := addQueueTest(t, r, "sample", "C", nil)
+	p := runtimeRequest{Operation: "queue_move", QueueID: c, BeforeID: a, RequestID: newID()}
+	if _, err := r.call(p); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := r.call(p); err != nil {
+		t.Fatal("idempotent receipt", err)
+	}
+	withQueue(r, func() {
+		if r.queue.Entries[0].ID != c || r.queue.Entries[1].ID != a || r.queue.Entries[2].ID != b {
+			t.Fatal("wrong order")
+		}
+	})
+	if _, err := r.call(runtimeRequest{Operation: "queue_move", QueueID: b, BeforeID: a, RequestID: newID()}); err == nil {
+		t.Fatal("dependency inversion accepted")
+	}
+	if _, err := r.call(runtimeRequest{Operation: "queue_cancel", QueueID: c, RequestID: newID()}); err != nil {
+		t.Fatal(err)
+	}
+	withQueue(r, func() {
+		if r.queueFindLocked(c).Status != "cancelled" {
+			t.Fatal("waiting operation not cancelled")
+		}
+		r.queueFindLocked(a).Status = "running"
+		r.queueFindLocked(a).JobID = "fake-job"
+		r.Jobs["fake-job"] = &Job{Status: "running"}
+	})
+	if _, err := r.call(runtimeRequest{Operation: "queue_cancel", QueueID: a, RequestID: newID()}); err == nil {
+		t.Fatal("queue cancel interrupted active work")
+	}
+}
+func TestQueueRecoveryNeverReplaysStartedEntries(t *testing.T) {
+	r, _ := fixtureRuntime(t)
+	holdQueue(t, r, "sample")
+	a := addQueueTest(t, r, "sample", "A", nil)
+	b := addQueueTest(t, r, "sample", "B", nil)
+	withQueue(r, func() {
+		r.queueFindLocked(a).Status = "starting"
+		if err := r.queueSaveLocked(); err != nil {
+			t.Fatal(err)
+		}
+	})
+	dir := r.dir
+	r.Close()
+	again, err := newRuntime(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer again.Close()
+	withQueue(again, func() {
+		if again.queue.Entries[0].ID != a || again.queue.Entries[1].ID != b || again.queueFindLocked(a).Status != "uncertain" || again.queueFindLocked(b).Status != "queued" || len(again.queue.Paused) == 0 {
+			t.Fatal("recovery replayed or lost order")
+		}
+	})
+}
+func TestQueueOverlapReadAvailabilityAndWriteExclusion(t *testing.T) {
+	r, dir := fixtureRuntime(t)
+	resource := holdQueue(t, r, "sample")
+	if !queuePathsOverlap(resource, filepath.Join(resource, "child")) || !queuePathsOverlap(filepath.Join(resource, "child"), resource) || queuePathsOverlap(resource, resource+"-other") {
+		t.Fatal("incorrect overlap")
+	}
+	id := addQueueTest(t, r, "sample", "active", nil)
+	withQueue(r, func() {
+		r.queueFindLocked(id).Status = "running"
+		r.queueFindLocked(id).JobID = "fake-job"
+		r.Jobs["fake-job"] = &Job{Status: "running"}
+	})
+	if err := os.WriteFile(filepath.Join(dir, "read.txt"), []byte("read while processing"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	done := make(chan error, 1)
+	go func() {
+		_, err := r.call(runtimeRequest{Operation: "file_read", Project: "sample", Path: "read.txt"})
+		done <- err
+	}()
+	select {
+	case err := <-done:
+		if err != nil {
+			t.Fatal(err)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("read waited for processing")
+	}
+	if _, err := r.call(runtimeRequest{Operation: "file_write", Project: "sample", Path: "other.txt", Expected: "missing", Content: "unsafe", RequestID: newID()}); err == nil {
+		t.Fatal("direct write raced active processing")
+	}
+	if _, err := r.call(runtimeRequest{Operation: "queue_list", Project: "sample"}); err != nil {
+		t.Fatal(err)
+	}
+}
+func TestQueueBlockedHeadDoesNotGetBypassed(t *testing.T) {
+	r, _ := fixtureRuntime(t)
+	resource := holdQueue(t, r, "sample")
+	other := filepath.Join(filepath.Dir(resource), "other")
+	if err := os.Mkdir(other, 0700); err != nil {
+		t.Fatal(err)
+	}
+	holdQueue(t, r, "other")
+	dep := addQueueTest(t, r, "other", "dependency", nil)
+	a := addQueueTest(t, r, "sample", "first", []string{dep})
+	b := addQueueTest(t, r, "sample", "second", nil)
+	withQueue(r, func() {
+		delete(r.queue.Paused, resource)
+		r.queueDispatchLocked()
+		if r.queueFindLocked(a).Status != "queued" || r.queueFindLocked(b).Status != "queued" {
+			t.Fatal("blocked head bypassed")
+		}
+		r.queueFindLocked(dep).Status = "completed"
+		r.queueDispatchLocked()
+		if r.queueFindLocked(a).JobID == "" || r.queueFindLocked(b).Status != "queued" {
+			t.Fatal("wrong dispatch order")
+		}
+	})
+}
+func TestQueueRejectsUnsafeCallsAndCrossProjectMoves(t *testing.T) {
+	r, _ := fixtureRuntime(t)
+	resource := holdQueue(t, r, "sample")
+	other := filepath.Join(filepath.Dir(resource), "other")
+	os.Mkdir(other, 0700)
+	holdQueue(t, r, "other")
+	a := addQueueTest(t, r, "sample", "A", nil)
+	b := addQueueTest(t, r, "other", "B", nil)
+	if _, err := r.call(runtimeRequest{Operation: "queue_move", QueueID: a, BeforeID: b, RequestID: newID()}); err == nil {
+		t.Fatal("cross-project move accepted")
+	}
+	for _, call := range []string{`{"operation":"file_write","path":"x","content":"x"}`, `{"operation":"command_start","profile":"cmd /c whoami"}`, `{"operation":"command_start","profile":"git_status","project":"other"}`} {
+		if _, err := r.call(runtimeRequest{Operation: "queue_add", Project: "sample", RequestID: newID(), Call: json.RawMessage(call)}); err == nil {
+			t.Fatal("unsafe call accepted", call)
+		}
+	}
+}
+func TestQueueIndependentProjectsCanDispatchTogether(t *testing.T) {
+	r, _ := fixtureRuntime(t)
+	resource := holdQueue(t, r, "sample")
+	other := filepath.Join(filepath.Dir(resource), "other")
+	os.Mkdir(other, 0700)
+	otherResource := holdQueue(t, r, "other")
+	a := addQueueTest(t, r, "sample", "A", nil)
+	b := addQueueTest(t, r, "other", "B", nil)
+	withQueue(r, func() {
+		delete(r.queue.Paused, resource)
+		delete(r.queue.Paused, otherResource)
+		r.queueDispatchLocked()
+		if r.queueFindLocked(a).JobID == "" || r.queueFindLocked(b).JobID == "" {
+			t.Fatal("independent project blocked by global job gate")
+		}
+	})
+	// Both real git processes must finish before TempDir cleanup removes their
+	// job directory. Runtime.Close cancels them but does not join command workers.
+	deadline := time.Now().Add(5 * time.Second)
+	for time.Now().Before(deadline) {
+		finished := false
+		withQueue(r, func() {
+			ja, jb := r.Jobs[r.queueFindLocked(a).JobID], r.Jobs[r.queueFindLocked(b).JobID]
+			finished = ja != nil && jb != nil && ja.Status != "running" && jb.Status != "running"
+		})
+		if finished {
+			return
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	t.Fatal("independent git commands did not finish")
+}
+
+func TestQueuePreservesCodexFinalStatus(t *testing.T) {
+	for _, status := range []string{"completed", "failed", "interrupted"} {
+		t.Run(status, func(t *testing.T) {
+			r, _ := fixtureRuntime(t)
+			resource := holdQueue(t, r, "sample")
+			thread, turn := newID(), newID()
+			params, _ := json.Marshal(map[string]any{"turn": map[string]any{"id": turn, "status": status}})
+			usage, _ := json.Marshal(map[string]any{"turn_id": turn})
+			if err := atomicJSON(filepath.Join(r.dir, "events", thread+".json"), []codexEvent{{Method: "turn/completed", Params: params}, {Method: "jarvis/usage", Params: usage}}); err != nil {
+				t.Fatal(err)
+			}
+			withQueue(r, func() {
+				r.codex = &codexClient{dir: r.dir, finished: map[string]string{thread: turn}}
+				defer func() { r.codex = nil }()
+				e := &queueEntry{ID: newID(), Project: "sample", Resource: resource, Status: "running", TurnID: turn, Request: runtimeRequest{Operation: "codex_turn", ThreadID: thread}}
+				r.queue.Entries = append(r.queue.Entries, e)
+				r.queueRefreshLocked()
+				if e.Status != status {
+					t.Fatalf("final status %s became %s", status, e.Status)
+				}
+			})
+		})
+	}
+}
+
+
+func TestRuntimeCloseWaitsForActiveCommandPersistence(t *testing.T) {
+	r, _ := fixtureRuntime(t)
+	// Direct execution validates the job lifecycle; r.call(command_start)
+	// returns a queue_id and may defer the actual process dispatch.
+	r.mu.Lock()
+	v, err := r.startCommand(runtimeRequest{Operation: "command_start", MachineID: r.MachineID, Project: "sample", Profile: "git_status", RequestID: newID()})
+	r.mu.Unlock()
+	if err != nil {
+		t.Fatal(err)
+	}
+	id, ok := v.(map[string]any)["job_id"].(string)
+	if !ok || id == "" {
+		t.Fatal("command did not produce a job ID")
+	}
+	r.Close()
+	b, err := os.ReadFile(filepath.Join(r.dir, "jobs", id+".json"))
+	if err != nil {
+		t.Fatal("final job state was not persisted before Close returned:", err)
+	}
+	var job Job
+	if err := json.Unmarshal(b, &job); err != nil {
+		t.Fatal(err)
+	}
+	if job.Status == "running" || job.FinishedAt == "" || job.ExitCode == nil {
+		t.Fatalf("Close returned before the command finished: %+v", job)
+	}
+}

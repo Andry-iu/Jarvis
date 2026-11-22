@@ -1,0 +1,84 @@
+{
+  "project": "Jarvis",
+  "version": "0.8.7",
+  "status": "candidate_not_released",
+  "prepared_at": "2026-11-22",
+  "source_main_before_integration": "139cf885d4b52af9447b2dc682e538679d0dc98c",
+  "source_windows_0_8_6": "95e2866178377c6529e6911104d79b6970901e50",
+  "source_esp32_bridge": "3921db014d40ba3505e503144e3a6a1646f4d931",
+  "source_chat_probe": "33e31212bc583874f6e841ac1ccb64c9662d8d83",
+  "previous_verified": {
+    "android": "0.5.123",
+    "android_versionCode": 145,
+    "windows": "0.8.6",
+    "wear": "0.5.93",
+    "wear_versionCode": 115
+  },
+  "components": [
+    {
+      "id": "jarviswake",
+      "source": "app/",
+      "version_name": "0.8.7",
+      "version_code": 146,
+      "build_verified": false,
+      "signed_verified": false,
+      "installed_verified": false
+    },
+    {
+      "id": "jarvis_cube",
+      "source": "car-game/",
+      "version_name": "0.8.7",
+      "version_code": 146,
+      "build_verified": false,
+      "signed_verified": false,
+      "installed_verified": false
+    },
+    {
+      "id": "wear",
+      "source": "wear/",
+      "version_name": "0.8.7",
+      "version_code": 146,
+      "build_verified": false,
+      "signed_verified": false,
+      "installed_verified": false
+    },
+    {
+      "id": "windows_agent",
+      "source": "windows-mcp-agent/",
+      "version": "0.8.7",
+      "go_test_verified": false,
+      "installer_verified": false,
+      "installed_verified": false,
+      "previous_installed_0_8_6": true
+    },
+    {
+      "id": "esp32_bridge",
+      "source": "windows-mcp-agent/ircesp32.go",
+      "status": "optional_unconfigured",
+      "hardware_verified": false
+    },
+    {
+      "id": "phone_bridge",
+      "source": "phone-bridge/",
+      "status": "main_unchanged",
+      "deployment_verified": false
+    },
+    {
+      "id": "cloud_runner",
+      "source": "cloud-runner/",
+      "status": "main_unchanged",
+      "deployment_verified": false
+    },
+    {
+      "id": "chat_context_experiment",
+      "source": "experiments/chat-context-probe/",
+      "status": "isolated_not_production"
+    }
+  ],
+  "safety": {
+    "no_signing_backup_on_main": true,
+    "secrets_not_copied": true,
+    "firmware_not_deployed": true
+  },
+  "notes": "The manifest describes source integration only. Nothing about v0.8.7 is a signed or installed production release until independently verified."
+}
