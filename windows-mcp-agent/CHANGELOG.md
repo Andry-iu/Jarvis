@@ -1,8 +1,8 @@
-## 0.8.6 — 2026-11-22 (candidato da verificare sul desktop)
+## 0.8.6 — 2026-11-22 (installata e verificata su Desktop1)
 
 - `ui_mouse` accetta l'azione `move` per riposizionare il puntatore senza cliccare o scorrere, conservando snapshot monouso, controllo finestra attiva e controlli anti-occlusione.
-- Allineati sorgente, vincoli di versione installer e script di creazione pacchetto; lo ZIP non viene ancora dichiarato pubblicato.
-- Suite Go, go vet e go build superati sul commit base della modifica; per questo commit di versione sono ancora richiesti test, build e verifica di aggiornamento reale.
+- Allineati sorgente, vincoli di versione installer e script di creazione pacchetto; lo ZIP non e ancora stato prodotto/verificato/pubblicato.
+- Suite Go, go vet e go build superati sul commit base della modifica; per il commit finale test Go/vet/build sono riusciti su Desktop1; aggiornamento `agent_update` completato con versione 0.8.6 e pulizia verificata.
 - Separato il difetto di esposizione plugin ChatGPT: l'agente dichiara `ui_mouse`, ma il comando non compare nella lista delle funzioni richiamabili in questa sessione. Installare il nuovo binario non prova la pubblicazione dello strumento.
 - Riferimento dettagliato: `docs/mcp-agent/UI-MOUSE-MOVE-20261122.md`.
 
