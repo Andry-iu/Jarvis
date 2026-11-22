@@ -2,9 +2,9 @@
   "project": "Jarvis",
   "version": "0.8.8",
   "date": "2026-11-22",
-  "status": "windows_mouse_source_tested_pending_merge_install_live_mouse_test",
+  "status": "windows_source_merged_d2_installed_verified_d1_update_uncertain",
   "base_version": "0.8.7",
-  "branch": "feature/desktop-image-mouse-088-20261122",
+  "branch": "main",
   "windows_agent": {
     "source": "windows-mcp-agent/",
     "version": "0.8.8",
@@ -18,9 +18,13 @@
       "log_local": "D:\\Jarvis\\Projects\\JarvisMouseQA\\_verify088_results3.log"
     },
     "deployment": {
-      "desktop1": "pending",
-      "desktop2": "pending",
-      "live_mouse_test": "pending"
+      "desktop1": "promoting_seen_then_connector_unavailable_not_verified",
+      "desktop1_request_id": "jarvis-d1-update-088-20261122-image-mouse-01",
+      "desktop2": "completed_verified_live_0.8.8",
+      "desktop2_request_id": "jarvis-d2-update-088-20261122-image-mouse-01",
+      "desktop2_sha256": "5dc6e3e4ebd0d404570918a6dc1ac945ec6e0ed7b02579db20fbf1b4fe8524c5",
+      "desktop2_backup": "D:\\Jarvis\\Backups\\self-update-f22431e48e12483ca37b95c22f0bf91e",
+      "live_mouse_test": "pending_desktop1_connection"
     }
   },
   "android": {
@@ -39,5 +43,11 @@
     "desktop_secure_ui_refused": true,
     "receipt_unique_request_id": true
   },
-  "doc": "docs/mcp-agent/IMAGE-SPACE-MOUSE-0.8.8-20261122.md"
+  "doc": "docs/mcp-agent/IMAGE-SPACE-MOUSE-0.8.8-20261122.md",
+  "merge_commit": "10175433558d48f35ef15674be6962c5134f3e29",
+  "pull_request": 2,
+  "ci": {
+    "head": "573298d4f9d8a2071f3ef2ec99391b9dcfc20b82",
+    "result": "success"
+  }
 }
