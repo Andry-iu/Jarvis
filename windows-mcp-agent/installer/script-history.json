@@ -30,7 +30,8 @@
     "Start.ps1":  [
                       "02fd1d824db6785240042c92a3c984063302f912989014effc86e4cba994b4e7",
                       "55dc9b518be0f2658697ea4062285bd9bd7e56b9402bb1d31e7e4fac9a0191fa",
-                      "b9abd64d600db41c738a2f71e34109a4a367b7f5475d57e598f170c461f07844"
+                      "b9abd64d600db41c738a2f71e34109a4a367b7f5475d57e598f170c461f07844",
+                      "c348b7a3845c2ca8ea3f37221f3cf3f530a8fa0838701bb9b5aaf02907bf2a0b"
                   ],
     "Stop.ps1":  [
                      "a4101ac310a2b997cd3f08beb0ff7fd08d269f5d4b3df8af2b7c3f2246a113cf"
@@ -129,4 +130,9 @@
                                "b14763e57862ff296be3d4d0edc32b74d9d116754166121314eb77ab179dd9e6",
                                "276e9c25a61f1b76f914f242712365f9db7a5db5b40d77c8a738e0a0ead68662"
                            ]
+,
+    "update-agent.ps1": [
+        "1d84e2b7109b4ff517c9acdff69f88f4dc4a6c8e7161e5efd7ad2262a66b25ab",
+        "e815957813fafd3cdde95271355b72033029fd3df6d2d27650c4c1cc0724ac1f"
+    ]
 }
