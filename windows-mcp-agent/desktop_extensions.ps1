@@ -43,6 +43,7 @@ public static class JarvisWindowNative {
   IntPtr hit=WindowFromPoint(new P{X=x,Y=y});
   if(hit==IntPtr.Zero||GetAncestor(hit,2)!=target)throw new Exception("point_occluded_or_window_changed");
   if(!SetCursorPos(x,y))throw new Exception("mouse_position_failed");
+  if(action=="move")return;
   var a=new List<I>();
   if(action=="wheel"){if(wheelDelta==0||wheelDelta<-1200||wheelDelta>1200||wheelDelta%120!=0)throw new Exception("invalid_wheel_delta");a.Add(MouseSignal(0x0800,unchecked((uint)wheelDelta)));}
   else{
@@ -133,7 +134,7 @@ function DirectOperation($req){
   $w=WindowState;if((Json $w.identity) -cne (Json $req.window)){Refuse 'window_changed'}
   [JarvisWindowNative]::Mouse($h,[int]$req.x,[int]$req.y,[string]$req.mouse_action,[int]$req.wheel_delta)
   Start-Sleep -Milliseconds 120
-  FreshResponse @{ok=$true;dispatched=$true;verified=$false;data=@{status='mouse_dispatched';mouse_action=[string]$req.mouse_action}};return $true
+  FreshResponse @{ok=$true;dispatched=$true;verified=$false;data=@{status=$(if($req.mouse_action -eq 'move'){'mouse_move_dispatched'}else{'mouse_dispatched'});mouse_action=[string]$req.mouse_action}};return $true
  }
  if($req.operation -eq 'ui_keys'){
   $h=ValidateWindow $req.window;RequireForeground $h

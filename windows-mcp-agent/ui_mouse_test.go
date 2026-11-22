@@ -7,6 +7,8 @@ import (
 
 func TestUIMouseRequestValidation(t *testing.T) {
     cases := []struct{ name, payload string; ok bool }{
+        {"move", `{"machine_id":"machine","snapshot_id":"fresh","x":150,"y":200,"mouse_action":"move","request_id":"ui-mouse-test-move-001"}`, true},
+        {"move_reject_wheel", `{"machine_id":"machine","snapshot_id":"fresh","x":150,"y":200,"mouse_action":"move","wheel_delta":120,"request_id":"ui-mouse-test-move-wheel-001"}`, false},
         {"click", `{"machine_id":"machine","snapshot_id":"fresh","x":150,"y":200,"mouse_action":"click","request_id":"ui-mouse-test-click-001"}`, true},
         {"wheel", `{"machine_id":"machine","snapshot_id":"fresh","x":150,"y":200,"mouse_action":"wheel","wheel_delta":-120,"request_id":"ui-mouse-test-wheel-001"}`, true},
         {"missing_x", `{"machine_id":"machine","snapshot_id":"fresh","y":200,"mouse_action":"click","request_id":"ui-mouse-test-missing-x"}`, false},

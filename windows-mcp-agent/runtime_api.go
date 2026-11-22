@@ -184,7 +184,7 @@ func toolsList() any {
 				s["enum"] = []string{"invoke", "set_text", "type_text", "focus", "toggle", "select"}
 			}
 			if f == "mouse_action" {
-				s["enum"] = []string{"click", "double_click", "right_click", "wheel"}
+				s["enum"] = []string{"move", "click", "double_click", "right_click", "wheel"}
 			}
 			if f == "dialog_mode" {
 				s["enum"] = []string{"open", "save"}
@@ -280,7 +280,7 @@ func decodeRuntime(name string, b json.RawMessage) (runtimeRequest, error) {
 			return p, errors.New("mouse coordinates out of range")
 		}
 		switch p.MouseAction {
-		case "click", "double_click", "right_click":
+		case "move", "click", "double_click", "right_click":
 			if p.WheelDelta != 0 { return p, errors.New("wheel_delta is only for wheel") }
 		case "wheel":
 			if p.WheelDelta == 0 || p.WheelDelta < -1200 || p.WheelDelta > 1200 || p.WheelDelta % 120 != 0 { return p, errors.New("invalid wheel_delta") }
