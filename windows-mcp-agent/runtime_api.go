@@ -236,7 +236,7 @@ func toolsList() any {
 			p["request"] = map[string]any{"type": "object", "description": "For operation=runtime: the complete named runtime request, including operation and machine_id."}
 			op := p["operation"].(map[string]any)
 			op["enum"] = append(op["enum"].([]string), "runtime")
-			m["description"] = "Run legacy diagnostic/Go/desktop operations, or operation=runtime with a nested request for the current runtime catalog. Read machine_info first."
+			m["description"] = "COMPATIBILITY FALLBACK ONLY — AVOID task_start whenever a dedicated MCP tool is available. Prefer machine_info, project_* and other named tools; for UI, prefer ui_session_open, ui_sequence, ui_mouse, ui_mouse_screen and ui_keys directly. Use task_start only for legacy diagnostic/Go/desktop operations without dedicated equivalents, or operation=runtime with a nested request when the ChatGPT connector has not exposed the dedicated tool. Read machine_info first. Authorization, window checks and other safety guards still apply."
 		}
 	}
 	v["tools"] = ts
