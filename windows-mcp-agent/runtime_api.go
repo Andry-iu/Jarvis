@@ -108,7 +108,7 @@ var runtimeCatalog = []runtimeTool{
 	{"queue_cancel", "Cancel one waiting queue_id. Does not interrupt running work; interrupt its exact job/turn and verify final state.", []string{"queue_id", "request_id"}, []string{"queue_id", "request_id"}, false},
 	{"queue_move", "Move a waiting queue_id before before_id in the same project. Omit before_id to make it next. Rejects explicit dependency inversion; never preempts active work. Returns updated order.", []string{"queue_id", "before_id", "request_id"}, []string{"queue_id", "request_id"}, false},
 	{"queue_resume", "Resume one paused project after review. Verify uncertain old Codex sessions are idle; never replay started entries. Waiting Codex sessions must remain attached or be resumed explicitly.", []string{"project", "request_id"}, []string{"project", "request_id"}, false},
-	{"machine_info", "Read stable computer identity, available tool paths and runtime limits. Call first; all other local operations require its machine_id.", nil, nil, true},
+	{"machine_info", "Read computer identity, available tool paths and runtime limits. The connected agent automatically selects its own local machine for dedicated tools; callers do not need to pass machine_id.", nil, nil, true},
 	{"project_catalog", "List usable project paths and stable project IDs under the authorized root.", nil, nil, true},
 	{"file_list", "List project files/directories with pagination; protected paths and links are excluded.", []string{"project", "path", "offset", "limit", "recursive"}, []string{"project"}, true},
 	{"file_read", "Read a bounded regular file and its SHA-256. UTF-8 or base64; no credentials/configuration access.", []string{"project", "path", "encoding"}, []string{"project", "path"}, true},
@@ -153,10 +153,10 @@ func toolsList() any {
 	for _, t := range runtimeCatalog {
 		props := map[string]any{}
 		required := append([]string{}, t.Required...)
-		if t.Name != "machine_info" {
-			props["machine_id"] = map[string]any{"type": "string"}
-			required = append(required, "machine_id")
-		}
+		// An MCP connection is already bound to this agent. The server selects
+		// its local machine identity internally instead of exposing a persistent
+		// machine_id parameter in every tool schema. Existing clients that still
+		// provide machine_id remain supported and mismatches are rejected.
 		for _, f := range t.Fields {
 			typ := "string"
 			switch f {
@@ -233,10 +233,10 @@ func toolsList() any {
 		if m["name"] == "task_start" {
 			s := m["inputSchema"].(map[string]any)
 			p := s["properties"].(map[string]any)
-			p["request"] = map[string]any{"type": "object", "description": "For operation=runtime: the complete named runtime request, including operation and machine_id."}
+			p["request"] = map[string]any{"type": "object", "description": "For operation=runtime: the complete named runtime request. Local machine identity is supplied by the connected agent."}
 			op := p["operation"].(map[string]any)
 			op["enum"] = append(op["enum"].([]string), "runtime")
-			m["description"] = "COMPATIBILITY FALLBACK ONLY — AVOID task_start whenever a dedicated MCP tool is available. Prefer machine_info, project_* and other named tools; for UI, prefer ui_session_open, ui_sequence, ui_mouse, ui_mouse_screen and ui_keys directly. Use task_start only for legacy diagnostic/Go/desktop operations without dedicated equivalents, or operation=runtime with a nested request when the ChatGPT connector has not exposed the dedicated tool. Read machine_info first. Authorization, window checks and other safety guards still apply."
+			m["description"] = "COMPATIBILITY FALLBACK ONLY — AVOID task_start whenever a dedicated MCP tool is available. Prefer machine_info, project_* and other named tools; for UI, prefer ui_session_open, ui_sequence, ui_mouse, ui_mouse_screen and ui_keys directly. Use task_start only for legacy diagnostic/Go/desktop operations without dedicated equivalents, or operation=runtime with a nested request when the ChatGPT connector has not exposed the dedicated tool. The connected agent supplies its machine identity automatically. Authentication, operation permissions, window checks and other safety guards still apply."
 		}
 	}
 	v["tools"] = ts
@@ -335,8 +335,14 @@ func (a *Agent) invokeRuntime(name string, raw json.RawMessage) any {
 	if e != nil {
 		return toolResult(map[string]any{"error": e.Error()}, true)
 	}
-	if p.Operation != "machine_info" && p.MachineID != r.MachineID {
-		return toolResult(map[string]any{"error": "machine_id mismatch; read machine_info and select the intended computer"}, true)
+	if p.Operation != "machine_info" {
+		if p.MachineID == "" {
+			// Do not require a persistent identifier in each ChatGPT tool call.
+			// Device forwarding still selects targets explicitly via device_id.
+			p.MachineID = r.MachineID
+		} else if p.MachineID != r.MachineID {
+			return toolResult(map[string]any{"error": "machine_id mismatch; requested computer is not this agent"}, true)
+		}
 	}
 	if p.Operation == "network_setup" {
 		v, e := r.mutation(p, func(_ *Receipt) (any, error) {
