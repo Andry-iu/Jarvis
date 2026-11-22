@@ -22,7 +22,7 @@ import (
 	"time"
 )
 
-const version = "0.8.7"
+const version = "0.8.8"
 
 type RPCRequest struct {
 	JSONRPC string          `json:"jsonrpc"`
@@ -70,6 +70,7 @@ type Agent struct {
 	task                   *Task
 	next                   int
 	desktop                *desktopSnapshot
+	capture                *imageCaptureSnapshot
 }
 
 func (a *Agent) snapshot() any {
