@@ -1,3 +1,5 @@
+> **Distribuzione e collaudo completati 22/11/2026:** Jarvis **0.9.4**, commit sorgente `fc4ecf67e7654ab2a1d0f85f0e037edb0ba5802f`, installata su Desktop1 e Desktop2. `agent_update_status` completed con cleanup verificato e `machine_info.version=0.9.4` live. Test su entrambi: `0` genera token, `project_catalog` lo riutilizza, token sconosciuto genera nuovo token, nuovo riuso riuscito. Nessuna modifica delle impostazioni Cloudflare Zero Trust effettuata: il token Jarvis non prolunga la sessione globale Access. Hash, PID e ricevute sono in [CURRENT-RELEASE.md](CURRENT-RELEASE.md).
+
 > **Correzione 0.9.4:** gli strumenti ChatGPT gia collegati possono avere schemi MCP obsoleti e rifiutare il parametro `session_token` sulla chiamata diretta. Fino al refresh dello schema, usare il percorso compatibile `task_start(operation="runtime", request={operation:"machine_info", machine_id:"...", session_token:"0"})` (o un altro runtime tool autorizzato). Il gateway continua a fare tutte le verifiche precedenti. Stato installazione 0.9.4 registrato separatamente dopo collaudo.
 
 # Jarvis Windows MCP 0.9.3: rolling session token and authentication cache
@@ -34,5 +36,5 @@ Ridurre la latenza per singolo comando e per workflow composti senza richiedere 
 ## Collaudo / release
 - Test unitari: zero, sconosciuto, validita, rinnovo prima di 1800s, scadenza a 1800s, differente principal, fallimento prima autorizzazione, JWKS, JWT exp assoluto.
 - CI Go e PowerShell, build Windows, rilascio via commit Git definitivo, aggiornamento Desktop1 e Desktop2 con `agent_update`, controllo live `machine_info.version`, hash, backup/cleanup, smoke test; verifica in seguito prestazioni su sequenze reali.
-- **Stato:** implementazione in sviluppo sul branch `feature/agent-session-token-093-20261122`. Non dichiarare installata fino a verifica live di entrambi i desktop.
+- **Stato finale:** 0.9.3 integrata con PR #9, successivamente corretta e distribuita come **0.9.4** con PR #10, installazione e test live di Desktop1 e Desktop2 completati; vedere `CURRENT-RELEASE.md`.
 - Dopo installazione collaudata, completare commit della documentazione finale con stato reale, versioni, hash, e limitazioni.
