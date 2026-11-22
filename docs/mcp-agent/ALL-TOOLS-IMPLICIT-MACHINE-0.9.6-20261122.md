@@ -1,3 +1,5 @@
+> **Verifica post-rilascio completata (22/11/2026):** 0.9.6 installata su **Desktop1 e Desktop2**, `agent_update_status=completed`, `cleanup_verified=true`, test runtime `project_catalog` senza `machine_id` riuscito su entrambi. Strumenti UI MCP diretti post-refresh verificati concretamente su **Desktop1**; per Desktop2 resta da attestare lo stesso controllo lato client ChatGPT. Tutte le autorizzazioni ChatGPT `Consenti` rimangono governate dalla piattaforma. Leggere [STATUS-CONSOLIDATO-0.9.6-20261122.md](STATUS-CONSOLIDATO-0.9.6-20261122.md) per le decisioni e i limiti piu recenti.
+
 # Jarvis 0.9.6: meno metadati e controlli ridondanti, per tutte le operazioni
 Decisioni: 22 novembre 2026.
 
