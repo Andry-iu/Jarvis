@@ -23,3 +23,7 @@ L'utente ha richiesto di **mantenere tutte le ottimizzazioni ma togliere il toke
 - Test CI Go + PowerShell: il catalogo `tools/list` non pubblica `session_token`; `decodeRuntime` rifiuta vecchi argomenti `session_token`, ma accetta richieste normali; cache JWT mantiene sliding 30 min ed exp assoluta; test UI e build restano validi.
 - Dopo merge, aggiornare Desktop1 e Desktop2 da commit esatto; convalidare `agent_update_status=completed`, `machine_info.version=0.9.5`, elevazione e checksum installato, `machine_info`/altri strumenti senza token e assenza di metadati di sessione. Registrare i risultati in `CURRENT-RELEASE.md`.
 - Eseguire benchmark comparativi di latenza prima di affermare miglioramenti percentuali. Una schermata di consenso comparsa o meno durante una prova non basta a dimostrare l'origine interna della classificazione.
+
+## Priorita degli strumenti MCP (richiesta utente)
+- Nell'informazione dell'operazione pubblica `task_start` indicare con chiarezza che si tratta di uno strumento di **compatibilita da usare il meno possibile**: scegliere sempre la funzione dedicata (per UI: `ui_session_open`, `ui_sequence`, `ui_mouse`, `ui_mouse_screen`, `ui_keys`) quando esposta dal client. Usare `task_start` solo in mancanza di un'alternativa specifica o per diagnostiche legacy.
+- La descrizione server sara visibile al client **dopo l'aggiornamento del catalogo MCP**. Questo commit da solo non puo cambiare istantaneamente uno schema gia memorizzato in ChatGPT e non permette di sopprimere richieste di consenso obbligatorie.
