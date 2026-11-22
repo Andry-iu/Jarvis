@@ -1,3 +1,9 @@
+## 0.9.4 — 2026-11-22 (bridge compatibilita sessione)
+
+- Il percorso MCP `task_start` con `operation=runtime` accetta ora `session_token` anche nell'oggetto annidato `request`. Serve ai client ChatGPT che hanno memorizzato lo schema precedente e non accettano ancora `session_token` nelle chiamate dirette.
+- Non cambia autenticazione del trasporto, autorizzazioni, isolamento agente, durata 30 minuti ne cache Access di 0.9.3.
+- Test specifici coprono primo token, riuso e compatibilita con `task_start` tradizionale.
+
 ## 0.9.3 — 2026-11-22 (candidato: rolling session 30 minuti; non ancora distribuita)
 
 - Parametro facoltativo `session_token` su tutti gli strumenti MCP: `0`, token scaduto, perso o sconosciuto aprono una nuova sessione; il primo comando viene eseguito senza round-trip aggiuntivo e restituisce il token se ha successo.

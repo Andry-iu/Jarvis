@@ -141,7 +141,7 @@ func (a *Agent) invoke(name string, args json.RawMessage) (result any) {
 func (a *Agent) invokeScoped(name string, args json.RawMessage, principal string) (result any) {
 	token, reused, supplied := "", false, false
 	if toolDeclared(name) {
-		token, reused, supplied = a.sessions.begin(args, principal, time.Now())
+		token, reused, supplied = a.sessions.begin(sessionTokenArguments(name, args), principal, time.Now())
 	}
 	defer func() { result = a.finishSession(result, principal, token, reused, supplied) }()
 	s, err := a.usageStore()

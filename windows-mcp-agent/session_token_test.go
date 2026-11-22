@@ -104,3 +104,23 @@ func TestVerifiedJWTCachedActivityAndAbsoluteJWTExpiry(t *testing.T) {
         t.Fatal("cache must stop reusing an inactive token at 30 minutes")
     }
 }
+
+func TestLegacyTaskStartRuntimeSessionToken(t *testing.T) {
+    nested := json.RawMessage(`{"operation":"runtime","request":{"operation":"machine_info","session_token":"0"}}`)
+    tokenInput := sessionTokenArguments("task_start", nested)
+    if value, supplied := suppliedSessionToken(tokenInput); value != "0" || !supplied {
+        t.Fatal("legacy compatibility bridge must transmit the session token")
+    }
+    a := &Agent{}
+    first, reused, supplied := a.sessions.begin(tokenInput, "mcp:local", time.Now())
+    if first != "" || reused || !supplied { t.Fatal("legacy first call must start a new lease") }
+    result := sessionText(t, a.finishSession(sessionResult(), "mcp:local", first, reused, supplied))
+    token := result["session_token"].(string)
+    rewrapped, err := json.Marshal(map[string]any{"operation":"runtime", "request":map[string]any{"operation":"machine_info","session_token":token}})
+    if err != nil {t.Fatal(err)}
+    valid, reused, supplied := a.sessions.begin(sessionTokenArguments("task_start", rewrapped), "mcp:local", time.Now())
+    if !supplied || !reused || valid != token {t.Fatal("legacy bridge must reuse lease")}
+    if _, supplied := suppliedSessionToken(sessionTokenArguments("task_start", json.RawMessage(`{"operation":"go_test"}`))); supplied {
+        t.Fatal("ordinary legacy diagnostic must remain unaffected")
+    }
+}

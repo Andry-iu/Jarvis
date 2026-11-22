@@ -1,3 +1,5 @@
+> **Correzione 0.9.4:** gli strumenti ChatGPT gia collegati possono avere schemi MCP obsoleti e rifiutare il parametro `session_token` sulla chiamata diretta. Fino al refresh dello schema, usare il percorso compatibile `task_start(operation="runtime", request={operation:"machine_info", machine_id:"...", session_token:"0"})` (o un altro runtime tool autorizzato). Il gateway continua a fare tutte le verifiche precedenti. Stato installazione 0.9.4 registrato separatamente dopo collaudo.
+
 # Jarvis Windows MCP 0.9.3: rolling session token and authentication cache
 Decisioni aggiornate al 22 novembre 2026.
 
