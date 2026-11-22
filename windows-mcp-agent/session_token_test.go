@@ -29,7 +29,7 @@ func TestSessionZeroReuseAndUnknownStart(t *testing.T) {
     known, reused, supplied = a.sessions.begin(input,"cf:user-1",now.Add(time.Second))
     if known != token || !reused || !supplied {t.Fatal("known token must reuse session")}
     again := sessionText(t, a.finishSession(sessionResult(),"cf:user-1",known,reused,supplied))
-    if again["session_token"] != token || again["session_reused"] != true {t.Fatal("reuse metadata")}
+    if _, ok := again["session_token"]; ok {t.Fatal("reuse must not rewrite normal command payloads")}
     known, reused, supplied = a.sessions.begin(json.RawMessage(`{"session_token":"made-up-token"}`),"cf:user-1",now)
     if known != "" || reused || !supplied {t.Fatal("unknown token must behave like zero")}
     replacement := sessionText(t,a.finishSession(sessionResult(),"cf:user-1",known,reused,supplied))
