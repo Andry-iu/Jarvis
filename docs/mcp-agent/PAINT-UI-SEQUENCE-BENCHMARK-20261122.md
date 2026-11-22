@@ -1,3 +1,24 @@
+## Paint 0.9.6: test grafico completo, con misurazioni e limiti (22/11/2026, ~21:38–21:46 UTC)
+
+**Desktop1 / Jarvis 0.9.6**, plugin ricaricato: confermata nel catalogo ChatGPT la disponibilita di `ui_session_open`, `ui_sequence`, `ui_mouse_screen` senza `machine_id` e senza `session_token`, con invocazioni dirette. Test di Paint reale sulla finestra `Senza titolo - Paint`, canvas 892 x 580 px. Il risultato finale e stato **verificato con screenshot**: un rettangolo nero, quattro cerchietti rossi, e il testo blu `Jarvis` vicino al centro, senza selezione attiva. Il testo e in font Calibri 12 e appare piccolo, ma leggibile. Non e stato salvato alcun file.
+
+### Tempi misurati
+- Riprova baseline dal canvas bianco al rettangolo: **13.298 s** da cattura iniziale a screenshot finale. Suddivisione: setup/screenshot/sessione **0.277 s**, sequenza iniziale di 7 azioni **7.662 s**, screenshot intermedio + drag diretto **3.882 s**, screenshot finale **1.477 s**. Il primo `ui_sequence drag` non ha prodotto il rettangolo; un successivo `ui_mouse_screen drag` l'ha prodotto.
+- Sessione dedicata ai 4 cerchi: **14.065 s** incluse screenshot, session-open, verifica; `ui_sequence` di 7 passi **8.465 s** con 2.85 s di pause programmate. Il primo cerchio e stato ritentato perche il primo drag dopo cambio forma tende a non produrre contenuto.
+- Sessione per testo: selezione + prima creazione casella **11.404 s** con screenshot finale ma casella non ancora visibile. Secondo click + screenshot **4.128 s**: box testo visibile. Digitazione + commit + screenshot **8.431 s**: in quel checkpoint il testo non risultava visibile.
+- Sessione recupero testo: aprire sessione, selezionare testo, cliccare due volte, screenshot **13.285 s**: la casella conteneva gia `Jarvis` blu. Una successiva chiamata separata di `ui_sequence` per cliccare lo strumento Selezione ha confermato/reso visibile il testo; screenshot finale ha verificato il disegno.
+- I tempi sono **intervalli di diverse prove e chiamate**, non una baseline one-pass unica. Non dichiarare un tempo totale della baseline riuscita concatenando quelle misure: la procedura include interventi di recupero e checkpoint. Usarle come punto di riferimento per ottimizzazioni della UI e della latenza.
+
+### Esiti tecnici
+1. Gli strumenti UI diretti sono disponibili sul client ChatGPT dopo aggiornamento del plugin, senza i parametri persistenti `machine_id` e `session_token` (0.9.6).
+2. `ui_sequence` puo restituire `ui_sequence_dispatched; verified=false` anche quando Paint non disegna: **dispatch non equivale a conferma visiva**.
+3. Le forme iniziali possono richiedere un'azione successiva per essere visibili; in particolare `ui_mouse_screen drag` ha funzionato dove `ui_sequence drag` non aveva prodotto una forma.
+4. La casella di testo in Paint e sensibile al focus: click sul canvas dopo selezione testo e verifiche screenshot, poi input Unicode, poi conferma **in una chiamata distinta**. Certe sequenze confermano senza il testo visibile; un nuovo focus e commit del testo lo rendono visibile.
+5. Almeno una richiesta `screen_capture(quality=91)` e stata rifiutata con `invalid capture size, quality, monitor or region`. Restare con quality 70..89 come nelle prove riuscite. Nessun blocco dimostrato della policy host in questa prova, ma il software Jarvis non puo impedire le conferme della piattaforma.
+6. Prossima baseline da fissare: unico test ripetibile da bianco a disegno corretto, senza correzioni manuali e con misura `end-to-end` e screenshot finale; poi ridurre pause. Obiettivo ulteriore: incrementare dimensione testo e centratura con strumenti Paint verificati.
+
+---
+
 ## Collaudo 0.9.5 con strumenti MCP diretti (22/11/2026, ore ~21:20–21:25 UTC)
 
 **Esito:** parziale. Strumenti `ui_session_open`, `ui_sequence`, `ui_mouse_screen`, `window_inspect`, `ui_action` esposti direttamente da ChatGPT, senza `task_start` e senza `session_token`. Desktop1 in versione `0.9.5`, Paint finestra attiva con geometria stabile. **Rettangolo nero e quattro cerchi rossi ottenuti e verificati visivamente**. **Testo blu centrale "Jarvis" NON ottenuto**, quindi non esiste una nuova baseline completa certificata.
