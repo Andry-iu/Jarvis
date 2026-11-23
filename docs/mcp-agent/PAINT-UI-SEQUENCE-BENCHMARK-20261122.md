@@ -63,3 +63,39 @@ Misurare il tempo di una sequenza UI controllata e ripetibile e ridurlo progress
 
 ## Prossimo criterio di successo
 Misurare in ogni prova `setup_ms`, `sequence_ms`, `verify_capture_ms`, `total_ms`, numero step, pause per step, e **esito visivo**. Prima ottenere rettangolo con quattro cerchi rossi su tela pulita; poi confrontare tempi, differenze e mediana su prove ripetute. Evitare un ciclo di invio comandi che non si possono verificare o che vengono bloccati. Ogni errore o risultato incerto resta distinto da un collaudo riuscito.
+## Protocollo di confronto ripetibile per il candidato UI readiness
+
+Eseguire tre run consecutivi della 0.9.6 e tre del candidato su
+Desktop1. Usare la stessa versione di Paint, finestra massimizzata sullo stesso
+monitor, risoluzione/DPI/zoom invariati, canvas bianco 892 × 580 e lo stesso
+catalogo degli strumenti, salvo la disponibilità del passo `wait`. Preparare
+un documento nuovo prima di ogni run. Verificare fuori cronometro, con UI
+Automation, se il selettore di forma espone `SelectionItemPattern` e dove
+ricade il punto nella casella di testo attiva. Conservare lo stesso piano di
+coordinate, colori, font e aree del disegno dopo questa calibrazione.
+
+1. Da Paint in primo piano e canvas bianco, avviare un cronometro monotono
+   subito prima della richiesta di screenshot iniziale. Includere apertura
+   della sessione e tutte le chiamate necessarie. Usare ID richiesta univoci.
+2. Eseguire la stessa sequenza di gesti per rettangolo nero, quattro cerchi
+   rossi e scritta blu `Jarvis`. Per la 0.9.6 congelare prima dei tre run i
+   `settle_ms` previsti. Nel candidato sostituire la pausa del clic sullo
+   strumento con `settle_ms: 0` e un passo `wait` con `condition: "selected"`
+   prima del primo drag. Dopo l'apertura della casella, usare `settle_ms: 0`
+   e `condition: "editable_focus"` a un punto interno prima di digitare
+   Unicode. Confermare il testo con il gesto predefinito e deselezionare.
+   Preservare le altre pause durante il primo confronto. Se il provider di
+   Paint non espone la condizione richiesta, registrare la mancata compatibilità
+   e il passo interrotto.
+3. Catturare il risultato rispettando il limite di una cattura al secondo.
+   Verificare su screenshot rettangolo nero chiuso, esattamente quattro cerchi
+   rossi nelle posizioni attese, testo blu leggibile `Jarvis` senza cursore
+   o maniglie. Fermare il cronometro alla conclusione della verifica o
+   registrare il tempo fino all'errore. Nessun recupero o clic extra nel run.
+4. Per ogni run registrare versione agente, SHA, durata totale, esito,
+   eventuale primo passo fallito e screenshot. Richiedere tre successi su tre
+   al primo passaggio per il candidato. Riportare i tre tempi completi e la
+   mediana delle durate dei run riusciti con il numero dei successi. Se la
+   0.9.6 non produce run riusciti, riportare i tempi dei fallimenti e il tasso
+   di riuscita. I 13,298 s storici misurano solo il tratto del rettangolo con
+   recupero e non costituiscono una baseline del disegno completo.
