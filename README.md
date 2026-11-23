@@ -1,5 +1,9 @@
 > **Jarvis Windows MCP Agent: stato attuale 0.9.6 (22 novembre 2026).** Installata e verificata su **Desktop1 e Desktop2**. Il runtime non richiede piu `session_token` conversazionale ne `machine_id` nel catalogo dei tool dedicati: usa l'identita della connessione autenticata; conservati controlli di autenticazione/destinazione e ottimizzazioni Cloudflare/TLS. Gli strumenti UI diretti su Desktop1 sono operativi e Paint e stato collaudato visivamente; **baseline ripetibile e ottimizzazione delle conferme ChatGPT ancora aperte**. Per riprendere questo filone leggere **[stato consolidato e limiti aperti](docs/mcp-agent/STATUS-CONSOLIDATO-0.9.6-20261122.md)** e [registro installazioni](docs/mcp-agent/CURRENT-RELEASE.md). La sezione seguente `versione coordinata 0.8.7` e **storica** e riguarda l'integrazione multi-componente, non la versione attuale dell'agente Windows. Non dedurre nuove build Android o nuovi installer da questo aggiornamento.
 
+> **Regola generale dei metodi collaudati - 23/11/2026:** prima di lavorare con Jarvis, Jarvis Agent, JarvisWake o qualunque suo componente, consultare [docs/METODI_COLLAUDATI.md](docs/METODI_COLLAUDATI.md), riutilizzare come prima scelta il metodo gia verificato e registrare in Git ogni nuova procedura che risolve un problema, con prove e limiti. La regola si applica a tutti i dispositivi e alle chat future; non altera da sola gli agenti installati.
+
+---
+
 ---
 
 # Jarvis — versione coordinata 0.8.7 (candidato)
