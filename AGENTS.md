@@ -1,5 +1,15 @@
 # Jarvis — integrazione comune (22/11/2026)
 
+## REGOLA FONDAMENTALE 23/11/2026 - RIUSARE I METODI GIA COLLAUDATI
+
+**REGOLA GENERALE APPROVATA DALL'UTENTE, OBBLIGATORIA OGNI VOLTA CHE SI USA JARVIS O UNO DEI SUOI COMPONENTI, ANCHE IN UNA NUOVA CHAT.** Prima di qualsiasi azione con **Jarvis, Jarvis Agent (Windows MCP Desktop1/Desktop2), JarvisWake, bridge, Android, Android Auto, cloud runner, ESP32 o altri moduli**, leggere sul Git remoto aggiornato il [Catalogo dei metodi collaudati](docs/METODI_COLLAUDATI.md) e i runbook pertinenti; **cercare e RIUTILIZZARE COME PRIMA SCELTA il metodo gia collaudato** se compatibile con ambiente, versione e prerequisiti. Non ripetere prove gia risolte né ricominciare da workaround generici.
+
+**Dopo ogni problema risolto e verificato** salvare su Git il METODO riproducibile (preflight, passi esatti, tool, risultato, prove, errori da evitare, limiti, fallback, rollback e versione), aggiornare il catalogo e la continuita' appropriata, fare commit e controllarne la presenza remota. Distinguere `PROPOSTO`, `TESTATO`, `VERIFICATO`, `SUPERATO`. Un semplice `dispatched` non e' prova che l'interfaccia o la macchina abbia eseguito l'azione.
+
+**JarvisWake:** applicare questa regola anche ai prompt e agli appunti del telefono: la nota locale puo' rinviare al catalogo Git, ma NON sostituisce la lettura aggiornata delle procedure. **Jarvis Windows:** non confondere i runbook sul Git con le procedure eseguibili mantenute in `<Jarvis>\Procedures`, non aggiungere conoscenze di un singolo programma nel core universale. La regola non elimina verifiche di sicurezza o autorizzazioni. Se Git non e' accessibile, dichiararlo invece di inventare un metodo gia provato.
+
+---
+
 La base di tutti i componenti e il ramo `main`. Il candidato `0.8.7` unifica il codice Android recente di `main`, il runtime Windows 0.8.6 e i moduli ESP32 opzionali. **0.8.7 non e ancora una release firmata o installata**, fino a test/collaudi e manifest verificati. La documentazione storica qui sotto, inclusi vecchi riferimenti a rami Windows e versione 0.8.4, resta utile come cronologia ma non come stato corrente. Riferimento: `docs/mcp-agent/UNIFIED-RELEASE-0.8.7-20261122.md`.
 
 Workflow approvato: un ramo breve da `main`, test, merge in `main`, chiusura; non accumulare rami di sviluppo senza reintegrare. Mantenere `app/`, `car-game/`, `wear/`, `phone-bridge/` separati da `windows-mcp-agent/`. Non riportare in `main` archivi di credenziali cifrati o segreti. Le funzioni ESP32 senza configurazione non devono attivare hardware.
