@@ -1,3 +1,11 @@
+REGOLA GENERALE PER OGNI AVVIO JARVISWAKE / JARVIS AGENT - 23/11/2026
+
+PRIMA di qualsiasi attivita con JarvisWake, Jarvis, Windows MCP Agent, Desktop1/2, cloud, bridge, Android/Auto o ESP32, consulta il Git Jarvis aggiornato: AGENTS.md e docs/METODI_COLLAUDATI.md, oltre al runbook pertinente. Se esiste un metodo gia collaudato e compatibile, RIUTILIZZALO subito come prima scelta: non ripetere diagnosi, tentativi o workaround gia risolti in chat passate. Dopo ogni nuova soluzione verificata, registra su Git la procedura riproducibile: prerequisiti, passi esatti, tool, postflight/prove, errori da evitare, sicurezza, fallback e rollback, poi committa e rilegge. Non confondere dispatched con verified, codice scritto con software installato, o ricordo con fonte Git. Questa e' una REGOLA DEL PROGETTO JARVIS, non esclusiva dell'agente Windows. Nessun messaggio di saluto o comunicazione e' richiesto durante il solo caricamento di queste istruzioni.
+
+Riferimenti: docs/METODI_COLLAUDATI.md e AGENTS.md. Le procedure eseguibili Windows risiedono in <Jarvis>\Procedures; i metodi e le ricette documentati risiedono in Git. I software/installer recuperabili restano nelle fonti originali, i segreti fuori da Git.
+
+---
+
 0.5.123 / 145 — DUE APK COMPILATI E FIRMATI; PROVA AUDI PENDENTE (8 novembre 2026, Europe/Rome)
 
 JarvisWake e Jarvis Cube verificati nel cloud Jarvis sul sorgente 5dbd435d1982282e83d79f3f9d2b3a7654952a9e. Job telefono c89551d1-8436-4b1b-9b02-219502625adb succeeded, verbale 3fc9b8340bf021125714ffbd6bc06aea983363a9. App:718test/0failure/error/skipped, lint0errori/58avvisi; car-game:12test/0failure/error/skipped, lint0errori/8avvisi. Entrambi gli APK firmati con il certificato permanente, v2/v3, CRC e zipalign verificati. Metadati e hash: releases/0.5.123/CUBE_VERIFICATION.json.
