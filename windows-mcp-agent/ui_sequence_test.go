@@ -28,8 +28,30 @@ func TestUISequenceRequestValidation(t *testing.T){
   {"settle_negative",`{"machine_id":"pc","session_id":"active","steps":[{"kind":"mouse","mouse_action":"click","x":1,"y":2,"settle_ms":-1}],"request_id":"ui-sequence-settle-negative"}`,false},
   {"settle_too_long",`{"machine_id":"pc","session_id":"active","steps":[{"kind":"keys","keys":["A"],"settle_ms":501}],"request_id":"ui-sequence-settle-too-long"}`,false},
   {"unknown_kind",`{"machine_id":"pc","session_id":"active","steps":[{"kind":"script","text":"hello"}],"request_id":"ui-sequence-script"}`,false},
+  {"wait_selected",`{"session_id":"active","steps":[{"kind":"wait","condition":"selected","x":0,"y":2}],"request_id":"ui-sequence-wait-selected"}`,true},
+  {"wait_focus",`{"session_id":"active","steps":[{"kind":"wait","condition":"editable_focus","x":8,"y":9}],"request_id":"ui-sequence-wait-focus"}`,true},
+  {"wait_unknown",`{"session_id":"active","steps":[{"kind":"wait","condition":"anything","x":0,"y":2}],"request_id":"ui-sequence-wait-unknown"}`,false},
+  {"wait_missing_point",`{"session_id":"active","steps":[{"kind":"wait","condition":"selected","x":0}],"request_id":"ui-sequence-wait-missing-point"}`,false},
+  {"wait_with_action",`{"session_id":"active","steps":[{"kind":"wait","condition":"selected","mouse_action":"click","x":0,"y":2}],"request_id":"ui-sequence-wait-action"}`,false},
+  {"wait_with_pause",`{"session_id":"active","steps":[{"kind":"wait","condition":"selected","x":0,"y":2,"settle_ms":20}],"request_id":"ui-sequence-wait-pause"}`,false},
+  {"condition_on_text",`{"session_id":"active","steps":[{"kind":"text","text":"hello","condition":"editable_focus"}],"request_id":"ui-sequence-text-condition"}`,false},
  }
  for _,tc:=range cases{t.Run(tc.name,func(t *testing.T){_,err:=decodeRuntime("ui_sequence",json.RawMessage(tc.body));if (err==nil)!=tc.ok{t.Fatalf("valid=%v want=%v err=%v",err==nil,tc.ok,err)}})}
+}
+func TestUISequenceWaitGeometry(t *testing.T) {
+ g := captureGeometry{OriginX:-100,OriginY:10,OriginalWidth:1200,OriginalHeight:600,ImageWidth:600,ImageHeight:300}
+ steps := []uiSequenceStep{{Kind:"wait",Condition:uiString("selected"),X:uiInt(100),Y:uiInt(100)}}
+ out, err := physicalUISequence(steps,g)
+ if err != nil {
+  t.Fatal(err)
+ }
+ if out[0]["x"]!=101 || out[0]["y"]!=211 || out[0]["condition"]!="selected" || len(out[0])!=4 {
+  t.Fatalf("wrong worker condition: %+v",out[0])
+ }
+ steps[0].X=uiInt(600)
+ if _,err:=physicalUISequence(steps,g);err==nil {
+  t.Fatal("out-of-image wait accepted")
+ }
 }
 func TestUISequenceStepLimits(t *testing.T){
  steps:=make([]uiSequenceStep,24)

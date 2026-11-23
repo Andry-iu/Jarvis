@@ -86,8 +86,7 @@ jobs:
           }
           & 'windows-mcp-agent/installer/Test-LocalToken.ps1'
 
-      - name: Compile guarded desktop mouse native helper on Windows PowerShell 5.1
+      - name: Compile the native helper and test UI readiness on Windows PowerShell 5.1
         shell: powershell
         run: |
-          . './windows-mcp-agent/desktop_extensions.ps1'
-          if (-not ('JarvisWindowNative' -as [type])) { throw 'Desktop native helper not compiled' }
+          & './windows-mcp-agent/scripts/Test-UISequenceWait.ps1'

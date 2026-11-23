@@ -46,8 +46,11 @@ public static class JarvisWindowNative {
  // Atomic drag: mouse button down, motion, release, all in this one request.
  // A button must never stay down across separate MCP requests or retries.
  static void CheckDragPoint(IntPtr root,int x,int y){
+  if(!PointInWindow(root,x,y))throw new Exception("drag_point_occluded_or_window_changed");
+ }
+ public static bool PointInWindow(IntPtr root,int x,int y){
   IntPtr hit=WindowFromPoint(new P{X=x,Y=y});
-  if(hit==IntPtr.Zero||GetAncestor(hit,2)!=root)throw new Exception("drag_point_occluded_or_window_changed");
+  return hit!=IntPtr.Zero && GetAncestor(hit,2)==root;
  }
  static void DragInRoot(IntPtr root,int x,int y,int endX,int endY){
   IdleModifiers();
@@ -56,6 +59,8 @@ public static class JarvisWindowNative {
   CheckDragPoint(root,x,y);CheckDragPoint(root,endX,endY);
   if(!SetCursorPos(x,y))throw new Exception("mouse_position_failed");
   System.Threading.Thread.Sleep(35);
+  if(GetForegroundWindow()!=root)throw new Exception("foreground_changed_before_drag");
+  CheckDragPoint(root,x,y);
   bool downAttempted=false;
   try {
    downAttempted=true;
@@ -177,6 +182,67 @@ function RequireForeground($h){
  if([JarvisWindowNative]::GetForegroundWindow() -ne $h){Refuse 'foreground_changed'}
  if(![JarvisDesktopNative]::DefaultInputDesktop()){Refuse 'desktop_unavailable_or_locked'}
 }
+function TestSequenceCondition($h,$targetPid,$step){
+ $x=[int]$step.x
+ $y=[int]$step.y
+ if(![JarvisWindowNative]::PointInWindow($h,$x,$y)){Refuse 'wait_point_occluded_or_window_changed'}
+ try {
+  if($step.condition -eq 'editable_focus'){
+   $element=[Windows.Automation.AutomationElement]::FocusedElement
+   if($null -eq $element){return $false}
+   $state=$element.Current
+   $bounds=$state.BoundingRectangle
+   if($state.ProcessId -ne $targetPid -or !$state.HasKeyboardFocus -or !$state.IsEnabled -or
+      $state.IsOffscreen -or $state.IsPassword -or !$bounds.Contains($x,$y)){return $false}
+   if($state.ControlType -ne [Windows.Automation.ControlType]::Edit -and
+      $state.ControlType -ne [Windows.Automation.ControlType]::Document){return $false}
+   $native=[IntPtr]$state.NativeWindowHandle
+   if($native -eq [IntPtr]::Zero){
+    $walker=[Windows.Automation.TreeWalker]::RawViewWalker
+    $ancestor=$element
+    for($depth=0;$depth -lt 32 -and $native -eq [IntPtr]::Zero;$depth++){
+     $ancestor=$walker.GetParent($ancestor)
+     if($null -eq $ancestor){return $false}
+     $native=[IntPtr]$ancestor.Current.NativeWindowHandle
+    }
+   }
+   if($native -eq [IntPtr]::Zero -or [JarvisDesktopNative]::GetAncestor($native,2) -ne $h){return $false}
+   $editHandle=[IntPtr]$state.NativeWindowHandle
+   if([JarvisDesktopNative]::Kind($editHandle,$targetPid) -eq 'edit'){
+    return (([JarvisDesktopNative]::Style($editHandle) -band 0x800) -eq 0 -and ![JarvisDesktopNative]::Password($editHandle))
+   }
+   [object]$pattern=$null
+   return ($element.TryGetCurrentPattern([Windows.Automation.ValuePattern]::Pattern,[ref]$pattern) -and !$pattern.Current.IsReadOnly)
+  }
+  # FromPoint can return the label or icon inside a selectable control.
+  $element=[Windows.Automation.AutomationElement]::FromPoint([Windows.Point]::new($x,$y))
+  $walker=[Windows.Automation.TreeWalker]::RawViewWalker
+  for($depth=0;$depth -lt 8 -and $null -ne $element;$depth++){
+   $state=$element.Current
+   if($state.ProcessId -ne $targetPid -or [IntPtr]$state.NativeWindowHandle -eq $h){break}
+   [object]$pattern=$null
+   if($state.IsEnabled -and !$state.IsOffscreen -and
+      $element.TryGetCurrentPattern([Windows.Automation.SelectionItemPattern]::Pattern,[ref]$pattern)){
+    return $pattern.Current.IsSelected
+   }
+   $element=$walker.GetParent($element)
+  }
+ }catch [Windows.Automation.ElementNotAvailableException]{
+  return $false
+ }
+ return $false
+}
+function WaitSequenceCondition($h,$targetPid,$step){
+ $clock=[Diagnostics.Stopwatch]::StartNew()
+ do {
+  RequireForeground $h
+  if(TestSequenceCondition $h $targetPid $step){return}
+  $remaining=400 - [int]$clock.ElapsedMilliseconds
+  if($remaining -le 0){break}
+  Start-Sleep -Milliseconds ([Math]::Min(20,$remaining))
+ }while($clock.ElapsedMilliseconds -lt 400)
+ Refuse ("sequence_condition_timeout_" + $step.condition)
+}
 function FreshResponse($data){
  if($req.return_snapshot){
   $script:TargetWindow=$null
@@ -225,9 +291,15 @@ function DirectOperation($req){
    if([int]$rect[$k] -ne [int]$req.expected_bounds[$k]){Refuse 'window_moved_since_initial_screenshot'}
   }
   $done=0
+  $conditions=0
   for($n=0;$n -lt $req.steps.Count;$n++){
    $step=$req.steps[$n]
    try{
+    if($step.kind -eq 'wait'){
+     WaitSequenceCondition $h ([int]$req.target_window.pid) $step
+     $conditions++
+     continue
+    }
     RequireForeground $h
     switch([string]$step.kind){
      'mouse' {
@@ -247,7 +319,7 @@ function DirectOperation($req){
     if($pauseMs -gt 0){Start-Sleep -Milliseconds $pauseMs}
    }catch{throw ("sequence_interrupted_at_step_" + $n + "_after_" + $done + "_actions: " + $_.Exception.Message)}
   }
-  [Console]::Write((Json @{ok=$true;dispatched=$true;verified=$false;data=@{status='ui_sequence_dispatched';steps_dispatched=$done;steps_requested=$req.steps.Count}}));return $true
+  [Console]::Write((Json @{ok=$true;dispatched=($done -gt 0);verified=$false;data=@{status='ui_sequence_dispatched';steps_dispatched=$done;steps_requested=$req.steps.Count;conditions_met=$conditions}}));return $true
  }
  if($req.operation -eq 'ui_mouse'){
   $h=ValidateWindow $req.window;RequireForeground $h

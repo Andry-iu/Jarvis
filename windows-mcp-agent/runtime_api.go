@@ -193,7 +193,8 @@ func toolsList() any {
 			}
 			if f == "steps" {
 				s["items"] = map[string]any{"type":"object", "properties":map[string]any{
-					"kind": map[string]any{"type":"string","enum":[]string{"mouse","keys","text"}},
+					"kind": map[string]any{"type":"string","enum":[]string{"mouse","keys","text","wait"}},
+					"condition":map[string]any{"type":"string","enum":[]string{"selected","editable_focus"},"description":"Only for wait steps. Use x/y in session image pixels. Wait for a selected control or a focused editable control at that point."},
 					"mouse_action":map[string]any{"type":"string","enum":[]string{"move","click","double_click","right_click","wheel","drag"}},
 					"x":map[string]any{"type":"integer"},"y":map[string]any{"type":"integer"},
 					"end_x":map[string]any{"type":"integer"},"end_y":map[string]any{"type":"integer"},

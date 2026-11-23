@@ -22,6 +22,7 @@ type uiSequenceStep struct {
  Keys []string `json:"keys,omitempty"`
  Text *string `json:"text,omitempty"`
  SettleMS *int `json:"settle_ms,omitempty"`
+ Condition *string `json:"condition,omitempty"`
 }
 
 type uiSession struct {
@@ -82,14 +83,15 @@ func validateUISequence(steps []uiSequenceStep) error {
  for i, step := range steps {
   bad := func(reason string) error {return fmt.Errorf("steps[%d]: %s",i,reason)}
   if step.SettleMS!=nil && (*step.SettleMS<0 || *step.SettleMS>500){return bad("settle_ms must be 0..500")}
+  if step.Kind!="wait" && step.Condition!=nil {return bad("condition is only for wait")}
+  if step.X!=nil && (*step.X<0 || *step.X>=32768) || step.Y!=nil && (*step.Y<0 || *step.Y>=32768) {
+   return bad("coordinates out of range")
+  }
   hasMouse := step.MouseAction!="" || step.X!=nil || step.Y!=nil || step.EndX!=nil || step.EndY!=nil || step.WheelDelta!=nil
   switch step.Kind {
   case "mouse":
    if step.Keys != nil || step.Text != nil || step.X == nil || step.Y == nil {
     return bad("mouse requires x/y, and no keyboard/text fields")
-   }
-   if *step.X<0 || *step.X>=32768 || *step.Y<0 || *step.Y>=32768 {
-    return bad("coordinates out of range")
    }
    if step.MouseAction == "drag" {
     if step.EndX==nil || step.EndY==nil || step.WheelDelta!=nil {return bad("drag requires end_x/end_y and no wheel_delta")}
@@ -113,6 +115,14 @@ func validateUISequence(steps []uiSequenceStep) error {
    }
    totalText+=utf8.RuneCountInString(*step.Text)
    if totalText>4096 {return bad("total text exceeds 4096 characters")}
+  case "wait":
+   if step.Condition==nil || (*step.Condition!="selected" && *step.Condition!="editable_focus") {
+    return bad("wait condition must be selected or editable_focus")
+   }
+   if step.X==nil || step.Y==nil || step.MouseAction!="" || step.EndX!=nil || step.EndY!=nil ||
+    step.WheelDelta!=nil || step.Keys!=nil || step.Text!=nil || step.SettleMS!=nil {
+    return bad("wait requires x/y and condition, with no action fields")
+   }
   default:
    return bad("unsupported kind")
   }
@@ -126,10 +136,14 @@ func physicalUISequence(steps []uiSequenceStep, geometry captureGeometry) ([]map
  for i, step:= range steps {
   action:=map[string]any{"kind":step.Kind}
   switch step.Kind {
-  case "mouse":
+  case "mouse", "wait":
    x,y,err:=geometry.physical(*step.X,*step.Y)
    if err!=nil{return nil,fmt.Errorf("steps[%d]: %w",i,err)}
    action["x"]=x;action["y"]=y
+   if step.Kind=="wait" {
+    action["condition"]=*step.Condition
+    break
+   }
    action["mouse_action"]=step.MouseAction
    if step.MouseAction=="drag" {
     endX,endY,err:=geometry.physical(*step.EndX,*step.EndY)
