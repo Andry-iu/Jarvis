@@ -1,5 +1,13 @@
 ## Stato operativo verificato: Desktop1 e Desktop2 aggiornati alla 0.8.7 (22/11/2026)
 
+## APPUNTI LOCALI JARVISWAKE - AGGIORNAMENTO PENDENTE 23/11/2026
+
+**Git aggiornato e verificato; appunti sul telefono NON aggiornati.** Su richiesta utente la regola generale "riutilizzare sempre il metodo collaudato; dopo un nuovo metodo verificato scriverlo su Git" e' stata inserita in `AGENTS.md`, `docs/METODI_COLLAUDATI.md`, `windows-mcp-agent/AGENTS.md`, `docs/mcp-agent/PROCEDURES.md`, `CONTINUITY.md`, `PROMPT_CONTINUITA.txt` e `README.md`. Verificato il contenuto via Git remoto.
+
+**Tentativo appunti locali JarvisWake:** elenco appunti e prime letture sono riusciti; individuate le note pertinenti `00 — Memoria operativa: indice e apprendimento` e `Uso di Jarvis Wake`. Prima di ogni salvataggio, la rilettura necessaria ha risposto `code: locked` su entrambe (telefono bloccato). **Nessun `save_note` e' stato inviato, nessuna revisione aggiornata**, quindi l'integrazione degli appunti e' ancora **PENDENTE**. Quando il telefono e' sbloccato e il plugin appunti autorizzato, leggere di nuovo le due note e le revisioni correnti, integrare senza sovrascrivere il contenuto esistente, chiamare `jarviswake_save_note` con `expected_revision` corrente, poi confermare `note_saved`. Non credere che aggiornare `PROMPT_CONTINUITA.txt` sul Git modifichi automaticamente le note Android o l'APK.
+
+---
+
 ## REGOLA OPERATIVA GLOBALE APPROVATA 23/11/2026 - METODI COLLAUDATI
 
 **DECISO E DOCUMENTATO SU GIT, non implica nuove installazioni/aggiornamenti:** per ogni attivita con Jarvis, Jarvis Agent, JarvisWake, cloud, Android/Auto, bridge, ESP32 o Desktop1/Desktop2, leggere `AGENTS.md` e `docs/METODI_COLLAUDATI.md` PRIMA di scegliere come operare. Se esiste una procedura collaudata applicabile, **riutilizzarla come prima scelta** anziche ripetere la ricerca o fare tentativi generici. Dopo ogni nuovo problema risolto e verificato, registrare in Git precondizioni, passi, esito osservato, limiti, errori da evitare, rollback e variante necessaria; commit remoto e verifica. Nel catalogo link alle procedure JarvisWake build e alle Windows MCP esistenti. Distinguere proposta, codice, test, installazione e prova live; la sicurezza non viene derogata. Integrare questa regola anche nei prompt/appunti di JarvisWake quando supportati; la nota telefono non sostituisce lettura Git. Nessun codice agente/APK modificato dalla sola registrazione della regola.
