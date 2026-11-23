@@ -1,5 +1,15 @@
 # Correzione requisito sessione: autorizzazione chat globale — 22 novembre 2026
 
+## REGOLA FONDAMENTALE JARVIS - CONSULTARE PRIMA I METODI COLLAUDATI (23/11/2026)
+
+**Regola generale dell'intero progetto, applicabile a OGNI chiamata Jarvis Agent.** Prima di operare con Windows MCP su Desktop1/Desktop2 o sviluppare l'agente, leggere l'indice `../docs/METODI_COLLAUDATI.md`, questo AGENTS e gli handoff pertinenti; cercare un metodo gia **COLLAUDATO** con stesso scopo, versione, autorizzazione e prerequisiti. **Riutilizzarlo come prima scelta**: non ripetere prove che hanno gia portato a una soluzione documentata. Se un metodo fallisce a seguito di un cambiamento reale, documentare la differenza, collaudare una variante e segnare la vecchia versione come superata solo con prova.
+
+**Dopo ogni nuova soluzione verificata** aggiornare la scheda del metodo sul Git, i problemi noti, gli esiti e i checkpoint; committare e rileggere. Le procedure eseguibili residenti sui Windows restano in `<Jarvis>\Procedures`; il repository custodisce descrizioni e sorgenti verificabili. Tenere l'agente generico, senza moduli per un singolo software. `ui_sequence_dispatched`/`verified=false` non certifica esito grafico: postflight live/screenshot obbligatorio quando pertinente. Permessi, sicurezza e no-replay invariati.
+
+**Questa regola vale anche per JarvisWake, Jarvis cloud, Android, ESP32 e tutte le chat Jarvis**: vedere `../AGENTS.md` e `../docs/METODI_COLLAUDATI.md`.
+
+---
+
 La sessione di autorizzazione richiesta dall'utente **non** riguarda soltanto la UI. L'obiettivo e **una sola conferma iniziale per chat per usare tutti gli strumenti Jarvis consentiti**, riutilizzata dalla stessa chat e scaduta dopo cinque minuti di **inattivita complessiva dell'agente** nella chat. Ogni comando aggiorna il termine di scadenza. Non confondere `ui_session_open` con questa autorizzazione generale. Mantenere i controlli per-comando essenziali, i consensi ad alto rischio e le conferme imposte dall'host ChatGPT. Non fingere che Cloudflare, il token MCP o un ID fornito liberamente dal modello identifichino una chat. **Non dichiarare implementata** la concessione generale finche non esiste una prova verificabile dell'identita della chat/consenso a livello integrazione host. Specifica: [CHAT-WIDE-AUTHORIZATION-20261122.md](../docs/mcp-agent/CHAT-WIDE-AUTHORIZATION-20261122.md).
 
 # Regole operative aggiuntive — 22 novembre 2026
