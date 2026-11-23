@@ -3,6 +3,7 @@ $ErrorActionPreference = 'Stop'
 if (-not ('JarvisWindowNative' -as [type])) { throw 'Desktop native helper not compiled' }
 
 # Test the worker's wait loop without sending input to the desktop.
+function Refuse($code) { throw $code }
 function RequireForeground($h) {
     if (!$script:isForeground) { throw 'foreground_changed' }
 }
