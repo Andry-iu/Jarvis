@@ -1,10 +1,14 @@
 ## Stato operativo verificato: Desktop1 e Desktop2 aggiornati alla 0.8.7 (22/11/2026)
 
-## APPUNTI LOCALI JARVISWAKE - AGGIORNAMENTO PENDENTE 23/11/2026
+## APPUNTI LOCALI JARVISWAKE - AGGIORNATI E VERIFICATI 23/11/2026
 
-**Git aggiornato e verificato; appunti sul telefono NON aggiornati.** Su richiesta utente la regola generale "riutilizzare sempre il metodo collaudato; dopo un nuovo metodo verificato scriverlo su Git" e' stata inserita in `AGENTS.md`, `docs/METODI_COLLAUDATI.md`, `windows-mcp-agent/AGENTS.md`, `docs/mcp-agent/PROCEDURES.md`, `CONTINUITY.md`, `PROMPT_CONTINUITA.txt` e `README.md`. Verificato il contenuto via Git remoto.
+**ESEGUITO E CONFERMATO DAL TELEFONO:** l'utente ha sbloccato il dispositivo e ha autorizzato il completamento dell'aggiornamento dei due appunti di JarvisWake. Sono stati letti i contenuti e le revisioni correnti, integrati preservando tutte le istruzioni precedenti, e salvati con controllo delle revisioni. Il plugin JarvisWake ha risposto `responded` / `note_saved` per entrambi:
+- `00 — Memoria operativa: indice e apprendimento`, revisione da 1 a **2**; conferma `note_saved`, richiesta `a4119c8e-1c15-45c6-8d34-6ce1af844b62`.
+- `Uso di Jarvis Wake`, revisione da 3 a **4**; conferma `note_saved`, richiesta `039c7b97-f193-452d-9791-2245d728ee60`.
 
-**Tentativo appunti locali JarvisWake:** elenco appunti e prime letture sono riusciti; individuate le note pertinenti `00 — Memoria operativa: indice e apprendimento` e `Uso di Jarvis Wake`. Prima di ogni salvataggio, la rilettura necessaria ha risposto `code: locked` su entrambe (telefono bloccato). **Nessun `save_note` e' stato inviato, nessuna revisione aggiornata**, quindi l'integrazione degli appunti e' ancora **PENDENTE**. Quando il telefono e' sbloccato e il plugin appunti autorizzato, leggere di nuovo le due note e le revisioni correnti, integrare senza sovrascrivere il contenuto esistente, chiamare `jarviswake_save_note` con `expected_revision` corrente, poi confermare `note_saved`. Non credere che aggiornare `PROMPT_CONTINUITA.txt` sul Git modifichi automaticamente le note Android o l'APK.
+**REGOLA REGISTRATA NELLE DUE NOTE:** ogni volta che si usa Jarvis, Jarvis Agent, JarvisWake, desktop, cloud, Android/Auto, bridge o ESP32, prima leggere `AGENTS.md` e `docs/METODI_COLLAUDATI.md` sul Git aggiornato, preferire il metodo gia' collaudato compatibile, non ripetere prove inefficaci; dopo ogni soluzione verificata registrare sul Git metodo, prerequisiti, passi, postflight, errori e rollback, commit e verifica remota. Nessun codice APK o agente e' stato modificato da questo intervento. Una nota sul telefono non garantisce da sola caricamento automatico delle istruzioni in ogni nuova chat.
+
+**La precedente voce 'AGGIORNAMENTO PENDENTE', bloccata temporaneamente da `locked`, e' SUPERATA** dal risultato `note_saved` sopra. File Git del progetto Jarvis gia' verificati: `AGENTS.md`, `windows-mcp-agent/AGENTS.md`, `docs/METODI_COLLAUDATI.md`, `docs/mcp-agent/PROCEDURES.md`, `CONTINUITY.md`, `PROMPT_CONTINUITA.txt`, `README.md`.
 
 ---
 
