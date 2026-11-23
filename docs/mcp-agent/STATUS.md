@@ -1,3 +1,4 @@
+> **Checkpoint operativo 23/11/2026, INPUT NO-VNC:** su Desktop1 agente 0.9.6, mouse e tastiera sono stati collaudati con screenshot sia in Blocco note locale sia dentro la VM AUTECH-TEST10 via noVNC. La precedente sequenza `dispatched` senza esito guest non provava input rotto; correggere focus/coordinate e confermare sempre a video. Metodo: [NOVNC-INPUT-VERIFIED-20261123.md](NOVNC-INPUT-VERIFIED-20261123.md). Rimangono pendenti le modifiche account delle 10 TEST e una prova di affidabilità ripetuta; nessun codice agente o credenziale pubblicata.
 > **Progetto unificato, candidato 0.8.7 (22 novembre 2026):** riferimento centrale in [UNIFIED-RELEASE-0.8.7-20261122.md](UNIFIED-RELEASE-0.8.7-20261122.md). La 0.8.6 Windows e gia verificata su Desktop1; il codice integrato 0.8.7 e ancora da testare e non va distribuito automaticamente. Restano aperti ui_mouse nel connettore e collaudo ESP32.
 
 # Decisione permanente (19 novembre 2026): Jarvis applicazione-agnostico
