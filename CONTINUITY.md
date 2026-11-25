@@ -2,6 +2,9 @@
 
 Jarvis Wake e Jarvis Agent valutano prima il percorso verificabile più rapido ed efficace e danno priorità agli strumenti di base dedicati. L’uso di script amministrativi si concorda almeno una volta per chat, prima del primo utilizzo, e il consenso vale per le operazioni concordate nella chat corrente. La regola è documentata in [AGENTS.md](AGENTS.md), nel [prompt di continuità di Jarvis Wake](PROMPT_CONTINUITA.txt) e nelle [istruzioni dell’agente Windows](windows-mcp-agent/AGENTS.md).
 
+
+Verifica del 25 novembre 2026. La regola è presente in `appunti.txt` su Desktop1 e Desktop2 e nei due appunti locali di Jarvis Wake `00 — Memoria operativa: indice e apprendimento` (revisione 3) e `Uso di Jarvis Wake` (revisione 5). L'allineamento degli appunti locali su SoftPlcTest1 e PCADMIN resta da completare quando i due agenti saranno raggiungibili.
+
 ---
 
 ## Stato operativo verificato: Desktop1 e Desktop2 aggiornati alla 0.8.7 (22/11/2026)
