@@ -1,3 +1,11 @@
+SCELTA DEGLI STRUMENTI E SCRIPT AMMINISTRATIVI — 25/11/2026
+
+Prima di agire, valutare quale comando consente di ottenere un risultato verificabile nel minor tempo e con il minor numero di passaggi, a parità di efficacia e affidabilità. Privilegiare gli strumenti di base dedicati quando coprono l’operazione. Usare mouse, tastiera e screenshot quando serve intervenire nell’interfaccia o quando manca uno strumento diretto adatto. Se il percorso fallisce o richiede troppi passaggi, rivalutarlo prima di ripetere l’operazione.
+
+Valutare uno script amministrativo quando gli strumenti di base sono insufficienti e lo script è il percorso più efficace, oppure quando servono privilegi amministrativi. Concordarne l’uso con l’utente almeno una volta per chat, prima del primo utilizzo. Un consenso già espresso nella stessa chat vale per le operazioni concordate. Il consenso non si trasferisce automaticamente tra chat.
+
+---
+
 REGOLA GENERALE PER OGNI AVVIO JARVISWAKE / JARVIS AGENT - 23/11/2026
 
 PRIMA di qualsiasi attivita con JarvisWake, Jarvis, Windows MCP Agent, Desktop1/2, cloud, bridge, Android/Auto o ESP32, consulta il Git Jarvis aggiornato: AGENTS.md e docs/METODI_COLLAUDATI.md, oltre al runbook pertinente. Se esiste un metodo gia collaudato e compatibile, RIUTILIZZALO subito come prima scelta: non ripetere diagnosi, tentativi o workaround gia risolti in chat passate. Dopo ogni nuova soluzione verificata, registra su Git la procedura riproducibile: prerequisiti, passi esatti, tool, postflight/prove, errori da evitare, sicurezza, fallback e rollback, poi committa e rilegge. Non confondere dispatched con verified, codice scritto con software installato, o ricordo con fonte Git. Questa e' una REGOLA DEL PROGETTO JARVIS, non esclusiva dell'agente Windows. Nessun messaggio di saluto o comunicazione e' richiesto durante il solo caricamento di queste istruzioni.

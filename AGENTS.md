@@ -1,5 +1,11 @@
 # Jarvis — integrazione comune (22/11/2026)
 
+## Scelta degli strumenti e script amministrativi — 25 novembre 2026
+
+Prima di agire, valutare quale comando consente di ottenere un risultato verificabile nel minor tempo e con il minor numero di passaggi, a parità di efficacia e affidabilità. Privilegiare gli strumenti di base dedicati quando coprono l’operazione. Usare mouse, tastiera e screenshot quando serve intervenire nell’interfaccia o quando manca uno strumento diretto adatto. Se il percorso fallisce o richiede troppi passaggi, rivalutarlo prima di ripetere l’operazione.
+
+Valutare uno script amministrativo quando gli strumenti di base sono insufficienti e lo script è il percorso più efficace, oppure quando servono privilegi amministrativi. Concordarne l’uso con l’utente almeno una volta per chat, prima del primo utilizzo. Un consenso già espresso nella stessa chat vale per le operazioni concordate. Il consenso non si trasferisce automaticamente tra chat.
+
 ## REGOLA FONDAMENTALE 23/11/2026 - RIUSARE I METODI GIA COLLAUDATI
 
 **REGOLA GENERALE APPROVATA DALL'UTENTE, OBBLIGATORIA OGNI VOLTA CHE SI USA JARVIS O UNO DEI SUOI COMPONENTI, ANCHE IN UNA NUOVA CHAT.** Prima di qualsiasi azione con **Jarvis, Jarvis Agent (Windows MCP Desktop1/Desktop2), JarvisWake, bridge, Android, Android Auto, cloud runner, ESP32 o altri moduli**, leggere sul Git remoto aggiornato il [Catalogo dei metodi collaudati](docs/METODI_COLLAUDATI.md) e i runbook pertinenti; **cercare e RIUTILIZZARE COME PRIMA SCELTA il metodo gia collaudato** se compatibile con ambiente, versione e prerequisiti. Non ripetere prove gia risolte né ricominciare da workaround generici.

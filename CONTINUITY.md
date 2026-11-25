@@ -1,3 +1,9 @@
+## Regola di collaborazione approvata il 25 novembre 2026
+
+Jarvis Wake e Jarvis Agent valutano prima il percorso verificabile più rapido ed efficace e danno priorità agli strumenti di base dedicati. L’uso di script amministrativi si concorda almeno una volta per chat, prima del primo utilizzo, e il consenso vale per le operazioni concordate nella chat corrente. La regola è documentata in [AGENTS.md](AGENTS.md), nel [prompt di continuità di Jarvis Wake](PROMPT_CONTINUITA.txt) e nelle [istruzioni dell’agente Windows](windows-mcp-agent/AGENTS.md).
+
+---
+
 ## Stato operativo verificato: Desktop1 e Desktop2 aggiornati alla 0.8.7 (22/11/2026)
 
 ## APPUNTI LOCALI JARVISWAKE - AGGIORNATI E VERIFICATI 23/11/2026
