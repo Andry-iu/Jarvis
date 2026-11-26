@@ -395,7 +395,21 @@ func (r *Runtime) ircCallWithTransports(p runtimeRequest, c *http.Client, openSe
 			image, photo, e = capture(s, seq)
 			return photo, e
 		}
-		if p.Text != "STOP" {
+		text := p.Text
+		var movement map[string]any
+		if p.Operation == "ircesp32_mouse_camera" {
+			if (serialSelected || d.linkID != 0) && !s.HIDReady {
+				return nil, errors.New("IRCESP32 USB HID is not ready on the target")
+			}
+			text, movement, e = r.ircCameraMove(p, s)
+			if e != nil || text == "" {
+				return movement, e
+			}
+		}
+		if p.Operation == "ircesp32_input" {
+			r.ircFrame = ircCameraFrame{}
+		}
+		if text != "STOP" {
 			if (serialSelected || d.linkID != 0) && !s.HIDReady {
 				return nil, errors.New("IRCESP32 USB HID is not ready on the target")
 			}
@@ -404,8 +418,13 @@ func (r *Runtime) ircCallWithTransports(p runtimeRequest, c *http.Client, openSe
 			}
 			seq++
 		}
-		if e = command(s, seq, p.Text); e != nil {
+		if e = command(s, seq, text); e != nil {
 			return nil, e
+		}
+		if movement != nil {
+			movement["state"] = "dispatched"
+			movement["sequence"] = seq
+			return movement, nil
 		}
 		return map[string]any{"device_id": d.ID, "boot_id": s.BootID, "sequence": seq, "state": "dispatched", "target_effect_verified": false}, nil
 	})
@@ -417,6 +436,10 @@ func (r *Runtime) ircCallWithTransports(p runtimeRequest, c *http.Client, openSe
 	}
 	if image == "" {
 		return nil, errors.New("capture request already completed; read request_status for metadata; no new image acquired")
+	}
+	r.ircFrame = ircCameraFrame{
+		ID: photo["capture_id"].(string), DeviceID: d.ID, BootID: photo["boot_id"].(string),
+		Width: photo["width"].(int), Height: photo["height"].(int), Received: time.Now(),
 	}
 	photo["machine_id"] = r.MachineID
 	photo["request_id"] = p.RequestID

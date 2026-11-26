@@ -18,6 +18,8 @@ import (
 // Runtime state is private to one agent instance. An OS lock prevents competing
 // instances from accepting the same request. A process crash releases the lock.
 type Runtime struct {
+	ircCalibrationMu sync.Mutex
+	ircFrame        ircCameraFrame // guarded by ircMu
 	ircMu           sync.Mutex
 	ircDetected     *ircDetectedDevice // guarded by ircMu; valid only for the selected connection
 	mu              sync.Mutex

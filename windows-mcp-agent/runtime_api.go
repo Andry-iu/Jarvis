@@ -15,6 +15,8 @@ import (
 )
 
 type runtimeRequest struct {
+	BitmapReady bool `json:"bitmap_ready,omitempty"`
+	TargetDeviceID string `json:"target_device_id,omitempty"`
 	SourceCommit     string   `json:"source_commit,omitempty"`
 	TargetVersion    string   `json:"target_version,omitempty"`
 	PairingID        string   `json:"pairing_id,omitempty"`
@@ -165,7 +167,7 @@ func toolsList() any {
 			switch f {
 			case "port", "offset", "limit", "timeout_seconds", "after", "monitor", "max_width", "quality", "x", "y", "end_x", "end_y", "wheel_delta":
 				typ = "integer"
-			case "recursive", "elevated", "overwrite":
+			case "recursive", "elevated", "overwrite", "bitmap_ready":
 				typ = "boolean"
 			case "region", "depends_on", "resources", "keys", "args", "steps":
 				typ = "array"
@@ -432,7 +434,9 @@ func (a *Agent) invokeRuntime(name string, raw json.RawMessage) any {
 		return v
 	}
 	var v any
-	if isDirectUI(p.Operation) {
+	if p.Operation == "ircesp32_calibrate" {
+		v, e = a.ircCalibrate(r, p)
+	} else if isDirectUI(p.Operation) {
 		v, e = a.directUI(r, p)
 	} else {
 		v, e = r.call(p)
@@ -459,7 +463,7 @@ func (r *Runtime) call(p runtimeRequest) (any, error) {
 	switch p.Operation {
 	case "ircesp32_discover":
 		return r.ircDiscoverTransport(p)
-	case "ircesp32_list", "ircesp32_status", "ircesp32_capture", "ircesp32_input":
+	case "ircesp32_list", "ircesp32_status", "ircesp32_capture", "ircesp32_input", "ircesp32_mouse_camera":
 		return r.ircCall(p)
 	case "device_pair_begin", "device_pair_status", "device_pair_complete":
 		return r.interactivePair(p)
