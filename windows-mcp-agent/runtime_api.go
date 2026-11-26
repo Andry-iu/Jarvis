@@ -80,6 +80,9 @@ type runtimeRequest struct {
 	MaxWidth int             `json:"max_width,omitempty"`
 	Quality  int             `json:"quality,omitempty"`
 	DeviceID string          `json:"device_id,omitempty"`
+	InterfaceName string     `json:"interface_name,omitempty"`
+	Transport     string     `json:"transport,omitempty"`
+	SerialPort    string     `json:"serial_port,omitempty"`
 	Call     json.RawMessage `json:"call,omitempty"`
 	Device   *peerDevice     `json:"device,omitempty"`
 }
@@ -187,6 +190,9 @@ func toolsList() any {
 			}
 			if f == "action" {
 				s["enum"] = []string{"invoke", "set_text", "type_text", "focus", "toggle", "select"}
+			}
+			if f == "transport" {
+				s["enum"] = []string{"usb", "wifi"}
 			}
 			if f == "mouse_action" {
 				s["enum"] = []string{"move", "click", "double_click", "right_click", "wheel", "drag"}
@@ -451,6 +457,8 @@ func (a *Agent) invokeRuntime(name string, raw json.RawMessage) any {
 }
 func (r *Runtime) call(p runtimeRequest) (any, error) {
 	switch p.Operation {
+	case "ircesp32_discover":
+		return r.ircDiscoverTransport(p)
 	case "ircesp32_list", "ircesp32_status", "ircesp32_capture", "ircesp32_input":
 		return r.ircCall(p)
 	case "device_pair_begin", "device_pair_status", "device_pair_complete":
