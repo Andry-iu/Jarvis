@@ -51,6 +51,13 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: windows-mcp-agent/go.mod
+          cache: false
+      - name: Test IRCESP32 and USB COM inventory on Windows
+        working-directory: windows-mcp-agent
+        run: go test -run IRCESP32 ./...
       - name: Parse the Windows scripts
         shell: pwsh
         run: |

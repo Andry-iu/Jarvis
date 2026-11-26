@@ -17,12 +17,24 @@ type ircHotspot struct {
 type ircDetectedDevice struct {
 	device  ircDevice
 	hotspot ircHotspot
+	serial  *ircSerialPort
+}
+
+func (d ircDetectedDevice) location() map[string]any {
+	if d.serial != nil {
+		return map[string]any{"device_id": d.device.ID, "serial_port": d.serial.name, "source": "usb_ttl_discovery"}
+	}
+	return map[string]any{"device_id": d.device.ID, "interface_name": d.hotspot.name, "source": "hotspot_discovery"}
 }
 
 func (s ircStatus) hotspotStatus() bool {
 	if s.Protocol != "0.3" || s.Kind != "autech-ircesp32" || s.LinkID == 0 {
 		return false
 	}
+	return s.validCameraState()
+}
+
+func (s ircStatus) validCameraState() bool {
 	switch s.CameraState {
 	case "not_initialized", "pins_unverified", "invalid_pins", "psram_required",
 		"init_failed", "unexpected_sensor", "ready", "capture_failed", "no_fresh_frame":

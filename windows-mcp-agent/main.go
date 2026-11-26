@@ -22,7 +22,7 @@ import (
 	"time"
 )
 
-const version = "0.9.7"
+const version = "0.9.8"
 
 type RPCRequest struct {
 	JSONRPC string          `json:"jsonrpc"`

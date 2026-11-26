@@ -18,7 +18,7 @@ try{
   if($task.Principal.LogonType -ne 'Interactive' -or $task.Principal.RunLevel -ne 'Highest' -or -not $task.Triggers){throw 'startup_task_not_registered'}
   if($settings.remote_configured -or ([IO.File]::ReadAllText((Join-Path $installHome 'Config\agent.env')) -match 'CLOUDFLARE|JARVIS_CF_')){throw 'local_install_requires_cloudflare'}
   $child=Start-Child (Join-Path $installHome 'Agent\jarvis-mcp.exe') ('-listen 127.0.0.1:'+$port) $installHome 'test-agent';$children+=$child
-  $ready=$false;for($j=0;$j -lt 100;$j++){try{$info=Invoke-LocalTool $installHome 'machine_info';if($info.version -eq '0.9.7'){$ready=$true;break}}catch{};Start-Sleep -Milliseconds 100}
+  $ready=$false;for($j=0;$j -lt 100;$j++){try{$info=Invoke-LocalTool $installHome 'machine_info';if($info.version -eq '0.9.8'){$ready=$true;break}}catch{};Start-Sleep -Milliseconds 100}
   if(-not $ready){throw 'installed_agent_not_ready'}
   if($info.capabilities -notcontains 'ircesp32_discover'){throw 'ircesp32_discover_missing'}
   $esp=Invoke-LocalTool $installHome 'ircesp32_list'

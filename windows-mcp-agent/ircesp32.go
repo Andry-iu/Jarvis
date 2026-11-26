@@ -51,9 +51,9 @@ var ircTokenEnv = regexp.MustCompile(`^JARVIS_IRCESP32_TOKEN_[A-Z0-9_]+$`)
 
 func init() {
 	runtimeCatalog = append(runtimeCatalog, []runtimeTool{
-		{"ircesp32_discover", "Detect one IRCESP32 on this bridge's already connected private Wi-Fi hotspot and use it for subsequent explicit status, photo or input requests. No credentials, Wi-Fi association, photos or HID actions during discovery. If necessary, select the exact Windows interface name.", []string{"interface_name"}, nil, true},
+		{"ircesp32_discover", "Detect one IRCESP32 on this Windows bridge for later explicit status, photo or input requests. Use transport=usb for USB-TTL (optional serial_port, e.g. COM7), or transport=wifi or omit it for the connected private hotspot (optional interface_name). Discovery takes no photos and sends no HID input.", []string{"transport", "serial_port", "interface_name"}, nil, true},
 		{"ircesp32_list", "List configured and previously detected IRCESP32 devices on this bridge. Call ircesp32_discover for a fresh detection or ircesp32_status for live status.", nil, nil, true},
-		{"ircesp32_status", "Read authenticated IRCESP32 identity, boot, camera readiness and input state over its private Wi-Fi AP. Bridge needs independent Internet.", []string{"device_id"}, []string{"device_id"}, true},
+		{"ircesp32_status", "Read IRCESP32 identity, boot, camera readiness and HID state on its selected USB-TTL or Wi-Fi connection.", []string{"device_id"}, []string{"device_id"}, true},
 		{"ircesp32_capture", "Request one fresh camera JPEG and return an MCP image with identity, hash, device uptime and UTC receive time. Refuses unverified pinout. Unique request_id; never replay on timeout.", []string{"device_id", "request_id"}, []string{"device_id", "request_id"}, false},
 		{"ircesp32_input", "Send one USB HID action through the configured IRCESP32: text KEY <usage> <modifiers>, MOUSE <dx> <dy> <wheel> <buttons>, or STOP. Automatically arms immediately before one action, releases afterwards. Dispatch is not target effect; no replay.", []string{"device_id", "text", "request_id"}, []string{"device_id", "text", "request_id"}, false},
 	}...)
@@ -178,7 +178,15 @@ func ircGetStatus(c *http.Client, d ircDevice, path string) (ircStatus, error) {
 	}
 	defer resp.Body.Close()
 	b, e := io.ReadAll(io.LimitReader(resp.Body, 4097))
-	if e != nil || len(b) > 4096 || resp.StatusCode != 200 || json.Unmarshal(b, &s) != nil || !ircID.MatchString(s.DeviceID) || !ircBoot.MatchString(s.BootID) {
+	if e != nil || len(b) > 4096 || resp.StatusCode != 200 {
+		return s, errors.New("IRCESP32 status unavailable or malformed")
+	}
+	return ircParseStatus(b)
+}
+
+func ircParseStatus(b []byte) (ircStatus, error) {
+	var s ircStatus
+	if json.Unmarshal(b, &s) != nil || !ircID.MatchString(s.DeviceID) || !ircBoot.MatchString(s.BootID) {
 		return s, errors.New("IRCESP32 status unavailable or malformed")
 	}
 	return s, nil
@@ -217,6 +225,13 @@ func ircValidateInput(text string) error {
 	}
 	return nil
 }
+
+const ircMaxJPEG = 1024 * 1024
+
+type ircPhotoHeader struct {
+	device, boot, sequence, hash, width, height, started, captured string
+}
+
 func ircReadPhoto(c *http.Client, d ircDevice, s ircStatus, seq uint32) (string, map[string]any, error) {
 	requested := time.Now().UTC().Format(time.RFC3339Nano)
 	resp, e := ircRequest(c, d, "POST", "/v1/capture", fmt.Sprintf("%s %d", s.BootID, seq))
@@ -227,19 +242,30 @@ func ircReadPhoto(c *http.Client, d ircDevice, s ircStatus, seq uint32) (string,
 	if resp.StatusCode != 200 || resp.Header.Get("Content-Type") != "image/jpeg" {
 		return "", nil, errors.New("IRCESP32 photo unavailable; check camera_state, pinout and PSRAM; do not replay")
 	}
-	b, e := io.ReadAll(io.LimitReader(resp.Body, 1024*1024+1))
-	if e != nil || len(b) < 4 || len(b) > 1024*1024 || b[0] != 0xff || b[1] != 0xd8 || b[len(b)-2] != 0xff || b[len(b)-1] != 0xd9 {
+	b, e := io.ReadAll(io.LimitReader(resp.Body, ircMaxJPEG+1))
+	if e != nil {
+		return "", nil, errors.New("IRCESP32 incomplete JPEG")
+	}
+	h := resp.Header
+	return ircValidatePhoto(b, d, s, seq, requested, ircPhotoHeader{
+		h.Get("X-IR-Device"), h.Get("X-IR-Boot"), h.Get("X-IR-Sequence"), h.Get("X-IR-SHA256"),
+		h.Get("X-IR-Width"), h.Get("X-IR-Height"), h.Get("X-IR-Requested-Us"), h.Get("X-IR-Captured-Us"),
+	})
+}
+
+func ircValidatePhoto(b []byte, d ircDevice, s ircStatus, seq uint32, requested string, header ircPhotoHeader) (string, map[string]any, error) {
+	if len(b) < 4 || len(b) > ircMaxJPEG || b[0] != 0xff || b[1] != 0xd8 || b[len(b)-2] != 0xff || b[len(b)-1] != 0xd9 {
 		return "", nil, errors.New("IRCESP32 incomplete or invalid JPEG")
 	}
 	h := sha256.Sum256(b)
 	sum := hex.EncodeToString(h[:])
-	if resp.Header.Get("X-IR-Device") != d.ID || resp.Header.Get("X-IR-Boot") != s.BootID || resp.Header.Get("X-IR-Sequence") != strconv.FormatUint(uint64(seq), 10) || resp.Header.Get("X-IR-SHA256") != sum {
+	if header.device != d.ID || header.boot != s.BootID || header.sequence != strconv.FormatUint(uint64(seq), 10) || header.hash != sum {
 		return "", nil, errors.New("IRCESP32 photo identity or hash mismatch")
 	}
-	width, ew := strconv.Atoi(resp.Header.Get("X-IR-Width"))
-	height, eh := strconv.Atoi(resp.Header.Get("X-IR-Height"))
-	started, es := strconv.ParseInt(resp.Header.Get("X-IR-Requested-Us"), 10, 64)
-	captured, ec := strconv.ParseInt(resp.Header.Get("X-IR-Captured-Us"), 10, 64)
+	width, ew := strconv.Atoi(header.width)
+	height, eh := strconv.Atoi(header.height)
+	started, es := strconv.ParseInt(header.started, 10, 64)
+	captured, ec := strconv.ParseInt(header.captured, 10, 64)
 	cfg, ej := jpeg.DecodeConfig(bytes.NewReader(b))
 	if ew != nil || eh != nil || es != nil || ec != nil || ej != nil || started < 0 || captured < started || width < 1 || height < 1 || width > 2048 || height > 1536 || width != cfg.Width || height != cfg.Height {
 		return "", nil, errors.New("IRCESP32 stale frame or invalid photo metadata")
@@ -252,6 +278,10 @@ func (r *Runtime) ircCall(p runtimeRequest) (any, error) {
 }
 
 func (r *Runtime) ircCallWithClient(p runtimeRequest, c *http.Client) (any, error) {
+	return r.ircCallWithTransports(p, c, ircOpenSerial)
+}
+
+func (r *Runtime) ircCallWithTransports(p runtimeRequest, c *http.Client, openSerial func(ircSerialPort) (ircSerialIO, error)) (any, error) {
 	r.ircMu.Lock()
 	defer r.ircMu.Unlock()
 	detected := r.ircDetected
@@ -262,7 +292,7 @@ func (r *Runtime) ircCallWithClient(p runtimeRequest, c *http.Client) (any, erro
 		}
 		v := []any{}
 		if detected != nil {
-			v = append(v, map[string]any{"device_id": detected.device.ID, "interface_name": detected.hotspot.name, "source": "hotspot_discovery"})
+			v = append(v, detected.location())
 		}
 		for _, d := range devices {
 			if detected != nil && d.ID == detected.device.ID {
@@ -275,7 +305,7 @@ func (r *Runtime) ircCallWithClient(p runtimeRequest, c *http.Client) (any, erro
 	var d ircDevice
 	if detected != nil && detected.device.ID == p.DeviceID {
 		d = detected.device
-		if c == nil {
+		if c == nil && detected.serial == nil {
 			var e error
 			c, e = ircHotspotClient(detected.hotspot)
 			if e != nil {
@@ -298,17 +328,47 @@ func (r *Runtime) ircCallWithClient(p runtimeRequest, c *http.Client) (any, erro
 	if d.ID == "" {
 		return nil, errors.New("IRCESP32 device not configured or detected on this bridge; run ircesp32_discover")
 	}
-	if c == nil {
-		c = ircHTTPClient()
-	}
-	defer c.CloseIdleConnections()
 	if p.Operation == "ircesp32_input" {
 		if e := ircValidateInput(p.Text); e != nil {
 			return nil, e
 		}
 	}
+	var read func() (ircStatus, error)
+	var command func(ircStatus, uint32, string) error
+	var capture func(ircStatus, uint32) (string, map[string]any, error)
+	serialSelected := detected != nil && d.ID == detected.device.ID && detected.serial != nil
+	if serialSelected {
+		var client *ircSerialClient
+		defer func() {
+			if client != nil {
+				client.port.Close()
+			}
+		}()
+		read = func() (ircStatus, error) {
+			port, err := openSerial(*detected.serial)
+			if err != nil {
+				return ircStatus{}, err
+			}
+			client = newIRCSerialClient(port)
+			s, err := client.status()
+			if err == nil && (s.DeviceID != d.ID || s.BootID != d.bootID) {
+				err = errors.New("IRCESP32 USB device or boot changed; discover again")
+			}
+			return s, err
+		}
+		command = func(s ircStatus, seq uint32, text string) error { return client.command(s, seq, text) }
+		capture = func(s ircStatus, seq uint32) (string, map[string]any, error) { return client.capture(d, s, seq) }
+	} else {
+		if c == nil {
+			c = ircHTTPClient()
+		}
+		defer c.CloseIdleConnections()
+		read = func() (ircStatus, error) { return ircReadStatus(c, d) }
+		command = func(s ircStatus, seq uint32, text string) error { return ircSendCommand(c, d, s, seq, text) }
+		capture = func(s ircStatus, seq uint32) (string, map[string]any, error) { return ircReadPhoto(c, d, s, seq) }
+	}
 	readStatus := func() (ircStatus, error) {
-		s, e := ircReadStatus(c, d)
+		s, e := read()
 		if e != nil && d.linkID != 0 {
 			r.ircDetected = nil
 		}
@@ -332,19 +392,19 @@ func (r *Runtime) ircCallWithClient(p runtimeRequest, c *http.Client) (any, erro
 			if !s.PinsVerified {
 				return nil, errors.New("IRCESP32 camera pinout unverified; capture refused")
 			}
-			image, photo, e = ircReadPhoto(c, d, s, seq)
+			image, photo, e = capture(s, seq)
 			return photo, e
 		}
 		if p.Text != "STOP" {
-			if d.linkID != 0 && !s.HIDReady {
+			if (serialSelected || d.linkID != 0) && !s.HIDReady {
 				return nil, errors.New("IRCESP32 USB HID is not ready on the target")
 			}
-			if e = ircSendCommand(c, d, s, seq, "ARM"); e != nil {
+			if e = command(s, seq, "ARM"); e != nil {
 				return nil, e
 			}
 			seq++
 		}
-		if e = ircSendCommand(c, d, s, seq, p.Text); e != nil {
+		if e = command(s, seq, p.Text); e != nil {
 			return nil, e
 		}
 		return map[string]any{"device_id": d.ID, "boot_id": s.BootID, "sequence": seq, "state": "dispatched", "target_effect_verified": false}, nil

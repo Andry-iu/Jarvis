@@ -4,7 +4,7 @@ sul PC destinatario. Stessa procedura diretta o attraverso piu gateway.
 Se Git non e raggiungibile, resta disponibile il pacchetto verificato via MCP.
 Entrambe usano l'updater canonico con backup/rollback e ricevuta finale.
 
-JARVIS AGENT SETUP 0.9.7 / AGENTE 0.9.7 - Windows x64
+JARVIS AGENT SETUP 0.9.8 / AGENTE 0.9.8 - Windows x64
 
 Estrarre lo ZIP in una cartella e avviare INSTALLA.cmd. Consentire UAC con lo
 stesso utente Windows. Scegliere il nome libero e univoco del computer, la cartella
@@ -40,15 +40,19 @@ AGGIORNA.cmd sul PC da aggiornare, con UAC dello stesso utente. Indicare la cart
 Jarvis esistente (es. C:\Jarvis). Non eseguire INSTALLA sopra l'installazione.
 AGGIORNA usa l'unico updater, con backup e prova di ripristino, conserva nome,
 identita, configurazione e avvio automatico. Non richiede Go o Cloudflare.
-Al termine attendere la conferma 0.9.7; tenere la sessione aperta e sbloccata.
+Al termine attendere la conferma 0.9.8; tenere la sessione aperta e sbloccata.
 
 ESP32-CAM SU BANCO
-Dopo la normale connessione Windows all'hotspot di una ESP32 con firmware 0.3,
-chiedere alla propria chat di rilevare la scheda sul nuovo ponte. Il comando
-MCP ircesp32_discover usa solo il Wi-Fi gia connesso. Il PC mantiene il proprio
-collegamento a Jarvis e a Internet su Ethernet o un secondo adattatore Wi-Fi.
-La chat puo poi richiedere foto e input separatamente. Dopo aver scollegato o
-riavviato la scheda, ripetere il rilevamento.
+Con firmware 0.4, collegare USB-TTL al ponte Windows e chiedere alla propria
+chat di rilevare la scheda via USB. Usare ircesp32_discover con transport=usb.
+Se rispondono piu schede, selezionare serial_port (esempio COM7). Chiudere
+Arduino Serial Monitor se occupa la porta. Windows deve esporre la COM del
+bridge USB-TTL; il PC puo mantenere la connessione Internet abituale.
+Per usare l'hotspot, associare prima Windows alla scheda (protocollo Wi-Fi 0.3)
+e mantenere Internet su Ethernet o un secondo adattatore Wi-Fi.
+OTG va al PC banco. Verificare i rami VBUS prima di collegare entrambi i cavi.
+La chat puo richiedere foto e input separatamente. Ripetere il rilevamento
+quando si sposta o riavvia la scheda.
 
 Config\devices.json conserva nomi, identita, indirizzi, percorsi via altri agenti e
 stato active/retired. Dismesso e offline sono distinti. Ogni gateway conserva la
