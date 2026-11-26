@@ -28,6 +28,8 @@ type ircDevice struct {
 	Label    string `json:"label"`
 	Endpoint string `json:"endpoint"`
 	TokenEnv string `json:"token_env"`
+	linkID   uint32
+	bootID   string
 }
 type ircStatus struct {
 	Protocol     string `json:"protocol"`
@@ -37,6 +39,9 @@ type ircStatus struct {
 	Armed        bool   `json:"armed"`
 	CameraState  string `json:"camera_state"`
 	PinsVerified bool   `json:"camera_pins_verified"`
+	HIDReady     bool   `json:"usb_hid_ready"`
+	Kind         string `json:"kind,omitempty"`
+	LinkID       uint32 `json:"link_id,omitempty"`
 }
 
 var ircID = regexp.MustCompile(`^ircesp32-[0-9a-f]{12}$`)
@@ -46,7 +51,8 @@ var ircTokenEnv = regexp.MustCompile(`^JARVIS_IRCESP32_TOKEN_[A-Z0-9_]+$`)
 
 func init() {
 	runtimeCatalog = append(runtimeCatalog, []runtimeTool{
-		{"ircesp32_list", "List explicitly configured IRCESP32 devices on this bridge; no Wi-Fi scan, pairing, credentials or automatic connection.", nil, nil, true},
+		{"ircesp32_discover", "Detect one IRCESP32 on this bridge's already connected private Wi-Fi hotspot and use it for subsequent explicit status, photo or input requests. No credentials, Wi-Fi association, photos or HID actions during discovery. If necessary, select the exact Windows interface name.", []string{"interface_name"}, nil, true},
+		{"ircesp32_list", "List configured and previously detected IRCESP32 devices on this bridge. Call ircesp32_discover for a fresh detection or ircesp32_status for live status.", nil, nil, true},
 		{"ircesp32_status", "Read authenticated IRCESP32 identity, boot, camera readiness and input state over its private Wi-Fi AP. Bridge needs independent Internet.", []string{"device_id"}, []string{"device_id"}, true},
 		{"ircesp32_capture", "Request one fresh camera JPEG and return an MCP image with identity, hash, device uptime and UTC receive time. Refuses unverified pinout. Unique request_id; never replay on timeout.", []string{"device_id", "request_id"}, []string{"device_id", "request_id"}, false},
 		{"ircesp32_input", "Send one USB HID action through the configured IRCESP32: text KEY <usage> <modifiers>, MOUSE <dx> <dy> <wheel> <buttons>, or STOP. Automatically arms immediately before one action, releases afterwards. Dispatch is not target effect; no replay.", []string{"device_id", "text", "request_id"}, []string{"device_id", "text", "request_id"}, false},
@@ -110,8 +116,11 @@ func ircHTTPClient() *http.Client {
 	}}
 }
 func ircRequest(c *http.Client, d ircDevice, method, path, body string) (*http.Response, error) {
-	token := os.Getenv(d.TokenEnv)
-	if !ircToken.MatchString(token) {
+	var token string
+	if d.linkID == 0 && path != "/v1/discover" {
+		token = os.Getenv(d.TokenEnv)
+	}
+	if d.linkID == 0 && path != "/v1/discover" && !ircToken.MatchString(token) {
 		return nil, errors.New("IRCESP32 token unavailable or invalid")
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
@@ -120,7 +129,14 @@ func ircRequest(c *http.Client, d ircDevice, method, path, body string) (*http.R
 		cancel()
 		return nil, errors.New("IRCESP32 request invalid")
 	}
-	req.Header.Set("Authorization", "Bearer "+token)
+	if token != "" {
+		req.Header.Set("Authorization", "Bearer "+token)
+	} else {
+		req.Header.Set("X-IR-Client", "jarvis")
+		if d.linkID != 0 {
+			req.Header.Set("X-IR-Link", strconv.FormatUint(uint64(d.linkID), 10))
+		}
+	}
 	req.Header.Set("Content-Type", "text/plain")
 	// Prevent automatic HTTP transport retries: no GetBody and no idempotency headers.
 	req.GetBody = nil
@@ -140,15 +156,30 @@ type ircBody struct {
 
 func (b *ircBody) Close() error { defer b.cancel(); return b.ReadCloser.Close() }
 func ircReadStatus(c *http.Client, d ircDevice) (ircStatus, error) {
+	s, e := ircGetStatus(c, d, "/v1/status")
+	if e != nil || s.DeviceID != d.ID {
+		return ircStatus{}, errors.New("IRCESP32 status refused or device identity mismatch")
+	}
+	if d.linkID != 0 {
+		if !s.hotspotStatus() || s.BootID != d.bootID || s.LinkID != d.linkID {
+			return ircStatus{}, errors.New("IRCESP32 hotspot or boot changed; run ircesp32_discover again")
+		}
+	} else if s.Protocol != "0.2" {
+		return ircStatus{}, errors.New("IRCESP32 status protocol mismatch")
+	}
+	return s, nil
+}
+
+func ircGetStatus(c *http.Client, d ircDevice, path string) (ircStatus, error) {
 	var s ircStatus
-	resp, e := ircRequest(c, d, "GET", "/v1/status", "")
+	resp, e := ircRequest(c, d, "GET", path, "")
 	if e != nil {
 		return s, e
 	}
 	defer resp.Body.Close()
 	b, e := io.ReadAll(io.LimitReader(resp.Body, 4097))
-	if e != nil || len(b) > 4096 || resp.StatusCode != 200 || json.Unmarshal(b, &s) != nil || s.Protocol != "0.2" || s.DeviceID != d.ID || !ircBoot.MatchString(s.BootID) {
-		return s, errors.New("IRCESP32 status refused or device identity/protocol mismatch")
+	if e != nil || len(b) > 4096 || resp.StatusCode != 200 || json.Unmarshal(b, &s) != nil || !ircID.MatchString(s.DeviceID) || !ircBoot.MatchString(s.BootID) {
+		return s, errors.New("IRCESP32 status unavailable or malformed")
 	}
 	return s, nil
 }
@@ -217,47 +248,79 @@ func ircReadPhoto(c *http.Client, d ircDevice, s ircStatus, seq uint32) (string,
 	return base64.StdEncoding.EncodeToString(b), meta, nil
 }
 func (r *Runtime) ircCall(p runtimeRequest) (any, error) {
-	return r.ircCallWithClient(p, ircHTTPClient())
+	return r.ircCallWithClient(p, nil)
 }
 
 func (r *Runtime) ircCallWithClient(p runtimeRequest, c *http.Client) (any, error) {
-	defer c.CloseIdleConnections()
-	devices, e := r.ircDevices()
-	if e != nil {
-		return nil, e
-	}
+	r.ircMu.Lock()
+	defer r.ircMu.Unlock()
+	detected := r.ircDetected
 	if p.Operation == "ircesp32_list" {
+		devices, e := r.ircDevices()
+		if e != nil {
+			return nil, e
+		}
 		v := []any{}
+		if detected != nil {
+			v = append(v, map[string]any{"device_id": detected.device.ID, "interface_name": detected.hotspot.name, "source": "hotspot_discovery"})
+		}
 		for _, d := range devices {
+			if detected != nil && d.ID == detected.device.ID {
+				continue
+			}
 			v = append(v, map[string]any{"device_id": d.ID, "label": d.Label, "endpoint": d.Endpoint})
 		}
-		return map[string]any{"devices": v, "configured_only": true}, nil
+		return map[string]any{"devices": v, "configured_only": detected == nil}, nil
 	}
 	var d ircDevice
-	for _, v := range devices {
-		if v.ID == p.DeviceID {
-			d = v
-			break
+	if detected != nil && detected.device.ID == p.DeviceID {
+		d = detected.device
+		if c == nil {
+			var e error
+			c, e = ircHotspotClient(detected.hotspot)
+			if e != nil {
+				r.ircDetected = nil
+				return nil, e
+			}
+		}
+	} else {
+		devices, e := r.ircDevices()
+		if e != nil {
+			return nil, e
+		}
+		for _, v := range devices {
+			if v.ID == p.DeviceID {
+				d = v
+				break
+			}
 		}
 	}
 	if d.ID == "" {
-		return nil, errors.New("IRCESP32 device not configured on this bridge")
+		return nil, errors.New("IRCESP32 device not configured or detected on this bridge; run ircesp32_discover")
 	}
+	if c == nil {
+		c = ircHTTPClient()
+	}
+	defer c.CloseIdleConnections()
 	if p.Operation == "ircesp32_input" {
 		if e := ircValidateInput(p.Text); e != nil {
 			return nil, e
 		}
 	}
-	// Shared by serialised API operations on this bridge; no global runtime lock during I/O.
-	r.ircMu.Lock()
-	defer r.ircMu.Unlock()
+	readStatus := func() (ircStatus, error) {
+		s, e := ircReadStatus(c, d)
+		if e != nil && d.linkID != 0 {
+			r.ircDetected = nil
+		}
+		return s, e
+	}
 	if p.Operation == "ircesp32_status" {
-		return ircReadStatus(c, d)
+		return readStatus()
 	}
 	var image string
 	var photo map[string]any
 	v, e := r.externalMutation(p, func() (any, error) {
-		s, e := ircReadStatus(c, d)
+		s, e := readStatus()
 		if e != nil {
 			return nil, e
 		}
@@ -273,6 +336,9 @@ func (r *Runtime) ircCallWithClient(p runtimeRequest, c *http.Client) (any, erro
 			return photo, e
 		}
 		if p.Text != "STOP" {
+			if d.linkID != 0 && !s.HIDReady {
+				return nil, errors.New("IRCESP32 USB HID is not ready on the target")
+			}
 			if e = ircSendCommand(c, d, s, seq, "ARM"); e != nil {
 				return nil, e
 			}

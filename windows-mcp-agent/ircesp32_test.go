@@ -11,6 +11,7 @@ import (
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"net/netip"
 	"os"
 	"path/filepath"
 	"strings"
@@ -42,6 +43,96 @@ func ircFixtureConfig(t *testing.T, r *Runtime, d ircDevice) {
 	b, _ := json.Marshal(map[string]any{"devices": []ircDevice{d}})
 	if e := os.WriteFile(filepath.Join(r.home, "Config", "ircesp32.json"), b, 0600); e != nil {
 		t.Fatal(e)
+	}
+}
+
+func TestIRCESP32HotspotDiscoveryAndUseWithoutRegistration(t *testing.T) {
+	r, _ := fixtureRuntime(t)
+	h := ircHotspot{index: 4, name: "Wi-Fi", local: netip.MustParseAddr("192.168.4.2"), server: netip.MustParseAddr("192.168.4.1")}
+	id := "ircesp32-0123456789ab"
+	var link atomic.Uint32
+	link.Store(2)
+	var highWater atomic.Uint32
+	var actions atomic.Int32
+	c := ircFixtureClient(t, func(w http.ResponseWriter, p *http.Request) {
+		if p.Header.Get("X-IR-Client") != "jarvis" || p.Header.Get("Authorization") != "" {
+			t.Error("hotspot request unexpectedly used credentials or omitted its client marker")
+		}
+		if p.URL.Path != "/v1/discover" && p.Header.Get("X-IR-Link") != "2" {
+			t.Error("request was not bound to the detected link")
+		}
+		switch p.URL.Path {
+		case "/v1/discover", "/v1/status":
+			json.NewEncoder(w).Encode(ircStatus{Protocol: "0.3", Kind: "autech-ircesp32", DeviceID: id,
+				BootID: "0123abcd", LinkID: link.Load(), HighWater: highWater.Load(),
+				HIDReady: true, PinsVerified: true, CameraState: "ready"})
+		case "/v1/command":
+			n := actions.Add(1)
+			body, _ := io.ReadAll(p.Body)
+			if (n == 1 && string(body) != "0123abcd 2 ARM") || (n == 2 && string(body) != "0123abcd 3 KEY 4 0") || n > 2 {
+				t.Errorf("unexpected command %d: %s", n, body)
+			}
+			fmt.Fprintf(w, "OK %d dispatched", highWater.Add(1))
+		case "/v1/capture":
+			highWater.Add(1)
+			ircFixturePhoto(w, ircDevice{ID: id}, nil)
+		default:
+			t.Errorf("unexpected endpoint: %s", p.URL.Path)
+			http.NotFound(w, p)
+		}
+	})
+	v, err := r.ircDiscover("", func() ([]ircHotspot, error) { return []ircHotspot{h}, nil },
+		func(m ircHotspot) (*http.Client, error) {
+			if m != h {
+				t.Fatal("unexpected probe target")
+			}
+			return c, nil
+		})
+	if err != nil || v == nil || actions.Load() != 0 {
+		t.Fatalf("discovery did not return a read-only status: %v %v", v, err)
+	}
+	if _, err := os.Stat(filepath.Join(r.home, "Config", "ircesp32.json")); !os.IsNotExist(err) {
+		t.Fatalf("discovery unexpectedly wrote a configuration file: %v", err)
+	}
+	photo, err := r.ircCallWithClient(runtimeRequest{Operation: "ircesp32_capture", DeviceID: id, RequestID: "bench-hotspot-photo-001"}, c)
+	if err != nil || photo == nil {
+		t.Fatalf("photo after tokenless discovery: %v %v", photo, err)
+	}
+	p := runtimeRequest{Operation: "ircesp32_input", DeviceID: id, Text: "KEY 4 0", RequestID: "bench-hotspot-input-001"}
+	if _, err := r.ircCallWithClient(p, c); err != nil || actions.Load() != 2 {
+		t.Fatalf("input after tokenless discovery: %v", err)
+	}
+	link.Store(3)
+	p.RequestID = "bench-hotspot-input-002"
+	if _, err := r.ircCallWithClient(p, c); err == nil || actions.Load() != 2 || r.ircDetected != nil {
+		t.Fatal("a changed Wi-Fi association must require discovery before any further input")
+	}
+}
+
+func TestIRCESP32HotspotDiscoveryRejectsAmbiguousAndLookalikeDevices(t *testing.T) {
+	r, _ := fixtureRuntime(t)
+	var version atomic.Value
+	version.Store("0.3")
+	c := ircFixtureClient(t, func(w http.ResponseWriter, p *http.Request) {
+		json.NewEncoder(w).Encode(ircStatus{Protocol: version.Load().(string), Kind: "autech-ircesp32",
+			DeviceID: "ircesp32-0123456789ab", BootID: "0123abcd", LinkID: 2, CameraState: "not_initialized"})
+	})
+	get := func() ([]ircHotspot, error) {
+		return []ircHotspot{
+			{index: 4, name: "Wi-Fi", server: netip.MustParseAddr("192.168.4.1")},
+			{index: 5, name: "Wi-Fi 2", server: netip.MustParseAddr("192.168.5.1")},
+		}, nil
+	}
+	clientFor := func(ircHotspot) (*http.Client, error) { return c, nil }
+	if _, err := r.ircDiscover("", get, clientFor); err == nil || r.ircDetected != nil {
+		t.Fatal("accepted ambiguous hotspot discovery")
+	}
+	if _, err := r.ircDiscover("Wi-Fi 2", get, clientFor); err != nil || r.ircDetected.hotspot.index != 5 {
+		t.Fatalf("could not select the exact interface: %v", err)
+	}
+	version.Store("0.2")
+	if _, err := r.ircDiscover("Wi-Fi 2", get, clientFor); err == nil || r.ircDetected != nil {
+		t.Fatal("accepted a non-discoverable protocol")
 	}
 }
 func ircFixturePhoto(w http.ResponseWriter, d ircDevice, mutate func(http.Header)) {

@@ -19,6 +19,7 @@ import (
 // instances from accepting the same request. A process crash releases the lock.
 type Runtime struct {
 	ircMu           sync.Mutex
+	ircDetected     *ircDetectedDevice // guarded by ircMu; valid only on the current hotspot connection
 	mu              sync.Mutex
 	inflight        sync.WaitGroup
 	codexStarting   bool
